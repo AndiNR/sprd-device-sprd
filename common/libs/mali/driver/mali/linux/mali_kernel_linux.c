@@ -28,6 +28,7 @@
 #include "mali_kernel_sysfs.h"
 #include "mali_platform.h"
 #include "mali_kernel_license.h"
+#include "mali_dma_buf.h"
 
 /* Streamline support for the Mali driver */
 #if defined(CONFIG_TRACEPOINTS) && MALI_TIMELINE_PROFILING_ENABLED
@@ -452,6 +453,26 @@ static int mali_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, 
 		case MALI_IOC_MEM_ATTACH_UMP:
 		case MALI_IOC_MEM_RELEASE_UMP: /* FALL-THROUGH */
 			MALI_DEBUG_PRINT(2, ("UMP not supported\n"));
+			err = -ENOTTY;
+			break;
+#endif
+
+#ifdef CONFIG_DMA_SHARED_BUFFER
+		case MALI_IOC_MEM_ATTACH_DMA_BUF:
+			err = mali_attach_dma_buf(session_data, (_mali_uk_attach_dma_buf_s __user *)arg);
+			break;
+
+		case MALI_IOC_MEM_RELEASE_DMA_BUF:
+			err = mali_release_dma_buf(session_data, (_mali_uk_release_dma_buf_s __user *)arg);
+			break;
+
+		case MALI_IOC_MEM_DMA_BUF_GET_SIZE:
+			err = mali_dma_buf_get_size(session_data, (_mali_uk_dma_buf_get_size_s __user *)arg);
+			break;
+#else
+
+		case MALI_IOC_MEM_DMA_BUF_GET_SIZE: /* FALL-THROUGH */
+			MALI_DEBUG_PRINT(2, ("DMA-BUF not supported\n"));
 			err = -ENOTTY;
 			break;
 #endif

@@ -102,7 +102,7 @@ endif
 
 # Get subversion revision number, fall back to only ${MALI_RELEASE_NAME} if no svn info is available
 #SVN_REV := $(shell (cd $(DRIVER_DIR); (svnversion | grep -qv exported && svnversion) || git svn info | grep '^Revision: '| sed -e 's/^Revision: //' ) 2>/dev/null )
-SVN_REV=r3p0
+SVN_REV=r3p1_dev
 ifeq ($(SVN_REV),)
 SVN_REV := $(MALI_RELEASE_NAME)
 else
@@ -177,7 +177,6 @@ ccflags-y += $(DEFINES) -I$(DRIVER_DIR) -I$(DRIVER_DIR)/include -I$(DRIVER_DIR)/
 SRC = \
 	common/mali_kernel_core.c \
 	linux/mali_kernel_linux.c \
-	$(OSKOS)/mali_osk_indir_mmap.c \
 	common/mali_kernel_descriptor_mapping.c \
 	common/mali_session.c \
 	common/mali_device_pause_resume.c \
@@ -235,6 +234,7 @@ ccflags-y += -I$(DRIVER_DIR)/platform/mali_pmu_testing
 endif
 
 mali-$(CONFIG_MALI400_GPU_UTILIZATION) += common/mali_kernel_utilization.o
+mali-$(CONFIG_DMA_SHARED_BUFFER) += linux/mali_dma_buf.o
 
 ifneq ($(call submodule_enabled, $(DRIVER_DIR), MALI400PP),0)
 	# Mali-400 PP in use

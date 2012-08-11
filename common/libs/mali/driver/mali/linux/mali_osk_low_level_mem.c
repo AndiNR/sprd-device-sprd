@@ -572,11 +572,8 @@ void _mali_osk_mem_mapregion_unmap( mali_memory_allocation * descriptor, u32 off
 				continue;
 			}
 
-			_kernel_page_release(alloc->physaddr);
-
-			/* Remove the allocation from the list */
 			*prev = alloc->next;
-			_mali_osk_free( alloc );
+			_allocation_list_item_release(alloc);
 
 			/* Move onto the next allocation */
 			size -= _MALI_OSK_CPU_PAGE_SIZE;

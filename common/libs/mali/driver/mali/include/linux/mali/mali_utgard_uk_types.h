@@ -73,19 +73,22 @@ typedef enum
 
 	/** Memory functions */
 
-    _MALI_UK_INIT_MEM                = 0, /**< _mali_ukk_init_mem() */
-    _MALI_UK_TERM_MEM,                    /**< _mali_ukk_term_mem() */
-    _MALI_UK_GET_BIG_BLOCK,               /**< _mali_ukk_get_big_block() */
-    _MALI_UK_FREE_BIG_BLOCK,              /**< _mali_ukk_free_big_block() */
-    _MALI_UK_MAP_MEM,                     /**< _mali_ukk_mem_mmap() */
-    _MALI_UK_UNMAP_MEM,                   /**< _mali_ukk_mem_munmap() */
+    _MALI_UK_INIT_MEM                = 0,    /**< _mali_ukk_init_mem() */
+    _MALI_UK_TERM_MEM,                       /**< _mali_ukk_term_mem() */
+    _MALI_UK_GET_BIG_BLOCK,                  /**< _mali_ukk_get_big_block() */
+    _MALI_UK_FREE_BIG_BLOCK,                 /**< _mali_ukk_free_big_block() */
+    _MALI_UK_MAP_MEM,                        /**< _mali_ukk_mem_mmap() */
+    _MALI_UK_UNMAP_MEM,                      /**< _mali_ukk_mem_munmap() */
     _MALI_UK_QUERY_MMU_PAGE_TABLE_DUMP_SIZE, /**< _mali_ukk_mem_get_mmu_page_table_dump_size() */
-    _MALI_UK_DUMP_MMU_PAGE_TABLE,         /**< _mali_ukk_mem_dump_mmu_page_table() */
-    _MALI_UK_ATTACH_UMP_MEM,             /**< _mali_ukk_attach_ump_mem() */
-    _MALI_UK_RELEASE_UMP_MEM,           /**< _mali_ukk_release_ump_mem() */
-    _MALI_UK_MAP_EXT_MEM,                 /**< _mali_uku_map_external_mem() */
-    _MALI_UK_UNMAP_EXT_MEM,               /**< _mali_uku_unmap_external_mem() */
-    _MALI_UK_VA_TO_MALI_PA,               /**< _mali_uku_va_to_mali_pa() */
+    _MALI_UK_DUMP_MMU_PAGE_TABLE,            /**< _mali_ukk_mem_dump_mmu_page_table() */
+    _MALI_UK_ATTACH_DMA_BUF,                 /**< _mali_ukk_attach_dma_buf() */
+    _MALI_UK_RELEASE_DMA_BUF,                /**< _mali_ukk_release_dma_buf() */
+    _MALI_UK_DMA_BUF_GET_SIZE,               /**< _mali_ukk_dma_buf_get_size() */
+    _MALI_UK_ATTACH_UMP_MEM,                 /**< _mali_ukk_attach_ump_mem() */
+    _MALI_UK_RELEASE_UMP_MEM,                /**< _mali_ukk_release_ump_mem() */
+    _MALI_UK_MAP_EXT_MEM,                    /**< _mali_uku_map_external_mem() */
+    _MALI_UK_UNMAP_EXT_MEM,                  /**< _mali_uku_unmap_external_mem() */
+    _MALI_UK_VA_TO_MALI_PA,                  /**< _mali_uku_va_to_mali_pa() */
 
     /** Common functions for each core */
 
@@ -761,7 +764,7 @@ typedef struct
  * The 16bit integer is stored twice in a 32bit integer
  * For example, for version 1 the value would be 0x00010001
  */
-#define _MALI_API_VERSION 14
+#define _MALI_API_VERSION 15
 #define _MALI_UK_API_VERSION _MAKE_VERSION_ID(_MALI_API_VERSION)
 
 /**
@@ -838,7 +841,9 @@ typedef struct
     void *ctx;                      /**< [in,out] user-kernel context (trashed on output) */
 } _mali_uk_term_mem_s;
 
-/** @note Mali-MMU only */
+/** Flag for _mali_uk_map_external_mem_s, _mali_uk_attach_ump_mem_s and _mali_uk_attach_dma_buf_s */
+#define _MALI_MAP_EXTERNAL_MAP_GUARD_PAGE (1<<0)
+
 typedef struct
 {
     void *ctx;                      /**< [in,out] user-kernel context (trashed on output) */
@@ -850,15 +855,36 @@ typedef struct
 	u32 cookie;                     /**< [out] identifier for mapped memory object in kernel space  */
 } _mali_uk_map_external_mem_s;
 
-/** Flag for _mali_uk_map_external_mem_s and _mali_uk_attach_ump_mem_s */
-#define _MALI_MAP_EXTERNAL_MAP_GUARD_PAGE (1<<0)
-
-/** @note Mali-MMU only */
 typedef struct
 {
     void *ctx;                      /**< [in,out] user-kernel context (trashed on output) */
 	u32 cookie;                     /**< [out] identifier for mapped memory object in kernel space  */
 } _mali_uk_unmap_external_mem_s;
+
+/** @note This is identical to _mali_uk_map_external_mem_s above, however phys_addr is replaced by memory descriptor */
+typedef struct
+{
+    void *ctx;                      /**< [in,out] user-kernel context (trashed on output) */
+	u32 mem_fd;                     /**< [in] Memory descriptor */
+	u32 size;                       /**< [in] size */
+	u32 mali_address;               /**< [in] mali address to map the physical memory to */
+	u32 rights;                     /**< [in] rights necessary for accessing memory */
+	u32 flags;                      /**< [in] flags, see \ref _MALI_MAP_EXTERNAL_MAP_GUARD_PAGE */
+	u32 cookie;                     /**< [out] identifier for mapped memory object in kernel space  */
+} _mali_uk_attach_dma_buf_s;
+
+typedef struct
+{
+	void *ctx;                      /**< [in,out] user-kernel context (trashed on output) */
+	u32 mem_fd;                     /**< [in] Memory descriptor */
+	u32 size;                       /**< [out] size */
+} _mali_uk_dma_buf_get_size_s;
+
+typedef struct
+{
+    void *ctx;                      /**< [in,out] user-kernel context (trashed on output) */
+	u32 cookie;                     /**< [in] identifier for mapped memory object in kernel space  */
+} _mali_uk_release_dma_buf_s;
 
 /** @note This is identical to _mali_uk_map_external_mem_s above, however phys_addr is replaced by secure_id */
 typedef struct
@@ -872,7 +898,6 @@ typedef struct
 	u32 cookie;                     /**< [out] identifier for mapped memory object in kernel space  */
 } _mali_uk_attach_ump_mem_s;
 
-/** @note Mali-MMU only; will be supported in future version */
 typedef struct
 {
     void *ctx;                      /**< [in,out] user-kernel context (trashed on output) */

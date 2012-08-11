@@ -51,6 +51,7 @@ void _ump_uku_msynch(_ump_uk_msync_s *args);
 
 _ump_osu_errcode_t _ump_uku_secure_id_from_phys_block(_ump_uk_secure_id_from_phys_blocks_s *args);
 
+
 void _ump_uku_cache_operations_control( _ump_uk_cache_operations_control_s *args );
 void _ump_uku_switch_hw_usage( _ump_uk_switch_hw_usage_s *dd_msync_call_arg );
 void _ump_uku_lock( _ump_uk_lock_s  *dd_msync_call_arg );

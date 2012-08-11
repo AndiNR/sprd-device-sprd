@@ -146,6 +146,11 @@ static mali_physical_memory_allocator * physical_memory_allocators = NULL;
 
 static dedicated_memory_info * mem_region_registrations = NULL;
 
+mali_allocation_engine mali_mem_get_memory_engine(void)
+{
+	return memory_engine;
+}
+
 /* called during module init */
 _mali_osk_errcode_t mali_memory_initialize(void)
 {
@@ -239,6 +244,8 @@ static void descriptor_table_cleanup_callback(int descriptor_id, void* map_targe
 
 void mali_memory_session_end(struct mali_session_data *session_data)
 {
+	_mali_osk_errcode_t err = _MALI_OSK_ERR_BUSY;
+
 	MALI_DEBUG_PRINT(3, ("MMU session end\n"));
 
 	if (NULL == session_data)
@@ -247,76 +254,63 @@ void mali_memory_session_end(struct mali_session_data *session_data)
 		return;
 	}
 
-#ifndef MALI_UKK_HAS_IMPLICIT_MMAP_CLEANUP
-#if _MALI_OSK_SPECIFIC_INDIRECT_MMAP
-#error Indirect MMAP specified, but UKK does not have implicit MMAP cleanup. Current implementation does not handle this.
-#else
+	while (err == _MALI_OSK_ERR_BUSY)
 	{
-		_mali_osk_errcode_t err;
-		err = _MALI_OSK_ERR_BUSY;
-		while (err == _MALI_OSK_ERR_BUSY)
+		/* Lock the session so we can modify the memory list */
+		_mali_osk_lock_wait( session_data->memory_lock, _MALI_OSK_LOCKMODE_RW );
+		err = _MALI_OSK_ERR_OK;
+
+		/* Free all memory engine allocations */
+		if (0 == _mali_osk_list_empty(&session_data->memory_head))
 		{
-			/* Lock the session so we can modify the memory list */
-			_mali_osk_lock_wait( session_data->memory_lock, _MALI_OSK_LOCKMODE_RW );
-			err = _MALI_OSK_ERR_OK;
+			mali_memory_allocation *descriptor;
+			mali_memory_allocation *temp;
+			_mali_uk_mem_munmap_s unmap_args;
 
-			/* Free all memory engine allocations */
-			if (0 == _mali_osk_list_empty(&session_data->memory_head))
+			MALI_DEBUG_PRINT(1, ("Memory found on session usage list during session termination\n"));
+
+			unmap_args.ctx = session_data;
+
+			/* use the 'safe' list iterator, since freeing removes the active block from the list we're iterating */
+			_MALI_OSK_LIST_FOREACHENTRY(descriptor, temp, &session_data->memory_head, mali_memory_allocation, list)
 			{
-				mali_memory_allocation *descriptor;
-				mali_memory_allocation *temp;
-				_mali_uk_mem_munmap_s unmap_args;
+				MALI_DEBUG_PRINT(4, ("Freeing block with mali address 0x%x size %d mapped in user space at 0x%x\n",
+							descriptor->mali_address, descriptor->size, descriptor->size, descriptor->mapping)
+						);
+				/* ASSERT that the descriptor's lock references the correct thing */
+				MALI_DEBUG_ASSERT(  descriptor->lock == session_data->memory_lock );
+				/* Therefore, we have already locked the descriptor */
 
-				MALI_DEBUG_PRINT(1, ("Memory found on session usage list during session termination\n"));
+				unmap_args.size = descriptor->size;
+				unmap_args.mapping = descriptor->mapping;
+				unmap_args.cookie = (u32)descriptor;
 
-				unmap_args.ctx = session_data;
+				/*
+					* This removes the descriptor from the list, and frees the descriptor
+					*
+					* Does not handle the _MALI_OSK_SPECIFIC_INDIRECT_MMAP case, since
+					* the only OS we are aware of that requires indirect MMAP also has
+					* implicit mmap cleanup.
+					*/
+				err = _mali_ukk_mem_munmap_internal( &unmap_args );
 
-				/* use the 'safe' list iterator, since freeing removes the active block from the list we're iterating */
-				_MALI_OSK_LIST_FOREACHENTRY(descriptor, temp, &session_data->memory_head, mali_memory_allocation, list)
+				if (err == _MALI_OSK_ERR_BUSY)
 				{
-					MALI_DEBUG_PRINT(4, ("Freeing block with mali address 0x%x size %d mapped in user space at 0x%x\n",
-								descriptor->mali_address, descriptor->size, descriptor->size, descriptor->mapping)
-							);
-					/* ASSERT that the descriptor's lock references the correct thing */
-					MALI_DEBUG_ASSERT(  descriptor->lock == session_data->memory_lock );
-					/* Therefore, we have already locked the descriptor */
-
-					unmap_args.size = descriptor->size;
-					unmap_args.mapping = descriptor->mapping;
-					unmap_args.cookie = (u32)descriptor;
-
+					_mali_osk_lock_signal( session_data->memory_lock, _MALI_OSK_LOCKMODE_RW );
 					/*
-					 * This removes the descriptor from the list, and frees the descriptor
-					 *
-					 * Does not handle the _MALI_OSK_SPECIFIC_INDIRECT_MMAP case, since
-					 * the only OS we are aware of that requires indirect MMAP also has
-					 * implicit mmap cleanup.
-					 */
-					err = _mali_ukk_mem_munmap_internal( &unmap_args );
-
-					if (err == _MALI_OSK_ERR_BUSY)
-					{
-						_mali_osk_lock_signal( session_data->memory_lock, _MALI_OSK_LOCKMODE_RW );
-						/*
-						 * Reason for this;
-						 * We where unable to stall the MMU, probably because we are in page fault handling.
-						 * Sleep for a while with the session lock released, then try again.
-						 * Abnormal termination of programs with running Mali jobs is a normal reason for this.
-						 */
-						_mali_osk_time_ubusydelay(10);
-						break; /* Will jump back into: "while (err == _MALI_OSK_ERR_BUSY)" */
-					}
+						* Reason for this;
+						* We where unable to stall the MMU, probably because we are in page fault handling.
+						* Sleep for a while with the session lock released, then try again.
+						* Abnormal termination of programs with running Mali jobs is a normal reason for this.
+						*/
+					_mali_osk_time_ubusydelay(10);
+					break; /* Will jump back into: "while (err == _MALI_OSK_ERR_BUSY)" */
 				}
 			}
 		}
-		/* Assert that we really did free everything */
-		MALI_DEBUG_ASSERT( _mali_osk_list_empty(&session_data->memory_head) );
 	}
-#endif /* _MALI_OSK_SPECIFIC_INDIRECT_MMAP */
-#else
-	/* Lock the session so we can modify the memory list */
-	_mali_osk_lock_wait( session_data->memory_lock, _MALI_OSK_LOCKMODE_RW );
-#endif /* MALI_UKK_HAS_IMPLICIT_MMAP_CLEANUP */
+	/* Assert that we really did free everything */
+	MALI_DEBUG_ASSERT( _mali_osk_list_empty(&session_data->memory_head) );
 
 	if (NULL != session_data->descriptor_mapping)
 	{
