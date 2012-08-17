@@ -7,6 +7,8 @@ PRODUCT_PACKAGES := \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \
 	lights.$(TARGET_PLATFORM) \
+	audio.primary.$(TARGET_PLATFORM) \
+	tinymix \
 	$(MALI)
 
 PRODUCT_COPY_FILES := \
@@ -16,5 +18,8 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/fstab.sp8810:root/fstab.sp8810 \
 	$(BOARDDIR)/vold.fstab:system/etc/vold.fstab \
 	device/sprd/common/libs/mali/egl.cfg:system/lib/egl/egl.cfg \
+	device/sprd/common/libs/audio/audio_policy.conf:system/etc/audio_policy.conf \
+	device/sprd/common/res/media/media_codecs.xml:system/etc/media_codecs.xml \
+	device/sprd/common/res/media/media_profiles.xml:system/etc/media_profiles.xml \
 	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml
 
