@@ -9,6 +9,7 @@ PRODUCT_PACKAGES := \
 	lights.$(TARGET_PLATFORM) \
 	audio.primary.$(TARGET_PLATFORM) \
 	tinymix \
+	sensors.$(TARGET_BOARD)  \
 	$(MALI)
 
 PRODUCT_COPY_FILES := \
