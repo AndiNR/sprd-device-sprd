@@ -25,6 +25,9 @@
 #include <hardware/hardware.h>
 #include <hardware/gralloc.h>
 
+#include <linux/ion.h>
+#include "ion_sprd.h"
+
 #include "gralloc_priv.h"
 #include "alloc_device.h"
 #include "framebuffer_device.h"
@@ -41,6 +44,9 @@ static int s_ump_is_open = 0;
 #endif
 
 static pthread_mutex_t s_map_lock = PTHREAD_MUTEX_INITIALIZER;
+
+extern int open_ion_device(private_module_t* m);
+extern void close_ion_device(private_module_t* m);
 
 static int gralloc_device_open(const hw_module_t* module, const char* name, hw_device_t** device)
 {
@@ -108,6 +114,28 @@ static int gralloc_register_buffer(gralloc_module_t const* module, buffer_handle
 				hnd->lockState = private_handle_t::LOCK_STATE_MAPPED;
 				hnd->writeOwner = 0;
 				hnd->lockState = 0;
+
+				if((hnd->flags & private_handle_t::PRIV_FLAGS_USES_PHY)&&(0==hnd->resv0))
+				{
+					private_module_t* m = (private_module_t*)(module);
+					if(open_ion_device(m))
+					{
+						ALOGE("open ion fail %s", __FUNCTION__);
+					}else
+					{
+						struct ion_fd_data fd_data;
+    						fd_data.fd = hnd->fd;
+    						int err = ioctl(m->mIonFd, ION_IOC_IMPORT, &fd_data);
+						if(err)
+						{
+							ALOGE("ION_IOC_IMPORT fail %x,phy addr = %x",hnd->resv0,hnd->phyaddr);
+						}else
+						{
+							hnd->resv0 = (int)fd_data.handle;
+							ALOGI("ION_IOC_IMPORT success %x,phy addr = %x",hnd->resv0,hnd->phyaddr);
+						}
+					}
+				}
 
 				pthread_mutex_unlock(&s_map_lock);
 				return 0;
@@ -228,6 +256,22 @@ static int gralloc_unregister_buffer(gralloc_module_t const* module, buffer_hand
 		hnd->lockState	= 0;
 		hnd->writeOwner = 0;
 
+		if((hnd->flags & private_handle_t::PRIV_FLAGS_USES_PHY)&&(0!=hnd->resv0))
+		{
+			private_module_t* m = (private_module_t*)(module);
+			if(open_ion_device(m))
+			{
+				ALOGE("open ion fail %s", __FUNCTION__);
+			}else
+			{
+       			struct ion_handle_data handle_data;
+				handle_data.handle = (struct ion_handle *)hnd->resv0;
+				ioctl(m->mIonFd, ION_IOC_FREE, &handle_data);
+				close_ion_device(m);
+				ALOGI("ION_IOC_FREE success %x,phy addr = %x",hnd->resv0,hnd->phyaddr);
+			}
+		}
+		
 		pthread_mutex_unlock(&s_map_lock);
 	}
 	else
@@ -312,8 +356,24 @@ int gralloc_perform(struct gralloc_module_t const* module,
 			// most operation still can be done by glTexImage2D rather than
 			// purely software, the *handle will reflect the success/fail
 			// situation
-			res = 0;
-			// validate that it's indeed a pmem buffer
+
+			private_module_t* m = (private_module_t*)(module);
+
+			if(open_ion_device(m))
+			{
+				ALOGE("open ion fail %s", __FUNCTION__);
+				break;
+			}
+	 		struct ion_phys_data phys_data;
+	 		struct ion_custom_data  custom_data;
+			phys_data.fd_buffer = fd;
+			custom_data.cmd = ION_SPRD_CUSTOM_PHYS;
+			custom_data.arg = (unsigned long)&phys_data;
+			int err = ioctl(m->mIonFd,ION_IOC_CUSTOM,&custom_data);
+			if(err){
+				break;
+			}
+	 		phys_addr = phys_data.phys;
 
 			// align offset to page
 			size_t start = phys_addr & ~4095;
@@ -328,7 +388,7 @@ int gralloc_perform(struct gralloc_module_t const* module,
 				break;
 			}
 			private_handle_t* hnd =
-				new private_handle_t(private_handle_t::PRIV_FLAGS_USES_UMP,
+				new private_handle_t(private_handle_t::PRIV_FLAGS_USES_UMP | private_handle_t::PRIV_FLAGS_USES_PHY,
 									size,
 									intptr_t(base) + (offset - bias),
 									private_handle_t::LOCK_STATE_MAPPED,
@@ -337,7 +397,7 @@ int gralloc_perform(struct gralloc_module_t const* module,
 									bias,
 									fd);
 			hnd->phyaddr = phys_addr;
-			hnd->resv0 = offset;
+			hnd->resv0 = 0;
 			AINF("PERFORM_CREATE hnd=%p,fd=%d,offset=0x%x,size=%d,base=%p,phys_addr=0x%lx",hnd,fd,offset,size,base,phys_addr);
 			*handle = (native_handle_t *)hnd;
 			res = 0;
@@ -437,6 +497,10 @@ private_module_t::private_module_t()
 	xdpi = 0.0f;
 	ydpi = 0.0f;
 	fps = 0.0f;
+
+	mIonFd = -1;
+	mIonBufNum = 0;
+
 
 #undef INIT_ZERO
 };

@@ -52,6 +52,8 @@ struct private_module_t
 	buffer_handle_t currentBuffer;
 	int ion_client;
 
+	int mIonFd;
+	int mIonBufNum;
 	
 	struct fb_var_screeninfo info;
 	struct fb_fix_screeninfo finfo;
@@ -83,6 +85,7 @@ struct private_handle_t
 		PRIV_FLAGS_FRAMEBUFFER = 0x00000001,
 		PRIV_FLAGS_USES_UMP    = 0x00000002,
 		PRIV_FLAGS_USES_ION    = 0x00000004,
+		PRIV_FLAGS_USES_PHY	 = 0x00000008,
 	};
 
 	enum
@@ -91,6 +94,8 @@ struct private_handle_t
 		LOCK_STATE_MAPPED    =   1<<30,
 		LOCK_STATE_READ_MASK =   0x3FFFFFFF
 	};
+	//fds
+	int     fd;
 
 	// ints
 	int     magic;
@@ -111,8 +116,8 @@ struct private_handle_t
 #endif
 
 	// Following members is for framebuffer only
-	int     fd;
 	int     offset;
+	//int     fd;//move to "fds"
 
 	int     phyaddr;
 	int     format;
@@ -131,8 +136,8 @@ struct private_handle_t
 #endif
 
 #ifdef __cplusplus
-	static const int sNumInts = 9 + GRALLOC_ARM_UMP_NUM_INTS + GRALLOC_ARM_DMA_BUF_NUM_INTS;
-	static const int sNumFds = 0;
+	static const int sNumInts = 9  -1 + 6 + GRALLOC_ARM_UMP_NUM_INTS + GRALLOC_ARM_DMA_BUF_NUM_INTS;
+	static const int sNumFds = 1;
 	static const int sMagic = 0x3141592;
 
 #if GRALLOC_ARM_UMP_MODULE

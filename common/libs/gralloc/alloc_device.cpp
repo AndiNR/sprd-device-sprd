@@ -40,6 +40,15 @@
 #include <ion/ion.h>
 #endif
 
+#include <sys/mman.h>
+//#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <linux/ion.h>
+#define ION_DEVICE "/dev/ion"
+#define ION_BUF_NUM_FOR_NOT_VIDEO 0
+
 #define GRALLOC_ALIGN( value, base ) (((value) + ((base) - 1)) & ~((base) - 1))
 
 
@@ -92,6 +101,118 @@ static int __ump_alloc_should_fail()
 }
 #endif
 
+int open_ion_device(private_module_t* m)
+{
+	if(m->mIonFd<0)
+		m->mIonFd = open(ION_DEVICE, O_RDONLY|O_SYNC);
+	if(m->mIonFd < 0)
+	{
+       	return -1;
+       }else
+       {
+       	return 0;
+       }
+}
+
+void close_ion_device(private_module_t* m)
+{
+    if(m->mIonFd >= 0)
+        close(m->mIonFd);
+    m->mIonFd = -1;
+}
+
+static int gralloc_alloc_ionbuffer_locked(alloc_device_t* dev, size_t size, int usage, buffer_handle_t* pHandle)
+{
+	private_module_t* m = reinterpret_cast<private_module_t*>(dev->common.module);
+
+	if(open_ion_device(m))
+	{
+       	ALOGE("%s: Failed to open ion device - %s",  __FUNCTION__, strerror(errno));
+       	return -ENOMEM;
+       }
+
+	int is_cached = 0;
+	int ion_fd = m->mIonFd;
+	uint32_t uread = usage & GRALLOC_USAGE_SW_READ_MASK;
+	uint32_t uwrite = usage & GRALLOC_USAGE_SW_WRITE_MASK;
+	if (uread == GRALLOC_USAGE_SW_READ_OFTEN || uwrite == GRALLOC_USAGE_SW_WRITE_OFTEN) {
+		is_cached = 1;
+		ion_fd = open(ION_DEVICE, O_RDONLY);
+		if(ion_fd < 0) {
+			ALOGE("open cacheable ion device fail");
+			return  -ENOMEM;
+		}
+	}
+
+	int err = 0;
+	void *base = 0;
+       struct ion_fd_data fd_data;
+       struct ion_handle_data handle_data;
+       struct ion_allocation_data ionAllocData;
+       ionAllocData.len = round_up_to_page_size(size);
+       ionAllocData.align = PAGE_SIZE;
+       ionAllocData.flags = ION_HEAP_CARVEOUT_MASK;
+
+    	err = ioctl(ion_fd, ION_IOC_ALLOC, &ionAllocData);
+    	if(err)
+	{
+		ALOGE("ION_IOC_ALLOC fail");
+		if(is_cached) close(ion_fd);
+		return -ENOMEM;
+    	}
+
+    	fd_data.handle = ionAllocData.handle;
+       handle_data.handle = ionAllocData.handle;
+
+       err = ioctl(ion_fd, ION_IOC_MAP, &fd_data);
+       if(err)
+	{
+		ALOGE("ION_IOC_MAP fail");
+		if(is_cached) close(ion_fd);
+		return -ENOMEM;
+       }
+
+       base = mmap(0, ionAllocData.len, PROT_READ|PROT_WRITE,
+                                MAP_SHARED, fd_data.fd, 0);
+
+	if(base == MAP_FAILED)
+	{
+		ALOGE("%s: Failed to map the allocated memory: %s",  __FUNCTION__, strerror(errno));
+		ioctl(ion_fd, ION_IOC_FREE, &handle_data);
+		if(is_cached) close(ion_fd);
+		return -ENOMEM;
+       }
+
+	gralloc_module_t *module = &(m->base);
+
+	err = module->perform(module,
+				GRALLOC_MODULE_PERFORM_CREATE_HANDLE_FROM_BUFFER,
+				fd_data.fd, ionAllocData.len,
+				0,base,
+				pHandle);
+	if(err)
+	{
+		ALOGE("perform fail");
+		munmap(base, ionAllocData.len);
+		if(is_cached) close(ion_fd);
+		return -ENOMEM;
+	}
+
+	ioctl(ion_fd, ION_IOC_FREE, &handle_data);
+
+	if(is_cached) close(ion_fd);
+
+	return 0;
+}
+
+static int gralloc_alloc_ionbuffer(alloc_device_t* dev, size_t size, int usage, buffer_handle_t* pHandle)
+{
+	private_module_t* m = reinterpret_cast<private_module_t*>(dev->common.module);
+	pthread_mutex_lock(&m->lock);
+	int err = gralloc_alloc_ionbuffer_locked(dev, size, usage, pHandle);
+	pthread_mutex_unlock(&m->lock);
+	return err;
+}
 
 static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buffer_handle_t* pHandle)
 {
@@ -341,8 +462,34 @@ static int alloc_device_alloc(alloc_device_t* dev, int w, int h, int format, int
 		stride = bpr / bpp;
 	}
 
+	int preferIon = 0;
+	private_module_t* m = reinterpret_cast<private_module_t*>(dev->common.module);
+	if ((format == HAL_PIXEL_FORMAT_RGBA_8888) && (stride == m->info.xres) && (h == m->info.yres) && (m->mIonBufNum < ION_BUF_NUM_FOR_NOT_VIDEO) && !(usage & GRALLOC_USAGE_HW_FB)) {
+		usage |= GRALLOC_USAGE_PRIVATE_0;
+		preferIon = 1;
+		m->mIonBufNum++;
+	}
+
 	int err;
-	if (usage & GRALLOC_USAGE_HW_FB)
+	if(usage & (GRALLOC_USAGE_PRIVATE_0))
+	{
+		 err = gralloc_alloc_ionbuffer(dev, size, usage, pHandle);
+		 if(err>=0){
+			const native_handle_t *p_nativeh  = *pHandle;
+			private_handle_t *hnd = (private_handle_t*)p_nativeh;
+			hnd->format = format;
+			hnd->width = stride;
+			hnd->height = h;
+			if(preferIon)
+				ALOGI("================allocat  ion memory for rgba xres*yres = %d*%d fd = %d:%d", m->info.xres,  m->info.yres, hnd->fd, m->mIonBufNum);	
+		} else {
+			if(preferIon) {
+				usage &= (~GRALLOC_USAGE_PRIVATE_0);
+				err = gralloc_alloc_buffer(dev, size, usage, pHandle);
+			}
+		}
+	}
+	else if (usage & GRALLOC_USAGE_HW_FB)
 	{
 		err = gralloc_alloc_framebuffer(dev, size, usage, pHandle);
 	}
@@ -374,7 +521,36 @@ static int alloc_device_free(alloc_device_t* dev, buffer_handle_t handle)
 				// we can't deallocate the memory in case of UNMAP failure
 				// because it would give that process access to someone else's
 				// surfaces, which would be a security breach.
-	if (hnd->flags & private_handle_t::PRIV_FLAGS_FRAMEBUFFER)
+	if (hnd->flags & private_handle_t::PRIV_FLAGS_USES_PHY)
+	{
+		private_module_t* m = reinterpret_cast<private_module_t*>(dev->common.module);
+		gralloc_module_t *module = &(m->base);
+		module->perform(module,
+					GRALLOC_MODULE_PERFORM_FREE_HANDLE,
+					&handle);
+		munmap((void *)hnd->base, hnd->size);
+		ALOGI("FREE hnd=%p,fd=%d,offset=0x%x,size=%d,base=%x,phys_addr=0x%x",hnd,hnd->fd,hnd->offset,hnd->size,hnd->base,hnd->phyaddr);
+		close(hnd->fd);
+	       close_ion_device(m);
+		if(hnd->format == HAL_PIXEL_FORMAT_RGBA_8888)
+		{
+			m->mIonBufNum--;
+			ALOGI("================ free ion memory fd=%d:%d", hnd->fd, m->mIonBufNum);
+		}
+		/*
+    		struct ion_fd_data fd_data;
+    		fd_data.fd = hnd->fd;
+    		int err = ioctl(m->mIonFd, ION_IOC_IMPORT, &fd_data);
+		if(err) {
+			ALOGE("ION_IOC_IMPORT fail");
+		}
+
+       	struct ion_handle_data handle_data;
+		handle_data.handle = fd_data.handle;
+		ioctl(m->mIonFd, ION_IOC_FREE, &handle_data);
+		*/
+	}
+	else if (hnd->flags & private_handle_t::PRIV_FLAGS_FRAMEBUFFER)
 	{
 		// free this buffer
 		private_module_t* m = reinterpret_cast<private_module_t*>(dev->common.module);

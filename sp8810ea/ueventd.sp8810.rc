@@ -3,6 +3,7 @@
 /dev/sprd_dcam          0660     system      graphics
 /dev/sprd_vsp           0660     system      audio
 /dev/video0             0660     system      graphics
+/dev/ion                0664     system      audio
 /dev/ecompass_ctrl      0666     system      compass
 /dev/mxc622x            0666     system      input
 /dev/mmc31xx            0666     system      compass
