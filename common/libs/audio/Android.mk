@@ -12,19 +12,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+ifeq ($(strip $(BOARD_USES_TINYALSA_AUDIO)),true)
+
 LOCAL_PATH := $(call my-dir)
+
+#TinyAlsa audio
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := audio.primary.sc8810
-LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
-LOCAL_SRC_FILES := audio_hw.c
+LOCAL_CFLAGS := -D_POSIX_SOURCE -Wno-multichar -g
+
+LOCAL_SRC_FILES := audio_hw.c tinyalsa_util.c
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
-	$(call include-path-for, audio-utils) \
-	$(call include-path-for, audio-effects)
-LOCAL_SHARED_LIBRARIES := liblog libcutils libtinyalsa libaudioutils libdl
+	external/expat/lib \
+	system/media/audio_utils/include \
+	system/media/audio_effects/include
+#	device/sprd/common/apps/engineeringmodel/engcs
+
+LOCAL_SHARED_LIBRARIES := \
+	liblog libcutils libtinyalsa libaudioutils \
+	libexpat libdl
+#	libengclient
+
+LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
+
+endif
 
