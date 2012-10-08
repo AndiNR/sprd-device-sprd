@@ -15,4 +15,5 @@
 #
 
 PRODUCT_MAKEFILES := $(LOCAL_DIR)/prod_kylew.mk
+PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_kylewplus.mk
 

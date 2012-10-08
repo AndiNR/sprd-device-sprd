@@ -15,3 +15,4 @@
 #
 
 add_lunch_combo kylew-userdebug
+add_lunch_combo kylewplus-userdebug
