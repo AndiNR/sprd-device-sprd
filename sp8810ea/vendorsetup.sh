@@ -15,3 +15,4 @@
 #
 
 add_lunch_combo sp8810eabase-userdebug
+add_lunch_combo sp8810eaplus-userdebug

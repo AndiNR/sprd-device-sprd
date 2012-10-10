@@ -22,12 +22,23 @@ ARCH_ARM_HAVE_TLS_REGISTER := true
 TARGET_BOARD_PLATFORM := sc8810
 TARGET_BOOTLOADER_BOARD_NAME := sp8810ea
 
+TARGET_VLX_ENABLE ?= true
+
 # config u-boot
-TARGET_NO_BOOTLOADER := true
+TARGET_NO_BOOTLOADER := false
+ifeq ($(TARGET_VLX_ENABLE), true)
+UBOOT_DEFCONFIG := sp8810ea
+else
 UBOOT_DEFCONFIG := sp8810ea_native
+endif
 
 # config kernel
+TARGET_NO_KERNEL := false
+ifeq ($(TARGET_VLX_ENABLE), true)
+KERNEL_DEFCONFIG := sp8810ea-vlx_defconfig
+else
 KERNEL_DEFCONFIG := sp8810ea-native_defconfig
+endif
 USES_UNCOMPRESSED_KERNEL := true
 BOARD_KERNEL_BASE := 0x00000000
 BOARD_KERNEL_CMDLINE := console=ttyS1,115200n8
