@@ -35,6 +35,7 @@ PRODUCT_PACKAGES := \
 
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \
+	$(BOARDDIR)/sec_touchscreen.idc:system/usr/idc/sec_touchscreen.idc
 
 $(call inherit-product, frameworks/native/build/phone-hdpi-dalvik-heap.mk)
 
