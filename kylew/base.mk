@@ -10,7 +10,8 @@ PRODUCT_PACKAGES := \
 	audio.primary.$(TARGET_PLATFORM) \
 	tinymix \
 	sensors.$(TARGET_BOARD)  \
-	$(MALI)
+	$(MALI)\
+	modem_control
 
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/init.sp8810.rc:root/init.sp8810.rc \
