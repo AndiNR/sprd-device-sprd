@@ -4,7 +4,7 @@ include $(CLEAR_VARS)
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
 
 # When zero we link against libqcamera; when 1, we dlopen libqcamera.
-DLOPEN_LIBQCAMERA:= 0
+DLOPEN_LIBQCAMERA:= 1
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH) \
@@ -17,7 +17,7 @@ LOCAL_C_INCLUDES := \
 	external/skia/include/core\
         external/jhead \
         external/sqlite/dist \
-	$(TARGET_OUT_INTERMEDIATES)/KERNEL/usr/include/video \
+	$(TARGET_OUT_INTERMEDIATES)/KERNEL/source/include/video \
 	$(TOP)/device/sprd/common/libs/gralloc \
 	$(TOP)/device/sprd/common/libs/mali/src/ump/include
 
