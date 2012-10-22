@@ -144,10 +144,17 @@ PUBLIC JPEG_RET_E JPEG_HWWriteHead(APP1_T *app1_t)
 	PutMarker(M_SOI);
 
 	/*put APP*/
-	if(PutAPP1(app1_t) != JPEG_SUCCESS)
-	//if(PutAPP0() != JPEG_SUCCESS)
-	{
-		return JPEG_FAILED;
+	if(NULL != app1_t->dc_exif_info_ptr) {
+		if(PutAPP1(app1_t) != JPEG_SUCCESS)
+		{
+			return JPEG_FAILED;
+		}
+	}
+	else {
+		if(PutAPP0() != JPEG_SUCCESS)
+		{
+			return JPEG_FAILED;
+		}
 	}
 	
 	/*put quant tbl*/

@@ -32,8 +32,6 @@
 
 #include "../../gralloc/gralloc_priv.h"
 
-#include <media/hardware/MetadataBufferType.h>
-
 #include <camera/Camera.h>
 
 #include "../sc8810/SprdOEMCamera.h"
@@ -48,7 +46,6 @@ extern "C" {
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(*x))
 #define PRINT_TIME 0
-#define METADATA_SIZE (4 * 3)
 
 extern "C" {
 
@@ -291,57 +288,8 @@ status_t SprdCameraHardware::dump(int fd) const
         return NO_ERROR;
     }
 
-sprd_camera_memory_t* SprdCameraHardware::GetPmem(const char *device_name, int buf_size, int num_bufs)
+camera_memory_t* SprdCameraHardware::GetPmem(const char *device_name, int buf_size, int num_bufs)
 {
-#if 1
-	sprd_camera_memory_t *memory = (sprd_camera_memory_t *)malloc(sizeof(sprd_camera_memory_t));
-	camera_memory_t *camera_memory;
-	int paddr, psize;
-        int order = 0, acc = 1;
-	while(acc < buf_size * num_bufs) {
-	 	order++;
-	 	acc = acc*2;
-	}
-        MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc , MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
-		
-	if((mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME)
-		|| (mMsgEnabled & CAMERA_MSG_POSTVIEW_FRAME)
-		|| (mMsgEnabled & CAMERA_MSG_RAW_IMAGE)
-		|| (mMsgEnabled & CAMERA_MSG_COMPRESSED_IMAGE)
-		|| (mMsgEnabled & CAMERA_MSG_VIDEO_FRAME)) {
-		camera_memory = mGetMemory_cb(pHeapIon->getHeapID(), buf_size, num_bufs, NULL);
-	}
-	else if(mMsgEnabled & CAMERA_MSG_PREVIEW_METADATA) {
-		camera_memory = mGetMemory_cb(-1, METADATA_SIZE, num_bufs, NULL);
-	}
-	else {
-		camera_memory = NULL;
-	}
-	
-        if(NULL == camera_memory) {
-               ALOGE("Fail to mGetMemory_cb(), METADATA: %d.", mMsgEnabled & CAMERA_MSG_PREVIEW_METADATA);
-                    goto getpmem_end;
-        }
-        if(0xFFFFFFFF == (uint32_t)camera_memory->data) {
-                 camera_memory = NULL;
-                 ALOGE("Fail to GetPmem().");
-                 goto getpmem_end;
-       }
-	pHeapIon->get_phy_addr_from_ion(&paddr, &psize);	
-	memory->ion_heap = pHeapIon;
-	memory->camra_memory = camera_memory;
-	memory->phys_addr = paddr;
-	memory->phys_size = psize;
-	memory->handle = camera_memory->handle;
-	memory->data = camera_memory->data;
-
-       ALOGV("GetPmem: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.", 
-                            memory->phys_addr, (uint32_t)camera_memory->data,
-                            camera_memory->size, memory->phys_size);
-	
-getpmem_end:
-	return memory;
-#else
         camera_memory_t* camera_memory = NULL;
         int fd = 0;//open(device_name, O_RDWR|O_SYNC );
         if (fd >= 0){
@@ -363,16 +311,10 @@ getpmem_end:
 getpmem_end:
         //close(fd);
         return camera_memory;
-#endif		
 }
 
-void SprdCameraHardware::FreePmem(sprd_camera_memory_t* memory)
+void SprdCameraHardware::FreePmem(camera_memory_t* camera_memory)
 {
-#if 1
-	memory->ion_heap = NULL;
-	memory->camra_memory = NULL;
-	memory = NULL;
-#else
         if(camera_memory){
                 ALOGV("FreePmem: phys_addr 0x%x, data: 0x%x, size: 0x%x.", 
                             camera_memory->phys_addr, (uint32_t)camera_memory->data, camera_memory->size);
@@ -385,7 +327,6 @@ void SprdCameraHardware::FreePmem(sprd_camera_memory_t* memory)
         } else{
                 ALOGV("FreePmem: NULL");
         }
-#endif		
 }
 
 bool SprdCameraHardware::initPreview()
@@ -843,7 +784,7 @@ status_t SprdCameraHardware::cancelAutoFocus()
 {
         return camera_cancel_autofocus();
 }
-uint32_t get_physical_address(sprd_camera_memory_t *mMem,uint32_t *size)
+uint32_t get_physical_address(camera_memory_t *mMem,uint32_t *size)
 {
         *size = mMem->phys_size;
         return mMem->phys_addr;
@@ -1425,7 +1366,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
                         ALOGE("Could not dequeue gralloc buffer!\n");
                         goto callbacks;
                 }
-                //ALOGI("stride: %d, width: %d, height: %d, frame->buf_id: %d.", stride, width, height, frame->buf_id);
+                ALOGI("stride: %d, width: %d, height: %d, frame->buf_id: %d.", stride, width, height, frame->buf_id);
 
                 void *vaddr;
                 if (!mGrallocHal->lock(mGrallocHal,
@@ -1438,7 +1379,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
                                 ALOGE("Fail to get gralloc buffer.");
                                 goto callbacks;
                         } else{
-		//ALOGI("OK to get gralloc buffer. vaddr: 0x%x, frame_addr: 0x%x, frame->buf_Virt_Addr: 0x%x.", (uint32_t)vaddr, (uint32_t)frame_addr, (uint32_t)frame->buf_Virt_Addr);
+		ALOGI("OK to get gralloc buffer. vaddr: 0x%x, frame_addr: 0x%x, frame->buf_Virt_Addr: 0x%x.", (uint32_t)vaddr, (uint32_t)frame_addr, (uint32_t)frame->buf_Virt_Addr);
 	     }
 
 	     {
@@ -1462,7 +1403,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
                         goto callbacks;
                 }
                 else{
-                //ALOGI("OK to enqueue gralloc buffer!");
+                	ALOGI("OK to enqueue gralloc buffer!");
                 }
         }
 }
@@ -1476,7 +1417,7 @@ callbacks:
                 ALOGV("receivePreviewFrame mMsgEnabled: 0x%x",mMsgEnabled);
                 if (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME) {
 #if CAM_OUT_YUV420_UV
-                        sprd_camera_memory_t *tempHeap = GetPmem("/dev/pmem_adsp", frame->dx * frame->dy * 3 /2, 1);
+                        camera_memory_t *tempHeap = GetPmem("/dev/pmem_adsp", frame->dx * frame->dy * 3 /2, 1);
                         if(NULL == tempHeap)
                             return;
                         if(NULL == tempHeap->handle){
@@ -1487,28 +1428,19 @@ callbacks:
                                 ALOGE("fail to camera_rotation_copy_data() in CAMERA_MSG_PREVIEW_FRAME.");
                                 return;
                         }
-                        mData_cb(CAMERA_MSG_PREVIEW_FRAME, tempHeap->camra_memory, 0, NULL, mUser);
+                        mData_cb(CAMERA_MSG_PREVIEW_FRAME, tempHeap, 0, NULL, mUser);
                         FreePmem(tempHeap);
                         tempHeap = NULL;
 #else
                         mData_cb(CAMERA_MSG_PREVIEW_FRAME, mPreviewHeap, offset, mUser);
 #endif
                 }
-                if ((mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) &&(mRecordingMode==1)) {
+                if ((mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) &&(mRecordingMode==1))
+                {
                         nsecs_t timestamp = systemTime();/*frame->timestamp;*/
                         ALOGV("test timestamp = %lld.",timestamp);
                         //mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap->mBuffers[offset], mUser);
-                        mData_cb_timestamp(timestamp, CAMERA_MSG_PREVIEW_FRAME, mPreviewHeap->camra_memory,  offset, mUser);
-                     //ALOGV("receivePreviewFrame: record index: %d, offset: %x, size: %x, frame->buf_Virt_Addr: 0x%x.", offset, off, size, (uint32_t)frame->buf_Virt_Addr);
-                }
-		else if((mMsgEnabled & CAMERA_MSG_PREVIEW_METADATA) && (mRecordingMode==1)) {
-                        nsecs_t timestamp = systemTime();/*frame->timestamp;*/
-                        ALOGV("test timestamp = %lld.",timestamp);
-                        uint32_t *data = (uint32_t *)mPreviewHeap->camra_memory->data + offset * METADATA_SIZE / 4;
-			*data++ = kMetadataBufferTypeCameraSource;
-			*data++ = frame->buffer_phy_addr;
-			*data = (uint32_t)frame->buf_Virt_Addr;
-                        mData_cb_timestamp(timestamp, CAMERA_MSG_PREVIEW_METADATA, mPreviewHeap->camra_memory,  offset, mUser);
+                        mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap, offset, mUser);
                      //ALOGV("receivePreviewFrame: record index: %d, offset: %x, size: %x, frame->buf_Virt_Addr: 0x%x.", offset, off, size, (uint32_t)frame->buf_Virt_Addr);
                 }
 		else {
@@ -1630,12 +1562,12 @@ callbackraw:
 		        frame_size = frame->dx * frame->dy * 3 / 2;        //for YUV420
 		else
 			frame_size = frame->dx * frame->dy * 2;
-	        if (offset + frame_size <= (ssize_t)mRawHeap->phys_size) {
+	        if (offset + frame_size <= (ssize_t)mRawHeap->size) {
 	                offset /= frame_size;
 			   ALOGV("mMsgEnabled: 0x%x, offset: %d.",mMsgEnabled, (uint32_t)offset);
 			   //if (mMsgEnabled & CAMERA_MSG_RAW_IMAGE)
 			   {
-				mData_cb(CAMERA_MSG_RAW_IMAGE, mRawHeap->camra_memory, offset, NULL, mUser);
+				mData_cb(CAMERA_MSG_RAW_IMAGE, mRawHeap, offset, NULL, mUser);
 			    }
 	        }
 	            else ALOGE("receiveRawPicture: virtual address %p is out of range!",

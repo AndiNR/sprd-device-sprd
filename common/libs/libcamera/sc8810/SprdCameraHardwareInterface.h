@@ -22,7 +22,7 @@
 //#include <camera/CameraParameters.h>
 //#include <binder/MemoryBase.h>
 //#include <binder/MemoryHeapBase.h>
-#include <binder/MemoryHeapIon.h>
+//#include <binder/MemoryHeapPmem.h>
 #include <utils/threads.h>
 extern "C" {
     #include <linux/android_pmem.h>
@@ -47,14 +47,6 @@ typedef void (*shutter_callback)(void *);
 typedef void (*raw_callback)(sp<MemoryBase> , void *);
 typedef void (*jpeg_callback)(sp<MemoryBase>, void *);
 typedef void (*autofocus_callback)(bool, void *);
-
-typedef struct sprd_camera_memory {
-	camera_memory_t *camra_memory;
-	MemoryHeapIon *ion_heap;
-	uint32_t phys_addr, phys_size;
-	void *handle;
-	void *data;	
-}sprd_camera_memory_t;
 
 class SprdCameraHardware : public virtual RefBase {
 public:
@@ -131,8 +123,8 @@ public:
     inline  int         getCameraId() const;
 private:
 
-	sprd_camera_memory_t* GetPmem(const char *device_name, int buf_size, int num_bufs);
-	void FreePmem(sprd_camera_memory_t* camera_memory);
+	camera_memory_t* GetPmem(const char *device_name, int buf_size, int num_bufs);
+	void FreePmem(camera_memory_t* camera_memory);
 	void* get_redisplay_mem(uint32_t size, uint32_t count, uint32_t *phy_addr);
        
     //SprdCameraHardware();
@@ -262,15 +254,15 @@ sp<RawPmemPool> mJpegencZoomHeap; //for capture zoom.
 sp<RawPmemPool> mJpegencSwapHeap; //for capture zoom scale.
 */
 
-    sprd_camera_memory_t *mPreviewHeap;	
-    sprd_camera_memory_t *mRawHeap;
-    sprd_camera_memory_t *mJpegencHWHeap;	
-    sprd_camera_memory_t *mTempHWHeap;	
-    sprd_camera_memory_t *mTempJpegSliceHeap;
+    camera_memory_t *mPreviewHeap;
+    camera_memory_t *mRawHeap;
+    camera_memory_t *mJpegencHWHeap;
+    camera_memory_t *mTempHWHeap;
+    camera_memory_t *mTempJpegSliceHeap;
     sp<AshmemPool> mJpegHeap;
-    sprd_camera_memory_t *mJpegencZoomHeap; //for capture zoom.	
-    sprd_camera_memory_t *mJpegencSwapHeap; //for capture zoom scale.
-    sprd_camera_memory_t *mReDisplayHeap;
+    camera_memory_t *mJpegencZoomHeap; //for capture zoom.
+    camera_memory_t *mJpegencSwapHeap; //for capture zoom scale.
+    camera_memory_t *mReDisplayHeap;
 
 
 

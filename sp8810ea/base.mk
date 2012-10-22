@@ -6,6 +6,7 @@ PRODUCT_PROPERTY_OVERRIDES :=
 PRODUCT_PACKAGES := \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \
+	camera.$(TARGET_PLATFORM) \
 	lights.$(TARGET_PLATFORM) \
 	audio.primary.$(TARGET_PLATFORM) \
 	tinymix \
@@ -23,4 +24,3 @@ PRODUCT_COPY_FILES := \
 	device/sprd/common/res/media/media_codecs.xml:system/etc/media_codecs.xml \
 	device/sprd/common/res/media/media_profiles.xml:system/etc/media_profiles.xml \
 	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml
-
