@@ -35,6 +35,10 @@ BOARD_KERNEL_CMDLINE := console=ttyS1,115200n8
 # use default init.rc
 TARGET_PROVIDES_INIT_RC := false
 
+# board specific modules
+BOARD_USES_TINYALSA_AUDIO := true
+BOARD_USE_VETH := true
+
 # ext4 partition layout
 TARGET_USERIMAGES_USE_EXT4 := true
 BOARD_SYSTEMIMAGE_PARTITION_SIZE := 300000000
