@@ -24,7 +24,7 @@ struct image_info {
 
 #define FDL_DL_ADDRESS		0x40000000
 
-#define FDL_IMAGE_PATH		"/dev/mtd/mtd3"
+#define FDL_IMAGE_PATH		"/dev/block/mmcblk0p1"
 #define FDL_OFFSET		0
 #define	FDL_PACKET_SIZE 	256
 #define	FDL_IMAGE_SIZE  	(12*1024)
@@ -34,27 +34,27 @@ unsigned long fdl_image_data[FDL_IMAGE_SIZE+4];
 
 struct image_info download_image_info[]={
 	{ //fixvn
-		"/fixnv/fixnv.bin",
+		"/dev/block/mmcblk0p4",
 		0x1E000,
 		0x400,
 	},
 	{ //fixvn
-		"/fixnv/fixnv.bin",
+		"/dev/block/mmcblk0p4",
 		0x1E000,
 		0x02100000,
 	},
 	{ //DSP code
-		"/dev/mtd/mtd7",
+		"/dev/block/mmcblk0p3",
 		0x3e0000,
 		0x00020000,
 	},
 	{ //ARM code
-		"/dev/mtd/mtd19",
+		"/dev/block/mmcblk0p19",
 		0x009F8000,
 		0x00400000,
 	},
 	{ //running nv
-		"/runtimenv/runtimenv.bin",
+		"/dev/block/mmcblk0p6",
 		0x20000,
 		0x02120000,
 	},
@@ -187,7 +187,7 @@ int download_image(int channel_fd,struct image_info *info)
 	image_fd = open(info->image_path, O_RDONLY,0);
 
 	if(image_fd < 0){
-		printf("open file error %s\n",strerror(errno));
+		printf("open file: %s error %s\n", info->image_path, strerror(errno));
 		return -1;
 	}
 
@@ -242,7 +242,7 @@ void * load_fdl2memory(int *length)
 	
 	fdl_fd = open(FDL_IMAGE_PATH, O_RDONLY,0);
 	if(fdl_fd < 0){
-		printf("open file error %s\n",strerror(errno));
+		printf("open file %s error %s\n", FDL_IMAGE_PATH, strerror(errno));
 		return NULL;
 	}
 	size = FDL_IMAGE_SIZE;
@@ -362,7 +362,12 @@ int modem_boot(void)
     modem_interface_fd = open(DLOADER_PATH, O_RDWR);
     if(modem_interface_fd < 0){
 	printf("open dloader device failed ......\n");
-	return -1;
+        for(;;)
+        {
+            modem_interface_fd = open(DLOADER_PATH, O_RDWR);
+                if(modem_interface_fd==0)
+                        break;
+        }
     }
     printf("open dloader device successfully ... \n");
     download_images(modem_interface_fd);
@@ -370,4 +375,4 @@ int modem_boot(void)
     close(uart_fd);
     printf("MODEM boot finished ......\n");
     return 0;
-}  
+} 
