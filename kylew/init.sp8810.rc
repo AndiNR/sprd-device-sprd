@@ -37,6 +37,14 @@ on boot
     chown system system /sys/class/compass/akm8975/delay_ori
     chown system system /sys/class/compass/akm8975/accel
 
+    chmod 666 /dev/ttyS0
+    chmod 660 /proc/bluetooth/sleep/proto
+    chmod 660 /sys/class/rfkill/rfkill0/state
+    chmod 660 /sys/class/rfkill/rfkill0/type
+    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/state
+    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/type
+    chown bluetooth system /proc/bluetooth/sleep/proto
+
 on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
 
@@ -106,5 +114,20 @@ service sdcard /system/bin/sdcard /data/media 1023 1023
 
 service akmd /system/bin/akmd8975 -m 3
     class main
+    oneshot
+
+service hciattach /system/bin/brcm_patchram_plus --enable_hci --enable_lpm --no2bytes \
+    --tosleep 50000 --baudrate 3000000 --use_baudrate_for_download  \
+    --patchram /system/bin/bcm4330.hcd /dev/ttyS0
+    class main
+    user bluetooth
+    group bluetooth net_bt_admin
+    disabled
+    oneshot
+
+service btld  /system/bin/btld -lpm 0 -hb 3000000
+    user root
+    group bluetooth net_bt_admin
+    disabled
     oneshot
 
