@@ -33,7 +33,7 @@ BOARD_KERNEL_BASE := 0x00000000
 BOARD_KERNEL_CMDLINE := console=ttyS1,115200n8
 
 # use default init.rc
-TARGET_PROVIDES_INIT_RC := false
+TARGET_PROVIDES_INIT_RC := true
 
 # board specific modules
 BOARD_USES_TINYALSA_AUDIO := true
