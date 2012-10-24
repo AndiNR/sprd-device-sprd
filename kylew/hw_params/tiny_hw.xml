@@ -5,11 +5,11 @@
    <path>
 
      <!-- DAC1->Headphone -->
-     <ctl name="HeadPhone Playback Volume" val="8" />
+     <ctl name="HeadPhone Playback Volume" val="12" />
 
      <!-- DAC1->Speaker -->
-     <ctl name="Master Playback Volume" val="11" />
-     <ctl name="Inter PA Playback Volume" val="8" />
+     <ctl name="Master Playback Volume" val="12" />
+     <ctl name="Inter PA Playback Volume" val="12" />
 
      <!-- DAC1->Earpiece -->
      <ctl name="Ear Boost Volume" val="1" />
@@ -84,6 +84,10 @@
      <ctl name="Linein Rec Function" val="0" />
   </path>
 </device>
+
+<private name="mic bias">
+  <func name="Mic Bias Function" val="0" />
+</private>
 
 <private name="vb control">
   <func name="VBC Switch" val="arm" />

@@ -45,6 +45,12 @@
 
 #define CTL_TRACE(exp) ALOGW(#exp" is %s", ((exp) != NULL) ? "success" : "failure")
 
+#define PRIVATE_MIC_BIAS                 "mic bias"
+#define PRIVATE_VBC_CONTROL              "vb control"
+#define PRIVATE_VBC_EQ_SWITCH            "eq switch"
+#define PRIVATE_VBC_EQ_UPDATE            "eq update"
+
+
 /* ALSA cards for sprd */
 #define CARD_SPRDPHONE "sprdphone"
 #define CARD_VAUDIO    "VIRTUAL AUDIO"
@@ -56,11 +62,11 @@
 /* constraint imposed by ABE: all period sizes must be multiples of 160 */
 #define VBC_BASE_FRAME_COUNT 160
 /* number of base blocks in a short period (low latency) */
-#define SHORT_PERIOD_MULTIPLIER 6  /* 21 ms */
+#define SHORT_PERIOD_MULTIPLIER 10  /* 36 ms */
 /* number of frames per short period (low latency) */
 #define SHORT_PERIOD_SIZE (VBC_BASE_FRAME_COUNT * SHORT_PERIOD_MULTIPLIER)
 /* number of short periods in a long period (low power) */
-#define LONG_PERIOD_MULTIPLIER 14  /* 304 ms */
+#define LONG_PERIOD_MULTIPLIER 8  /* 304 ms */
 /* number of frames per long period (low power) */
 #define LONG_PERIOD_SIZE (SHORT_PERIOD_SIZE * LONG_PERIOD_MULTIPLIER)
 /* number of periods for low power playback */
@@ -131,6 +137,7 @@ struct tiny_dev_cfg {
 };
 
 struct tiny_private_ctl {
+    struct mixer_ctl *mic_bias_switch;
     struct mixer_ctl *vbc_switch;
     struct mixer_ctl *vbc_eq_switch;
     struct mixer_ctl *vbc_eq_update;
@@ -231,6 +238,7 @@ static const struct {
     { AUDIO_DEVICE_IN_WIRED_HEADSET, "headset-in" },
     { AUDIO_DEVICE_IN_AUX_DIGITAL, "digital" },
     { AUDIO_DEVICE_IN_BACK_MIC, "back-mic" },
+    { AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, "line"},
     //{ "linein-capture"},
 };
 
@@ -256,7 +264,7 @@ static int get_route_depth (
     int devices,
     int on);
 
-//#include "at_commands.c"
+#include "at_commands.c"
 
 
 /*
@@ -274,6 +282,8 @@ int set_call_route(struct tiny_audio_device *adev, int device, int on)
     cur_depth = get_route_depth(adev, device, on);
     if (adev->mixer && cur_setting)
         set_route_by_array(adev->mixer, cur_setting, cur_depth);
+    //open Mic Bias
+    mixer_ctl_set_value(adev->private_ctl.mic_bias_switch, 0, on);
     return 0;
 }
 
@@ -365,22 +375,35 @@ static void select_devices(struct tiny_audio_device *adev)
 
     /* Turn on new devices first so we don't glitch due to powerdown... */
     for (i = 0; i < adev->num_dev_cfgs; i++)
-	if (adev->devices & adev->dev_cfgs[i].mask)
+	if (adev->devices & adev->dev_cfgs[i].mask) {
+	    if (AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET == adev->dev_cfgs[i].mask
+	        && adev->in_call == 1) {
+	        ALOGI("In_call now, on devices is (0x%08x)", adev->devices);
+	        continue;
+	    }
 	    set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
 			       adev->dev_cfgs[i].on_len);
+    }
 
     /* ...then disable old ones. */
     for (i = 0; i < adev->num_dev_cfgs; i++)
-	if (!(adev->devices & adev->dev_cfgs[i].mask))
+	if (!(adev->devices & adev->dev_cfgs[i].mask)) {
+        if (AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET == adev->dev_cfgs[i].mask
+	        && adev->in_call == 1) {
+	        ALOGI("In_call now, off devices is (0x%08x)", adev->devices);
+	        continue;
+	    }
 	    set_route_by_array(adev->mixer, adev->dev_cfgs[i].off,
 			       adev->dev_cfgs[i].off_len);
+    }
 
 }
 
 static int start_call(struct tiny_audio_device *adev)
 {
     ALOGE("Opening modem PCMs");
-    //open linein function here?
+    //open linein function here
+    set_call_route(adev, AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, 1);
     return 0;
 }
 
@@ -388,6 +411,7 @@ static void end_call(struct tiny_audio_device *adev)
 {
     ALOGE("Closing modem PCMs");
     //close linein function.
+    set_call_route(adev, AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, 0);
 }
 
 static void set_eq_filter(struct tiny_audio_device *adev)
@@ -498,22 +522,17 @@ static void select_mode(struct tiny_audio_device *adev)
 {
     if (adev->mode == AUDIO_MODE_IN_CALL) {
 		ALOGE("Entering IN_CALL state, %s first call...devices:0x%x mode:%d ", adev->in_call ? "not":"is",adev->devices,adev->mode);
-		if (!adev->in_call) {
-//		    force_all_standby(adev);
-
-            start_call(adev);    
-//		    adev->in_call = 1;
-		}
+        if (!adev->in_call) {
+            start_call(adev);
+            adev->in_call = 1;
+        }
     } else {
         ALOGE("Leaving IN_CALL state, in_call=%d, mode=%d devices:0x%x ",
-	     adev->in_call, adev->mode,adev->devices);
-		if (adev->in_call) {
-		    end_call(adev);
-			adev->in_call = 0;
-//		    force_all_standby(adev);
-//		    select_output_device(adev);
-//		    select_input_device(adev);
-		}
+	            adev->in_call, adev->mode,adev->devices);
+        if (adev->in_call) {
+            end_call(adev);
+            adev->in_call = 0;
+        }
     }
 }
 
@@ -807,38 +826,9 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             adev->devices |= val;
             ALOGW("out_set_parameters want to set devices:0x%x old_mode:%d ",adev->devices,cur_mode);
             cur_mode = adev->mode;
+            select_devices(adev);
             if (AUDIO_MODE_IN_CALL == adev->mode) {
-                /*ret = at_cmd_route(adev,1);
-                if (ret < 0) {
-                    ALOGE("out_set_parameters at_cmd_route error(%d) ",ret);
-                    pthread_mutex_unlock(&out->lock);
-                    pthread_mutex_unlock(&adev->lock);
-                    return ret;
-            	}
-            	if (!adev->in_call) {
-                    adev->active_output = out;
-                    ALOGW("chj out_set_parameters first call,need to sync with ril ");
-                    sync2ril(1);
-                    out->pcm = pcm_open(s_tinycard, PORT_MODEM, PCM_OUT | PCM_MMAP, &pcm_config_vx);
-                    if (!pcm_is_ready(out->pcm)) {
-                        ALOGE("cannot open pcm_out driver: %s", pcm_get_error(out->pcm));
-                        pcm_close(out->pcm);
-                        adev->active_output = NULL;
-                        pthread_mutex_unlock(&out->lock);
-                        pthread_mutex_unlock(&adev->lock);
-                        return -ENOMEM;
-                    }
-                    ret = at_cmd_open(adev);
-                    if(ret < 0){
-                        ALOGE("chj out_set_parameters, at_cmd_open error,ret(%d) ",ret);
-                        pthread_mutex_unlock(&out->lock);
-                        pthread_mutex_unlock(&adev->lock);
-                        return ret;
-                    }
-                    adev->in_call = 1;
-            	}*/
-            }else{
-                select_devices(adev);
+                at_cmd_route(adev,1);
             }
         }else{
             ALOGW("the same devices(0x%x) with val(0x%x) val is zero...",adev->devices,val);
@@ -1868,7 +1858,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
     memcpy(&in->config, &pcm_config_mm_ul, sizeof(pcm_config_mm_ul));
     in->config.channels = channel_count;
-    
+
     in->buffer = malloc(in->config.period_size *
                         audio_stream_frame_size(&in->stream.common));
     if (!in->buffer) {
@@ -1953,7 +1943,7 @@ static int adev_close(hw_device_t *device)
         free(adev->dev_cfgs[i].off);
     };
     free(adev->dev_cfgs);
-    
+
     mixer_close(adev->mixer);
     free(device);
     return 0;
@@ -2079,18 +2069,22 @@ static void adev_config_start(void *data, const XML_Char *elem,
         memcpy(s->private_name, name, strlen(name));
     }
     else if (strcmp(elem, "func") == 0) {
-        if (strcmp(s->private_name, "vb control") == 0) {
+        if (strcmp(s->private_name, PRIVATE_VBC_CONTROL) == 0) {
             s->adev->private_ctl.vbc_switch =
                  mixer_get_ctl_by_name(s->adev->mixer, name);
             CTL_TRACE(s->adev->private_ctl.vbc_switch);
-        } else if (strcmp(s->private_name, "eq switch") == 0) {
+        } else if (strcmp(s->private_name, PRIVATE_VBC_EQ_SWITCH) == 0) {
             s->adev->private_ctl.vbc_eq_switch =
                  mixer_get_ctl_by_name(s->adev->mixer, name);
             CTL_TRACE(s->adev->private_ctl.vbc_eq_switch);
-        } else if (strcmp(s->private_name, "eq update") == 0) {
+        } else if (strcmp(s->private_name, PRIVATE_VBC_EQ_UPDATE) == 0) {
             s->adev->private_ctl.vbc_eq_update =
                  mixer_get_ctl_by_name(s->adev->mixer, name);
             CTL_TRACE(s->adev->private_ctl.vbc_eq_update);
+        } else if (strcmp(s->private_name, PRIVATE_MIC_BIAS) == 0) {
+            s->adev->private_ctl.mic_bias_switch =
+                 mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.mic_bias_switch);
         }
     }
 }

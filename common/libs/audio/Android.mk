@@ -30,13 +30,13 @@ LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
 	external/expat/lib \
 	system/media/audio_utils/include \
-	system/media/audio_effects/include
-#	device/sprd/common/apps/engineeringmodel/engcs
+	system/media/audio_effects/include \
+	device/sprd/common/apps/engineeringmodel/engcs
 
 LOCAL_SHARED_LIBRARIES := \
 	liblog libcutils libtinyalsa libaudioutils \
-	libexpat libdl
-#	libengclient
+	libexpat libdl \
+	libengclient
 
 LOCAL_MODULE_TAGS := optional
 
