@@ -1564,14 +1564,18 @@ callbackraw:
 			frame_size = frame->dx * frame->dy * 2;
 	        if (offset + frame_size <= (ssize_t)mRawHeap->size) {
 	                offset /= frame_size;
-			   ALOGV("mMsgEnabled: 0x%x, offset: %d.",mMsgEnabled, (uint32_t)offset);
-			   //if (mMsgEnabled & CAMERA_MSG_RAW_IMAGE)
-			   {
+			ALOGV("mMsgEnabled: 0x%x, offset: %d.",mMsgEnabled, (uint32_t)offset);
+			if (mMsgEnabled & CAMERA_MSG_RAW_IMAGE) {
+				ALOGV("mMsgEnabled & CAMERA_MSG_RAW_IMAGE");
 				mData_cb(CAMERA_MSG_RAW_IMAGE, mRawHeap, offset, NULL, mUser);
-			    }
+			}
+			ALOGV("mMsgEnabled & CAMERA_MSG_RAW_IMAGE after.");
+			if(mMsgEnabled & CAMERA_MSG_RAW_IMAGE_NOTIFY) {
+				ALOGV("mMsgEnabled & CAMERA_MSG_RAW_IMAGE_NOTIFY");
+				mNotify_cb(CAMERA_MSG_RAW_IMAGE_NOTIFY, 0,0,mUser);
+			}
 	        }
-	            else ALOGE("receiveRawPicture: virtual address %p is out of range!",
-	                      frame->buf_Virt_Addr);
+	            else ALOGE("receiveRawPicture: virtual address %p is out of range!", frame->buf_Virt_Addr);
         }
         else ALOGV("Raw-picture callback was canceled--skipping.");
 	FreePmem(mJpegencZoomHeap);
