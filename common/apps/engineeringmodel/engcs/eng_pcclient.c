@@ -422,6 +422,7 @@ void eng_check_factorymode_fornand(void)
 	char config_property[64];
 
 
+#ifdef USE_BOOT_AT_DIAG
 	ENG_LOG("%s: status=%x\n",__func__, status);
 	property_get("persist.sys.usb.config", config_property, "");
 	if((status==1)||(status == ENG_SQLSTR2INT_ERR)) {
@@ -449,6 +450,7 @@ void eng_check_factorymode_fornand(void)
 	} else {
 		remove(ENG_FACOTRYMODE_FILE);
 	}
+#endif
 
 	fd=open(ENG_FACOTRYSYNC_FILE, O_RDWR|O_CREAT|O_TRUNC);
 	if(fd > 0)

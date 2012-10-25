@@ -136,6 +136,10 @@ ifeq ($(strip $(BOARD_USE_EMMC)),true)
 LOCAL_CFLAGS += -DCONFIG_EMMC
 endif
 
+ifeq ($(USE_BOOT_AT_DIAG),true)
+LOCAL_CFLAGS += -DUSE_BOOT_AT_DIAG
+endif
+
 LOCAL_C_INCLUDES    +=  external/sqlite/dist/
 
 LOCAL_C_INCLUDES    +=  engphasecheck.h
