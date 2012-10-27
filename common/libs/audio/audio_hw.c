@@ -112,7 +112,7 @@ struct pcm_config pcm_config_mm_ul = {
 struct pcm_config pcm_config_vx = {
     .channels = 2,
     .rate = VX_NB_SAMPLING_RATE,
-    .period_size = 160,
+    .period_size = VBC_BASE_FRAME_COUNT,
     .period_count = 2,
     .format = PCM_FORMAT_S16_LE,
 };
@@ -150,6 +150,7 @@ struct tiny_audio_device {
     struct mixer *mixer;
     audio_mode_t mode;
     int devices;
+    int prev_devices;
     int in_call;
     float voice_volume;
     struct tiny_stream_in *active_input;
@@ -371,8 +372,9 @@ static void select_devices(struct tiny_audio_device *adev)
 {
     unsigned int i;
 
-    ALOGI("Changing devices 0x%08x\n", adev->devices);
-
+    ALOGI("Changing devices: 0x%08x, prev_devices: 0x%08x", adev->devices, adev->prev_devices);
+    if (adev->prev_devices == adev->devices) return ;
+    adev->prev_devices = adev->devices;
     /* Turn on new devices first so we don't glitch due to powerdown... */
     for (i = 0; i < adev->num_dev_cfgs; i++)
 	if (adev->devices & adev->dev_cfgs[i].mask) {
@@ -429,75 +431,6 @@ static void set_output_volumes(struct tiny_audio_device *adev, bool tty_volume)
 {
 }
 
-#if 0
-static int sync2ril(int do_sync)
-{
-    static int ril_audio_ipc_0 = -1, ril_audio_ipc_1 = -1;
-    int retval;
-    struct timeval tv;
-    fd_set rfds;
-    #define RIL_AUDIO_IPC_TIMEOUT2  50 /* timeout value for clear pipe data */
-    #define RIL_AUDIO_IPC_TIMEOUT   4000 /* when system is so busy, sometimes ril start later,
-											so this value should be big enough */
-    char buf[128];
-    ALOGW("sync2ril start.");
-    if (ril_audio_ipc_0 < 0)
-			ril_audio_ipc_0 = open("/dev/pipe/ril.audio.0", O_RDWR);	//read from ril
-    if (ril_audio_ipc_1 < 0)
-			ril_audio_ipc_1 = open("/dev/pipe/ril.audio.1", O_RDWR);	//write to ril
-    if (ril_audio_ipc_0 >= 0 && ril_audio_ipc_1 >= 0) {
-        if (do_sync) {
-            FD_ZERO(&rfds);
-            FD_SET(ril_audio_ipc_0, &rfds);
-            tv.tv_sec = RIL_AUDIO_IPC_TIMEOUT / 1000; // because ril do first then sync2ril, so we do not need delay
-            tv.tv_usec = (RIL_AUDIO_IPC_TIMEOUT % 1000) * 1000;
-            retval = select(ril_audio_ipc_0 + 1, &rfds, NULL, NULL, &tv);
-            if (retval == -1) {
-               ALOGW("sync2ril ================== [ BUG pipe error ] ==================");
-            } else if (retval) {
-                ALOGW("sync2ril have read ipc from /dev/pipe/ril.audio.0");
-                read(ril_audio_ipc_0, buf, sizeof(buf) - 1);
-                ALOGW("sync2ril get %s from ril", buf);
-                ALOGW("sync2ril write return-ipc to /dev/pipe/ril.audio.1");
-                write(ril_audio_ipc_1, "audio->ril : sync ok", 21);
-            } else {
-                ALOGW("sync2ril ================== [ ril pipe %dms timeout, so force passed ] ==================",RIL_AUDIO_IPC_TIMEOUT );
-            }
-        } else {
-            int fd_max;
-            FD_ZERO(&rfds);
-            FD_SET(ril_audio_ipc_0, &rfds);
-            FD_SET(ril_audio_ipc_1, &rfds);
-            tv.tv_sec = RIL_AUDIO_IPC_TIMEOUT2 / 1000;
-            tv.tv_usec = (RIL_AUDIO_IPC_TIMEOUT2 % 1000) * 1000;
-            if (ril_audio_ipc_1 > ril_audio_ipc_0){
-				fd_max = ril_audio_ipc_1;
-			}else{
-				fd_max = ril_audio_ipc_0;
-			}
-
-            retval = select(fd_max + 1, &rfds, NULL, NULL, &tv);
-            if (retval == -1) {
-               ALOGW("sync2ril  ================== [ BUG pipe error ] ==================");
-            } else if (retval) {
-                if (FD_ISSET(ril_audio_ipc_0, &rfds)) {
-                    ALOGW("sync2ril [ clear ] read ipc from /dev/pipe/ril.audio.0");
-                    read(ril_audio_ipc_0, buf, sizeof(buf) - 1);
-                }
-                if (FD_ISSET(ril_audio_ipc_1, &rfds)) {
-                    ALOGW("sync2ril [ clear ] read ipc from /dev/pipe/ril.audio.1");
-                    read(ril_audio_ipc_1, buf, sizeof(buf) - 1);
-                }
-            }
-        }
-    } else {
-        ALOGW("sync2ril Failed to open /dev/pipe/ril.audio.0 & /dev/pipe/ril.audio.1");
-    }
-    ALOGW("sync2ril done.");
-    return 0;
-}
-#endif
-
 static void force_all_standby(struct tiny_audio_device *adev)
 {
     struct tiny_stream_in *in;
@@ -521,7 +454,7 @@ static void force_all_standby(struct tiny_audio_device *adev)
 static void select_mode(struct tiny_audio_device *adev)
 {
     if (adev->mode == AUDIO_MODE_IN_CALL) {
-		ALOGE("Entering IN_CALL state, %s first call...devices:0x%x mode:%d ", adev->in_call ? "not":"is",adev->devices,adev->mode);
+        ALOGE("Entering IN_CALL state, %s first call...devices:0x%x mode:%d ", adev->in_call ? "not":"is",adev->devices,adev->mode);
         if (!adev->in_call) {
             start_call(adev);
             adev->in_call = 1;
@@ -881,19 +814,10 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
     int kernel_frames;
     void *buf;
 
-    //BLUE_TRACE("out_write, bytes=%d, in_frames=%d, frame_size=%d", bytes,in_frames, frame_size);
     /* acquiring hw device mutex systematically is useful if a low priority thread is waiting
      * on the output stream mutex - e.g. executing select_mode() while holding the hw device
      * mutex
      */
-     if (adev->in_call) {
-	 	ALOGW("out_write incall(%d) ...so force return...",adev->in_call);
-        usleep(bytes * 1000000 / audio_stream_frame_size(&stream->common) /
-               out_get_sample_rate(&stream->common));
-		return bytes;		/*should return,otherwise we can wait for the normal pcm some time*/
-     }
-
-
     pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&out->lock);
     if (out->standby) {
@@ -971,8 +895,7 @@ exit:
     pthread_mutex_unlock(&out->lock);
     if (ret != 0) {
         ALOGW("warning: ret=%d, (%s)", ret, pcm_get_error(out->pcm));
-        usleep(bytes * 1000000 / audio_stream_frame_size(&stream->common) /
-               out_get_sample_rate(&stream->common));
+        do_output_standby(out);
     }
 
     if (force_input_standby) {
