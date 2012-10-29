@@ -30,6 +30,7 @@ PRODUCT_PACKAGES := \
 PRODUCT_PACKAGES += \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \
+	camera.$(TARGET_PLATFORM) \
 	lights.$(TARGET_PLATFORM) \
 	audio.primary.$(TARGET_PLATFORM) \
 	tinymix \
