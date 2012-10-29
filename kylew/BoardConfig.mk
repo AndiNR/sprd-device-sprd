@@ -38,6 +38,8 @@ TARGET_PROVIDES_INIT_RC := true
 # board specific modules
 BOARD_USES_TINYALSA_AUDIO := true
 BOARD_USE_VETH := true
+BOARD_SPRD_RIL := true
+BOARD_SAMSUNG_RIL := false
 
 # ext4 partition layout
 TARGET_USERIMAGES_USE_EXT4 := true
