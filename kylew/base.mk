@@ -36,7 +36,8 @@ PRODUCT_PACKAGES += \
 	tinymix \
 	sensors.$(TARGET_BOARD)  \
 	$(MALI)\
-	modem_control
+	modem_control \
+        nvitemd
 
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/init.rc:root/init.rc \

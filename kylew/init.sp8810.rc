@@ -112,6 +112,12 @@ service ril-daemon1 /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -
 on property:persist.msms.phone_count=2
     start ril-daemon1
 
+#nvitemd
+service nvitem /system/bin/nvitemd
+    class main
+    user root
+    oneshot
+
 # create virtual SD card at /storage/sdcard0, based on the /data/media directory
 # daemon will drop to user/group system/media_rw after initializing
 # underlying files in /data/media will be created with user and group media_rw (1023)
