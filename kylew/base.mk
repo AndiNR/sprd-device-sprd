@@ -52,6 +52,8 @@ PRODUCT_COPY_FILES := \
 	device/sprd/common/res/media/media_codecs.xml:system/etc/media_codecs.xml \
 	device/sprd/common/res/media/media_profiles.xml:system/etc/media_profiles.xml \
 	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml \
+	device/sprd/partner/g05t/lib_gsd5t.so:system/lib/hw/gps.kylew.so \
+	device/sprd/partner/g05t/sirfgps.conf:system/vendor/etc/sirfgps.conf \
 	frameworks/native/data/etc/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml
 
 $(call inherit-product, $(BOARDDIR)/../common/apps/engineeringmodel/module.mk)
