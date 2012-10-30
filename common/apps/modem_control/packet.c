@@ -354,7 +354,6 @@ int  send_start_message(int fd,int size,unsigned long addr,int flag)
 	} 
 
     	printf("START_NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_buffer[2],raw_buffer[3],raw_buffer[4],raw_buffer[5],raw_buffer[6],raw_buffer[7]);
-	while(1);
 	return -1;
 }
 /******************************************************************************
@@ -485,7 +484,6 @@ int  send_data_message(int fd,char *buffer,int data_size,int flag)
 		}
 	} 
     	printf("DATA_NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_buffer[2],raw_buffer[3],raw_buffer[4],raw_buffer[5],raw_buffer[6],raw_buffer[7]);
-	while(1);
 	return -1;
 }
 /******************************************************************************
@@ -548,7 +546,6 @@ int  send_exec_message(int fd,unsigned long addr,int flag)
 		}
 	} 
     	printf("EXEC_NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_buffer[2],raw_buffer[3],raw_buffer[4],raw_buffer[5],raw_buffer[6],raw_buffer[7]);
-	///while(1);
 	return -1;
 }
 
