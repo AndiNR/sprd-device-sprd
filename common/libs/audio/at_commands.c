@@ -2,11 +2,15 @@
 #include <sys/uio.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
+#include <cutils/properties.h>
 
 static int at_cmd_fd = -1;
 static int at_cmd_prefix_len;
 static char at_cmd_prefix[16];
+static char pwrprop[PROPERTY_VALUE_MAX];
+static  char cmd[30];
 
 #ifdef __cplusplus
 extern "C" {
@@ -98,6 +102,14 @@ int at_cmd_send_recv(void *s_buf, size_t s_len, void *r_buf, size_t r_len)
     return -1;
 }
 
+void at_cmd_route_done(struct tiny_audio_device *adev)
+{
+    property_get("ro.gpio.pcm_device_switch",pwrprop,NULL);
+    sprintf(cmd,"echo %d 0 1 0 > /dev/gpio",atoi(pwrprop));
+    system(cmd);
+    ALOGI("Switch PCM control back to AP, adev->devices=0x%08x", adev->devices);
+}
+
 int at_cmd_route(struct tiny_audio_device *adev, int on)
 {
     char r_buf[32];
@@ -112,6 +124,12 @@ int at_cmd_route(struct tiny_audio_device *adev, int on)
     } else if (adev->devices & (AUDIO_DEVICE_OUT_BLUETOOTH_SCO
                                 | AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET
                                 | AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT)) {
+
+        property_get("ro.gpio.pcm_device_switch",pwrprop,NULL);
+        sprintf(cmd,"echo %d 1 1 1 > /dev/gpio",atoi(pwrprop));
+        system(cmd);
+        ALOGI("Switch PCM control to CP for BT call.");
+
         at_cmd = "AT+SSAM=5";
     } else if (adev->devices & AUDIO_DEVICE_OUT_SPEAKER) {
         at_cmd = "AT+SSAM=1";
@@ -245,7 +263,6 @@ int at_cmd_headset_volume_max(void)
     return 0;
 }
 
-#include <cutils/properties.h>
 int at_cmd_volume(float vol, int mode)
 {
     char r_buf[256];

@@ -414,6 +414,7 @@ static void end_call(struct tiny_audio_device *adev)
     ALOGE("Closing modem PCMs");
     //close linein function.
     set_call_route(adev, AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, 0);
+    at_cmd_route_done(adev);
 }
 
 static void set_eq_filter(struct tiny_audio_device *adev)
