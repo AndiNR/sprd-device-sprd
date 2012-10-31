@@ -25,7 +25,8 @@ PRODUCT_PACKAGES := \
 	CalendarProvider \
 	bluetooth-health \
 	hostapd \
-	wpa_supplicant.conf
+	wpa_supplicant.conf \
+	audio.a2dp.default
 
 PRODUCT_PACKAGES += \
 	gralloc.$(TARGET_PLATFORM) \
