@@ -29,6 +29,9 @@ struct image_info {
 #define	FDL_PACKET_SIZE 	256
 #define	FDL_IMAGE_SIZE  	(12*1024)
 #define HS_PACKET_SIZE		0x8000
+
+#define	DL_FAILURE		(-1)
+#define DL_SUCCESS		(0)
 char test_buffer[HS_PACKET_SIZE]={0};
 unsigned long fdl_image_data[FDL_IMAGE_SIZE+4];
 
@@ -45,7 +48,7 @@ struct image_info download_image_info[]={
 	},
 	{ //DSP code
 		"/dev/block/mmcblk0p3",
-		0x3e0000,
+		0x200000,
 		0x00020000,
 	},
 	{ //ARM code
@@ -183,6 +186,7 @@ int download_image(int channel_fd,struct image_info *info)
 	char *buffer;
 	int i,image_size;
 	int count = 0;
+	int ret;
 	
 	image_fd = open(info->image_path, O_RDONLY,0);
 
@@ -194,7 +198,11 @@ int download_image(int channel_fd,struct image_info *info)
 	printf("Start download image %s image_size 0x%x address 0x%x\n",info->image_path,info->image_size,info->address);
 	image_size = info->image_size;
 	count = (image_size+HS_PACKET_SIZE-1)/HS_PACKET_SIZE;
-	send_start_message(channel_fd,count*HS_PACKET_SIZE,info->address,1);
+	ret = send_start_message(channel_fd,count*HS_PACKET_SIZE,info->address,1);
+	if(ret != DL_SUCCESS){
+		close(image_fd);
+		return DL_FAILURE;
+	}
         for(i=0;i<count;i++){
 		packet_size = HS_PACKET_SIZE;
 		buffer = (char *)test_buffer;
@@ -211,27 +219,34 @@ int download_image(int channel_fd,struct image_info *info)
 			image_size = 0;
 		}else { image_size -= HS_PACKET_SIZE;}
 		//memset(test_buffer,i,HS_PACKET_SIZE);
-		send_data_message(channel_fd,test_buffer,HS_PACKET_SIZE,1);
+		ret = send_data_message(channel_fd,test_buffer,HS_PACKET_SIZE,1);
+		if(ret != DL_SUCCESS){
+			close(image_fd);
+			return DL_FAILURE;
+		}
 	}
 
-	send_end_message(channel_fd,1);
+	ret = send_end_message(channel_fd,1);
 
 	close(image_fd);
-	return 0;
+	return ret;
 }
 
-void download_images(int channel_fd)
+int download_images(int channel_fd)
 {
 	struct image_info *info;
-	int i;
+	int i ,ret;
 	int image_count = sizeof(download_image_info)/sizeof(download_image_info[0]);
 	
 	info = &download_image_info[0];
 	for(i=0;i<image_count;i++){
-		download_image(channel_fd,info);
+		ret = download_image(channel_fd,info);
+		if(ret != DL_SUCCESS)
+			break;
 		info++;
 	}
 	send_exec_message(channel_fd,0x400000,1);
+	return ret;
 }
 
 void * load_fdl2memory(int *length)
@@ -275,6 +290,7 @@ static int download_fdl(int uart_fd)
 	if(buffer == NULL)
 		return -1;
 	ret = send_start_message(uart_fd,size,FDL_DL_ADDRESS,0);
+
 	while(size){
 		send_data_message(uart_fd,buffer,FDL_PACKET_SIZE,0);		
 		buffer += FDL_PACKET_SIZE;
@@ -336,20 +352,25 @@ int open_uart_device(int polling_mode,int speed)
 int modem_boot(void)  
 {  
     int uart_fd;
+    int ret=0;
     unsigned int i;  
     int nread;  
     char buff[512]; 
     unsigned long offset = 0,step = 4*1024;
 
-    boot_status = 0;
+    modem_interface_fd = -1;
+reboot_modem:    
     uart_fd = open_uart_device(1,115200);
     if(uart_fd < 0)
 	return -1;  
+
 #ifndef __TEST_SPI_ONLY__
-    try_to_connect_modem(uart_fd);
-    boot_status = 1;
-    send_connect_message(uart_fd,0);
-    printf("send connect_message ...\n");
+    do{
+    	boot_status = 0;
+    	try_to_connect_modem(uart_fd);
+    	boot_status = 1;
+    	ret = send_connect_message(uart_fd,0);
+    }while(ret < 0);
 
     download_fdl(uart_fd);
     try_to_connect_modem(uart_fd);
@@ -359,20 +380,27 @@ int modem_boot(void)
 	return -1; 
     uart_send_change_spi_mode_message(uart_fd);
 #endif
+    
     modem_interface_fd = open(DLOADER_PATH, O_RDWR);
     if(modem_interface_fd < 0){
 	printf("open dloader device failed ......\n");
         for(;;)
         {
-            modem_interface_fd = open(DLOADER_PATH, O_RDWR);
+            	modem_interface_fd = open(DLOADER_PATH, O_RDWR);
                 if(modem_interface_fd==0)
                         break;
         }
     }
     printf("open dloader device successfully ... \n");
-    download_images(modem_interface_fd);
-    close(modem_interface_fd);
+    
+    ret = download_images(modem_interface_fd);
     close(uart_fd);
+    close(modem_interface_fd);
+    if(ret == DL_FAILURE){
+	sleep(10);
+	goto reboot_modem;
+    }
+    
     printf("MODEM boot finished ......\n");
     return 0;
 } 

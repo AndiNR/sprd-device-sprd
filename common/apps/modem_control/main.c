@@ -30,7 +30,7 @@ typedef enum _MOMDEM_STATE{
 	MODEM_STA_INIT,
 	MODEM_STA_ALIVE,
 	MODEM_STA_ASSERT,
-	MODEM_STA_RESET,
+	MODEM_STA_BOOTCOMP,
 	MODEM_STA_MAX
 } MODEM_STA_E;
 
@@ -157,23 +157,6 @@ static void *modemd_listenaccept_thread(void *par)
 		}
 	}
 }
-static void dump_modem_memory(void)
-{
-	int  read_len;
-	int  length=0;
-	char read_buffer[4096] = {0};
-	int modem_interface_fd = open(DLOADER_PATH, O_RDONLY);	
-
-	if(modem_interface_fd > 0){
-		do{
-			read_len = read(modem_interface_fd,read_buffer,sizeof(read_buffer));
-			if(read_len == 4)
-				break;
-			length+=read_len;
-		}while(1);
-		close(modem_interface_fd);
-	}
-}
 
 static int translate_modem_state_message(char *message)
 {
@@ -242,15 +225,21 @@ static void process_modem_state_message(char *message,int size)
 		break;
 		case MODEM_STA_ASSERT:
 			if(reset_status==1){
-				modem_state =MODEM_STA_RESET;
-				printf("modem_state2 = MODEM_STA_RESET\n");
-				dump_modem_memory();
+				
+				printf("modem_state2 = MODEM_STA_BOOT\n");
+				modem_state = MODEM_STA_BOOT;
 			}
 		break;
-		case MODEM_STA_RESET:
-			if(alive_status == 0){
-				modem_state = MODEM_STA_BOOT;
-				printf("modem_state3 = MODEM_STA_BOOT\n");
+		case MODEM_STA_BOOTCOMP:
+			if(reset_status==0){
+				if(alive_status == 1){
+					int pid;
+					modem_state = MODEM_STA_ALIVE;
+					printf("modem_state0 = MODEM_STA_ALIVE\n"); 
+					pid = get_task_pid(MONITOR_APP);
+					if((pid > 0)&&(!first_alive))
+						kill(pid, SIGUSR2);
+				}
 			}
 		break;
         	case MODEM_STA_ALIVE:
@@ -266,9 +255,8 @@ static void process_modem_state_message(char *message,int size)
 			}
 			
 			if(reset_status==1){
-				modem_state =MODEM_STA_RESET;
-				printf("modem_state5 = MODEM_STA_RESET\n");
-				dump_modem_memory();
+				printf("modem_state2 = MODEM_STA_BOOT\n");
+				modem_state = MODEM_STA_BOOT;
 			}
 		break;
 		default:
@@ -304,9 +292,9 @@ int main(int argc, char *argv[])
 			process_modem_state_message(buf,ret);
 		}
 		if(modem_state == MODEM_STA_BOOT){
+			modem_boot();
 			sleep(1);
-			modem_boot( );
-			modem_state = MODEM_STA_INIT;
+			modem_state = MODEM_STA_BOOTCOMP;
 			continue;
 		}
 	}while(1);

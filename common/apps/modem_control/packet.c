@@ -282,13 +282,7 @@ int  send_connect_message(int fd,int flag)
 			return 0;
 		}
 	} 
-    	printf("NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_buffer[2],raw_buffer[3],raw_buffer[4],raw_buffer[5],raw_buffer[6],raw_buffer[7]);
-	while(1){
-                retval = read(fd,&raw_buffer[0],1);
-                if(retval > 0)
-                      	printf("NACK::%x \n",raw_buffer[0]);
-
-        };
+    	printf("CONNECT_NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_buffer[2],raw_buffer[3],raw_buffer[4],raw_buffer[5],raw_buffer[6],raw_buffer[7]);
 	return -1;
 }
 /******************************************************************************
