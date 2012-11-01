@@ -55,7 +55,8 @@ PRODUCT_COPY_FILES := \
 	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml \
 	device/sprd/partner/g05t/lib_gsd5t.so:system/lib/hw/gps.kylew.so \
 	device/sprd/partner/g05t/sirfgps.conf:system/vendor/etc/sirfgps.conf \
-	frameworks/native/data/etc/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml
+	frameworks/native/data/etc/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml \
+	frameworks/native/data/etc/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml
 
 $(call inherit-product, $(BOARDDIR)/../common/apps/engineeringmodel/module.mk)
 BOARD_WLAN_DEVICE_REV       := bcm4330_b1
