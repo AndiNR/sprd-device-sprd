@@ -290,16 +290,23 @@ static int download_fdl(int uart_fd)
 	if(buffer == NULL)
 		return -1;
 	ret = send_start_message(uart_fd,size,FDL_DL_ADDRESS,0);
-
+	if(ret == DL_FAILURE)
+		return ret;
 	while(size){
-		send_data_message(uart_fd,buffer,FDL_PACKET_SIZE,0);		
+		ret = send_data_message(uart_fd,buffer,FDL_PACKET_SIZE,0);
+		if(ret == DL_FAILURE)
+			return ret;		
 		buffer += FDL_PACKET_SIZE;
 		size -= FDL_PACKET_SIZE;
 	}
-	send_end_message(uart_fd,0);
-	send_exec_message(uart_fd,FDL_DL_ADDRESS,0);
+	ret = send_end_message(uart_fd,0);
+	if(ret == DL_FAILURE)
+		return ret;
+	ret = send_exec_message(uart_fd,FDL_DL_ADDRESS,0);
+	if(ret == DL_FAILURE)
+		return ret;
 
-	return 0;
+	return ret;
 }
 static void print_log_data(char *buf, int cnt)
 {
@@ -358,7 +365,6 @@ int modem_boot(void)
     char buff[512]; 
     unsigned long offset = 0,step = 4*1024;
 
-    modem_interface_fd = -1;
 reboot_modem:    
     uart_fd = open_uart_device(1,115200);
     if(uart_fd < 0)
@@ -372,7 +378,11 @@ reboot_modem:
     	ret = send_connect_message(uart_fd,0);
     }while(ret < 0);
 
-    download_fdl(uart_fd);
+    ret = download_fdl(uart_fd);
+    if(ret == DL_FAILURE){
+	close(uart_fd);
+	goto reboot_modem;
+    }
     try_to_connect_modem(uart_fd);
     close(uart_fd);
     uart_fd = open_uart_device(0,115200);
@@ -397,7 +407,7 @@ reboot_modem:
     close(uart_fd);
     close(modem_interface_fd);
     if(ret == DL_FAILURE){
-	sleep(10);
+	sleep(2);
 	goto reboot_modem;
     }
     
