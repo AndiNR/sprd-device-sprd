@@ -40,7 +40,7 @@ void parser_header(nvrequest_header_t *nv_header)
 	if((nv_header->attr & ATTR_RW_MASK)>>ATTR_RW_OFFSET == 0)
 	{
 		;	//writer
-		if( nv_header->offset < 120*1024)	//fixnv
+		if( nv_header->offset < FIXNV_REALSIZE*BLOCK_SIZE)	//fixnv
 		{
 			// save directly		
 			//lseek(fixnv_fd,nv_header->offset,SEEK_SET);
@@ -48,10 +48,10 @@ void parser_header(nvrequest_header_t *nv_header)
 			
 			//save to ram then wrire to file
 			
-			if(cursor_fixnv >= FIXNV_BLOCK_SIZE-1)
+			if(cursor_fixnv >= FIXNV_REALSIZE-1)
 			{
 
-				NVITEM_DEBUG("[Nvitemd] cursor_fixnv >= FIXNV_BLOCK_SIZE-1 !!!\n");
+				NVITEM_DEBUG("[Nvitemd] cursor_fixnv >= FIXNV_REALSIZE-1 !!!\n");
 				memcpy(&fixnv_buf[cursor_fixnv*BLOCK_SIZE],data+sizeof(nvrequest_header_t),nv_header->size);
 				cursor_fixnv = 0;
 				fixnv_dirty = 1;
@@ -73,9 +73,9 @@ void parser_header(nvrequest_header_t *nv_header)
 
 			//save to ram then wrire to file
 			
-			if(cursor_runnv >= RUNNV_BLOCK_SIZE-1)
+			if(cursor_runnv >= RUNNV_REALSIZE-1)
 			{
-				NVITEM_DEBUG("[Nvitemd] cursor_runnv >= RUNNV_BLOCK_SIZE-1 !!!\n");
+				NVITEM_DEBUG("[Nvitemd] cursor_runnv >= RUNNV_REALSIZE-1 !!!\n");
 				memcpy(&runnv_buf[cursor_runnv*BLOCK_SIZE],data+sizeof(nvrequest_header_t),nv_header->size);
 				cursor_runnv = 0;
 				runnv_dirty = 1;
