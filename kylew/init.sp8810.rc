@@ -120,9 +120,9 @@ on property:persist.msms.phone_count=2
     start ril-daemon1
 
 #nvitemd
-service nvitem /system/bin/nvitemd
+service nvitemd /system/bin/nvitemd
     class main
-    user root
+    disabled
     oneshot
 
 # create virtual SD card at /storage/sdcard0, based on the /data/media directory

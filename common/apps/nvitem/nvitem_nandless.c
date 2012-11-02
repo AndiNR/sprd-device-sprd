@@ -64,12 +64,12 @@ int main(int argc, char *argv[])
 		nvitem_receive_fd = open_port();
 		if (nvitem_receive_fd < 0)
 		{
-			timeout++;
-			if(timeout > 30){
+			//timeout++;
+			//if(timeout > 30){
 				NVITEM_DEBUG("[Nvitemd] Service Start ERR !!!\n");
 				NVITEM_LOG("[Nvitemd] Service Start ERR !!!\n");
-				exit(1);
-			}
+			//	exit(1);
+			//}
 		} else { break;}
 	}
 	NVITEM_DEBUG("[Nvitemd] Service Start OK!!!\n");

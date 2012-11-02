@@ -38,7 +38,7 @@ int nandless()
 		if(timeout>30){
 			if(fd < 0){
 				NANDLESS_LOG("nandless engapi_open err !!!\n");
-				exit(-1);
+				//exit(-1);
 			} else { break;}
 		}
 		sleep(1);
