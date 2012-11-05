@@ -31,6 +31,6 @@ PROPMODS := \
 	system/bin/phoneserver \
 	system/bin/phoneserver_2sim
 
-PRODUCT_COPY_FILES := $(foreach f,$(PROPMODS),vendor/sprd/proprietories/kylew/$(f):$(f))
+PRODUCT_COPY_FILES := $(foreach f,$(PROPMODS),vendor/sprd/proprietories/cori2g/$(f):$(f))
 
 endif
