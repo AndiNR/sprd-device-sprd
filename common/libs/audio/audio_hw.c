@@ -15,7 +15,7 @@
  */
 
 #define LOG_TAG "audio_hw_primary"
-/*#define ALOG_NDEBUG 0*/
+/*#define LOG_NDEBUG 0*/
 
 #include <errno.h>
 #include <pthread.h>
@@ -38,7 +38,15 @@
 #include <audio_utils/echo_reference.h>
 #include <hardware/audio_effect.h>
 #include <audio_effects/effect_aec.h>
+#include "audio_pga.h"
 
+//#define XRUN_DEBUG
+
+#ifdef XRUN_DEBUG
+#define XRUN_TRACE  ALOGW
+#else
+#define XRUN_TRACE
+#endif
 #define BLUE_TRACE  ALOGW
 
 #define PRIVATE_NAME_LEN 60
@@ -49,7 +57,6 @@
 #define PRIVATE_VBC_CONTROL              "vb control"
 #define PRIVATE_VBC_EQ_SWITCH            "eq switch"
 #define PRIVATE_VBC_EQ_UPDATE            "eq update"
-
 
 /* ALSA cards for sprd */
 #define CARD_SPRDPHONE "sprdphone"
@@ -117,6 +124,15 @@ struct pcm_config pcm_config_vx = {
     .format = PCM_FORMAT_S16_LE,
 };
 
+struct pcm_config pcm_config_vrec_vx = {    //voice record in vlx mode
+    .channels = 1,
+    .rate = VX_NB_SAMPLING_RATE,
+    .period_size = 320,
+    .period_count = 8,
+    .format = PCM_FORMAT_S16_LE,
+};
+
+
 #define MIN(x, y) ((x) > (y) ? (y) : (x))
 
 struct route_setting
@@ -166,6 +182,7 @@ struct tiny_audio_device {
     unsigned int num_dev_cfgs;
 
     struct tiny_private_ctl private_ctl;
+    struct audio_pga *pga;
 };
 
 struct tiny_stream_out {
@@ -242,6 +259,11 @@ static const struct {
     { AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, "line"},
     //{ "linein-capture"},
 };
+/*
+ * card define
+ */
+static int s_tinycard = 0;
+static int s_vaudio = 0;
 
 /**
  * NOTE: when multiple mutexes have to be acquired, always respect the following order:
@@ -254,7 +276,7 @@ static int set_route_by_array(struct mixer *mixer, struct route_setting *route,u
 static int adev_set_voice_volume(struct audio_hw_device *dev, float volume);
 static int do_input_standby(struct tiny_stream_in *in);
 static int do_output_standby(struct tiny_stream_out *out);
-
+static void force_all_standby(struct tiny_audio_device *adev);
 static struct route_setting * get_route_setting (
     struct tiny_audio_device *adev,
     int devices,
@@ -265,14 +287,11 @@ static int get_route_depth (
     int devices,
     int on);
 
-#include "at_commands.c"
+#ifndef _VOICE_CALL_VIA_LINEIN
+#include "vb_control_parameters.c"
+#endif
 
-
-/*
- * card define
- */
-static int s_tinycard = 0;
-static int s_vaudio = 1;
+#include "at_commands_generic.c"
 
 int set_call_route(struct tiny_audio_device *adev, int device, int on)
 {
@@ -283,8 +302,10 @@ int set_call_route(struct tiny_audio_device *adev, int device, int on)
     cur_depth = get_route_depth(adev, device, on);
     if (adev->mixer && cur_setting)
         set_route_by_array(adev->mixer, cur_setting, cur_depth);
+#ifdef _VOICE_CALL_VIA_LINEIN
     //open Mic Bias
     mixer_ctl_set_value(adev->private_ctl.mic_bias_switch, 0, on);
+#endif
     return 0;
 }
 
@@ -378,11 +399,13 @@ static void select_devices(struct tiny_audio_device *adev)
     /* Turn on new devices first so we don't glitch due to powerdown... */
     for (i = 0; i < adev->num_dev_cfgs; i++)
 	if (adev->devices & adev->dev_cfgs[i].mask) {
+#ifdef _VOICE_CALL_VIA_LINEIN
 	    if (AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET == adev->dev_cfgs[i].mask
 	        && adev->in_call == 1) {
 	        ALOGI("In_call now, on devices is (0x%08x)", adev->devices);
 	        continue;
 	    }
+#endif
 	    set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
 			       adev->dev_cfgs[i].on_len);
     }
@@ -390,11 +413,13 @@ static void select_devices(struct tiny_audio_device *adev)
     /* ...then disable old ones. */
     for (i = 0; i < adev->num_dev_cfgs; i++)
 	if (!(adev->devices & adev->dev_cfgs[i].mask)) {
+#ifdef _VOICE_CALL_VIA_LINEIN
         if (AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET == adev->dev_cfgs[i].mask
 	        && adev->in_call == 1) {
 	        ALOGI("In_call now, off devices is (0x%08x)", adev->devices);
 	        continue;
 	    }
+#endif
 	    set_route_by_array(adev->mixer, adev->dev_cfgs[i].off,
 			       adev->dev_cfgs[i].off_len);
     }
@@ -404,17 +429,20 @@ static void select_devices(struct tiny_audio_device *adev)
 static int start_call(struct tiny_audio_device *adev)
 {
     ALOGE("Opening modem PCMs");
+#ifdef _VOICE_CALL_VIA_LINEIN
     //open linein function here
     set_call_route(adev, AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, 1);
+#endif
     return 0;
 }
 
 static void end_call(struct tiny_audio_device *adev)
 {
     ALOGE("Closing modem PCMs");
+#ifdef _VOICE_CALL_VIA_LINEIN
     //close linein function.
     set_call_route(adev, AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, 0);
-    at_cmd_route_done(adev);
+#endif
 }
 
 static void set_eq_filter(struct tiny_audio_device *adev)
@@ -456,17 +484,21 @@ static void select_mode(struct tiny_audio_device *adev)
 {
     if (adev->mode == AUDIO_MODE_IN_CALL) {
         ALOGE("Entering IN_CALL state, %s first call...devices:0x%x mode:%d ", adev->in_call ? "not":"is",adev->devices,adev->mode);
+#ifdef _VOICE_CALL_VIA_LINEIN
         if (!adev->in_call) {
             start_call(adev);
             adev->in_call = 1;
         }
+#endif
     } else {
         ALOGE("Leaving IN_CALL state, in_call=%d, mode=%d devices:0x%x ",
 	            adev->in_call, adev->mode,adev->devices);
+#ifdef _VOICE_CALL_VIA_LINEIN
         if (adev->in_call) {
             end_call(adev);
             adev->in_call = 0;
         }
+#endif
     }
 }
 
@@ -487,7 +519,7 @@ static int start_output_stream(struct tiny_stream_out *out)
      * tinyalsa.
      */
     out->write_threshold = PLAYBACK_LONG_PERIOD_COUNT * LONG_PERIOD_SIZE;
-    out->config.start_threshold = SHORT_PERIOD_SIZE * 2;
+    out->config.start_threshold = SHORT_PERIOD_SIZE * PLAYBACK_SHORT_PERIOD_COUNT / 2;
     out->config.avail_min = LONG_PERIOD_SIZE;
     out->low_power = 1;
 
@@ -680,7 +712,7 @@ static int do_output_standby(struct tiny_stream_out *out)
     if (!out->standby) {
         pcm_close(out->pcm);
         out->pcm = NULL;
-        BLUE_TRACE("do_output_standby.");
+        BLUE_TRACE("do_output_standby.mode:%d ",adev->mode);
         adev->active_output = 0;
 
         /* if in call, don't turn off the output stage. This will
@@ -730,7 +762,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     char value[32];
     int ret, val = 0;
     bool force_input_standby = false;
-	static int cur_mode = 0;
+    static int cur_mode = 0;
 
     BLUE_TRACE("[out_set_parameters], kvpairs=%s devices:0x%x mode:%d ", kvpairs,adev->devices,adev->mode);
 
@@ -760,9 +792,19 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             adev->devices |= val;
             ALOGW("out_set_parameters want to set devices:0x%x old_mode:%d ",adev->devices,cur_mode);
             cur_mode = adev->mode;
-            select_devices(adev);
             if (AUDIO_MODE_IN_CALL == adev->mode) {
-                at_cmd_route(adev,1);
+                #ifdef _VOICE_CALL_VIA_LINEIN
+                    select_devices(adev);
+                #endif
+                ret = at_cmd_route(adev);
+                if (ret < 0) {
+                    ALOGE("out_set_parameters at_cmd_route error(%d) ",ret);
+                    pthread_mutex_unlock(&out->lock);
+                    pthread_mutex_unlock(&adev->lock);
+                    return ret;
+                }
+            } else {
+                select_devices(adev);
             }
         }else{
             ALOGW("the same devices(0x%x) with val(0x%x) val is zero...",adev->devices,val);
@@ -777,7 +819,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         pthread_mutex_unlock(&adev->lock);
     }
 
-    ALOGW("chj out_set_parameters out...in_call:%d",adev->in_call);
+    ALOGW("out_set_parameters out...in_call:%d",adev->in_call);
     str_parms_destroy(parms);
     return ret;
 }
@@ -819,6 +861,14 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
      * on the output stream mutex - e.g. executing select_mode() while holding the hw device
      * mutex
      */
+     if (adev->in_call) {
+//	 	MY_TRACE("out_write incall(%d) ...so force return...",adev->in_call);
+        usleep(bytes * 1000000 / audio_stream_frame_size(&stream->common) /
+               out_get_sample_rate(&stream->common));
+		return bytes;		/*should return,otherwise we can wait for the normal pcm some time*/
+     }
+
+
     pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&out->lock);
     if (out->standby) {
@@ -868,18 +918,20 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
         get_playback_delay(out, out_frames, &b);
         out->echo_reference->write(out->echo_reference, &b);
     }
-
+    XRUN_TRACE("in_frames=%d, out_frames=%d", in_frames, out_frames);
+    XRUN_TRACE("out->write_threshold=%d, config.avail_min=%d, start_threshold=%d",
+                out->write_threshold,out->config.avail_min, out->config.start_threshold);
     /* do not allow more than out->write_threshold frames in kernel pcm driver buffer */
     do {
         struct timespec time_stamp;
 
         if (pcm_get_htimestamp(out->pcm, (unsigned int *)&kernel_frames, &time_stamp) < 0)
             break;
-        //BLUE_TRACE("src_kernel_frames=%d, out_frames=%d", kernel_frames, out_frames);
+        XRUN_TRACE("src_kernel_frames=%d, out_frames=%d", kernel_frames, out_frames);
 
         kernel_frames = pcm_get_buffer_size(out->pcm) - kernel_frames;
-        //BLUE_TRACE("buffer_size =%d, kernel_frames=%d, wirte_threshold=%d",
-        //        pcm_get_buffer_size(out->pcm),kernel_frames, out->write_threshold);
+        XRUN_TRACE("buffer_size =%d, kernel_frames=%d, wirte_threshold=%d",
+                pcm_get_buffer_size(out->pcm),kernel_frames, out->write_threshold);
         if (kernel_frames > out->write_threshold) {
             unsigned long time = (unsigned long)
                     (((int64_t)(kernel_frames - out->write_threshold) * 1000000) /
@@ -938,7 +990,7 @@ static int start_input_stream(struct tiny_stream_in *in)
     struct tiny_audio_device *adev = in->dev;
 
     adev->active_input = in;
-
+    ALOGW("start_input_stream in mode:0x%x devices:0x%x in_call:%d ",adev->mode,adev->devices,adev->in_call);
     if (adev->mode != AUDIO_MODE_IN_CALL) {
         adev->devices &= ~AUDIO_DEVICE_IN_ALL;
         adev->devices |= in->device;
@@ -954,14 +1006,24 @@ static int start_input_stream(struct tiny_stream_in *in)
                 in->config.channels, in->config.period_size,
                 in->config.period_count, in->config.rate);
     /* this assumes routing is done previously */
-    in->pcm = pcm_open(s_tinycard, PORT_MM, PCM_IN, &in->config);
-    if (!pcm_is_ready(in->pcm)) {
-        ALOGE("cannot open pcm_in driver: %s", pcm_get_error(in->pcm));
-        pcm_close(in->pcm);
-        adev->active_input = NULL;
-        return -ENOMEM;
-    }
 
+    if(adev->in_call) {
+        in->pcm = pcm_open(s_vaudio,PORT_MM,PCM_IN,&pcm_config_vrec_vx);
+        if (!pcm_is_ready(in->pcm)) {
+            ALOGE("voice-call rec cannot open pcm_in driver: %s", pcm_get_error(in->pcm));
+            pcm_close(in->pcm);
+            adev->active_input = NULL;
+            return -ENOMEM;
+        }
+    } else {
+        in->pcm = pcm_open(s_tinycard, PORT_MM, PCM_IN, &in->config);
+        if (!pcm_is_ready(in->pcm)) {
+            ALOGE("normal rec cannot open pcm_in driver: %s", pcm_get_error(in->pcm));
+            pcm_close(in->pcm);
+            adev->active_input = NULL;
+            return -ENOMEM;
+        }
+    }
     /* if no supported sample rate is available, use the resampler */
     if (in->resampler) {
         in->resampler->reset(in->resampler);
@@ -984,11 +1046,20 @@ static int in_set_sample_rate(struct audio_stream *stream, uint32_t rate)
 
 static size_t in_get_buffer_size(const struct audio_stream *stream)
 {
+    size_t size;
+    size_t device_rate;
+
     struct tiny_stream_in *in = (struct tiny_stream_in *)stream;
 
-    return get_input_buffer_size(in->requested_rate,
-                                 AUDIO_FORMAT_PCM_16_BIT,
-                                 in->config.channels);
+    if (check_input_parameters(in->requested_rate, AUDIO_FORMAT_PCM_16_BIT, in->config.channels) != 0)
+        return 0;
+    /* take resampling into account and return the closest majoring
+    multiple of 16 frames, as audioflinger expects audio buffers to
+    be a multiple of 16 frames */
+    size = (in->config.period_size * in->requested_rate) / in->config.rate;
+    size = ((size + 15) / 16) * 16;
+
+    return size * in->config.channels * sizeof(short);
 }
 
 static uint32_t in_get_channels(const struct audio_stream *stream)
@@ -1680,11 +1751,12 @@ static int adev_init_check(const struct audio_hw_device *dev)
 
 static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
 {
-	return 0;
     struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
+    BLUE_TRACE("adev_set_voice_volume in...volume:%f mode:%d in_call:%d ",volume,adev->mode,adev->in_call);
 
     adev->voice_volume = volume;
-    /*To be done*/
+    /*Send at command to cp side*/
+    at_cmd_volume(volume,adev->mode);
 
     return 0;
 }
@@ -1779,8 +1851,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->stream.get_input_frames_lost = in_get_input_frames_lost;
 
     in->requested_rate = config->sample_rate;
-
-    memcpy(&in->config, &pcm_config_mm_ul, sizeof(pcm_config_mm_ul));
+    if (ladev->in_call)
+        memcpy(&in->config, &pcm_config_vrec_vx, sizeof(pcm_config_vrec_vx));
+    else
+        memcpy(&in->config, &pcm_config_mm_ul, sizeof(pcm_config_mm_ul));
     in->config.channels = channel_count;
 
     in->buffer = malloc(in->config.period_size *
@@ -1853,7 +1927,11 @@ static int adev_close(hw_device_t *device)
 {
     unsigned int i, j;
     struct tiny_audio_device *adev = (struct tiny_audio_device *)device;
-
+    /* free audio PGA */
+    audio_pga_free(adev->pga);
+#ifndef _VOICE_CALL_VIA_LINEIN
+    vbc_ctrl_close();
+#endif
     //Need to free mixer configs here.
     for (i=0; i < adev->num_dev_cfgs; i++) {
         for (j=0; j < adev->dev_cfgs->on_len; j++) {
@@ -2174,7 +2252,11 @@ static int adev_open(const hw_module_t* module, const char* name,
     }
     BLUE_TRACE("ret=%d, num_dev_cfgs=%d", ret, adev->num_dev_cfgs);
     BLUE_TRACE("dev_cfgs_on depth=%d, dev_cfgs_off depth=%d", adev->dev_cfgs->on_len,  adev->dev_cfgs->off_len);
-
+    /*Parse PGA*/
+    adev->pga = audio_pga_init(adev->mixer);
+    if (!adev->pga) {
+        ALOGE("Warning: Unable to locate PGA from XML.");
+    }
     /* Set the default route before the PCM stream is opened */
     pthread_mutex_lock(&adev->lock);
     adev->mode = AUDIO_MODE_NORMAL;
@@ -2187,7 +2269,13 @@ static int adev_open(const hw_module_t* module, const char* name,
     pthread_mutex_unlock(&adev->lock);
 
     *device = &adev->hw_device.common;
-
+#ifndef _VOICE_CALL_VIA_LINEIN
+    /* Create a task to get vbpipe message from cp when voice-call */
+    ret = vbc_ctrl_open(adev);
+    if(ret < 0){
+        return -EINVAL;
+    }
+#endif
     return 0;
 }
 
@@ -2201,8 +2289,9 @@ struct audio_module HAL_MODULE_INFO_SYM = {
         .module_api_version = AUDIO_MODULE_API_VERSION_0_1,
         .hal_api_version = HARDWARE_HAL_API_VERSION,
         .id = AUDIO_HARDWARE_MODULE_ID,
-        .name = "SC8810 audio HW HAL",
+        .name = "Spreadtrum Audio HW HAL",
         .author = "The Android Open Source Project",
         .methods = &hal_module_methods,
     },
 };
+

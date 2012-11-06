@@ -25,7 +25,11 @@ LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 LOCAL_CFLAGS := -D_POSIX_SOURCE -Wno-multichar -g
 
-LOCAL_SRC_FILES := audio_hw.c tinyalsa_util.c
+ifeq ($(strip $(BOARD_USES_LINE_CALL)), true)
+LOCAL_CFLAGS += -D_VOICE_CALL_VIA_LINEIN
+endif
+
+LOCAL_SRC_FILES := audio_hw.c tinyalsa_util.c audio_pga.c
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
 	external/expat/lib \
@@ -42,5 +46,6 @@ LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
 
+include $(call all-makefiles-under,$(LOCAL_PATH))
 endif
 
