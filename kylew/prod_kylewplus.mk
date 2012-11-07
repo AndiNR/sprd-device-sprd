@@ -34,7 +34,10 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 	persist.sys.usb.config=mtp
 
 PRODUCT_PACKAGES := \
-	VoiceDialer
+	VoiceDialer \
+	MsmsPhone \
+    framework2 \
+	Settings
 
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \

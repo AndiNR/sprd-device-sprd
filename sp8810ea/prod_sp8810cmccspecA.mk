@@ -36,6 +36,7 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 PRODUCT_PACKAGES := \
 	VoiceDialer \
 	Phone \
+    framework2 \
 	Settings
 	        
 
