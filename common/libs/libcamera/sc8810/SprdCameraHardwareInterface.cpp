@@ -1499,8 +1499,11 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
 		return;
     }
 
-    width = 640;
-    height = 480;
+    //width = 640;
+    //height = 480;
+    width  = mPreviewWidth;
+    height = mPreviewHeight;
+
 
     if (mPreviewWindow && mGrallocHal) {
         buffer_handle_t *buf_handle;
