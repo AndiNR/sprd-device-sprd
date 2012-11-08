@@ -1,6 +1,13 @@
 
 MALI := libUMP libEGL_mali.so libGLESv1_CM_mali.so libGLESv2_mali.so libMali.so ump.ko mali.ko
 
+BRCMFM := \
+	com.broadcom.bt.service \
+	libfmpmservice \
+	libfmservice \
+	BtFmServiceReg \
+	FmRadio
+
 PRODUCT_PROPERTY_OVERRIDES :=
 
 # original apps copied from generic_no_telephony.mk
@@ -39,6 +46,8 @@ PRODUCT_PACKAGES += \
 	$(MALI)\
 	modem_control \
         nvitemd
+
+PRODUCT_PACKAGES += $(BRCMFM)
 
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/init.rc:root/init.rc \
