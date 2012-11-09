@@ -81,7 +81,7 @@ UMP_API_EXPORT ump_handle ump_handle_create_from_secure_id(ump_secure_id secure_
 				mem->ref_count = 1;
 
 				/* This is called only to set the cache settings in this handle */
-				ump_cpu_msync_now((ump_handle)mem, UMP_MSYNC_READOUT_CACHE_ENABLED, NULL, 0);
+				ump_cpu_msync_now((ump_handle)mem, UMP_MSYNC_CLEAN_AND_INVALIDATE, NULL, 0); //modified by yfs for flush the cpu cache immediately.
 
 				UMP_DEBUG_PRINT(4, ("UMP handle created for ID %u of size %lu, mapped into address 0x%08lx", mem->secure_id, mem->size, (unsigned long)mem->mapped_mem));
 

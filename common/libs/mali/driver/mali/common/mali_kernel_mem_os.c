@@ -241,6 +241,10 @@ static void os_allocator_release(void * ctx, void * handle)
 	_mali_osk_free(allocation);
 }
 
+#ifdef SPRD_MEM_OPTIMIZATION
+static int default_order = 6;
+#endif
+
 static mali_physical_memory_allocation_result os_allocator_allocate_page_table_block(void * ctx, mali_page_table_block * block)
 {
 	int allocation_order = 6; /* _MALI_OSK_CPU_PAGE_SIZE << 6 */
@@ -255,6 +259,11 @@ static mali_physical_memory_allocation_result os_allocator_allocate_page_table_b
 
 	/* Ensure we don't allocate more than we're supposed to from the ctx */
 	if (_MALI_OSK_ERR_OK != _mali_osk_lock_wait(info->mutex, _MALI_OSK_LOCKMODE_RW)) return MALI_MEM_ALLOC_INTERNAL_FAILURE;
+
+#ifdef SPRD_MEM_OPTIMIZATION
+	allocation_order = default_order;
+	default_order = 0;
+#endif
 
 	/* if the number of pages to be requested lead to exceeding the memory
 	 * limit in info->num_pages_max, reduce the size that is to be requested. */

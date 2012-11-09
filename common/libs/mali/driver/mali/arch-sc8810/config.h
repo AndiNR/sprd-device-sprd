@@ -11,6 +11,8 @@
 #ifndef __ARCH_CONFIG_H__
 #define __ARCH_CONFIG_H__
 
+#include "base.h"
+
 /* Configuration for the PB platform with ZBT memory enabled */
 
 static _mali_osk_resource_t arch_configuration [] =
@@ -97,7 +99,7 @@ static _mali_osk_resource_t arch_configuration [] =
 		.type = OS_MEMORY,
 		.description = "OS Memory",
 //		.base = 0x00000000,
-		.size = 0x10000000,
+		.size = ARCH_MALI_MEMORY_SIZE_DEFAULT >> 1,
 		.flags = _MALI_CPU_WRITEABLE | _MALI_CPU_READABLE | _MALI_MMU_WRITEABLE | _MALI_MMU_READABLE
 	},
 #endif
