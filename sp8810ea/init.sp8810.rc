@@ -37,6 +37,12 @@ on boot
     chown system system /sys/class/compass/akm8975/delay_ori
     chown system system /sys/class/compass/akm8975/accel
 
+    mkdir /data/misc/wifi/sockets 0770 wifi wifi
+    mkdir /data/system 0770 system system
+    mkdir /etc/wifi 0770 wifi wifi
+    mkdir /data/system/wpa_supplicant 0771 wifi wifi
+    mkdir /data/misc/dhcp 0770 dhcp dhcp
+    setprop wifi.interface wlan0
 on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
 
@@ -108,3 +114,32 @@ service akmd /system/bin/akmd8975 -m 3
     class main
     oneshot
 
+service wpa_supplicant /system/bin/wpa_supplicant \
+    -Dnl80211 -iwlan0 -c/data/misc/wifi/wpa_supplicant.conf -dd
+    group system wifi inet keystore
+    socket wpa_wlan0 dgram 660 wifi wifi
+    class main
+    disabled
+    oneshot
+
+service dhcpcd_wlan0 /system/bin/dhcpcd -ABKL
+    group system dhcp
+    disabled
+    oneshot
+
+service dhcpcd_p2p /system/bin/dhcpcd -ABKL
+    group system dhcp
+    disabled
+    oneshot
+
+service iprenew_wlan0 /system/bin/dhcpcd -n
+    class main
+    group system dhcp
+    disabled
+    oneshot
+
+service iprenew_p2p /system/bin/dhcpcd -n
+    class main
+    group system dhcp
+    disabled
+    oneshot
