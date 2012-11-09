@@ -24,6 +24,10 @@ PRODUCT_PACKAGES := \
 	SystemUI \
 	CalendarProvider \
 	bluetooth-health \
+	hciconfig \
+	hcitool \
+	hcidump \
+	bttest\
 	hostapd \
 	wpa_supplicant.conf \
     SoundRecorder
@@ -54,7 +58,7 @@ PRODUCT_COPY_FILES := \
 	device/sprd/common/libs/audio/audio_policy.conf:system/etc/audio_policy.conf \
 	device/sprd/common/res/media/media_codecs.xml:system/etc/media_codecs.xml \
 	device/sprd/common/res/media/media_profiles.xml:system/etc/media_profiles.xml \
-	frameworks/base/data/etc/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml \
+	frameworks/native/data/etc/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml \
 	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml
 
 BOARD_WLAN_DEVICE_REV       := bcm4330_b2

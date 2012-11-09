@@ -37,6 +37,13 @@ on boot
     chown system system /sys/class/compass/akm8975/delay_ori
     chown system system /sys/class/compass/akm8975/accel
 
+    chmod 666 /dev/ttyS0
+    chmod 660 /proc/bluetooth/sleep/proto
+    chmod 660 /sys/class/rfkill/rfkill0/state
+    chmod 660 /sys/class/rfkill/rfkill0/type
+    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/state
+    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/type
+    chown bluetooth system /proc/bluetooth/sleep/proto
     mkdir /data/misc/wifi/sockets 0770 wifi wifi
     mkdir /data/system 0770 system system
     mkdir /etc/wifi 0770 wifi wifi
@@ -110,10 +117,43 @@ on property:persist.msms.phone_count=2
 service sdcard /system/bin/sdcard /data/media 1023 1023
     class late_start
 
+
+service hfag /system/bin/sdptool add --channel=10 HFAG
+    user bluetooth
+    group bluetooth net_bt_admin
+    disabled
+    oneshot
+
+service hsag /system/bin/sdptool add --channel=11 HSAG
+    user bluetooth
+    group bluetooth net_bt_admin
+    disabled
+    oneshot
+
+service opush /system/bin/sdptool add --channel=12 OPUSH
+    user bluetooth
+    group bluetooth net_bt_admin
+    disabled
+    oneshot
+
+service pbap /system/bin/sdptool add --channel=19 PBAP
+    user bluetooth
+    group bluetooth net_bt_admin
+    disabled
+    oneshot
 service akmd /system/bin/akmd8975 -m 3
     class main
     oneshot
 
+
+service hciattach /system/bin/brcm_patchram_plus --enable_hci --enable_lpm --no2bytes \
+    --tosleep 50000 --baudrate 3000000 --use_baudrate_for_download  \
+    --patchram /system/bin/bcm4330.hcd /dev/ttyS0
+    class main
+    user bluetooth
+    group bluetooth net_bt_admin
+    disabled
+    oneshot
 service wpa_supplicant /system/bin/wpa_supplicant \
     -Dnl80211 -iwlan0 -c/data/misc/wifi/wpa_supplicant.conf -dd
     group system wifi inet keystore
