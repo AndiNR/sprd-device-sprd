@@ -48,6 +48,8 @@ PRODUCT_COPY_FILES := \
         $(BOARDDIR)/hw_params/tiny_hw.xml:system/etc/tiny_hw.xml \
         $(BOARDDIR)/hw_params/codec_pga.xml:system/etc/codec_pga.xml \
         $(BOARDDIR)/hw_params/audio_para:system/etc/audio_para \
+        $(BOARDDIR)/features/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml \
+        $(BOARDDIR)/features/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml \
 	device/sprd/common/libs/mali/egl.cfg:system/lib/egl/egl.cfg \
 	device/sprd/common/libs/audio/audio_policy.conf:system/etc/audio_policy.conf \
 	device/sprd/common/res/media/media_codecs.xml:system/etc/media_codecs.xml \
