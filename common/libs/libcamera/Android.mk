@@ -53,7 +53,7 @@ LOCAL_SRC_FILES:= \
 
 endif
 
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825_bak)
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/vsp/tiger/inc	\
 	$(LOCAL_PATH)/vsp/tiger/src \
