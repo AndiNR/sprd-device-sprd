@@ -19,11 +19,13 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <stdlib.h>
 #include <sys/ioctl.h>
 #include <linux/fb.h>
 
 #include <cutils/log.h>
 #include <cutils/atomic.h>
+#include <cutils/properties.h>
 #include <hardware/hardware.h>
 #include <hardware/gralloc.h>
 
@@ -230,6 +232,12 @@ int init_frame_buffer_locked(struct private_module_t* module)
 	info.xoffset = 0;
 	info.yoffset = 0;
 	info.activate = FB_ACTIVATE_NOW;
+
+	char value[PROPERTY_VALUE_MAX];
+	property_get("ro.sf.lcd_width", value, "1");
+	info.width = atoi(value);
+	property_get("ro.sf.lcd_height", value, "1");
+	info.height = atoi(value);
 
     if(info.bits_per_pixel == 16)
     {
@@ -484,6 +492,5 @@ int framebuffer_device_open(hw_module_t const* module, const char* name, hw_devi
 	//}
 
 	status = 0;
-
 	return status;
 }

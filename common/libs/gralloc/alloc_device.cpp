@@ -224,8 +224,6 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
 		int shared_fd;
 		int ret;
 
-		AINF( "Trying to create ION buffer on hnd %p", pHandle );
-
 		ret = ion_alloc( m->ion_client, size, 0, ION_HEAP_SYSTEM_MASK, &ion_hnd );
 		if ( ret != 0) 
 		{
@@ -250,14 +248,14 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
 			return -1;
 		}
 
-		private_handle_t *hnd = new private_handle_t( private_handle_t::PRIV_FLAGS_USES_ION, size, (int)cpu_ptr, private_handle_t::LOCK_STATE_MAPPED, shared_fd );
+		private_handle_t *hnd = new private_handle_t( private_handle_t::PRIV_FLAGS_USES_ION, size, (int)cpu_ptr, private_handle_t::LOCK_STATE_MAPPED );
 
 		if ( NULL != hnd )
 		{
+			hnd->share_fd = shared_fd;
 			hnd->ion_hnd = ion_hnd;
 			hnd->ion_client = m->ion_client;
 			*pHandle = hnd;
-			AINF( "Created shared_fd: %d ion_handle: %p", shared_fd, ion_hnd );
 			return 0;
 		}
 		else
@@ -571,9 +569,8 @@ static int alloc_device_free(alloc_device_t* dev, buffer_handle_t handle)
 	else if ( hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION )
 	{
 #if GRALLOC_ARM_DMA_BUF_MODULE
-		AINF( "ION deleting handle %p client:%d ion_hnd:%p", hnd, hnd->ion_client, hnd->ion_hnd );
 		if ( 0 != munmap( (void*)hnd->base, hnd->size ) ) AERR( "Failed to munmap handle 0x%x", (unsigned int)hnd );
-		close( hnd->ion_fd );
+		close( hnd->share_fd );
 		if ( 0 != ion_free( hnd->ion_client, hnd->ion_hnd ) ) AERR( "Failed to ion_free( ion_client: %d ion_hnd: %p )", hnd->ion_client, hnd->ion_hnd );
 		memset( (void*)hnd, 0, sizeof( *hnd ) );
 #else 
@@ -645,7 +642,6 @@ int alloc_device_open(hw_module_t const* module, const char* name, hw_device_t**
 		delete dev;
 		return -1;
 	}
-	AINF( "ion_open of device: %d", m->ion_client );
 #endif
 	
 	*device = &dev->common;

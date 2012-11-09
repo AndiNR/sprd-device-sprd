@@ -94,7 +94,7 @@ UMP_KERNEL_API_EXPORT ump_dd_handle ump_dd_handle_create_from_phys_blocks(ump_dd
 	mem->ctx = NULL;
 	mem->release_func = phys_blocks_release;
 	/* For now UMP handles created by ump_dd_handle_create_from_phys_blocks() is forced to be Uncached */
-	mem->is_cached = 0;
+	mem->is_cached = 1;//0; //modified by yfs
 	mem->hw_device = _UMP_UK_USED_BY_CPU;
 	mem->lock_usage = UMP_NOT_LOCKED;
 

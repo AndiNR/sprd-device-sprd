@@ -98,6 +98,10 @@ struct private_handle_t
 	int     fd;
 
 	// ints
+#if GRALLOC_ARM_DMA_BUF_MODULE
+	/*shared file descriptor for dma_buf sharing*/
+	int     share_fd;
+#endif
 	int     magic;
 	int     flags;
 	int     size;
@@ -127,12 +131,17 @@ struct private_handle_t
 	int     resv1;   
 
 #if GRALLOC_ARM_DMA_BUF_MODULE
-	int     ion_fd;
 	int     ion_client;
 	struct ion_handle *ion_hnd;
-#define GRALLOC_ARM_DMA_BUF_NUM_INTS 3
+#define GRALLOC_ARM_DMA_BUF_NUM_INTS 3 
 #else
 #define GRALLOC_ARM_DMA_BUF_NUM_INTS 0
+#endif
+
+#if GRALLOC_ARM_DMA_BUF_MODULE
+#define GRALLOC_ARM_NUM_FDS 1	
+#else
+#define GRALLOC_ARM_NUM_FDS 0	
 #endif
 
 #ifdef __cplusplus
@@ -154,8 +163,7 @@ struct private_handle_t
 		fd(fd),
 		offset(offset)
 #if GRALLOC_ARM_DMA_BUF_MODULE
-		, ion_fd(-1),
-		ion_client(-1),
+		,ion_client(-1),
 		ion_hnd(NULL)
 #endif
 
@@ -167,7 +175,7 @@ struct private_handle_t
 #endif
 
 #if GRALLOC_ARM_DMA_BUF_MODULE
-	private_handle_t(int flags, int size, int base, int lock_state, int ion_fd ):
+	private_handle_t(int flags, int size, int base, int lock_state):
 		magic(sMagic),
 		flags(flags),
 		size(size),
@@ -181,7 +189,6 @@ struct private_handle_t
 #endif
 		fd(0),
 		offset(0),
-		ion_fd(ion_fd),
 		ion_client(-1),
 		ion_hnd(NULL)
 
@@ -189,7 +196,6 @@ struct private_handle_t
 		version = sizeof(native_handle);
 		numFds = sNumFds;
 		numInts = sNumInts;
-		AINF( "Allocated ION hnd: %p ion_fd: %d", this, ion_fd );
 	}
 
 #endif
@@ -209,8 +215,7 @@ struct private_handle_t
 		fd(fb_file),
 		offset(fb_offset)
 #if GRALLOC_ARM_DMA_BUF_MODULE
-		,ion_fd(-1),
-		ion_client(-1),
+		,ion_client(-1),
 		ion_hnd(NULL)
 #endif
 
@@ -218,7 +223,6 @@ struct private_handle_t
 		version = sizeof(native_handle);
 		numFds = sNumFds;
 		numInts = sNumInts;
-		AINF( "Allocated FB hnd: %p fb_file : %d", this, fb_file );
 	}
 
 	~private_handle_t()

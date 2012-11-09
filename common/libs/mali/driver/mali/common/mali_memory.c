@@ -31,6 +31,10 @@
 #include "mali_osk_list.h"
 #include "mali_osk_bitops.h"
 
+#ifdef SPRD_MEM_OPTIMIZATION
+#include <linux/string.h>
+#endif
+
 /**
  * Per-session memory descriptor mapping table sizes
  */
@@ -425,6 +429,58 @@ _mali_osk_errcode_t mali_memory_core_resource_dedicated_memory(_mali_osk_resourc
 	MALI_SUCCESS;
 }
 
+#ifdef SPRD_MEM_OPTIMIZATION
+DEFINE_SPINLOCK(ump_block_buf_lock);
+#define SPRD_UMP_BLOCK_BUF_LEN 16384
+#define SPRD_UMP_BLOCK_BUF_NUM 3
+static int ump_blocks_count[SPRD_UMP_BLOCK_BUF_NUM] = {0, 0, 0};
+static unsigned char ump_blocks_buf[SPRD_UMP_BLOCK_BUF_NUM][SPRD_UMP_BLOCK_BUF_LEN];
+
+void *_do_ump_block_alloc(u32 size)
+{
+	int i;
+	unsigned char *ptr;
+
+	if(size <= SPRD_UMP_BLOCK_BUF_LEN)
+	{
+		spin_lock(&ump_block_buf_lock);
+		for(i = 0; i < SPRD_UMP_BLOCK_BUF_NUM; i++) {
+			if(ump_blocks_count[i] == 0) {
+				ump_blocks_count[i] = 1;
+				ptr = (unsigned char *)ump_blocks_buf[i];
+				break;
+			}
+		}
+		spin_unlock(&ump_block_buf_lock);
+	}
+	else
+		i = SPRD_UMP_BLOCK_BUF_NUM;
+
+	if(i == SPRD_UMP_BLOCK_BUF_NUM)
+		ptr = _mali_osk_calloc(1, size);
+	else
+		memset(ptr, 0, SPRD_UMP_BLOCK_BUF_LEN);
+
+	return (void *)ptr;
+}
+void _do_ump_block_free(void *ptr)
+{
+	int i;
+
+	spin_lock(&ump_block_buf_lock);
+	for(i = 0; i < SPRD_UMP_BLOCK_BUF_NUM; i++) {
+		if((unsigned long)ptr == (unsigned long)ump_blocks_buf[i]) {
+			ump_blocks_count[i] = 0;
+			break;
+		}
+	}
+	spin_unlock(&ump_block_buf_lock);
+
+	if(i == SPRD_UMP_BLOCK_BUF_NUM)
+		_mali_osk_free(ptr);
+}
+#endif
+
 #if MALI_USE_UNIFIED_MEMORY_PROVIDER != 0
 static mali_physical_memory_allocation_result ump_memory_commit(void* ctx, mali_allocation_engine * engine, mali_memory_allocation * descriptor, u32* offset, mali_physical_memory_allocation * alloc_info)
 {
@@ -457,7 +513,11 @@ static mali_physical_memory_allocation_result ump_memory_commit(void* ctx, mali_
 		return MALI_MEM_ALLOC_INTERNAL_FAILURE;
 	}
 
-	ump_blocks = _mali_osk_malloc(sizeof(*ump_blocks)*nr_blocks );
+#ifdef SPRD_MEM_OPTIMIZATION
+	ump_blocks = _do_ump_block_alloc(sizeof(*ump_blocks)*nr_blocks);
+#else
+	ump_blocks = _mali_osk_malloc(sizeof(*ump_blocks)*nr_blocks);
+#endif
 	if ( NULL==ump_blocks )
 	{
 		_mali_osk_free( ret_allocation );
@@ -466,7 +526,11 @@ static mali_physical_memory_allocation_result ump_memory_commit(void* ctx, mali_
 
 	if (UMP_DD_INVALID == ump_dd_phys_blocks_get(ump_mem, ump_blocks, nr_blocks))
 	{
+#ifdef SPRD_MEM_OPTIMIZATION
+		_do_ump_block_free(ump_blocks);
+#else
 		_mali_osk_free(ump_blocks);
+#endif
 		_mali_osk_free( ret_allocation );
 		return MALI_MEM_ALLOC_INTERNAL_FAILURE;
 	}
@@ -485,7 +549,11 @@ static mali_physical_memory_allocation_result ump_memory_commit(void* ctx, mali_
 			/* unmap all previous blocks (if any) */
 			mali_allocation_engine_unmap_physical(engine, descriptor, ret_allocation->initial_offset, size_allocated, (_mali_osk_mem_mapregion_flags_t)0 );
 
+#ifdef SPRD_MEM_OPTIMIZATION
+			_do_ump_block_free(ump_blocks);
+#else
 			_mali_osk_free(ump_blocks);
+#endif
 			_mali_osk_free(ret_allocation);
 			return MALI_MEM_ALLOC_INTERNAL_FAILURE;
 		}
@@ -504,14 +572,22 @@ static mali_physical_memory_allocation_result ump_memory_commit(void* ctx, mali_
 			/* unmap all previous blocks (if any) */
 			mali_allocation_engine_unmap_physical(engine, descriptor, ret_allocation->initial_offset, size_allocated, (_mali_osk_mem_mapregion_flags_t)0 );
 
+#ifdef SPRD_MEM_OPTIMIZATION
+			_do_ump_block_free(ump_blocks);
+#else
 			_mali_osk_free(ump_blocks);
+#endif
 			_mali_osk_free(ret_allocation);
 			return MALI_MEM_ALLOC_INTERNAL_FAILURE;
 		}
 		*offset += _MALI_OSK_MALI_PAGE_SIZE;
 	}
 
+#ifdef SPRD_MEM_OPTIMIZATION
+	_do_ump_block_free(ump_blocks);
+#else
 	_mali_osk_free( ump_blocks );
+#endif
 
 	ret_allocation->engine = engine;
 	ret_allocation->descriptor = descriptor;
@@ -595,7 +671,9 @@ _mali_osk_errcode_t _mali_ukk_attach_ump_mem( _mali_uk_attach_ump_mem_s *args )
 	descriptor->mali_address = args->mali_address;
 	descriptor->mali_addr_mapping_info = (void*)session_data;
 	descriptor->process_addr_mapping_info = NULL; /* do not map to process address space */
+	descriptor->cache_settings = (u32) MALI_CACHE_STANDARD;
 	descriptor->lock = session_data->memory_lock;
+
 	if (args->flags & _MALI_MAP_EXTERNAL_MAP_GUARD_PAGE)
 	{
 		descriptor->flags = MALI_MEMORY_ALLOCATION_FLAG_MAP_GUARD_PAGE;
@@ -806,6 +884,7 @@ _mali_osk_errcode_t _mali_ukk_map_external_mem( _mali_uk_map_external_mem_s *arg
 	descriptor->mali_address = args->mali_address;
 	descriptor->mali_addr_mapping_info = (void*)session_data;
 	descriptor->process_addr_mapping_info = NULL; /* do not map to process address space */
+	descriptor->cache_settings = (u32)MALI_CACHE_STANDARD;
 	descriptor->lock = session_data->memory_lock;
 	if (args->flags & _MALI_MAP_EXTERNAL_MAP_GUARD_PAGE)
 	{
@@ -878,9 +957,13 @@ _mali_osk_errcode_t _mali_ukk_init_mem( _mali_uk_init_mem_s *args )
 {
 	MALI_DEBUG_ASSERT_POINTER(args);
 	MALI_CHECK_NON_NULL(args->ctx, _MALI_OSK_ERR_INVALID_ARGS);
-
+#ifdef SPRD_MEM_OPTIMIZATION
+	args->memory_size       = ARCH_MALI_MEMORY_SIZE_DEFAULT;
+	args->mali_address_base = ARCH_MALI_MEMORY_BASE_DEFAULT;
+#else
 	args->memory_size = 2 * 1024 * 1024 * 1024UL; /* 2GB address space */
 	args->mali_address_base = 1 * 1024 * 1024 * 1024UL; /* staring at 1GB, causing this layout: (0-1GB unused)(1GB-3G usage by Mali)(3G-4G unused) */
+#endif
 	MALI_SUCCESS;
 }
 
@@ -941,7 +1024,7 @@ static _mali_osk_errcode_t mali_address_manager_map(mali_memory_allocation * des
 
 	MALI_DEBUG_PRINT(7, ("Mali map: mapping 0x%08X to Mali address 0x%08X length 0x%08X\n", *phys_addr, mali_address, size));
 
-	mali_mmu_pagedir_update(session_data->page_directory, mali_address, *phys_addr, size);
+	mali_mmu_pagedir_update(session_data->page_directory, mali_address, *phys_addr, size, descriptor->cache_settings);
 
 	MALI_SUCCESS;
 }
@@ -970,6 +1053,7 @@ _mali_osk_errcode_t _mali_ukk_mem_mmap( _mali_uk_mem_mmap_s *args )
 
 	descriptor->process_addr_mapping_info = args->ukk_private; /* save to be used during physical manager callback */
 	descriptor->flags = MALI_MEMORY_ALLOCATION_FLAG_MAP_INTO_USERSPACE;
+	descriptor->cache_settings = (u32) args->cache_settings ;
 	descriptor->lock = session_data->memory_lock;
 	_mali_osk_list_init( &descriptor->list );
 
