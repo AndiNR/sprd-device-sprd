@@ -183,3 +183,7 @@ service iprenew_p2p /system/bin/dhcpcd -n
     group system dhcp
     disabled
     oneshot
+
+service slog /system/bin/slog
+    class main
+    user root

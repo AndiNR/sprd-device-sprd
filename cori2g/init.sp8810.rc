@@ -137,3 +137,6 @@ service btld  /system/bin/btld -lpm 0 -hb 3000000
     disabled
     oneshot
 
+service slog /system/bin/slog
+    class main
+    user root

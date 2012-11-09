@@ -49,3 +49,7 @@ service sdcard /system/bin/sdcard /data/media 1023 1023
 service akmd /system/bin/akmd8975 -m 3
     class main
     oneshot
+
+service slog /system/bin/slog
+    class main
+    user root
