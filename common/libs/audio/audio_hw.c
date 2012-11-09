@@ -250,7 +250,8 @@ static const struct {
     { AUDIO_DEVICE_OUT_WIRED_HEADSET | AUDIO_DEVICE_OUT_WIRED_HEADPHONE |AUDIO_DEVICE_OUT_FM_HEADSET,
           "headphone" },
     { AUDIO_DEVICE_OUT_EARPIECE, "earpiece" },
-    { AUDIO_DEVICE_OUT_ALL_FM, "line" },
+    /* ANLG for voice call via linein*/
+    { AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET | AUDIO_DEVICE_OUT_ALL_FM, "line" },
 
     { AUDIO_DEVICE_IN_COMMUNICATION, "comms" },
     { AUDIO_DEVICE_IN_AMBIENT, "ambient" },
@@ -258,8 +259,6 @@ static const struct {
     { AUDIO_DEVICE_IN_WIRED_HEADSET, "headset-in" },
     { AUDIO_DEVICE_IN_AUX_DIGITAL, "digital" },
     { AUDIO_DEVICE_IN_BACK_MIC, "back-mic" },
-    /* voice call via linein for 8810+7702*/
-    { AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, "line"},
     //{ "linein-capture"},
 };
 /*
@@ -403,8 +402,7 @@ static void select_devices(struct tiny_audio_device *adev)
     for (i = 0; i < adev->num_dev_cfgs; i++)
 	if (adev->devices & adev->dev_cfgs[i].mask) {
 #ifdef _VOICE_CALL_VIA_LINEIN
-	    if (((AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ==  adev->dev_cfgs[i].mask)
-                || (AUDIO_DEVICE_OUT_ALL_FM == adev->dev_cfgs[i].mask))
+	    if (((AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET | AUDIO_DEVICE_OUT_ALL_FM) ==  adev->dev_cfgs[i].mask)
 	        && adev->in_call == 1) {
 	        ALOGI("In_call now, on devices is (0x%08x)", adev->devices);
 	        continue;
@@ -418,8 +416,7 @@ static void select_devices(struct tiny_audio_device *adev)
     for (i = 0; i < adev->num_dev_cfgs; i++)
 	if (!(adev->devices & adev->dev_cfgs[i].mask)) {
 #ifdef _VOICE_CALL_VIA_LINEIN
-	    if (((AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ==  adev->dev_cfgs[i].mask)
-                || (AUDIO_DEVICE_OUT_ALL_FM == adev->dev_cfgs[i].mask))
+	    if (((AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET | AUDIO_DEVICE_OUT_ALL_FM) ==  adev->dev_cfgs[i].mask)
 	        && adev->in_call == 1) {
 	        ALOGI("In_call now, off devices is (0x%08x)", adev->devices);
 	        continue;
