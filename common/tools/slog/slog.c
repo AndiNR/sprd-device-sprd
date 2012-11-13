@@ -208,7 +208,7 @@ static void handler_last_dir()
         }
 
         sprintf(buffer, "%s/%s/", current_log_path, LAST_LOG);
-        sprintf(ybuffer, "%s %s", "rm -rf", buffer);
+        sprintf(ybuffer, "%s %s", "rm -r", buffer);
 
         if(last_flag == 1){
                 system(ybuffer);
@@ -423,9 +423,9 @@ int clear_all_log()
 	slog_enable = 0;
 	stop_sub_threads();
 	sleep(3);
-	sprintf(cmd, "rm -fr %s/%s/", current_log_path, top_logdir);
+	sprintf(cmd, "rm -r %s/%s/", current_log_path, top_logdir);
 	system(cmd);
-	sprintf(cmd, "rm -fr %s/last_log", current_log_path);
+	sprintf(cmd, "rm -r %s/last_log", current_log_path);
 	system(cmd);
 	reload();
 	return 0;
@@ -638,7 +638,7 @@ static void handler_internal_log_size()
 	debug_log("internal available %dM", availabledisk >> 20);
 
 	/* default setting internal log size, half of available */
-	internal_log_size = (availabledisk >> 20) /2;
+	internal_log_size = (availabledisk >> 20) /5;
 	debug_log("set internal log size %dM", internal_log_size);
 }
 
