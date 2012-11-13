@@ -4,8 +4,33 @@ MALI := libUMP libEGL_mali.so libGLESv1_CM_mali.so libGLESv2_mali.so libMali.so 
 PRODUCT_PROPERTY_OVERRIDES :=
 
 PRODUCT_PACKAGES := \
+	DeskClock \
+	Bluetooth \
+	Calculator \
+	Calendar \
+	CertInstaller \
+	DrmProvider \
+	Email \
+	Exchange2 \
+	Gallery2 \
+	InputDevices \
+	LatinIME \
+	Launcher2 \
+	Music \
+	MusicFX \
+	Provision \
+	QuickSearchBox \
+	SystemUI \
+	CalendarProvider \
+	bluetooth-health \
+	hostapd \
+	wpa_supplicant.conf \
+	audio.a2dp.default
+
+PRODUCT_PACKAGES += \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \
+	camera.$(TARGET_PLATFORM) \
 	lights.$(TARGET_PLATFORM) \
 	audio.primary.$(TARGET_PLATFORM) \
 	tinymix \
