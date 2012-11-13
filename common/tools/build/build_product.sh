@@ -19,6 +19,7 @@ OUTDIR=$4
 JOBS=$5
 
 FLIST='
+fdl1.bin
 fdl2.bin
 u-boot-spl-16k.bin
 u-boot.bin
@@ -29,7 +30,6 @@ userdata.img
 recovery.img
 cache.img
 installed-files.txt
-symbols/
 '
 
 LOG=$OUTDIR/$PROD-$VAR-$VLX.build.log
@@ -72,7 +72,7 @@ fi
 
 cd $ANDROID_PRODUCT_OUT
 cp obj/KERNEL/vmlinux symbols/
-tar zcf $PAK $FLIST
+tar zcf $PAK $FLIST 2>/dev/null
 cd -
 
 echo "==== ====" >> $LOG
