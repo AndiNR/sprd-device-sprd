@@ -21,3 +21,4 @@
 /dev/vbpipe0            0660     system  system
 /dev/ttyS2              0660     system      system
 /dev/gpsctl             0660     system      system
+/dev/vbpipe6            0660     media   audio
