@@ -1,6 +1,13 @@
 
 MALI := libUMP libEGL_mali.so libGLESv1_CM_mali.so libGLESv2_mali.so libMali.so ump.ko mali.ko
 
+BRCMFM := \
+	com.broadcom.bt.service \
+	libfmpmservice \
+	libfmservice \
+	BtFmServiceReg \
+	FmRadio
+
 PRODUCT_PROPERTY_OVERRIDES :=
 
 # original apps copied from generic_no_telephony.mk
@@ -26,7 +33,8 @@ PRODUCT_PACKAGES := \
 	bluetooth-health \
 	hostapd \
 	wpa_supplicant.conf \
-	modemd
+	modemd \
+	audio.a2dp.default
 
 PRODUCT_PACKAGES += \
 	gralloc.$(TARGET_PLATFORM) \
@@ -38,6 +46,8 @@ PRODUCT_PACKAGES += \
 	sensors.$(TARGET_BOARD)  \
 	$(MALI)\
 	modem_control
+
+PRODUCT_PACKAGES += $(BRCMFM)
 
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/init.rc:root/init.rc \
@@ -54,7 +64,8 @@ PRODUCT_COPY_FILES := \
 	device/sprd/common/res/media/media_codecs.xml:system/etc/media_codecs.xml \
 	device/sprd/common/res/media/media_profiles.xml:system/etc/media_profiles.xml \
 	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml \
-	frameworks/native/data/etc/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml
+	frameworks/native/data/etc/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml \
+	frameworks/native/data/etc/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml
 
 $(call inherit-product, $(BOARDDIR)/../common/apps/engineeringmodel/module.mk)
 BOARD_WLAN_DEVICE_REV       := bcm4330_b1
