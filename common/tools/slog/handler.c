@@ -538,6 +538,7 @@ void *stream_log_handler(void *arg)
 	int max = 0, ret, result;
 	fd_set readset_tmp, readset;
 	char buf[LOGGER_ENTRY_MAX_LEN+1], buf_kmsg[LOGGER_ENTRY_MAX_LEN], wbuf_kmsg[LOGGER_ENTRY_MAX_LEN *2];
+	char buf_modem[MODEM_LOG_BUF_SIZE];
 	struct logger_entry *entry;
 	AndroidLogEntry entry_write;
 	static AndroidLogPrintFormat format;
@@ -557,8 +558,8 @@ void *stream_log_handler(void *arg)
 			info->fd_device = open_device(KERNEL_LOG_SOURCE);
 			info->fd_out = gen_outfd(info);
 		} else if(!strncmp(info->name, "modem", 5)) {
-			continue;
-			/*TODO*/
+			info->fd_device = open_device(MODEM_LOG_SOURCE);
+			info->fd_out = gen_outfd(info);
 		} else {
 			sprintf(devname, "%s/%s", "/dev/log", info->name);
 			info->fd_device = open_device(devname);
@@ -631,8 +632,23 @@ void *stream_log_handler(void *arg)
 				info->outbytecount += ret;
 				log_size_handler(info);
 			} else if(!strncmp(info->name, "modem", 5)) {
-				continue;
-				/*TODO*/
+				memset(buf_modem, 0, MODEM_LOG_BUF_SIZE);
+				ret = read(info->fd_device, buf_modem, MODEM_LOG_BUF_SIZE);
+				if (ret == 0) {
+					close(info->fd_device);
+					info->fd_device = open_device(MODEM_LOG_SOURCE);
+					continue;
+				} else if (ret < 0) {
+					err_log("read %s log failed!", info->name);
+					continue;
+				}
+
+				do {
+					ret = write(info->fd_out, buf_modem, strlen(buf_modem));
+				} while (ret < 0 && errno == EINTR);
+
+				info->outbytecount += ret;
+				log_size_handler(info);
 			} else {
 				ret = read(info->fd_device, buf, LOGGER_ENTRY_MAX_LEN);
 				if(ret <= 0) {
