@@ -70,9 +70,10 @@ enum {
 #define DEFAULT_MAX_LOG_SIZE		256 /* MB */
 #define MAXROLLLOGS			10
 #define TIMEOUT_FOR_SD_MOUNT		5 /* seconds */
+#define MODEM_LOG_BUF_SIZE		(4096*64)
 
 #define KERNEL_LOG_SOURCE		"/proc/kmsg"
-#define MODEM_LOG_SOURCE		"/dev/vhub.modem"
+#define MODEM_LOG_SOURCE		"/dev/vbpipe0"
 
 /* handler last log dir */
 #define LAST_LOG 			"last_log"
