@@ -33,8 +33,10 @@ PRODUCT_PACKAGES := \
 	bluetooth-health \
 	hostapd \
 	wpa_supplicant.conf \
-	modemd \
-	audio.a2dp.default
+	calibration_init \
+	rawdatad \
+	nvm_daemon \
+	modemd
 
 PRODUCT_PACKAGES += \
 	gralloc.$(TARGET_PLATFORM) \
