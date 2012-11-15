@@ -53,6 +53,7 @@ LOCAL uint32_t _ov5640_after_snapshot(uint32_t param);
 LOCAL uint32_t _ov540_flash(uint32_t param);
 LOCAL uint32_t _ov5640_GetExifInfo(uint32_t param);
 LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param);
+LOCAL uint32_t _ov5640_check_status(uint32_t param);
 
 //640X480 YUV
 LOCAL const SENSOR_REG_T ov5640_640X480[] = {
@@ -67,7 +68,7 @@ LOCAL const SENSOR_REG_T ov5640_640X480[] = {
 	{0x3018, 0xff},
 	//{0x3031, 0x08}, /*kenxu add 20120201 for external 1.5v dvdd @ 2.8v DOVDD*/
 	{0x3034, 0x1a},
-	{0x3035, 0x31},/*0x11-->30fps; 0x21-->15fps*/
+	{0x3035, 0x11},/*0x11-->30fps; 0x21-->15fps*/
 	{0x3036, 0x46},
 	{0x3037, 0x13},
 	{0x3108, 0x01},
@@ -406,7 +407,7 @@ LOCAL const SENSOR_REG_T ov5640_common_init[] = {
 	{0x3018, 0xff},		/*D[5:0], GPIO[1:0] output*/
 	/*{0x3031, 0x08}, *//*kenxu add 20120201 for external 1.5v dvdd @ 2.8v DOVDD*/
 	{0x3034, 0x1a},
-	{0x3035, 0x31},		/*0x11-->30fps; 0x21-->15fps*/
+	{0x3035, 0x11},		/*0x11-->30fps; 0x21-->15fps*/
 	{0x3036, 0x46},
 	{0x3037, 0x13},
 	{0x3108, 0x01},		/* clock divider*/
@@ -854,7 +855,7 @@ LOCAL const SENSOR_REG_T ov5640_640X480_new[] = {
 	{0x5001, 0xa3},		/* SDE on, CMX on, AWB on*/
 
 	{0x3034, 0x1a},
-	{0x3035, 0x31},		/* MIPI global timing*/
+	{0x3035, 0x11},		/* MIPI global timing*/
 	{0x3036, 0x46},		/* PCLK manual divider*/
 	{0x3037, 0x13},		/* SDE on, CMX on, AWB on*/
 
@@ -1171,162 +1172,6 @@ LOCAL SENSOR_TRIM_T s_ov5640_Resolution_Trim_Tab[] = {
 
 LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_ov5640_exif;
 
-static const uint8_t s_ov5640_lnc_00[]=
-{
-	0x00
-};
-static const uint8_t s_ov5640_lnc_01[]=
-{
-	0x00
-};
-static const uint8_t s_ov5640_lnc_02[]=
-{
-	0x00
-};
-static const uint8_t s_ov5640_lnc_03[]=
-{
-	0x00
-};
-static const uint8_t s_ov5640_lnc_04[]=
-{
-	0x00
-};
-static const uint8_t s_ov5640_lnc_05[]=
-{
-	0x00
-};
-static const uint8_t s_ov5640_lnc_06[]=
-{
-	0x00
-};
-static const uint8_t s_ov5640_lnc_07[]=
-{
-	0x00
-};
-static const uint8_t s_ov5640_lnc_08[]=
-{
-	0x00
-};
-
-static const uint8_t s_ov5640_ae_weight_customer[]=
-{
-#include "sensor_ov5640_ae_weight_customer.dat"
-};
-
-/* 00: 0x->50hz 1x->60hz x0->normal x1->night*/
-static const uint16_t s_ov5640_aes_00[250]={
-#include "sensor_ov5640_aes_00.dat"
-};
-
-static const uint16_t s_ov5640_aeg_00[250]={
-#include "sensor_ov5640_aeg_00.dat"
-};
-
-static const uint16_t s_ov5640_aes_10[250]={
-#include "sensor_ov5640_aes_10.dat"
-};
-
-static const uint16_t s_ov5640_aeg_10[250]={
-#include "sensor_ov5640_aeg_10.dat"
-};
-
-static const uint16_t s_ov5640_aes_01[250]={
-#include "sensor_ov5640_aes_01.dat"
-};
-
-static const uint16_t s_ov5640_aeg_01[250]={
-#include "sensor_ov5640_aeg_01.dat"
-};
-
-static const uint16_t s_ov5640_aes_11[250]={
-#include "sensor_ov5640_aes_11.dat"
-};
-
-static const uint16_t s_ov5640_aeg_11[250]={
-#include "sensor_ov5640_aeg_11.dat"
-};
-
-static const uint8_t s_ov5640_tune_info[sizeof(struct sensor_raw_tune_info)]={
-#include "sensor_ov5640_tune_info.dat"
-};
-
-static struct sensor_raw_fix_info s_ov5640_fix_info={
-//ae
-{
-	(uint8_t*)s_ov5640_ae_weight_customer,
-
-	(uint16_t*)s_ov5640_aes_00,
-	(uint16_t*)s_ov5640_aes_00,
-	128,
-	(sizeof(s_ov5640_aes_00)/2)-0x01,
-
-	(uint16_t*)s_ov5640_aes_10,
-	(uint16_t*)s_ov5640_aes_10,
-	128,
-	(sizeof(s_ov5640_aes_10)/2)-0x01,
-
-	(uint16_t*)s_ov5640_aes_10,
-	(uint16_t*)s_ov5640_aes_10,
-	128,
-	(sizeof(s_ov5640_aes_10)/2)-0x01,
-
-	(uint16_t*)s_ov5640_aes_11,
-	(uint16_t*)s_ov5640_aeg_11,
-	128,
-	(sizeof(s_ov5640_aes_11)/2)-0x01
-},
-
-//lnc
-{
-	0x00,
-	(uint32_t*)s_ov5640_lnc_00,
-	0x00,
-
-	0x00,
-	(uint32_t*)s_ov5640_lnc_01,
-	0x00,
-
-	0x00,
-	(uint32_t*)s_ov5640_lnc_02,
-	0x00,
-
-	0x00,
-	(uint32_t*)s_ov5640_lnc_03,
-	0x00,
-
-	0x00,
-	(uint32_t*)s_ov5640_lnc_04,
-	0x00,
-
-	0x00,
-	(uint32_t*)s_ov5640_lnc_05,
-	0x00,
-
-	0x00,
-	(uint32_t*)s_ov5640_lnc_06,
-	0x00,
-
-	0x00,
-	(uint32_t*)s_ov5640_lnc_07,
-	0x00,
-
-	0x00,
-	(uint32_t*)s_ov5640_lnc_08,
-	0x00
-}
-};
-
-static struct sensor_version_info s_ov5640_version_info={
-	SENSOR_RAW_VERSION_ID,
-	sizeof(struct sensor_raw_info),
-	0x00
-};
-
-static struct sensor_raw_info s_ov5640_raw_info={
-	&s_ov5640_version_info,
-	&s_ov5640_tune_info,
-	&s_ov5640_fix_info,
-};
 LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5640_ioctl_func_tab = {
 	PNULL,
 	_ov5640_PowerOn,
@@ -1374,6 +1219,9 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5640_ioctl_func_tab = {
 	_ov5640_set_anti_flicker,
 	_ov5640_set_video_mode,
 	_ov5640_pick_out_jpeg_stream,
+	PNULL,  //meter_mode
+	_ov5640_check_status, //get_status
+	PNULL,
 	PNULL
 };
 #if 0
@@ -1434,7 +1282,7 @@ SENSOR_INFO_T g_ov5640_yuv_info = {
 
 	s_ov5640_resolution_Tab_YUV,	// point to resolution table information structure
 	&s_ov5640_ioctl_func_tab,	// point to ioctl function table
-	&s_ov5640_raw_info,		// information and table about Rawrgb sensor
+	0,		// information and table about Rawrgb sensor
 	NULL,			//&g_ov5640_ext_info,                // extend information about sensor
 	SENSOR_AVDD_2800MV,	// iovdd
 	SENSOR_AVDD_1500MV,	// dvdd
@@ -1447,7 +1295,8 @@ SENSOR_INFO_T g_ov5640_yuv_info = {
 	0,
 	0,
 	0,
-	0
+	0,
+	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1}
 };
 
 LOCAL uint32_t _ov5640_GetExifInfo(uint32_t param)
@@ -2417,6 +2266,11 @@ LOCAL uint32_t _ov5640_chang_image_format(uint32_t param)
 LOCAL uint32_t _ov5640_after_snapshot(uint32_t param)
 {
 	SENSOR_PRINT("SENSOR: _ov5640_after_snapshot =%d \n", param);
+	SENSOR_PRINT_HIGH("SENSOR: set flash on beforeSnapShot, g_flash_mode = %d \n",
+	       g_flash_mode_en);
+	if (g_flash_mode_en) {
+		Sensor_SetFlash(0x10);
+	}
 	Sensor_SetMode(param);
 	return SENSOR_SUCCESS;
 }
@@ -2434,9 +2288,10 @@ LOCAL uint32_t _ov540_flash(uint32_t param)
 
 LOCAL uint32_t _ov5640_MatchZone(SENSOR_EXT_FUN_T_PTR param_ptr)
 {
-	SENSOR_RECT_T zone_rect = { 0x00 };
+	SENSOR_RECT_T zone_rect;
 	uint32_t rtn = SENSOR_SUCCESS;
 
+	memset((void*)&zone_rect, 0, sizeof(SENSOR_RECT_T));
 	switch (param_ptr->cmd) {
 	case SENSOR_EXT_FOCUS_START:
 		switch (param_ptr->param) {
@@ -6931,7 +6786,7 @@ LOCAL int _ov5640_init_firmware(uint32_t param)
 
 	for (i = 0; i < 4; i++) {
 #if 1
-		ret = Sensor_WriteRegs(reg_ptr, init_num);
+		ret = Sensor_WriteData(reg_ptr, init_num);
 #else
 		msg_w.addr = i2c_client->addr;
 		msg_w.flags = 0;
@@ -6989,6 +6844,21 @@ LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param)
 		break;
 	}
 	return rtn;
+}
+
+//static int count = 0;
+LOCAL uint32_t _ov5640_check_status(uint32_t param)
+{
+	return 0;
+#if 0
+	SENSOR_PRINT_HIGH("_ov5640_check_status, count %d", count);
+	if (count ++ >= 10) {
+		count = 0;
+		return -1;
+	} else {
+		return 0;
+	}
+#endif
 }
 
 #if 0

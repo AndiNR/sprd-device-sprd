@@ -476,8 +476,11 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV2655_ioctl_func_tab = {
 	PNULL,
 	set_ov2655_anti_flicker,
 	PNULL,
-
 	PNULL,
+	PNULL,  //meter_mode
+	PNULL, //get_status
+	PNULL,
+	PNULL
 };
 
 /**---------------------------------------------------------------------------*

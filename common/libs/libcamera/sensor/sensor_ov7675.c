@@ -493,11 +493,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
 {
         // Internal 
         PNULL,
-#if defined(PLATFORM_SC8800G)
         PNULL,
-#else
-        //_ov7675_Power_On,
-#endif
         PNULL,
         OV7675_Identify,
 
@@ -543,8 +539,11 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
         PNULL,
         set_ov7675_anti_flicker,
         set_ov7675_video_mode,
-        //    PNULL,
-        PNULL    
+        PNULL,
+	PNULL,  //meter_mode
+	PNULL, //get_status
+	PNULL,
+	PNULL
 };
 /**---------------------------------------------------------------------------*
  ** 						Global Variables								  *
@@ -557,7 +556,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
         							// bit2: 0: i2c register addr  is 8 bit, 1: i2c register addr  is 16 bit
         							// other bit: reseved
         SENSOR_HW_SIGNAL_PCLK_N|\
-        SENSOR_HW_SIGNAL_VSYNC_P|\
+        SENSOR_HW_SIGNAL_VSYNC_N|\
         SENSOR_HW_SIGNAL_HSYNC_P,		// bit0: 0:negative; 1:positive -> polarily of pixel clock
         							// bit2: 0:negative; 1:positive -> polarily of horizontal synchronization signal
         							// bit4: 0:negative; 1:positive -> polarily of vertical synchronization signal
@@ -608,8 +607,8 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
         	
         PNULL,							// information and table about Rawrgb sensor
         PNULL,							// extend information about sensor	
-        SENSOR_AVDD_2800MV,                     // iovdd
-        SENSOR_AVDD_2800MV,                      // dvdd
+        SENSOR_AVDD_1800MV,                     // iovdd
+        SENSOR_AVDD_1800MV,                      // dvdd
         4,                     // skip frame num before preview 
         3,                      // skip frame num before capture
         0,                      // deci frame num during preview	
@@ -618,7 +617,9 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
         0,                     // atv output mode 0 fix mode 1 auto mode	
         0,                    // atv output start postion	
         0,                     // atv output end postion
-        0
+        0,
+	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1}
+
 };
 /**---------------------------------------------------------------------------*
  ** 							Function  Definitions
@@ -657,7 +658,7 @@ LOCAL uint32_t OV7675_Identify(uint32_t param)
                 if( ret != value[i]) {
                         err_cnt++;
                         if(err_cnt>3) {
-                                SENSOR_TRACE("Fail to OV7690_Identify: ret: %d, value[%d]: %d.\n", ret, i, value[i]);
+                                SENSOR_TRACE("Fail to OV7690_Identify: ret: %d, value[%d]: %d", ret, i, value[i]);
                                 return SENSOR_FAIL;
                         } else {
                                 //Masked by frank.yang,SENSOR_Sleep() will cause a  Assert when called in boot precedure
@@ -672,7 +673,7 @@ LOCAL uint32_t OV7675_Identify(uint32_t param)
         }
 
         _ov7675_InitExifInfo();
-        SENSOR_TRACE("SENSOR: OV7675_Identify: it is OV7675.\n");
+        SENSOR_TRACE("SENSOR: OV7675_Identify: it is OV7675");
         return 0;
 }
 /******************************************************************************/
