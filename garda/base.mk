@@ -4,8 +4,33 @@ MALI := libUMP libEGL_mali.so libGLESv1_CM_mali.so libGLESv2_mali.so libMali.so 
 PRODUCT_PROPERTY_OVERRIDES :=
 
 PRODUCT_PACKAGES := \
+	DeskClock \
+	Bluetooth \
+	Calculator \
+	Calendar \
+	CertInstaller \
+	DrmProvider \
+	Email \
+	Exchange2 \
+	Gallery2 \
+	InputDevices \
+	LatinIME \
+	Launcher2 \
+	Music \
+	MusicFX \
+	Provision \
+	QuickSearchBox \
+	SystemUI \
+	CalendarProvider \
+	bluetooth-health \
+	hostapd \
+	wpa_supplicant.conf \
+	audio.a2dp.default
+
+PRODUCT_PACKAGES += \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \
+	camera.$(TARGET_PLATFORM) \
 	lights.$(TARGET_PLATFORM) \
 	audio.primary.$(TARGET_PLATFORM) \
 	tinymix \
@@ -13,10 +38,11 @@ PRODUCT_PACKAGES := \
 	$(MALI)
 
 PRODUCT_COPY_FILES := \
-	$(BOARDDIR)/init.sp8825.rc:root/init.sp8825.rc \
-	$(BOARDDIR)/init.sp8825.usb.rc:root/init.sp8825.usb.rc \
-	$(BOARDDIR)/ueventd.sp8825.rc:root/ueventd.sp8825.rc \
-	$(BOARDDIR)/fstab.sp8825:root/fstab.sp8825 \
+	$(BOARDDIR)/init.rc:root/init.rc \
+	$(BOARDDIR)/init.sc8825.rc:root/init.sc8825.rc \
+	$(BOARDDIR)/init.sc8825.usb.rc:root/init.sc8825.usb.rc \
+	$(BOARDDIR)/ueventd.sc8825.rc:root/ueventd.sc8825.rc \
+	$(BOARDDIR)/fstab.sc8825:root/fstab.sc8825 \
 	$(BOARDDIR)/vold.fstab:system/etc/vold.fstab \
         $(BOARDDIR)/hw_params/tiny_hw.xml:system/etc/tiny_hw.xml \
         $(BOARDDIR)/hw_params/codec_pga.xml:system/etc/codec_pga.xml \

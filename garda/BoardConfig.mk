@@ -44,7 +44,13 @@ BOARD_KERNEL_BASE := 0x00000000
 BOARD_KERNEL_CMDLINE := console=ttyS1,115200n8
 
 # use default init.rc
-TARGET_PROVIDES_INIT_RC := false
+TARGET_PROVIDES_INIT_RC := true
+
+# board specific modules
+BOARD_USES_TINYALSA_AUDIO := true
+BOARD_USES_ALSA_AUDIO := false
+BUILD_WITH_ALSA_UTILS := false
+BOARD_USE_VETH := true
 
 # ext4 partition layout
 TARGET_USERIMAGES_USE_EXT4 := true
@@ -62,4 +68,3 @@ BOARD_USES_GENERIC_AUDIO := false
 BOARD_USES_TINYALSA_AUDIO := true
 
 BOARD_HAVE_BLUETOOTH := true
-BOARD_USE_VETH := true
