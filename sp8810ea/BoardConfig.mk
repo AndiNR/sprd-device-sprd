@@ -85,3 +85,6 @@ BOARD_HAVE_BLUETOOTH := true
 
 USE_BOOT_AT_DIAG := true
 
+#fm
+BOARD_HAVE_FM_BCM := true
+

@@ -151,10 +151,16 @@ service pbap /system/bin/sdptool add --channel=19 PBAP
     group bluetooth net_bt_admin
     disabled
     oneshot
+
 service akmd /system/bin/akmd8975 -m 3
     class main
     oneshot
 
+
+service FmPower /system/bin/FmDaemon
+   class main
+   user root
+   group vpn net_admin net_raw
 
 service hciattach /system/bin/brcm_patchram_plus --enable_hci --enable_lpm --no2bytes \
     --tosleep 50000 --baudrate 3000000 --use_baudrate_for_download  \
@@ -164,6 +170,21 @@ service hciattach /system/bin/brcm_patchram_plus --enable_hci --enable_lpm --no2
     group bluetooth net_bt_admin
     disabled
     oneshot
+
+service btld  /system/bin/btld -lpm 0 -hb 3000000
+    user root
+    group bluetooth net_bt_admin
+    disabled
+    oneshot
+
+#start btld if soft_onoff is enabled
+on property:service.brcm.bt.soft_onoff=1
+    start btld
+
+# stop btld if soft_onoff is disabled
+on property:service.brcm.bt.soft_onoff=0
+    stop btld
+
 service wpa_supplicant /system/bin/wpa_supplicant \
     -Dnl80211 -iwlan0 -c/data/misc/wifi/wpa_supplicant.conf -dd
     group system wifi inet keystore
