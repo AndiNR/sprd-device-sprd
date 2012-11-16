@@ -9,6 +9,8 @@
  *          add continous area read support
  * 2010.11.17 v04 fool2
  *          add set support, polish the help info
+ * 2012.11.16 v05 fool2
+ *          add sc8825 (tiger) a-die regs access
  */
 
 #define LOG_NDEBUG 0
@@ -26,9 +28,8 @@
 #include <getopt.h>
 
 #define MAPSIZE (4096)
-#define ANA_REG_ADDR_START 0x82000040
-#define ANA_REG_ADDR_END   0x82000780
-#define IS_ANA_ADDR(_a) (_a>=ANA_REG_ADDR_START && _a<=ANA_REG_ADDR_END)
+unsigned int ana_reg_addr_start = 0, ana_reg_addr_end = 0;
+#define IS_ANA_ADDR(_a) (_a>=ana_reg_addr_start && _a<=ana_reg_addr_end)
 
 #define ADI_ARM_RD_CMD(b) (b+0x24)
 #define ADI_RD_DATA(b)    (b+0x28)
@@ -63,7 +64,7 @@ void usage(void)
 "  1) 0x%08x-0x%08x - ADI REG area\n"
 "  2) other addresses       - Other IO areas\n"
 "\n"
-                ,ANA_REG_ADDR_START, ANA_REG_ADDR_END);
+                ,ana_reg_addr_start, ana_reg_addr_end);
 }
 
 unsigned short ADI_Analogdie_reg_read (unsigned int vbase, unsigned int paddr)
@@ -161,13 +162,58 @@ void print_result_mul(unsigned int paddr, unsigned int vbase,
         return;
 }
 
+int chip_probe(void)
+{
+    int fd;
+    char *vbase;
+    unsigned int chip_id;
+    if ((fd = open("/dev/mem", O_RDWR | O_SYNC)) == -1) {
+        perror("could not open /dev/mem/");
+        exit(EXIT_FAILURE);
+    }
+
+    vbase = (char*)mmap(0, MAPSIZE, PROT_READ | PROT_WRITE,
+                    MAP_SHARED, fd, 0x20900000);
+    if (vbase == (char *)-1) {
+        perror("mmap failed!");
+        exit(EXIT_FAILURE);
+    }
+
+    chip_id = *((unsigned int *)(vbase+0x3fc));
+    chip_id >>= 16;
+
+    if (chip_id == 0x8810) {
+        ana_reg_addr_start = 0x82000040;
+    }
+    else if (chip_id == 0x8820) {
+        ana_reg_addr_start = 0x42000040;
+    }
+    else {
+        perror("unknown chip!");
+        exit(EXIT_FAILURE);
+    }
+
+    /* each adi frame only contain 9 bits address */
+    ana_reg_addr_end = (ana_reg_addr_start & ~(MAPSIZE - 1)) + 0x7fc;
+
+    if (munmap(vbase, 4096) == -1) {
+        perror("munmap failed!");
+        exit(EXIT_FAILURE);
+    }
+
+    close(fd);
+    return 0;
+}
+
 int main (int argc, char** argv)
 {
         int fd, opt;
         int flags = 0; /* option indicator */
         unsigned int paddr, pbase, offset;
-        unsigned int value, nword = 0; 
+        unsigned int value = 0, nword = 0;
         char *vbase;
+
+        chip_probe();
 
         while ((opt = getopt(argc, argv, "s:l:h")) != -1) {
                 switch (opt) {
