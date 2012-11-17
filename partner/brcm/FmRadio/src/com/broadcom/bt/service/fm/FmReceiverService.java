@@ -57,6 +57,7 @@ import android.util.Log;
 import android.content.Context;
 import android.content.Intent;
 import android.media.AudioSystem;
+import android.media.AudioManager;
 
 /**
  * /** Provides a service for accessing and altering FM receiver hardware
@@ -1385,11 +1386,22 @@ public final class FmReceiverService extends BaseService {
             else if (audioPath == FmReceiver.AUDIO_PATH_WIRE_HEADSET)
                 AudioSystem.setParameters("fm_route=fm_headset");*/
             Log.d(TAG, "FM audio system switch audioPath="+audioPath);
-            Intent intent = new Intent(Intent.ACTION_FM);
+/*            Intent intent = new Intent(Intent.ACTION_FM);
             intent.putExtra("state", audioPath == FmReceiver.AUDIO_PATH_NONE ? 0 : 1);
             intent.putExtra("speaker", audioPath == FmReceiver.AUDIO_PATH_SPEAKER ? 1 : 0);
 
-            mContext.sendBroadcast(intent, null);
+            mContext.sendBroadcast(intent, null);*/
+            AudioManager am = ((AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE));
+            if (audioPath == FmReceiver.AUDIO_PATH_NONE) {
+                am.setWiredDeviceConnectionState(AudioManager.DEVICE_OUT_FM_SPEAKER, AudioSystem.DEVICE_STATE_UNAVAILABLE, "");
+                am.setWiredDeviceConnectionState(AudioManager.DEVICE_OUT_FM_HEADSET, AudioSystem.DEVICE_STATE_UNAVAILABLE, "");
+            } else if (audioPath == FmReceiver.AUDIO_PATH_SPEAKER) {
+                am.setWiredDeviceConnectionState(AudioManager.DEVICE_OUT_FM_HEADSET, AudioSystem.DEVICE_STATE_UNAVAILABLE, "");
+                am.setWiredDeviceConnectionState(AudioManager.DEVICE_OUT_FM_SPEAKER, AudioSystem.DEVICE_STATE_AVAILABLE, "");
+            } else if (audioPath == FmReceiver.AUDIO_PATH_WIRE_HEADSET) {
+                am.setWiredDeviceConnectionState(AudioManager.DEVICE_OUT_FM_SPEAKER, AudioSystem.DEVICE_STATE_UNAVAILABLE, "");
+                am.setWiredDeviceConnectionState(AudioManager.DEVICE_OUT_FM_HEADSET, AudioSystem.DEVICE_STATE_AVAILABLE, "");
+            }
         }
 
         return returnStatus;
