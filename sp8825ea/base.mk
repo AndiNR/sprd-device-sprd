@@ -28,6 +28,11 @@ PRODUCT_PACKAGES := \
 	audio.a2dp.default
 
 PRODUCT_PACKAGES += \
+	nvitemd \
+	charge \
+	vcharged \
+	modemd \
+	calibration_init \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \
 	camera.$(TARGET_PLATFORM) \
