@@ -226,6 +226,12 @@ static void process_modem_state_message(char *message,int size)
 		case MODEM_STA_ASSERT:
 			if(reset_status==1){
 				
+				int pid;
+
+				pid = get_task_pid(MONITOR_APP);
+
+				if(pid > 0)
+					kill(pid, SIGUSR1);
 				printf("modem_state2 = MODEM_STA_BOOT\n");
 				modem_state = MODEM_STA_BOOT;
 			}
@@ -244,12 +250,6 @@ static void process_modem_state_message(char *message,int size)
 		break;
         	case MODEM_STA_ALIVE:
 			if(alive_status == 0){
-				int pid;
-
-				pid = get_task_pid(MONITOR_APP);
-
-				if(pid > 0)
-					kill(pid, SIGUSR1);
 				modem_state = MODEM_STA_ASSERT;
 				printf("modem_state4 = MODEM_STA_ASSERT\n");
 			}
