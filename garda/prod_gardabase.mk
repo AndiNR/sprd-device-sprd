@@ -41,7 +41,7 @@ PRODUCT_PACKAGES := \
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \
 	$(BOARDDIR)/pixcir_ts.kl:system/usr/keylayout/pixcir_ts.kl \
-	$(BOARDDIR)/pixcir_ts.idc:system/usr/idc/pixcir_ts.idc
+	$(BOARDDIR)/Zinitix_tsp.idc:system/usr/idc/Zinitix_tsp.idc
 
 $(call inherit-product, frameworks/native/build/phone-hdpi-dalvik-heap.mk)
 
