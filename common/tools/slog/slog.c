@@ -63,12 +63,25 @@ void exec_or_dump_content(struct slog_info *info, char *filepath)
 	struct tm tm;
 	char buffer[4096];
 
+	if(!strncmp("bugreport", info->content, 9)) {
+		sprintf(buffer, "%s/%s/%s", current_log_path, top_logdir, info->log_path);
+		ret = mkdir(buffer, S_IRWXU | S_IRWXG | S_IRWXO);
+		if(-1 == ret && (errno != EEXIST)){
+			err_log("mkdir %s failed.", buffer);
+			exit(0);
+		}
+		sprintf(buffer, "bugreport >> %s/%s/%s/%s.log",
+			current_log_path, top_logdir, info->log_path, info->log_basename);
+		system(buffer);
+		return;
+	}
+
 	/* setup log file first */
 	if( filepath == NULL ) {
 		sprintf(buffer, "%s/%s/%s", current_log_path, top_logdir, info->log_path);
 		ret = mkdir(buffer, S_IRWXU | S_IRWXG | S_IRWXO);
 		if(-1 == ret && (errno != EEXIST)){
-			err_log("mkdir %s failed", buffer);
+			err_log("mkdir %s failed.", buffer);
 			exit(0);
 		}
 		sprintf(buffer, "%s/%s/%s/%s.log",
@@ -157,7 +170,7 @@ static int capture_all(struct slog_info *head)
 	sprintf(filepath, "/%s/%s/%s", current_log_path, top_logdir, info->log_path);
         ret = mkdir(filepath, S_IRWXU | S_IRWXG | S_IRWXO);
         if(-1 == ret && (errno != EEXIST)){
-                err_log("mkdir %s failed", filepath);
+                err_log("mkdir %s failed.", filepath);
                 exit(0);
         }
 
@@ -189,7 +202,7 @@ static void handler_last_dir()
 
         if(( p_dir = opendir(current_log_path)) == NULL)
                 {
-                        err_log("can not open %s\n", current_log_path);
+                        err_log("can not open %s.", current_log_path);
                         return;
                 }
 
@@ -217,7 +230,7 @@ static void handler_last_dir()
 
 	ret = mkdir(buffer, S_IRWXU | S_IRWXG | S_IRWXO);
 	if(-1 == ret && (errno != EEXIST)){
-		err_log("mkdir %s failed", buffer);
+		err_log("mkdir %s failed.", buffer);
 		exit(0);
 	}
 
@@ -240,7 +253,7 @@ static int cp_internal_to_external()
 
         if(( p_dir = opendir(INTERNAL_LOG_PATH)) == NULL)
                 {
-                        err_log("can not open %s\n", current_log_path);
+                        err_log("can not open %s.", current_log_path);
                         return 0;
                 }
 
@@ -248,7 +261,7 @@ static int cp_internal_to_external()
                 {
                         if( !strncmp(p_dirent->d_name, "20", 2) ) {
 				strcpy(top_logdir, p_dirent->d_name);
-				sprintf(buffer, "cp -rf %s/%s %s/", INTERNAL_LOG_PATH, top_logdir, external_storage);
+				sprintf(buffer, "cp -r %s/%s %s/", INTERNAL_LOG_PATH, top_logdir, external_storage);
 				system(buffer);
 				debug_log("%s", buffer);
 				return 1;
@@ -288,7 +301,7 @@ static void create_log_dir()
 
 	ret = mkdir(path, S_IRWXU | S_IRWXG | S_IRWXO);
 	if (-1 == ret && (errno != EEXIST)){
-		err_log("mkdir %s failed", path);
+		err_log("mkdir %s failed.", path);
 		exit(0);
 	}
 
@@ -304,7 +317,7 @@ static void use_ori_log_dir()
 
         if(( p_dir = opendir(current_log_path)) == NULL)
                 {
-                        err_log("can not open %s\n", current_log_path);
+                        err_log("can not open %s.", current_log_path);
                         return;
                 }
 
@@ -439,7 +452,7 @@ int dump_all_log(const char *name)
 	capture_by_name(snapshot_log_head, "getprop");
 	if(!strncmp(current_log_path ,INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)))
 		return -1;
-	sprintf(cmd, "tar czf %s/../%s.tgz /%s", current_log_path, name, current_log_path);
+	sprintf(cmd, "tar czf %s/../%s /%s %s", current_log_path, name, current_log_path, INTERNAL_LOG_PATH);
 	return system(cmd);
 }
 
@@ -534,7 +547,7 @@ void *command_handler(void *arg)
 			}
 			break;
 		default:
-			err_log("wrong cmd cmd: %d %s\n", cmd.type, cmd.content);
+			err_log("wrong cmd cmd: %d %s.", cmd.type, cmd.content);
 			break;
 		}
 		cmd.type = CTRL_CMD_TYPE_RSP;
@@ -581,7 +594,7 @@ static void handle_top_logdir()
 
 	ret = mkdir(current_log_path, S_IRWXU | S_IRWXG | S_IRWXO);
 	if(-1 == ret && (errno != EEXIST)){
-		err_log("mkdir %s failed", current_log_path);
+		err_log("mkdir %s failed.", current_log_path);
                 exit(0);
 	}
 
@@ -648,7 +661,6 @@ static void handler_internal_log_size()
  */
 static int do_init()
 {
-
 	/* handle sdcard issue */
 	if(!strncmp(config_log_path, external_storage, strlen(external_storage))) {
 		if(!sdcard_mounted())
@@ -688,7 +700,7 @@ void create_pidfile()
 
 	fp = fopen(PID_FILE, "r");
 	if(fp == NULL) {
-		err_log("can't open pid file: %s", PID_FILE);
+		err_log("can't open pid file: %s.", PID_FILE);
 		exit(0);
 	}
 	memset(buffer, 0, MAX_NAME_LEN);
@@ -703,7 +715,7 @@ void create_pidfile()
 			fgets(buffer, MAX_NAME_LEN, fp);
 			if(!strncmp(buffer, "slog", 4)) {
 				/* means daemon has started, just exit */
-				err_log("Slog is running already, the quit immediately");
+				err_log("Slog is running already, the quit immediately.");
 				fclose(fp);
 				exit(0);
 			}
@@ -714,13 +726,13 @@ void create_pidfile()
 write_pid:
 	ret = mkdir(TMP_FILE_PATH, S_IRWXU | S_IRWXG | S_IRWXO);
         if (-1 == ret && (errno != EEXIST)){
-                err_log("mkdir %s failed", TMP_FILE_PATH);
+                err_log("mkdir %s failed.", TMP_FILE_PATH);
                 exit(0);
         }
 
 	fp = fopen(PID_FILE, "w");
 	if(fp == NULL) {
-		err_log("can't open pid file: %s", PID_FILE);
+		err_log("can't open pid file: %s.", PID_FILE);
 		exit(0);
 	}
 
@@ -731,14 +743,14 @@ write_pid:
 
 static void sig_handler1(int sig)
 {
-	err_log("get a signal %d\n", sig);
+	err_log("get a signal %d.", sig);
 	unlink(PID_FILE);
 	exit(0);
 }
 
 static void sig_handler2(int sig)
 {
-	err_log("get a signal %d\n", sig);
+	err_log("get a signal %d.", sig);
 	return;
 }
 
@@ -780,10 +792,12 @@ int main(int argc, char *argv[])
 {
 	/* become a background service */
 /*	if(daemon(0, 0)){
-		err_log("Can't start Slog daemon");
+		err_log("Can't start Slog daemon.");
 		exit(0);
 	}
 */
+	err_log("Slog begin to work.");
+
 	/* pid file */
 	create_pidfile();
 

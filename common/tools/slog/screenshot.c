@@ -95,7 +95,7 @@ static void set_pixel_unpacker(FBInfo* fb)
 		fb->unpack = fb_unpack_argb32;
 	} else {
 		fb->unpack = fb_unpack_none;
-		err_log("%s: not supported format.\n", __func__);
+		err_log("not supported format.");
 	}
 	return;
 }
@@ -104,7 +104,7 @@ static int fb_open(FBInfo* fb, const char* fbfilename)
 {
 	fb->fd = open(fbfilename, O_RDWR);
 	if (fb->fd < 0) {
-		err_log("can't open %s\n", fbfilename);
+		err_log("can't open %s.", fbfilename);
 		return -1;
 	}
 
@@ -130,7 +130,7 @@ static int fb_open(FBInfo* fb, const char* fbfilename)
 	return 0;
 
 fail:
-	err_log("%s is not a framebuffer.\n", fbfilename);
+	err_log("%s is not a framebuffer.", fbfilename);
 	close(fb->fd);
 
 	return -1;

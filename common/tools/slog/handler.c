@@ -39,7 +39,7 @@ static void gen_logfile(char *filename, struct slog_info *info)
 	sprintf(filename, "%s/%s/%s", current_log_path, top_logdir, info->log_path);
 	ret = mkdir(filename, S_IRWXU | S_IRWXG | S_IRWXO);
 	if (-1 == ret && (errno != EEXIST)){
-                err_log("mkdir %s failed", filename);
+                err_log("mkdir %s failed.", filename);
                 exit(0);
         }
 
@@ -220,13 +220,13 @@ static void handle_notify_file(int wd, const char *name)
 		sprintf(dest_file, "%s/%s/%s", current_log_path, top_logdir, info->log_path);
 		ret = mkdir(dest_file, S_IRWXU | S_IRWXG | S_IRWXO);
 		if (-1 == ret && (errno != EEXIST)){
-			err_log("mkdir %s failed", dest_file);
+			err_log("mkdir %s failed.", dest_file);
 			exit(0);
 		}
 		sprintf(dest_file, "%s/%s/%s/%s", current_log_path, top_logdir, info->log_path, info->name);
 		ret = mkdir(dest_file, S_IRWXU | S_IRWXG | S_IRWXO);
 		if (-1 == ret && (errno != EEXIST)){
-                        err_log("mkdir %s failed", dest_file);
+                        err_log("mkdir %s failed.", dest_file);
                         exit(0);
                 }
 
@@ -312,7 +312,7 @@ void *notify_log_handler(void *arg)
                 }
 		ret = mkdir(info->content, S_IRWXU | S_IRWXG | S_IRWXO);
 		if (-1 == ret && (errno != EEXIST)){
-                        err_log("mkdir %s failed", info->content);
+                        err_log("mkdir %s failed.", info->content);
                         exit(0);
                 }
 		debug_log("notify add watch %s\n", info->content);
@@ -374,15 +374,15 @@ void *notify_log_handler(void *arg)
  * open log devices
  *
  */
-static int open_device(char *path)
+static void open_device(struct slog_info *info, char *path)
 {
-	int fd;
-	fd = open(path, O_RDONLY);
-	if(fd < 0){
-		err_log("Unable to open log device '%s'", path);
-		exit(0);
+	info->fd_device = open(path, O_RDONLY);
+	if(info->fd_device < 0){
+		err_log("Unable to open log device '%s', close '%s' log.", path, info->name);
+		info->state = SLOG_STATE_OFF;
 	}
-	return fd;
+
+	return;
 }
 
 /*
@@ -397,7 +397,7 @@ static int gen_outfd(struct slog_info *info)
 	gen_logfile(buffer, info);
 	fd = open(buffer, O_WRONLY | O_APPEND | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
 	if(fd < 0){
-		err_log("Unable to open file '%s'",buffer);
+		err_log("Unable to open file %s.",buffer);
 		exit(0);
 	}
 
@@ -538,7 +538,6 @@ void *stream_log_handler(void *arg)
 	int max = 0, ret, result;
 	fd_set readset_tmp, readset;
 	char buf[LOGGER_ENTRY_MAX_LEN+1], buf_kmsg[LOGGER_ENTRY_MAX_LEN], wbuf_kmsg[LOGGER_ENTRY_MAX_LEN *2];
-	char buf_modem[MODEM_LOG_BUF_SIZE];
 	struct logger_entry *entry;
 	AndroidLogEntry entry_write;
 	static AndroidLogPrintFormat format;
@@ -555,14 +554,14 @@ void *stream_log_handler(void *arg)
 			continue;
 		}
 		if(!strncmp(info->name, "kernel", 6)) {
-			info->fd_device = open_device(KERNEL_LOG_SOURCE);
+			open_device(info, KERNEL_LOG_SOURCE);
 			info->fd_out = gen_outfd(info);
 		} else if(!strncmp(info->name, "modem", 5)) {
-			info->fd_device = open_device(MODEM_LOG_SOURCE);
+			open_device(info, MODEM_LOG_SOURCE);
 			info->fd_out = gen_outfd(info);
 		} else {
 			sprintf(devname, "%s/%s", "/dev/log", info->name);
-			info->fd_device = open_device(devname);
+			open_device(info, devname);
 			info->fd_out = gen_outfd(info);
 		}
 
@@ -615,6 +614,7 @@ void *stream_log_handler(void *arg)
 				ret = read(info->fd_device, buf_kmsg, LOGGER_ENTRY_MAX_LEN);
 				if(ret <= 0) {
 					err_log("read %s log failed!", info->name);
+					info = info->next;
 					continue;
 				}
 				strinst(wbuf_kmsg, buf_kmsg);
@@ -632,19 +632,21 @@ void *stream_log_handler(void *arg)
 				info->outbytecount += ret;
 				log_size_handler(info);
 			} else if(!strncmp(info->name, "modem", 5)) {
-				memset(buf_modem, 0, MODEM_LOG_BUF_SIZE);
-				ret = read(info->fd_device, buf_modem, MODEM_LOG_BUF_SIZE);
+				memset(buf_kmsg, 0, LOGGER_ENTRY_MAX_LEN);
+				ret = read(info->fd_device, buf_kmsg, LOGGER_ENTRY_MAX_LEN);
 				if (ret == 0) {
 					close(info->fd_device);
-					info->fd_device = open_device(MODEM_LOG_SOURCE);
+					open_device(info, MODEM_LOG_SOURCE);
+					info = info->next;
 					continue;
 				} else if (ret < 0) {
 					err_log("read %s log failed!", info->name);
+					info = info->next;
 					continue;
 				}
 
 				do {
-					ret = write(info->fd_out, buf_modem, strlen(buf_modem));
+					ret = write(info->fd_out, buf_kmsg, strlen(buf_kmsg));
 				} while (ret < 0 && errno == EINTR);
 
 				info->outbytecount += ret;
@@ -652,8 +654,9 @@ void *stream_log_handler(void *arg)
 			} else {
 				ret = read(info->fd_device, buf, LOGGER_ENTRY_MAX_LEN);
 				if(ret <= 0) {
-                                        err_log("read %s log failed!", info->name);
-                                        continue;
+					err_log("read %s log failed!", info->name);
+					info = info->next;
+					continue;
                                 }
 
 				entry = (struct logger_entry *)buf;
