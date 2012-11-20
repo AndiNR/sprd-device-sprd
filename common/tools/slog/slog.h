@@ -49,11 +49,13 @@ enum {
 };
 
 #ifdef SLOG_ALOGD_ALOGE
-#define err_log(fmt, arg...) ALOGE("%s: " fmt " errno: %d\n", __func__, ## arg, errno);
-#define debug_log(fmt, arg...) ALOGD("%s: " fmt, __func__, ## arg);
+#define err_log(fmt, arg...) ALOGE("%s: " fmt " [%d]\n", __func__, ## arg, errno);
+/*#define debug_log(fmt, arg...) ALOGD("%s: " fmt, __func__, ## arg);*/
+#define debug_log(fmt, arg...)
 #else
-#define err_log(fmt, arg...) LOGE("%s: " fmt " errno: %d\n", __func__, ## arg, errno);
-#define debug_log(fmt, arg...) LOGD("%s: " fmt, __func__, ## arg);
+#define err_log(fmt, arg...) LOGE("%s: " fmt " [%d]\n", __func__, ## arg, errno);
+/*#define debug_log(fmt, arg...) LOGD("%s: " fmt, __func__, ## arg);*/
+#define debug_log(fmt, arg...)
 #endif
 
 #define INTERNAL_LOG_PATH		"/data/slog"
@@ -70,7 +72,6 @@ enum {
 #define DEFAULT_MAX_LOG_SIZE		256 /* MB */
 #define MAXROLLLOGS			10
 #define TIMEOUT_FOR_SD_MOUNT		5 /* seconds */
-#define MODEM_LOG_BUF_SIZE		(4096*64)
 
 #define KERNEL_LOG_SOURCE		"/proc/kmsg"
 #define MODEM_LOG_SOURCE		"/dev/vbpipe0"
