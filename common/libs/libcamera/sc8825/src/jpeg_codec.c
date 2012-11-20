@@ -45,6 +45,7 @@ typedef struct
 	uint32_t	active_handle;
 	uint32_t    is_exit_thread;
 	cmr_evt_cb  event_cb;
+	uint32_t    is_stop;
 }JPEG_CONTEXT_T;
 
 
@@ -131,7 +132,7 @@ static void savedata(uint32_t buf_addr, uint32_t size)
 {
 	FILE *fp = NULL;
 
-	ALOGE("jpeg: savedata");
+	CMR_LOGV("jpeg: savedata");
 	fp = fopen("/data/out.raw", "wb");
 	if(0 != fp)
 	{
@@ -139,7 +140,7 @@ static void savedata(uint32_t buf_addr, uint32_t size)
 		fclose(fp);
 	}else{
 
-		ALOGE("can not create savedata");
+		CMR_LOGE("can not create savedata");
 	}
 
 }
@@ -150,20 +151,20 @@ static void save_inputdata(uint32_t y_buf_addr,
 {
 	FILE *fp = NULL;
 
-	ALOGE("jpeg: save input data,size=%d.",size);
+	CMR_LOGV("jpeg: save input data,size=%d.",size);
 	fp = fopen("/data/in_y.raw", "wb");
 	if(0 != fp) {
 		fwrite((void*)y_buf_addr, 1, size, fp);
 		fclose(fp);
 	}else{
-		ALOGE("can not create savedata");
+		CMR_LOGE("can not create savedata");
 	}
 	fp = fopen("/data/in_uv.raw", "wb");
 	if(0 != fp) {
 		fwrite((void*)uv_buf_addr, 1, size/2, fp);
 		fclose(fp);
 	}else{
-		ALOGE("can not create savedata");
+		CMR_LOGE("can not create savedata");
 	}
 }
 
@@ -181,7 +182,7 @@ static uint32_t _format_covert(uint32_t format)
 
 	default:
 
-		ALOGV("JPEG, unknow format");
+		CMR_LOGE("JPEG, unknow format");
 
 	break;
 
@@ -255,7 +256,7 @@ static  int  _enc_start(uint32_t handle)
 	JPEGENC_SLICE_NEXT_T next_slice_parm;
 	JPEGENC_PARAMS_T *jenc_parm_ptr = (JPEGENC_PARAMS_T *)malloc(sizeof(JPEGENC_PARAMS_T));
 
-	ALOGE("jpeg: _encoder_start: S");
+	CMR_LOGV("jpeg: _encoder_start: S");
 	memset((void*)&slice_out,0,sizeof(JPEGENC_SLICE_OUT_T));
 	memset((void*)&next_slice_parm,0,sizeof(JPEGENC_SLICE_NEXT_T));
 	if(NULL == jenc_parm_ptr){
@@ -264,7 +265,7 @@ static  int  _enc_start(uint32_t handle)
 
 	enc_cxt_ptr = (JPEG_ENC_T * )handle;
 	if(enc_cxt_ptr->slice_height == enc_cxt_ptr->size.height ) {
-		jenc_parm_ptr->set_slice_height = 32;//enc_cxt_ptr->slice_height;
+		jenc_parm_ptr->set_slice_height = 128;//enc_cxt_ptr->slice_height;
 	} else{
 		jenc_parm_ptr->set_slice_height = enc_cxt_ptr->slice_height;
 	}
@@ -296,7 +297,7 @@ static  int  _enc_start(uint32_t handle)
 	jenc_parm_ptr->yuv_v_phy_buf = 0;//enc_cxt_ptr->src_addr_phy.addr_v;
 #endif
 
-	ALOGE("jpeg enc yuv phy addr,0x%x 0x%x 0x%x,slice height %d.",
+	CMR_LOGV("jpeg enc yuv phy addr,0x%x 0x%x 0x%x,slice height %d.",
 		jenc_parm_ptr->yuv_phy_buf,
 		jenc_parm_ptr->yuv_u_phy_buf,
 		jenc_parm_ptr->yuv_v_phy_buf,
@@ -316,7 +317,7 @@ static  int  _enc_start(uint32_t handle)
 #endif
 	jenc_parm_ptr->stream_virt_buf[0] = jpeg_enc_buf_virt_addr;
 	jenc_parm_ptr->stream_phy_buf[0] = jpeg_enc_buf_phys_addr;
-	ALOGE("encoder: jpegenc_params[%d]: virt: %x, phys: %x.",i,(uint32_t)jenc_parm_ptr->stream_virt_buf[i],jenc_parm_ptr->stream_phy_buf[i]);
+	CMR_LOGV("encoder: jpegenc_params[%d]: virt: %x, phys: %x.",i,(uint32_t)jenc_parm_ptr->stream_virt_buf[i],jenc_parm_ptr->stream_phy_buf[i]);
 
 	jenc_parm_ptr->stream_buf_len = jpeg_enc_buf_len;
 	jenc_parm_ptr->stream_size = 0;
@@ -336,16 +337,20 @@ static  int  _enc_start(uint32_t handle)
 		uint32_t cur_y_buf_adr = 0;
 		uint32_t cur_u_buf_adr = 0;
 
-		ALOGE("jpeg: slice mode for frame");
+		CMR_LOGV("jpeg: slice mode for frame");
 
 		if(0 !=  enc_cxt_ptr->size.height%cur_slice_height){
 			slice_num = slice_num+1;
 		}
 
-		ALOGE("jpeg: slice num: %d", slice_num);
+		CMR_LOGV("jpeg: slice num: %d", slice_num);
 		slice_num--;/*start has process one slice*/
 		do {
-
+			if(1 == jcontext.is_stop) {
+				CMR_LOGI("force stop enode.");
+				ret = JPEG_CODEC_ERROR;
+				break;
+			}
 			next_slice_parm.slice_height = jenc_parm_ptr->set_slice_height;
 			next_slice_parm.yuv_phy_buf = enc_cxt_ptr->src_addr_phy.addr_y+enc_cxt_ptr->cur_line_num* enc_cxt_ptr->size.width;
 			next_slice_parm.yuv_u_phy_buf = enc_cxt_ptr->src_addr_phy.addr_u+enc_cxt_ptr->cur_line_num* enc_cxt_ptr->size.width/2;
@@ -361,7 +366,7 @@ static  int  _enc_start(uint32_t handle)
 				enc_cxt_ptr->is_finish = 1;
 				enc_cxt_ptr->stream_real_size = slice_out.stream_size;
 				enc_cxt_ptr->cur_line_num = enc_cxt_ptr->size.height;
-				ALOGE("jpeg: slice num:slice size: %d", slice_out.stream_size);
+				CMR_LOGV("jpeg: slice num:slice size: %d", slice_out.stream_size);
 				break;
 			}
 			slice_num--;
@@ -371,11 +376,11 @@ static  int  _enc_start(uint32_t handle)
 
 	enc_cxt_ptr->cur_id = 0;
 
-	ALOGE("jpeg:  buf addr: 0x%x,  size: %d",enc_cxt_ptr->stream_buf_vir, enc_cxt_ptr->stream_real_size);
+	CMR_LOGV("jpeg:  buf addr: 0x%x,  size: %d",enc_cxt_ptr->stream_buf_vir, enc_cxt_ptr->stream_real_size);
 /*	savedata(enc_cxt_ptr->stream_buf_vir, enc_cxt_ptr->stream_real_size);*/
 enc_start_end:
 	free(jenc_parm_ptr);
-	ALOGE("jpeg: _encoder_start E.");
+	CMR_LOGV("jpeg: _encoder_start E.");
 	return ret;
 }
 
@@ -399,7 +404,7 @@ static  int  _enc_next(uint32_t handle, JPEG_ENC_NXT_PARAM *param_ptr)
 	JPEG_ENC_T *enc_cxt_ptr = NULL;
 	JPEGENC_SLICE_OUT_T slice_out;
 
-	ALOGV("jpeg: _enc_next: S");
+	CMR_LOGV("jpeg: _enc_next: S");
 
 	enc_cxt_ptr = (JPEG_ENC_T * )handle;
 	if(((enc_cxt_ptr->cur_line_num + enc_cxt_ptr->slice_height)>param_ptr->ready_line_num)
@@ -446,7 +451,7 @@ static  int  _enc_next(uint32_t handle, JPEG_ENC_NXT_PARAM *param_ptr)
 		enc_cxt_ptr->cur_line_num = enc_cxt_ptr->size.height;
 	}
 
-	ALOGV("jpeg: _encoder_start E.");
+	CMR_LOGV("jpeg: _encoder_start E.");
 	return ret;
 }
 
@@ -827,7 +832,7 @@ static void* _thread_proc(void* data)
 	JPEG_ENC_T *enc_cxt_ptr = NULL;
 	JPEG_WEXIF_CB_PARAM_T wexif_out_param;
 	CMR_MSG_INIT(message);
-	ALOGE("JPEG Thread In \n");
+	CMR_LOGV("JPEG Thread In \n");
 
 	while(1) {
 
@@ -840,7 +845,10 @@ static void* _thread_proc(void* data)
 
 		CMR_LOGE("jpeg: message.msg_type 0x%x", message.msg_type);
 		evt = (uint32_t)(message.msg_type & JPEG_EVT_MASK_BITS);
-
+		if((1 == jcontext.is_stop) &&(JPEG_EVT_STOP != evt)) {
+			CMR_LOGI("discard message 0x%x.",evt);
+			goto JPEG_SWITCH_END;
+		}
 		switch(evt){
 		case  JPEG_EVT_ENC_START:
 			handle = (uint32_t )message.data;
@@ -940,7 +948,7 @@ static void* _thread_proc(void* data)
 			CMR_LOGE("jpeg: not correct message");
 			break;
 		}
-
+JPEG_SWITCH_END:
 		if(1 == message.alloc_flag){
 			free(message.data);
 		}
@@ -1332,6 +1340,7 @@ int jpeg_stop(uint32_t handle)
 
 	CMR_LOGV("jpeg_stop: handle: 0x%x", (uint32_t)handle);
 
+	jcontext.is_stop = 1;
 	message.data = (void*)handle;
 	ret = cmr_msg_post(jcontext.msg_queue_handle, &message);
 
@@ -1340,6 +1349,7 @@ int jpeg_stop(uint32_t handle)
 	}
 
 	sem_wait(&jcontext.stop_sem);
+	jcontext.is_stop = 0;
 	CMR_LOGV("jpeg_stop end\n");
 	return JPEG_CODEC_SUCCESS;
 }

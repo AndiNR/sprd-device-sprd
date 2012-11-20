@@ -1032,7 +1032,7 @@ LOCAL JPEG_RET_E Jpeg_WriteExifSpecInfo(JPEG_WRITE_STREAM_CONTEXT_T *context_ptr
         ifd_info.count = 1;
         ifd_info.value_offset.long_value = ifd_value_offset - ifh_offset;
         ifd_info.value_ptr = (void *)&baisc_ptr->PixelXDimension;
-		ALOGE("baisc_ptr->PixelXDimension = %d.",baisc_ptr->PixelXDimension);
+		JPEG_PRINT_LOW("baisc_ptr->PixelXDimension = %d.",baisc_ptr->PixelXDimension);
         if (!Jpeg_WriteLongIFD(context_ptr, &ifd_info, &ifd_offset, &ifd_value_offset))
         {
             return JPEG_FAILED;

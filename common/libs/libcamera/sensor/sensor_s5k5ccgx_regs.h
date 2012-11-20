@@ -1,7 +1,7 @@
 
 //#include <mach/sensor_drv.h>
 
-SENSOR_REG_T reg_main_init[]=
+LOCAL SENSOR_REG_T reg_main_init[]=
 {
 	{0xFCFC, 0xD000},
 	//****************************************/
@@ -3078,7 +3078,7 @@ SENSOR_REG_T reg_main_init[]=
 
 };
 
-SENSOR_REG_T s5k5ccgx_update_preview_setting[] = 
+LOCAL SENSOR_REG_T s5k5ccgx_update_preview_setting[] = 
 {
   {0xFCFC, 0xD000},
   {0x0028, 0x7000},
@@ -3109,7 +3109,7 @@ SENSOR_REG_T s5k5ccgx_update_preview_setting[] =
   {0xffff, 0xffff},
 };
 
-SENSOR_REG_T s5k5ccgx_highlight_snapshot[] = 
+LOCAL SENSOR_REG_T s5k5ccgx_highlight_snapshot[] = 
 {
 	//Nomal_capture
 	{0xFCFC, 0xD000},
@@ -3130,7 +3130,7 @@ SENSOR_REG_T s5k5ccgx_highlight_snapshot[] =
    	{0xFFFF, 0xFFFF},
 };
 	
-SENSOR_REG_T s5k5ccgx_normal_snapshot[] = 
+LOCAL SENSOR_REG_T s5k5ccgx_normal_snapshot[] = 
 {
 	{0xFCFC, 0xD000},
 	{0x0028, 0x7000},
@@ -3150,7 +3150,7 @@ SENSOR_REG_T s5k5ccgx_normal_snapshot[] =
    	{0xFFFF, 0xFFFF},
 };
 
-SENSOR_REG_T s5k5ccgx_lowlight_snapshot[] = 
+LOCAL SENSOR_REG_T s5k5ccgx_lowlight_snapshot[] = 
 {
 	{0xFCFC, 0xD000},
 	{0x0028, 0x7000},
@@ -3175,7 +3175,7 @@ SENSOR_REG_T s5k5ccgx_lowlight_snapshot[] =
    	{0xFFFF, 0xFFFF},
 };
 
-SENSOR_REG_T s5k5ccgx_night_snapshot[] = 
+LOCAL SENSOR_REG_T s5k5ccgx_night_snapshot[] = 
 {
 	{0xFCFC, 0xD000},
 	{0x0028, 0x7000},
@@ -3194,21 +3194,21 @@ SENSOR_REG_T s5k5ccgx_night_snapshot[] =
 	{0x0F12, 0x0001},	//REG_TC_GP_EnableCaptureChanged
 };
 
-SENSOR_REG_T s5k5ccgx_get_light_status[] = 
+LOCAL SENSOR_REG_T s5k5ccgx_get_light_status[] = 
 {
 	{0xFCFC, 0xD000},
 	{0x002C, 0x7000},
 	{0x002E, 0x2A3C},
 };
 
-SENSOR_REG_T s5k5ccgx_get_iso_reg[] =
+LOCAL SENSOR_REG_T s5k5ccgx_get_iso_reg[] =
 {
 	{0xFCFC, 0xD000},
 	{0x002C, 0x7000},
 	{0x002E, 0x2A18},
 };
 
-SENSOR_REG_T s5k5ccgx_get_shutterspeed_reg[] =
+LOCAL SENSOR_REG_T s5k5ccgx_get_shutterspeed_reg[] =
 {
 	{0xFCFC, 0xD000},
 	{0x002C, 0x7000},
@@ -3223,7 +3223,7 @@ SENSOR_REG_T s5k5ccgx_get_shutterspeed_reg[] =
 //		
 /******************************************************************************/
 
-SENSOR_REG_T s5k5ccgx_awb_tab[][20]=
+LOCAL SENSOR_REG_T s5k5ccgx_awb_tab[][20]=
 {
     //AUTO
     {
@@ -3332,7 +3332,7 @@ SENSOR_REG_T s5k5ccgx_awb_tab[][20]=
 // Note:
 //		level  must smaller than 8
 /******************************************************************************/
-SENSOR_REG_T s5k5ccgx_brightness_tab[][10]=
+LOCAL SENSOR_REG_T s5k5ccgx_brightness_tab[][10]=
 {
     {//level 1
 		{0xFCFC, 0xD000},
@@ -3412,7 +3412,7 @@ SENSOR_REG_T s5k5ccgx_brightness_tab[][10]=
 // Note:
 //		level must smaller than 9
 /******************************************************************************/
-SENSOR_REG_T s5k5ccgx_contrast_tab[][8]=
+LOCAL SENSOR_REG_T s5k5ccgx_contrast_tab[][8]=
 {
 	{//level 1
 		{0xFCFC, 0xD000}, 
@@ -3464,7 +3464,7 @@ SENSOR_REG_T s5k5ccgx_contrast_tab[][8]=
 // Note:
 //		level must smaller than 9
 /******************************************************************************/
-SENSOR_REG_T s5k5ccgx_image_effect_tab[][8]=
+LOCAL SENSOR_REG_T s5k5ccgx_image_effect_tab[][8]=
 {
 	{
 		//EF_NOMAL
@@ -3514,7 +3514,7 @@ SENSOR_REG_T s5k5ccgx_image_effect_tab[][8]=
 // Note:
 //		mode 0:normal;   1:night 
 /******************************************************************************/
-SENSOR_REG_T s5k5ccgx_scene_mode_tab[][150]=
+LOCAL SENSOR_REG_T s5k5ccgx_scene_mode_tab[][150]=
 {
 	{
 		// ==========================================================
@@ -4207,7 +4207,7 @@ SENSOR_REG_T s5k5ccgx_scene_mode_tab[][150]=
 	},
 };
 
-SENSOR_REG_T s5k5ccgx_YUV_640X480[]=
+LOCAL SENSOR_REG_T s5k5ccgx_YUV_640X480[]=
   //thomas 24M MCLK  input ,15fps ,18M PCLK 
 {
 	{0xFCFC, 0xD000},
@@ -4269,7 +4269,7 @@ SENSOR_REG_T s5k5ccgx_YUV_640X480[]=
 // Author:
 // Note:
 /******************************************************************************/
-SENSOR_REG_T s5k5ccgx_quality_tab[][10]=
+LOCAL SENSOR_REG_T s5k5ccgx_quality_tab[][10]=
 {
 	{
 		// ==========================================================
@@ -4314,7 +4314,7 @@ SENSOR_REG_T s5k5ccgx_quality_tab[][10]=
 // Note:
 //		mode 0:normal;   1:night 
 /******************************************************************************/
-SENSOR_REG_T s5k5ccgx_preview_mode_tab[][50]=
+LOCAL SENSOR_REG_T s5k5ccgx_preview_mode_tab[][50]=
 {
 	{
 		// ==========================================================
@@ -4833,7 +4833,7 @@ SENSOR_REG_T s5k5ccgx_preview_mode_tab[][50]=
 // Author:
 // Note:
 /******************************************************************************/
-SENSOR_REG_T s5k5ccgx_capture_mode_tab[][50]=
+LOCAL SENSOR_REG_T s5k5ccgx_capture_mode_tab[][50]=
 {
 	{
 		// ==========================================================
@@ -5061,7 +5061,7 @@ SENSOR_REG_T s5k5ccgx_capture_mode_tab[][50]=
 // Author:
 // Note:
 /******************************************************************************/
-SENSOR_REG_T s5k5ccgx_dtp_mode_tab[][50]=
+LOCAL SENSOR_REG_T s5k5ccgx_dtp_mode_tab[][50]=
 {
 	{
 		// ==========================================================
@@ -5094,7 +5094,7 @@ SENSOR_REG_T s5k5ccgx_dtp_mode_tab[][50]=
 // Author:
 // Note:
 /******************************************************************************/
-SENSOR_REG_T s5k5ccgx_metering_mode_tab[][50]=
+LOCAL SENSOR_REG_T s5k5ccgx_metering_mode_tab[][50]=
 {
 	{
 		// ==========================================================
@@ -5233,7 +5233,7 @@ SENSOR_REG_T s5k5ccgx_metering_mode_tab[][50]=
 // Author:
 // Note:
 /******************************************************************************/
-SENSOR_REG_T s5k5ccgx_fps_mode_tab[][50]=
+LOCAL SENSOR_REG_T s5k5ccgx_fps_mode_tab[][50]=
 {
 	{ 
 		// ==========================================================

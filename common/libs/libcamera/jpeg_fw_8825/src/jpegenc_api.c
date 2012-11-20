@@ -1022,7 +1022,7 @@ uint32_t JPEGENC_Slice_Next(JPEGENC_SLICE_NEXT_T *update_parm_ptr, JPEGENC_SLICE
 	uint32_t stream_size = 0;
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGEncCodec();
 
-	ALOGE("JPEGENC_Slice_Next: s\n");
+	SCI_TRACE_LOW("JPEGENC_Slice_Next: s\n");
 	vsp_fd = jpeg_fw_codec->fd;
 	vsp_addr = (void*)jpeg_fw_codec->addr;
 	ret = _Encode_NextSlice(0xFFF,update_parm_ptr);
@@ -1049,12 +1049,12 @@ uint32_t JPEGENC_Slice_Next(JPEGENC_SLICE_NEXT_T *update_parm_ptr, JPEGENC_SLICE
 		out_ptr->is_over = 1;
 		out_ptr->stream_size =  stream_size;
 
-		ALOGE("JPEGENC_Slice_Next:  stream size: %d\n", jpeg_fw_codec->slice_num);
+		SCI_TRACE_LOW("JPEGENC_Slice_Next:  stream size: %d\n", jpeg_fw_codec->slice_num);
 	}else{
-		ALOGE("JPEGENC_Slice_Next:  still slice: %d\n", jpeg_fw_codec->slice_num);
+		SCI_TRACE_LOW("JPEGENC_Slice_Next:  still slice: %d\n", jpeg_fw_codec->slice_num);
 	}
 
-	ALOGE("JPEGENC_Slice_Next: ret: %d\n", ret);
+	SCI_TRACE_LOW("JPEGENC_Slice_Next: ret: %d\n", ret);
 	return ret;
 }
 

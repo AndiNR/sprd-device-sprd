@@ -23,11 +23,14 @@
 LOCAL uint32_t _ov5640_GetResolutionTrimTab(uint32_t param);
 LOCAL uint32_t _ov5640_PowerOn(uint32_t power_on);
 LOCAL uint32_t _ov5640_Identify(uint32_t param);
-
 LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param);
 LOCAL uint32_t _ov5640_after_snapshot(uint32_t param);
 LOCAL uint32_t _ov5640_StreamOn(uint32_t param);
 LOCAL uint32_t _ov5640_StreamOff(uint32_t param);
+LOCAL uint32_t _ov5640_write_exposure(uint32_t param);
+LOCAL uint32_t _ov5640_write_gain(uint32_t param);
+LOCAL uint32_t _ov5640_write_af(uint32_t param);
+
 
 static uint32_t g_flash_mode_en = 0;
 
@@ -153,6 +156,7 @@ LOCAL const SENSOR_REG_T ov5640_1280X960_mipi_raw[] = {
 	{0x3036, 0x54},
 	{0x3037, 0x13},
 	{0x4837, 0x0a},
+	{0x3503, 0x03},//bit0 agc  bit1 aec 0:auto 1:maul
 
 //	{0x3008, 0x02}
 };
@@ -160,7 +164,7 @@ LOCAL const SENSOR_REG_T ov5640_1280X960_mipi_raw[] = {
 LOCAL SENSOR_REG_TAB_INFO_T s_ov5640_resolution_Tab_RAW[] = {
 	{NULL, 0, 0, 0, 24, SENSOR_IMAGE_FORMAT_RAW},
 
-	{ADDR_AND_LEN_OF_ARRAY(ov5640_1280X960_mipi_raw), 1280, 960, 12, SENSOR_IMAGE_FORMAT_RAW},
+	{ADDR_AND_LEN_OF_ARRAY(ov5640_1280X960_mipi_raw), 1280, 960, 24, SENSOR_IMAGE_FORMAT_RAW},
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
@@ -403,13 +407,13 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5640_ioctl_func_tab = {
 	PNULL, //_ov5640_set_work_mode,
 	PNULL, //_ov5640_set_image_effect,
 
-	PNULL, //_ov5640_BeforeSnapshot,
-	PNULL, //_ov5640_after_snapshot,
+	_ov5640_BeforeSnapshot,
+	_ov5640_after_snapshot,
 	PNULL, //_ov540_flash,
 	PNULL,
+	_ov5640_write_exposure,
 	PNULL,
-	PNULL,
-	PNULL,
+	_ov5640_write_gain,
 	PNULL,
 	PNULL,
 	PNULL,
@@ -520,8 +524,8 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->blc_bypass=0x01;
 	sensor_ptr->nlc_bypass=0x01;
 	sensor_ptr->lnc_bypass=0x01;
-	sensor_ptr->ae_bypass=0x01;
-	sensor_ptr->awb_bypass=0x01;
+	sensor_ptr->ae_bypass=0x00;
+	sensor_ptr->awb_bypass=0x00;
 	sensor_ptr->bpc_bypass=0x01;
 	sensor_ptr->denoise_bypass=0x01;
 	sensor_ptr->grgb_bypass=0x01;
@@ -694,7 +698,7 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->awb.win_start.x=0x00;
 	sensor_ptr->awb.win_start.y=0x00;
 	sensor_ptr->awb.win_size.w=40;
-	sensor_ptr->awb.win_size.h=30;
+	sensor_ptr->awb.win_size.h=32;
 	sensor_ptr->awb.r_gain[0]=0x40;
 	sensor_ptr->awb.g_gain[0]=0x40;
 	sensor_ptr->awb.b_gain[0]=0x40;
@@ -1092,9 +1096,58 @@ LOCAL uint32_t _ov5640_Identify(uint32_t param)
 		}
 	} else {
 		SENSOR_PRINT("SENSOR:ov5640 identify fail,pid_value=%d .\n",
-			     pid_value);
+			pid_value);
 	}
 	
+	return ret_value;
+}
+
+LOCAL uint32_t _ov5640_write_exposure(uint32_t param)
+{
+	uint32_t ret_value = SENSOR_SUCCESS;
+	uint16_t expsure_line=0x00;
+	uint16_t dummy_line=0x00;
+	uint16_t value=0x00;
+
+	expsure_line=(param>>0x10)&0xffff;
+	dummy_line=param&0xffff;
+
+	SENSOR_PRINT("ISP_RAW:SENSOR:_ov5640_write_exposure %d, %d\n", expsure_line, dummy_line);
+
+	value=(expsure_line<<0x04)&0xff;
+	ret_value = Sensor_WriteReg(0x3502, 0x01);
+	value=(expsure_line>>0x04)&0xff;
+	ret_value = Sensor_WriteReg(0x3501, 0x01);
+	value=(expsure_line>>0x0c)&0x0f;
+	ret_value = Sensor_WriteReg(0x3500, 0x01);
+
+	return ret_value;
+}
+
+LOCAL uint32_t _ov5640_write_gain(uint32_t param)
+{
+	uint32_t ret_value = SENSOR_SUCCESS;
+	uint16_t value=0x00;
+
+	SENSOR_PRINT("ISP_RAW:SENSOR:_ov5640_write_gain\n");
+
+	value = param&0xff;
+	ret_value = Sensor_WriteReg(0x350b, value);//0-7
+	value = (param>>0x08)&0x01;
+	ret_value = Sensor_WriteReg(0x350a, value);//8
+
+	return ret_value;
+}
+
+LOCAL uint32_t _ov5640_write_af(uint32_t param)
+{
+	uint32_t ret_value = SENSOR_SUCCESS;
+
+	SENSOR_PRINT("ISP_RAW:SENSOR:_ov5640_write_af\n");
+
+//	ret_value = Sensor_WriteReg(0x3406, 0x01);
+//	ret_value = Sensor_WriteReg(0x3503, 0x07);
+
 	return ret_value;
 }
 

@@ -43,6 +43,7 @@ extern SENSOR_INFO_T g_OV7660_yuv_info;
 extern SENSOR_INFO_T g_nmi600_yuv_info;//atv:nmi bonnie
 extern SENSOR_INFO_T g_ov5640_mipi_yuv_info;
 extern SENSOR_INFO_T g_ov5640_mipi_raw_info;
+extern SENSOR_INFO_T g_s5k5ccgx_yuv_info_mipi;
 
 /**---------------------------------------------------------------------------*
  **                         Constant Variables                                *
@@ -50,6 +51,7 @@ extern SENSOR_INFO_T g_ov5640_mipi_raw_info;
 const SENSOR_INFO_T* main_sensor_infor_tab[]=
 {
 	&g_ov5640_mipi_yuv_info,
+	&g_s5k5ccgx_yuv_info_mipi,
 	//&g_ov5640_mipi_raw_info,
 	//&g_ov5640_yuv_info,
 	//&g_OV7675_yuv_info,

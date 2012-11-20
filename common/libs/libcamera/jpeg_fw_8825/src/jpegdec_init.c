@@ -140,11 +140,11 @@ PUBLIC void JpegDec_VspTopRegCfg(void)
 	VSP_WRITE_REG(pTableAddr+ 8, BIT_STREAM_DEC_0>>8, "Decoded bit stream buffer0 ");
 	VSP_WRITE_REG(pTableAddr+ 12, BIT_STREAM_DEC_1>>8, "Decoded bit stream buffer1 ");
 #else
-	ALOGE("jpeg_fw_codec->YUV_Info_0.y_data_ptr 0x%x YUV_Info_1.y_data_ptr 0x%x",
+	JPEG_TRACE("jpeg_fw_codec->YUV_Info_0.y_data_ptr 0x%x YUV_Info_1.y_data_ptr 0x%x",
 		jpeg_fw_codec->YUV_Info_0.y_data_ptr,
 		jpeg_fw_codec->YUV_Info_1.y_data_ptr);
 
-	ALOGE("pTableAddr 0x%x", pTableAddr);
+	JPEG_TRACE("pTableAddr 0x%x", pTableAddr);
 	VSP_WRITE_REG(pTableAddr+ 0, (uint32)(jpeg_fw_codec->YUV_Info_0.y_data_ptr)>>2, "Reconstructed Y0 frame buffer ");
 	VSP_WRITE_REG(pTableAddr+ 4, (uint32)(jpeg_fw_codec->YUV_Info_1.y_data_ptr)>>2, "Reconstructed Y1 Frame buffer ");
 

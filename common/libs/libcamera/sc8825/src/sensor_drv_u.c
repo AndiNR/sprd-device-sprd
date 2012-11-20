@@ -470,7 +470,7 @@ SENSOR_TYPE_E _Sensor_GetSensorType(void)
 void Sensor_Reset_EX(uint32_t power_down, uint32_t level)
 {
 	SENSOR_IOCTL_FUNC_PTR reset_func = 0;
-	ALOGE("Sensor_Reset_EX.\n");
+	SENSOR_PRINT("Sensor_Reset_EX.\n");
 
 	reset_func = s_sensor_info_ptr->ioctl_func_tab_ptr->reset;
 	Sensor_PowerDown(!power_down);
@@ -607,9 +607,7 @@ LOCAL void Sensor_PowerOn_Ex(uint32_t sensor_id)
 	iovdd_val = s_sensor_info_ptr->iovdd_val;
 	power_func = s_sensor_info_ptr->ioctl_func_tab_ptr->power;
 
-	ALOGE
-	    ("SENSOR:  power_down_level = %d, avdd_val = %d\n",
-	     power_down, avdd_val);
+	SENSOR_PRINT("SENSOR:  power_down_level = %d, avdd_val = %d\n", power_down, avdd_val);
 
 	if (PNULL != power_func) {
 		power_func(1);
@@ -878,6 +876,7 @@ ERR_SENSOR_E Sensor_SendRegTabToSensor(SENSOR_REG_TAB_INFO_T *
 				SENSOR_PRINT("SENSOR: IIC write : reg:0x%04x, val:0x%04x error\n", subaddr, data);
 		}
 	}else{
+#if 1
 		SENSOR_REG_TAB_T regTab;
 		regTab.reg_count			= sensor_reg_tab_info_ptr->reg_count;
 		regTab.reg_bits				= s_sensor_info_ptr->reg_addr_value_bits;
@@ -885,6 +884,12 @@ ERR_SENSOR_E Sensor_SendRegTabToSensor(SENSOR_REG_TAB_INFO_T *
 		regTab.sensor_reg_tab_ptr 	= sensor_reg_tab_info_ptr->sensor_reg_tab_ptr;
 		
 		ret = _Sensor_Device_WriteRegTab(&regTab);
+#else
+		for(i = 0; i < sensor_reg_tab_info_ptr->reg_count; i++)
+		{
+			Sensor_WriteReg(sensor_reg_tab_info_ptr->sensor_reg_tab_ptr[i].reg_addr, sensor_reg_tab_info_ptr->sensor_reg_tab_ptr[i].reg_value);
+		}
+#endif
 	}
 
 	SENSOR_PRINT("SENSOR: Sensor_SendRegValueToSensor -> reg_count = %d, g_is_main_sensor: %d.\n",
@@ -1634,6 +1639,8 @@ SENSOR_EXP_INFO_T *Sensor_GetInfo(void)
 		SENSOR_PRINT("SENSOR: Sensor_GetInfo -> sensor has not init");
 		return PNULL;
 	}
+
+	SENSOR_PRINT("Sensor_GetInfo: info=%x \n", &s_sensor_exp_info);
 	return &s_sensor_exp_info;
 }
 

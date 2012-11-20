@@ -604,7 +604,8 @@ int camera_set_ctrl(camera_parm_type id,
 	if((CAMERA_PARM_ZOOM != id)
 		&& (CAMERA_PARM_FOCUS_RECT != id)
 		&& (CAMERA_PARM_FLASH != id)
-		&& (CAMERA_PARM_AF_MODE != id)) {
+		&& (CAMERA_PARM_AF_MODE != id)
+		&& (CAMERA_PARM_ENCODE_ROTATION != id)) {
 		return ret;
 	}
 
@@ -634,10 +635,11 @@ int camera_set_ctrl(camera_parm_type id,
 		break;
 		
 	case CAMERA_PARM_ENCODE_ROTATION: /* 0, 90, 180, 270 degrees */
-		if (CMR_CAPTURE == cxt->camera_status || CMR_CAPTURE_SLICE == cxt->camera_status) {
+		/*if (CMR_CAPTURE == cxt->camera_status || CMR_CAPTURE_SLICE == cxt->camera_status) {
 			
 		}
-		cxt->cap_rot = 0;//(uint32_t)camera_get_rot_angle(parm);
+		cxt->cap_rot = 0;//(uint32_t)camera_get_rot_angle(parm);*/
+		cxt->jpeg_cxt.set_encode_rotation = parm;
 		break;
 		
 	case CAMERA_PARM_SENSOR_ROTATION: /* 0, 90, 180, 270 degrees */

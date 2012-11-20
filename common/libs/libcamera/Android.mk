@@ -95,6 +95,7 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_ov7675.c  \
 	sensor/sensor_gc0309.c  \
 	sensor/sensor_s5k5ccgx.c \
+	sensor/sensor_s5k5ccgx_mipi.c \
 	sensor/sensor_ov5640_mipi.c  \
 	sensor/sensor_ov5640_mipi_raw.c \
 	vsp/sc8825/src/vsp_drv_sc8825.c \

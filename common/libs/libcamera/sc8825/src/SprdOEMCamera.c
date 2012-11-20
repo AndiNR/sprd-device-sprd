@@ -1262,6 +1262,10 @@ int camera_stop_capture_internal(void)
 {
 	int                      ret = CAMERA_SUCCESS;
 
+	if((JPEG_ENCODE == g_cxt->jpeg_cxt.jpeg_state)
+		|| JPEG_DECODE == g_cxt->jpeg_cxt.jpeg_state) {
+		jpeg_stop(g_cxt->jpeg_cxt.handle);
+	}
 	return ret;
 }
 

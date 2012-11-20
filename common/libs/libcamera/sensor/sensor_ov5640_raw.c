@@ -1208,25 +1208,25 @@ LOCAL uint32_t _ov5640_Identify(uint32_t param)
 	uint8_t ver_value = 0x00;
 	uint32_t ret_value = SENSOR_FAIL;
 
-	ALOGE("SENSOR:ov5640 identify  .\n");
+	LOGE("SENSOR:ov5640 identify  .\n");
 
 	pid_value = Sensor_ReadReg(ov5640_PID_ADDR);
 
 	if (ov5640_PID_VALUE == pid_value) {
 		ver_value = Sensor_ReadReg(ov5640_VER_ADDR);
-		ALOGE("SENSOR: ov5640_Identify: PID = %x, VER = %x \n",
+		LOGE("SENSOR: ov5640_Identify: PID = %x, VER = %x \n",
 			     pid_value, ver_value);
 		if (ov5640_VER_VALUE == ver_value) {
 			Sensor_InitRawTuneInfo();
 			ret_value = SENSOR_SUCCESS;
-			ALOGE("SENSOR: this is ov5640 sensor ! \n");
+			LOGE("SENSOR: this is ov5640 sensor ! \n");
 		} else {
 			SENSOR_PRINT
 			    ("SENSOR: ov5640_Identify this is OV%x%x sensor ! \n",
 			     pid_value, ver_value);
 		}
 	} else {
-		ALOGE("SENSOR:ov5640 identify fail,pid_value=%d .\n",
+		LOGE("SENSOR:ov5640 identify fail,pid_value=%d .\n",
 			     pid_value);
 	}
 	
@@ -1243,7 +1243,7 @@ LOCAL uint32_t _ov5640_write_exposure(uint32_t param)
 	expsure_line=(param>>0x10)&0xffff;
 	dummy_line=param&0xffff;
 
-	ALOGE("ISP_RAW:SENSOR:_ov5640_write_exposure %d, %d\n", expsure_line, dummy_line);
+	LOGE("ISP_RAW:SENSOR:_ov5640_write_exposure %d, %d\n", expsure_line, dummy_line);
 
 	value=(expsure_line<<0x04)&0xff;
 	ret_value = Sensor_WriteReg(0x3502, 0x01);
@@ -1260,7 +1260,7 @@ LOCAL uint32_t _ov5640_write_gain(uint32_t param)
 	uint32_t ret_value = SENSOR_SUCCESS;
 	uint16_t value=0x00;
 
-	ALOGE("ISP_RAW:SENSOR:_ov5640_write_gain\n");
+	LOGE("ISP_RAW:SENSOR:_ov5640_write_gain\n");
 
 	value = param&0xff;
 	ret_value = Sensor_WriteReg(0x350b, value);//0-7
@@ -1275,7 +1275,7 @@ LOCAL uint32_t _ov5640_write_af(uint32_t param)
 {
 	uint32_t ret_value = SENSOR_SUCCESS;
 
-	ALOGE("ISP_RAW:SENSOR:_ov5640_write_af\n");
+	LOGE("ISP_RAW:SENSOR:_ov5640_write_af\n");
 
 	ret_value = Sensor_WriteReg(0x3406, 0x01);
 	ret_value = Sensor_WriteReg(0x3503, 0x07);
