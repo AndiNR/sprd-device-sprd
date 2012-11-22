@@ -565,12 +565,18 @@ RESTART:
                 MY_TRACE("VBC_CMD_HAL_OPEN IN.");
                 force_all_standby(adev);
                 pthread_mutex_lock(&adev->lock);
-                adev->pcm_modem= pcm_open(s_tinycard, PORT_MODEM, PCM_OUT | PCM_MMAP, &pcm_config_vx);
-                if (!pcm_is_ready(adev->pcm_modem)) {
-                    ALOGE("cannot open pcm_out driver: %s", pcm_get_error(adev->pcm_modem));
-                    pcm_close(adev->pcm_modem);
+                adev->pcm_modem_dl= pcm_open(s_tinycard, PORT_MODEM, PCM_OUT | PCM_MMAP, &pcm_config_vx);
+                if (!pcm_is_ready(adev->pcm_modem_dl)) {
+                    ALOGE("cannot open pcm_out driver: %s", pcm_get_error(adev->pcm_modem_dl));
+                    pcm_close(adev->pcm_modem_dl);
                     s_is_exit = 1;
                 }
+                adev->pcm_modem_ul= pcm_open(s_tinycard, PORT_MODEM, PCM_IN, &pcm_config_vrec_vx);
+                if (!pcm_is_ready(adev->pcm_modem_ul)) {
+					ALOGE("cannot open pcm modem in");
+					pcm_close(adev->pcm_modem_ul);
+					s_is_exit = 1;
+				}
                 ALOGW("START CALL,open pcm device...");
                 adev->in_call = 1;
                 pthread_mutex_unlock(&adev->lock);
@@ -584,7 +590,8 @@ RESTART:
                 MY_TRACE("VBC_CMD_HAL_CLOSE IN.");
                 mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);	//switch to arm
                 pthread_mutex_lock(&adev->lock);
-                pcm_close(adev->pcm_modem);
+                pcm_close(adev->pcm_modem_dl);
+                pcm_close(adev->pcm_modem_ul);
                 adev->in_call = 0;
                 ALOGW("END CALL,close pcm device & switch to arm...");
                 force_all_standby(adev);

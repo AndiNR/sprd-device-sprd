@@ -176,7 +176,8 @@ struct tiny_audio_device {
     bool bluetooth_nrec;
     bool device_is_tiger;
     bool low_power;
-    struct pcm *pcm_modem;
+    struct pcm *pcm_modem_dl;
+    struct pcm *pcm_modem_ul;
 
     struct tiny_dev_cfg *dev_cfgs;
     unsigned int num_dev_cfgs;
@@ -794,9 +795,10 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             adev->devices |= val;
             ALOGW("out_set_parameters want to set devices:0x%x old_mode:%d ",adev->devices,cur_mode);
             cur_mode = adev->mode;
+			select_devices(adev);
             if (AUDIO_MODE_IN_CALL == adev->mode) {
                 #ifdef _VOICE_CALL_VIA_LINEIN
-                    select_devices(adev);
+                   // select_devices(adev);
                 #endif
                 ret = at_cmd_route(adev);
                 if (ret < 0) {
@@ -806,7 +808,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                     return ret;
                 }
             } else {
-                select_devices(adev);
+                //select_devices(adev);
             }
         }else{
             ALOGW("the same devices(0x%x) with val(0x%x) val is zero...",adev->devices,val);
@@ -2268,6 +2270,8 @@ static int adev_open(const hw_module_t* module, const char* name,
 
     adev->voice_volume = 1.0f;
     adev->bluetooth_nrec = false;
+    adev->pcm_modem_dl = NULL;
+    adev->pcm_modem_ul = NULL;
 
     pthread_mutex_unlock(&adev->lock);
 
