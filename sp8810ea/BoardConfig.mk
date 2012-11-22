@@ -35,7 +35,7 @@ endif
 # config kernel
 TARGET_NO_KERNEL := false
 ifeq ($(TARGET_VLX_ENABLE), true)
-KERNEL_DEFCONFIG := sp8810ea-vlx_defconfig
+KERNEL_DEFCONFIG := sp8810ea-vlx_4p1_defconfig
 else
 KERNEL_DEFCONFIG := sp8810ea-native_defconfig
 endif
