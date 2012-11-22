@@ -500,8 +500,14 @@ void *command_handler(void *arg)
 			close(client_sock);
 			continue;
 		}
-		if(cmd.type == CTRL_CMD_TYPE_RELOAD)
+		if(cmd.type == CTRL_CMD_TYPE_RELOAD) {
+			cmd.type = CTRL_CMD_TYPE_RSP;
+			sprintf(cmd.content, "OK");
+			send_socket(client_sock, (void *)&cmd, sizeof(cmd));
+			close(client_sock);
 			reload();
+			continue;
+		}
 
 		while(slog_initialized == 0) sleep(1);
 
@@ -556,6 +562,7 @@ void *command_handler(void *arg)
 		else if(!ret && cmd.content[0] == 0)
 			sprintf(cmd.content, "OK");
 		send_socket(client_sock, (void *)&cmd, sizeof(cmd));
+		close(client_sock);
 	}
 }
 
@@ -713,7 +720,7 @@ void create_pidfile()
 		fp = fopen(buffer, "r");
 		if (fp != NULL) {
 			fgets(buffer, MAX_NAME_LEN, fp);
-			if(!strncmp(buffer, "slog", 4)) {
+			if(!strncmp(buffer, "/system/bin/slog", 16)) {
 				/* means daemon has started, just exit */
 				err_log("Slog is running already, the quit immediately.");
 				fclose(fp);
