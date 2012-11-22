@@ -19,6 +19,7 @@ TARGET_BOARD := kylew
 BOARDDIR := device/sprd/$(TARGET_BOARD)
 
 DEVICE_PACKAGE_OVERLAYS := $(BOARDDIR)/overlay
+PRODUCT_PACKAGE_OVERLAYS := vendor/sprd/operator/cmcc/specA/overlay
 
 PRODUCT_AAPT_CONFIG := hdpi
 
@@ -38,7 +39,18 @@ PRODUCT_PACKAGES := \
 	MsmsPhone \
     framework2 \
 	Settings
-
+	
+# prebuild files
+PRODUCT_PACKAGES += \
+	
+# packages files
+PRODUCT_PACKAGES += \
+	
+# add  system properties
+PRODUCT_PROPERTY_OVERRIDES += \
+	ro.operator=cmcc \
+	ro.operator.version=specA
+	
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \
 	$(BOARDDIR)/sec_touchscreen.idc:system/usr/idc/sec_touchscreen.idc
