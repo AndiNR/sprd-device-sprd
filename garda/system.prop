@@ -7,3 +7,5 @@ debug.hwui.render_dirty_regions=false
 
 # delay for ConnectivityChange broadcast (ms)
 conn.connectivity_change_delay = 0
+
+persist.ttydev=ttyVUART0

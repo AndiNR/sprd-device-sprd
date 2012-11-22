@@ -58,3 +58,4 @@ PRODUCT_COPY_FILES := \
 	device/sprd/common/res/media/media_profiles.xml:system/etc/media_profiles.xml \
 	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml
 
+$(call inherit-product, $(BOARDDIR)/../common/apps/engineeringmodel/module.mk)
