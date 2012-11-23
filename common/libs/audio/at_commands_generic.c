@@ -35,7 +35,7 @@ extern "C" {
 
 int at_cmd_deinit(void)
 {
-	MY_TRACE("at_cmd_deinit in...");
+    ALOGI("at_cmd_deinit in...");
     if (at_cmd_fd > 0) {
         engapi_close(at_cmd_fd);
         at_cmd_fd = -1;
@@ -71,13 +71,13 @@ int at_cmd_send_recv(void *s_buf, size_t s_len, void *r_buf, size_t r_len)
     if (at_cmd_fd > 0) {
         if (r_buf) memset(r_buf, 0, r_len); // ((char*)r_buf)[0] = 0;
 		
-        MY_TRACE("at_cmd_send_recv write incall AT command [%s] at_cmd_prefix:%s ", (char*)s_buf,at_cmd_prefix);
+        ALOGI("at_cmd_send_recv write incall AT command [%s] at_cmd_prefix:%s ", (char*)s_buf,at_cmd_prefix);
 		ret = engapi_write(at_cmd_fd, at_cmd, sprintf(at_cmd, "%s%s", at_cmd_prefix, (char*)s_buf));
 		if(ret < 0){
 			at_cmd_fd = -1;
             ALOGE("at_cmd_send_recv Switch incall AT command s_buf:%s error:%s(%d) failed", (char*)s_buf, strerror(errno),errno);			
 		}else {
-			MY_TRACE("at_cmd_send_recv read incall AT command [%s] ret:%d r_buf:%s ret:%d ", (char*)s_buf,ret,(char*)r_buf,ret);
+			ALOGI("at_cmd_send_recv read incall AT command [%s] ret:%d r_buf:%s ret:%d ", (char*)s_buf,ret,(char*)r_buf,ret);
         }
 
         //at_cmd_deinit();
@@ -241,12 +241,12 @@ int at_cmd_volume(float vol, int mode)
     char r_buf[256];
     char buf[16];
     char *at_cmd = buf;
-	int ret = 0;
-	unsigned short cur_device;
+    int ret = 0;
+    unsigned short cur_device;
 
     int volume = vol * VOICECALL_VOLUME_MAX_UI + 1;
     if (volume >= VOICECALL_VOLUME_MAX_UI) volume = VOICECALL_VOLUME_MAX_UI;
-    MY_TRACE("%s mode=%d ,volume=%d, android vol:%f ", __func__,mode,volume,vol);
+    ALOGI("%s mode=%d ,volume=%d, android vol:%f ", __func__,mode,volume,vol);
     snprintf(at_cmd, sizeof buf, "AT+VGR=%d", volume);
     do_cmd(at_cmd);
     return 0;
