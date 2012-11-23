@@ -27,8 +27,10 @@
 
 extern int audio_fd;
 extern AUDIO_TOTAL_T audio_total[4];
-extern void eng_chgeck_factorymode_fornand(void);
+extern void eng_check_factorymode_fornand(void);
 extern void eng_check_factorymode_formmc(void);
+extern int parse_vb_effect_params(void *audio_params_ptr, unsigned int params_size);
+extern int SetAudio_pga_parameter_eng(AUDIO_TOTAL_T *aud_params_ptr, unsigned int params_size, uint32_t vol_level);
 
 extern  struct eng_bt_eutops bt_eutops;
 extern  struct eng_wifi_eutops wifi_eutops;
@@ -1005,6 +1007,7 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 		ENG_LOG("g_indicator = 0x%x,%x\n",g_indicator,AUDIO_DATA_READY_INDI_FLAG);
 
 		if ( audio_ptr ) {
+            parse_vb_effect_params((void *)audio_ptr, 4*sizeof(AUDIO_TOTAL_T));
 			msync((void *)audio_ptr,4*sizeof(AUDIO_TOTAL_T),MS_ASYNC);
 			munmap((void *)audio_ptr,4*sizeof(AUDIO_TOTAL_T));
 		}
@@ -1012,13 +1015,7 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 		if ( g_indicator ) {
 			ENG_LOG("data is ready!g_indicator = 0x%x\n",g_indicator);
 			g_indicator = 0;
-			fd=open(ENG_AUDIO,O_RDWR);
-			if(fd<0){
-				ENG_LOG("file open error!\n");
-				goto out;
-			}	
-			write(fd,&audio_total[g_index],sizeof(AUDIO_TOTAL_T));
-			close(fd);
+			SetAudio_pga_parameter_eng(&audio_total[g_index],sizeof(AUDIO_TOTAL_T),1);
 		}
 
 		sprintf(rsp,"\r\nOK\r\n");

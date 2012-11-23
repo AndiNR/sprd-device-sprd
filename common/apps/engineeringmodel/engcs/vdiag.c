@@ -14,9 +14,9 @@
 #include "cutils/properties.h"
 #include "private/android_filesystem_config.h"
 
-#define DATA_BUF_SIZE (4096)
+#define DATA_BUF_SIZE (4096*2)
 static char log_data[DATA_BUF_SIZE];
-#define DATA_EXT_DIAG_SIZE (4096)
+#define DATA_EXT_DIAG_SIZE (4096*2)
 static char ext_data_buf[DATA_EXT_DIAG_SIZE];
 static int ext_buf_len;
 //referrenced by eng_diag.c
@@ -28,8 +28,8 @@ static void print_log_data(int cnt)
 {
 	int i;
 
-	if (cnt > DATA_BUF_SIZE)
-		cnt = DATA_BUF_SIZE;
+	if (cnt > DATA_BUF_SIZE/2)
+		cnt = DATA_BUF_SIZE/2;
 
 	ENG_LOG("vser receive:\n");
 	for(i = 0; i < cnt; i++) {
@@ -180,7 +180,13 @@ void *eng_vdiag_thread(void *x)
 	init_user_diag_buf();
 	
 	while(1) {
-		r_cnt = read(ser_fd, log_data, DATA_BUF_SIZE);
+        ENG_LOG("DIAGLOG\n");
+		r_cnt = read(ser_fd, log_data, DATA_BUF_SIZE/2);
+        ENG_LOG("DIAGLOG::1r_cnt=%d\n", r_cnt);
+        if (r_cnt == DATA_BUF_SIZE/2) {
+    		r_cnt += read(ser_fd, log_data+r_cnt, DATA_BUF_SIZE/2);
+            ENG_LOG("DIAGLOG::r_cnt=%d\n", r_cnt);
+        }
 		if (r_cnt < 0) {
 			ENG_LOG("no log data from serial:%d %s\n", r_cnt,
 					strerror(errno));

@@ -39,7 +39,7 @@ typedef enum
 	CMD_INVALID
 }DIAG_CMD_TYPE;
 
-#define ENG_DIAG_SIZE 2048
+#define ENG_DIAG_SIZE 4096
 #define ENG_LINUX_VER	"/proc/version"
 #define ENG_ANDROID_VER "ro.build.version.release"
 #define ENG_AUDIO       "/sys/class/vbc_param_config/vbc_param_store"
