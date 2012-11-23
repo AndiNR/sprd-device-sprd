@@ -40,6 +40,7 @@ PRODUCT_PACKAGES += \
 	audio.primary.$(TARGET_PLATFORM) \
 	tinymix \
 	libvbeffect \
+	libvbpga \
 	sensors.$(TARGET_BOARD)  \
 	$(MALI)
 

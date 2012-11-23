@@ -129,7 +129,7 @@ CAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 LOCAL_PRELINK_MODULE    := false
-LOCAL_SHARED_LIBRARIES  := libcutils libsqlite libhardware libhardware_legacy
+LOCAL_SHARED_LIBRARIES  := libcutils libsqlite libhardware libhardware_legacy libvbeffect	libvbpga
 LOCAL_STATIC_LIBRARIES  :=
 LOCAL_LDLIBS        += -Idl
 ifeq ($(strip $(BOARD_USE_EMMC)),true)

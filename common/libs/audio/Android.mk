@@ -36,12 +36,13 @@ LOCAL_C_INCLUDES += \
 	system/media/audio_utils/include \
 	system/media/audio_effects/include \
 	device/sprd/common/apps/engineeringmodel/engcs \
-	device/sprd/common/libs/audio/vb_effect
+	device/sprd/common/libs/audio/vb_effect	\
+	device/sprd/common/libs/audio/vb_pga
 
 LOCAL_SHARED_LIBRARIES := \
 	liblog libcutils libtinyalsa libaudioutils \
 	libexpat libdl \
-	libengclient libvbeffect
+	libengclient libvbeffect libvbpga
 
 LOCAL_MODULE_TAGS := optional
 

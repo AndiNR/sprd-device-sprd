@@ -40,6 +40,7 @@
 #include <audio_effects/effect_aec.h>
 #include "audio_pga.h"
 #include "vb_effect_if.h"
+#include "vb_pga.h"
 
 //#define XRUN_DEBUG
 
@@ -802,7 +803,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             }
             adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
             adev->devices |= val;
-            ALOGW("out_set_parameters want to set devices:0x%x old_mode:%d ",adev->devices,cur_mode);
+            ALOGW("out_set_parameters want to set devices:0x%x old_mode:%d new_mode:%d incall:%d ",adev->devices,cur_mode,adev->mode,adev->in_call);
             cur_mode = adev->mode;
             select_devices(adev);
             if (AUDIO_MODE_IN_CALL == adev->mode) {
@@ -813,6 +814,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                     pthread_mutex_unlock(&adev->lock);
                     return ret;
             	}
+            }else{
+                SetAudio_gain_route(adev,1);
             }
         }else{
             ALOGW("the same devices(0x%x) with val(0x%x) val is zero...",adev->devices,val);
@@ -1771,6 +1774,9 @@ static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
 
 static int adev_set_master_volume(struct audio_hw_device *dev, float volume)
 {
+    struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
+    ALOGW("adev_set_master_volume in...devices:0x%x ,volume:%f ",adev->devices,volume);
+    SetAudio_gain_route(adev,1);
     return -ENOSYS;
 }
 
