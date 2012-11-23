@@ -45,7 +45,8 @@ PRODUCT_PACKAGES += \
 	sensors.$(TARGET_BOARD)  \
 	$(MALI)\
 	modem_control \
-        nvitemd
+        nvitemd   \
+    mcom_monitor
 
 PRODUCT_PACKAGES += $(BRCMFM)
 
