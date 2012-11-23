@@ -121,6 +121,8 @@ on fs
     mount yaffs2 mtd@system /system ro remount
     mount yaffs2 mtd@userdata /data nosuid nodev
     mount yaffs2 mtd@cache /cache nosuid nodev
+    mkdir /productinfo 0777 system system
+# ---------------------------- spreadtrum on fs section end
 
 on post-fs
     # once everything is setup, no need to modify /
@@ -129,6 +131,11 @@ on post-fs
     # We chown/chmod /cache again so because mount is run as root + defaults
     chown system cache /cache
     chmod 0770 /cache
+
+# ---------------------------- spreadtrum on post-fs section start
+    chown system system /productinfo
+    chmod 0774 /productinfo
+# ---------------------------- spreadtrum on post-fs section end
 
     # This may have been created by the recovery system with odd permissions
     chown system cache /cache/recovery
@@ -146,6 +153,27 @@ on post-fs
 
     # create the lost+found directories, so as to enforce our permissions
     mkdir /cache/lost+found 0770 root root
+# ---------------------------- spreadtrum on post-fs section start
+    mkdir /runtimenv 0777 system system
+    mkdir /backupfixnv 0777 system system
+    mkdir /fixnv 0777 system system
+
+    #mount yaffs2 mtd@runtimenv /runtimenv nosuid nodev no-checkpoint,tags-ecc-off,no-rest-block
+    chown system system /runtimenv
+    chmod 0777 /runtimenv
+
+    #mount yaffs2 mtd@backupfixnv /backupfixnv nosuid nodev no-checkpoint,tags-ecc-off,no-rest-block
+    chown system system /backupfixnv
+    chmod 0777 /backupfixnv
+
+    #mount yaffs2 mtd@productinfo /productinfo nosuid nodev no-checkpoint,tags-ecc-off,no-rest-block
+    chown system system /productinfo
+    chmod 0777 /productinfo
+
+    #mount yaffs2 mtd@fixnv /fixnv nosuid nodev no-checkpoint,tags-ecc-off,no-rest-block
+    chown system system /fixnv
+    chmod 0777 /fixnv
+# ---------------------------- spreadtrum on post-fs section end
 
 on post-fs-data
     # We chown/chmod /data again so because mount is run as root + defaults
