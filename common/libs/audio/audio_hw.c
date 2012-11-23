@@ -39,6 +39,7 @@
 #include <hardware/audio_effect.h>
 #include <audio_effects/effect_aec.h>
 #include "audio_pga.h"
+#include "vb_effect_if.h"
 
 //#define XRUN_DEBUG
 
@@ -53,10 +54,11 @@
 
 #define CTL_TRACE(exp) ALOGW(#exp" is %s", ((exp) != NULL) ? "success" : "failure")
 
-#define PRIVATE_MIC_BIAS                 "mic bias"
+#define PRIVATE_MIC_BIAS                  "mic bias"
 #define PRIVATE_VBC_CONTROL              "vb control"
 #define PRIVATE_VBC_EQ_SWITCH            "eq switch"
 #define PRIVATE_VBC_EQ_UPDATE            "eq update"
+#define PRIVATE_VBC_EQ_PROFILE            "eq profile"
 
 /* ALSA cards for sprd */
 #define CARD_SPRDPHONE "sprdphone"
@@ -66,7 +68,7 @@
 #define PORT_MM 0
 #define PORT_MODEM 1
 
-/* constraint imposed by ABE: all period sizes must be multiples of 160 */
+/* constraint imposed by VBC: all period sizes must be multiples of 160 */
 #define VBC_BASE_FRAME_COUNT 160
 /* number of base blocks in a short period (low latency) */
 #define SHORT_PERIOD_MULTIPLIER 10  /* 36 ms */
@@ -110,7 +112,7 @@ struct pcm_config pcm_config_mm = {
 
 struct pcm_config pcm_config_mm_ul = {
     .channels = 2,
-    .rate = MM_LOW_POWER_SAMPLING_RATE,
+    .rate = MM_FULL_POWER_SAMPLING_RATE,
     .period_size = SHORT_PERIOD_SIZE,
     .period_count = CAPTURE_PERIOD_COUNT,
     .format = PCM_FORMAT_S16_LE,
@@ -157,6 +159,7 @@ struct tiny_private_ctl {
     struct mixer_ctl *vbc_switch;
     struct mixer_ctl *vbc_eq_switch;
     struct mixer_ctl *vbc_eq_update;
+    struct mixer_ctl *vbc_eq_profile_select;
 };
 
 struct tiny_audio_device {
@@ -167,6 +170,8 @@ struct tiny_audio_device {
     audio_mode_t mode;
     int devices;
     int prev_devices;
+    struct pcm *pcm_modem_dl;
+    struct pcm *pcm_modem_ul;
     int in_call;
     float voice_volume;
     struct tiny_stream_in *active_input;
@@ -174,16 +179,14 @@ struct tiny_audio_device {
     bool mic_mute;
     struct echo_reference_itfe *echo_reference;
     bool bluetooth_nrec;
-    bool device_is_tiger;
     bool low_power;
-    struct pcm *pcm_modem_dl;
-    struct pcm *pcm_modem_ul;
 
     struct tiny_dev_cfg *dev_cfgs;
     unsigned int num_dev_cfgs;
 
     struct tiny_private_ctl private_ctl;
     struct audio_pga *pga;
+    int eq_available;
 };
 
 struct tiny_stream_out {
@@ -253,6 +256,8 @@ static const struct {
     { AUDIO_DEVICE_OUT_EARPIECE, "earpiece" },
     /* ANLG for voice call via linein*/
     { AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET | AUDIO_DEVICE_OUT_ALL_FM, "line" },
+    { AUDIO_DEVICE_OUT_FM_HEADSET, "line-headphone" },
+    { AUDIO_DEVICE_OUT_FM_SPEAKER, "line-speaker" },
 
     { AUDIO_DEVICE_IN_COMMUNICATION, "comms" },
     { AUDIO_DEVICE_IN_AMBIENT, "ambient" },
@@ -295,6 +300,7 @@ static int get_route_depth (
 #endif
 
 #include "at_commands_generic.c"
+#include "mmi_audio_loop.c"
 
 int set_call_route(struct tiny_audio_device *adev, int device, int on)
 {
@@ -399,6 +405,7 @@ static void select_devices(struct tiny_audio_device *adev)
     ALOGI("Changing devices: 0x%08x, prev_devices: 0x%08x", adev->devices, adev->prev_devices);
     if (adev->prev_devices == adev->devices) return ;
     adev->prev_devices = adev->devices;
+    if(adev->eq_available) vb_effect_sync_devices(adev->devices);
     /* Turn on new devices first so we don't glitch due to powerdown... */
     for (i = 0; i < adev->num_dev_cfgs; i++)
 	if (adev->devices & adev->dev_cfgs[i].mask) {
@@ -427,6 +434,8 @@ static void select_devices(struct tiny_audio_device *adev)
 			       adev->dev_cfgs[i].off_len);
     }
 
+    /* update EQ profile*/
+    if(adev->eq_available) vb_effect_profile_apply();
 }
 
 static int start_call(struct tiny_audio_device *adev)
@@ -795,20 +804,15 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             adev->devices |= val;
             ALOGW("out_set_parameters want to set devices:0x%x old_mode:%d ",adev->devices,cur_mode);
             cur_mode = adev->mode;
-			select_devices(adev);
+            select_devices(adev);
             if (AUDIO_MODE_IN_CALL == adev->mode) {
-                #ifdef _VOICE_CALL_VIA_LINEIN
-                   // select_devices(adev);
-                #endif
-                ret = at_cmd_route(adev);
+                ret = at_cmd_route(adev);  //send at command to cp
                 if (ret < 0) {
                     ALOGE("out_set_parameters at_cmd_route error(%d) ",ret);
                     pthread_mutex_unlock(&out->lock);
                     pthread_mutex_unlock(&adev->lock);
                     return ret;
-                }
-            } else {
-                //select_devices(adev);
+            	}
             }
         }else{
             ALOGW("the same devices(0x%x) with val(0x%x) val is zero...",adev->devices,val);
@@ -2092,6 +2096,10 @@ static void adev_config_start(void *data, const XML_Char *elem,
             s->adev->private_ctl.mic_bias_switch =
                  mixer_get_ctl_by_name(s->adev->mixer, name);
             CTL_TRACE(s->adev->private_ctl.mic_bias_switch);
+        }else if (strcmp(s->private_name, PRIVATE_VBC_EQ_PROFILE) == 0) {
+            s->adev->private_ctl.vbc_eq_profile_select =
+                 mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.vbc_eq_profile_select);
         }
     }
 }
@@ -2201,10 +2209,25 @@ static int adev_config_parse(struct tiny_audio_device *adev)
     return ret;
 }
 
+static void aud_vb_effect_start(struct tiny_audio_device *adev)
+{
+    if (adev)
+        mixer_ctl_set_enum_by_string(adev->private_ctl.vbc_eq_switch, "on");
+}
+
+static void aud_vb_effect_stop(struct tiny_audio_device *adev)
+{
+    if (adev)
+        mixer_ctl_set_enum_by_string(adev->private_ctl.vbc_eq_switch, "off");
+}
+
 static int adev_open(const hw_module_t* module, const char* name,
                      hw_device_t** device)
 {
+#define MIXER_CTL_VBC_EQ_UPDATE            "VBC EQ Update"
+
     struct tiny_audio_device *adev;
+    struct mixer_ctl *eq_update;
     int ret;
     BLUE_TRACE("adev_open");
     if (strcmp(name, AUDIO_HARDWARE_INTERFACE) != 0)
@@ -2249,7 +2272,18 @@ static int adev_open(const hw_module_t* module, const char* name,
         ALOGE("Unable to open the mixer, aborting.");
         return -EINVAL;
     }
-
+    /* generate eq params file of vbc effect*/
+    ret = create_vb_effect_params();
+    if (ret != 0) {
+	adev->eq_available = 0;
+        ALOGW("Warning: Failed to create the parameters file of vbc_eq");
+    } else {
+	adev->eq_available = 1;
+        eq_update = mixer_get_ctl_by_name(adev->mixer, MIXER_CTL_VBC_EQ_UPDATE);
+        ret = mixer_ctl_set_enum_by_string(eq_update, "loading");
+        ALOGI("eq_loading, ret(%d)", ret);
+    }
+    /* parse mixer ctl */
     ret = adev_config_parse(adev);
     if (ret < 0) {
         ALOGE("Unable to locate all mixer controls from XML, aborting.");
@@ -2257,6 +2291,12 @@ static int adev_open(const hw_module_t* module, const char* name,
     }
     BLUE_TRACE("ret=%d, num_dev_cfgs=%d", ret, adev->num_dev_cfgs);
     BLUE_TRACE("dev_cfgs_on depth=%d, dev_cfgs_off depth=%d", adev->dev_cfgs->on_len,  adev->dev_cfgs->off_len);
+
+    if (adev->eq_available) {
+        vb_effect_config_mixer_ctl(adev->private_ctl.vbc_eq_update, adev->private_ctl.vbc_eq_profile_select);
+        aud_vb_effect_start(adev);
+    }
+    
     /*Parse PGA*/
     adev->pga = audio_pga_init(adev->mixer);
     if (!adev->pga) {
@@ -2265,13 +2305,13 @@ static int adev_open(const hw_module_t* module, const char* name,
     /* Set the default route before the PCM stream is opened */
     pthread_mutex_lock(&adev->lock);
     adev->mode = AUDIO_MODE_NORMAL;
-    adev->devices = AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_IN_BUILTIN_MIC;
+    adev->devices = AUDIO_DEVICE_OUT_SPEAKER;
     select_devices(adev);
 
-    adev->voice_volume = 1.0f;
-    adev->bluetooth_nrec = false;
     adev->pcm_modem_dl = NULL;
     adev->pcm_modem_ul = NULL;
+    adev->voice_volume = 1.0f;
+    adev->bluetooth_nrec = false;
 
     pthread_mutex_unlock(&adev->lock);
 
@@ -2283,6 +2323,8 @@ static int adev_open(const hw_module_t* module, const char* name,
         return -EINVAL;
     }
 #endif
+    ret = mmi_audio_loop_open();
+    if (ret)  ALOGW("Warning: audio loop can NOT work.");
     return 0;
 }
 

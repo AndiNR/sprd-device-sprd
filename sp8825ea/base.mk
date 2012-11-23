@@ -39,6 +39,7 @@ PRODUCT_PACKAGES += \
 	lights.$(TARGET_PLATFORM) \
 	audio.primary.$(TARGET_PLATFORM) \
 	tinymix \
+	libvbeffect \
 	sensors.$(TARGET_BOARD)  \
 	$(MALI)
 

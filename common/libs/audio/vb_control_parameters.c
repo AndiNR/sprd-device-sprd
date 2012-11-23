@@ -538,7 +538,17 @@ RESTART:
         s_vbpipe_fd = open("/dev/vbpipe6", O_RDWR);
         if (s_vbpipe_fd <= 0) {
             ALOGE("Error: s_vbpipe_fd(%d) open failed.", s_vbpipe_fd);
-            return 0;
+            if(adev->in_call){                  //cp crash during call
+                mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);  //switch to arm
+                pthread_mutex_lock(&adev->lock);
+                force_all_standby(adev);
+                pcm_close(adev->pcm_modem_ul);
+                pcm_close(adev->pcm_modem_dl);
+                adev->in_call = 0;
+                pthread_mutex_unlock(&adev->lock);
+            }
+            usleep(1000*1000);
+            goto RESTART;
         } else {
             ALOGW("s_vbpipe_fd(%d) open successfully.", s_vbpipe_fd);
         }
@@ -567,16 +577,16 @@ RESTART:
                 pthread_mutex_lock(&adev->lock);
                 adev->pcm_modem_dl= pcm_open(s_tinycard, PORT_MODEM, PCM_OUT | PCM_MMAP, &pcm_config_vx);
                 if (!pcm_is_ready(adev->pcm_modem_dl)) {
-                    ALOGE("cannot open pcm_out driver: %s", pcm_get_error(adev->pcm_modem_dl));
+                    ALOGE("cannot open pcm_modem_dl : %s", pcm_get_error(adev->pcm_modem_dl));
                     pcm_close(adev->pcm_modem_dl);
                     s_is_exit = 1;
                 }
                 adev->pcm_modem_ul= pcm_open(s_tinycard, PORT_MODEM, PCM_IN, &pcm_config_vrec_vx);
                 if (!pcm_is_ready(adev->pcm_modem_ul)) {
-					ALOGE("cannot open pcm modem in");
-					pcm_close(adev->pcm_modem_ul);
-					s_is_exit = 1;
-				}
+                    ALOGE("cannot open pcm_modem_ul : %s", pcm_get_error(adev->pcm_modem_ul));
+                    pcm_close(adev->pcm_modem_ul);
+                    s_is_exit = 1;
+                }
                 ALOGW("START CALL,open pcm device...");
                 adev->in_call = 1;
                 pthread_mutex_unlock(&adev->lock);
@@ -588,13 +598,13 @@ RESTART:
             case VBC_CMD_HAL_CLOSE:
             {
                 MY_TRACE("VBC_CMD_HAL_CLOSE IN.");
-                mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);	//switch to arm
+                mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);  //switch to arm
                 pthread_mutex_lock(&adev->lock);
-                pcm_close(adev->pcm_modem_dl);
+                force_all_standby(adev);
                 pcm_close(adev->pcm_modem_ul);
+                pcm_close(adev->pcm_modem_dl);
                 adev->in_call = 0;
                 ALOGW("END CALL,close pcm device & switch to arm...");
-                force_all_standby(adev);
                 pthread_mutex_unlock(&adev->lock);
                 write_common_head.cmd_type = VBC_CMD_RSP_CLOSE;
                 WriteParas_Head(s_vbpipe_fd, &write_common_head);
@@ -604,7 +614,6 @@ RESTART:
             case VBC_CMD_SET_MODE:
             {
                 MY_TRACE("VBC_CMD_SET_MODE IN.");
-                //paras_mode_gain_t *mode_gain_paras_ptr = malloc(sizeof(mode_gain_paras_ptr));
                 ret = SetParas_Route_Incall(s_vbpipe_fd,adev);
                 if(ret < 0){
                     MY_TRACE("VBC_CMD_SET_MODE SetParas_Route_Incall error.s_is_exit:%d ",s_is_exit);
@@ -616,7 +625,6 @@ RESTART:
             case VBC_CMD_SET_GAIN:
             {
                 MY_TRACE("VBC_CMD_SET_GAIN IN.");
-                //paras_mode_gain_t *mode_gain_paras_ptr = malloc(sizeof(mode_gain_paras_ptr));
                 ret = SetParas_Volume_Incall(s_vbpipe_fd,adev);
                 if(ret < 0){
                     MY_TRACE("VBC_CMD_SET_GAIN SetParas_Route_Incall error.s_is_exit:%d ",s_is_exit);
@@ -624,7 +632,7 @@ RESTART:
                 }
                 MY_TRACE("VBC_CMD_SET_GAIN OUT.");
             }
-            break; 
+            break;
             case VBC_CMD_SWITCH_CTRL:
             {
                 MY_TRACE("VBC_CMD_SWITCH_CTRL IN.");
@@ -646,7 +654,6 @@ RESTART:
             case VBC_CMD_DEVICE_CTRL:
             {
                 MY_TRACE("VBC_CMD_DEVICE_CTRL IN.");
-
                 ret = SetParas_DeviceCtrl_Incall(s_vbpipe_fd,adev);
                 if(ret < 0){
                     MY_TRACE("VBC_CMD_DEVICE_CTRL SetParas_DeviceCtrl_Incall error.s_is_exit:%d ",s_is_exit);

@@ -9,8 +9,7 @@
 static int at_cmd_fd = -1;
 static int at_cmd_prefix_len;
 static char at_cmd_prefix[16];
-static char pwrprop[PROPERTY_VALUE_MAX];
-static  char cmd[30];
+static pthread_mutex_t  ATlock = PTHREAD_MUTEX_INITIALIZER;         //eng cannot handle many at commands once
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,16 +23,19 @@ extern "C" {
 #endif
 
 #define do_cmd(at_cmd) \
+    pthread_mutex_lock(&ATlock);\
     if (at_cmd && at_cmd_send_recv((void*)at_cmd, strlen(at_cmd), r_buf, sizeof r_buf)) { \
         ALOGE("--------------------------------------\n" \
-             "Switch incall AT command [%s][%s] failed", at_cmd, r_buf); \
+             "do_cmd Switch incall AT command [%s][%s] failed", at_cmd, r_buf); \
     } else if (at_cmd) { \
         ALOGW("--------------------------------------\n" \
-             "Switch incall AT command [%s][%s] good", at_cmd, r_buf); \
-    }
+             "do_cmd Switch incall AT command [%s][%s] good", at_cmd, r_buf); \
+    } \
+    pthread_mutex_unlock(&ATlock);
 
 int at_cmd_deinit(void)
 {
+	MY_TRACE("at_cmd_deinit in...");
     if (at_cmd_fd > 0) {
         engapi_close(at_cmd_fd);
         at_cmd_fd = -1;
@@ -42,21 +44,11 @@ int at_cmd_deinit(void)
 }
 
 // external/sprd/engineeringmodel/engcs/eng_appclient.c
-static int android_sim;
-static int android_sim_num;
 int at_cmd_init(void)
 {
     char buf[8];
     int sim = 0;
-//    if (android_sim <= 0 && !access("/sys/class/modem/sim", W_OK)) {
-//        android_sim = open("/sys/class/modem/sim", O_RDWR);
-//    }
-//    if (android_sim > 0) {
-//        lseek(android_sim, 0, SEEK_SET);
-//        read(android_sim, buf, sizeof(buf) - 1);
-//        sim = strtol(buf, NULL, NULL);
-//    }
-    if (at_cmd_fd <= 0 /*|| sim != android_sim_num*/) {
+    if (at_cmd_fd <= 0 /*|| sim != android_sim_num */) {
         at_cmd_deinit();
         at_cmd_fd = engapi_open(sim);
 //        android_sim_num = sim;
@@ -71,30 +63,25 @@ int at_cmd_init(void)
 int at_cmd_send_recv(void *s_buf, size_t s_len, void *r_buf, size_t r_len)
 {
 //  struct iovec iov[2];
+	int ret = 0;
     char at_cmd[64];
 
     at_cmd_init();
 
     if (at_cmd_fd > 0) {
-//      iov[0].iov_base = at_cmd_prefix;
-//      iov[0].iov_len = at_cmd_prefix_len;
-//      iov[1].iov_base = s_buf;
-//      iov[1].iov_len = s_len;
         if (r_buf) memset(r_buf, 0, r_len); // ((char*)r_buf)[0] = 0;
-//      if (writev(at_cmd_fd, iov, 2) < 0) {
-        ALOGW("write incall AT command [%s]", (char*)s_buf);
-        if (engapi_write(at_cmd_fd, at_cmd, sprintf(at_cmd, "%s%s", at_cmd_prefix, (char*)s_buf)) < 0) {
-            at_cmd_fd = -1;
-            ALOGE("--------------------------------------\n"
-                 "Switch incall AT command [%s][%s] failed", (char*)s_buf, strerror(errno));
-        } else {
-            ALOGW("read incall AT command [%s]", (char*)s_buf);
-            engapi_read(at_cmd_fd, r_buf, r_len);
+		
+        MY_TRACE("at_cmd_send_recv write incall AT command [%s] at_cmd_prefix:%s ", (char*)s_buf,at_cmd_prefix);
+		ret = engapi_write(at_cmd_fd, at_cmd, sprintf(at_cmd, "%s%s", at_cmd_prefix, (char*)s_buf));
+		if(ret < 0){
+			at_cmd_fd = -1;
+            ALOGE("at_cmd_send_recv Switch incall AT command s_buf:%s error:%s(%d) failed", (char*)s_buf, strerror(errno),errno);			
+		}else {
+			MY_TRACE("at_cmd_send_recv read incall AT command [%s] ret:%d r_buf:%s ret:%d ", (char*)s_buf,ret,(char*)r_buf,ret);
         }
 
         //at_cmd_deinit();
-
-        return strstr((char *)r_buf, "OK") == NULL; // strncmp((char*)r_buf, "OK", 2);
+        return 0; // strncmp((char*)r_buf, "OK", 2);
     } else {
         snprintf((char*)r_buf, r_len, "%s", "at_cmd_fd = -1");
     }
@@ -102,7 +89,7 @@ int at_cmd_send_recv(void *s_buf, size_t s_len, void *r_buf, size_t r_len)
     return -1;
 }
 
-int at_cmd_route(struct tiny_audio_device *adev)
+static int at_cmd_route(struct tiny_audio_device *adev)
 {
     char r_buf[32];
     const char *at_cmd = NULL;
@@ -122,10 +109,8 @@ int at_cmd_route(struct tiny_audio_device *adev)
     } else {
         at_cmd = "AT+SSAM=0";
     }
-    ALOGI("at_cmd_route, at_cmd:%s ",at_cmd);
-    at_cmd_init();
     do_cmd(at_cmd);
-    at_cmd_deinit();
+
     return 0;
 }
 
@@ -249,36 +234,19 @@ int at_cmd_headset_volume_max(void)
     return 0;
 }
 
+#include <cutils/properties.h>
+#define VOICECALL_VOLUME_MAX_UI	6
 int at_cmd_volume(float vol, int mode)
 {
     char r_buf[256];
     char buf[16];
     char *at_cmd = buf;
-    static float offset_vol = -1;
-    static int at_vgr_modem_max;
-    float vol1;
-    if (offset_vol < 0) {
-        /*********** sp6810a ***********
-        这个问题是这样的，打电话的时候，如果你将音量调到最小（UI上还会剩下一格），
-        如果不加0.125会导致，对方听不见声音。
-        这个在我们其他好几个产品上提过bug：
-        也就是说调到最小也不能让对方听见声音，而且也得和UI保持一致。
-        AudioFlinger::setVoiceVolume ==> vol + 0.125
-        ********************************/
-        property_get("ro.hardware", r_buf, "");
-        if (strcmp(r_buf, "sp6810a") == 0 ||
-            strcmp(r_buf, "sp6820a") == 0 ) {
-            offset_vol = 0.125;
-            at_vgr_modem_max = 6;
-        } else {
-            offset_vol = 0;
-            at_vgr_modem_max = 6;
-        }
-    }
-    vol1 = vol - offset_vol;
-    int volume = vol1 * at_vgr_modem_max + 1;
-    if (volume >= at_vgr_modem_max) volume = at_vgr_modem_max;
-    ALOGW("audio mode=%d %s ==> %d-%f, offset_vol=%f", mode, __func__, volume, vol, offset_vol);
+	int ret = 0;
+	unsigned short cur_device;
+
+    int volume = vol * VOICECALL_VOLUME_MAX_UI + 1;
+    if (volume >= VOICECALL_VOLUME_MAX_UI) volume = VOICECALL_VOLUME_MAX_UI;
+    MY_TRACE("%s mode=%d ,volume=%d, android vol:%f ", __func__,mode,volume,vol);
     snprintf(at_cmd, sizeof buf, "AT+VGR=%d", volume);
     do_cmd(at_cmd);
     return 0;
@@ -291,6 +259,21 @@ int at_cmd_mic_mute(bool mute)
     ALOGW("audio at_cmd_mic_mute %d", mute);
     if (mute) at_cmd = "AT+CMUT=1";
     else at_cmd = "AT+CMUT=0";
+    do_cmd(at_cmd);
+    return 0;
+}
+
+int at_cmd_audio_loop(int enable, int mode, int volume,int loopbacktype,int voiceformat,int delaytime)
+{
+    char r_buf[60];
+    char buf[89];
+    char *at_cmd = buf;
+	if(volume >15) {
+		volume = 15;
+	}
+    ALOGW("audio at_cmd_audio_loop enable:%d,mode:%d,voluem:%d,loopbacktype:%d,voiceformat:%d,delaytime:%d",enable,mode,volume,loopbacktype,voiceformat,delaytime);
+
+    snprintf(at_cmd, sizeof buf, "AT+SPVLOOP=%d,%d,%d,%d,%d,%d", enable,mode,volume,loopbacktype,voiceformat,delaytime);
     do_cmd(at_cmd);
     return 0;
 }
