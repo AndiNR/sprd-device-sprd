@@ -802,14 +802,14 @@ LOCAL int32_t get_cur_sample_rate(void)
 	 char *mode_name = NULL;
 	 BOOLEAN eq_para_tunable = SCI_FALSE;
 	 int32_t vol_index = 0;
-	 int16_t arm_vol = 0;
+	 int32_t arm_vol = 0;
 
 	 s_cur_sample_rate=get_cur_sample_rate();
 	 vol_index = audio_param_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.app_config_info_set.app_config_info[s_cur_music_type].valid_volume_level_count;
 
 	 arm_vol=audio_param_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.app_config_info_set.app_config_info[s_cur_music_type].arm_volume[vol_index];
-	 s_cur_dg_param.left_gain = arm_vol >> 9;				 //get s_cur_dg_param
-	 s_cur_dg_param.right_gain = arm_vol>>9;
+	 s_cur_dg_param.left_gain = ((arm_vol & 0xffff0000) >> 16);				 //get s_cur_dg_param
+	 s_cur_dg_param.right_gain = ((arm_vol & 0xffff0000) >> 16);
 
 	 armAudioInfo = &audio_param_ptr->audio_nv_arm_mode_info;
 	 mode_name = (char *)armAudioInfo->ucModeName;
