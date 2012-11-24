@@ -814,9 +814,12 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                     pthread_mutex_unlock(&adev->lock);
                     return ret;
             	}
-            }else{
+            }
+            #ifndef _VOICE_CALL_VIA_LINEIN
+            else{
                 SetAudio_gain_route(adev,1);
             }
+            #endif
         }else{
             ALOGW("the same devices(0x%x) with val(0x%x) val is zero...",adev->devices,val);
         }
@@ -1776,7 +1779,9 @@ static int adev_set_master_volume(struct audio_hw_device *dev, float volume)
 {
     struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
     ALOGW("adev_set_master_volume in...devices:0x%x ,volume:%f ",adev->devices,volume);
+    #ifndef _VOICE_CALL_VIA_LINEIN
     SetAudio_gain_route(adev,1);
+    #endif
     return -ENOSYS;
 }
 
