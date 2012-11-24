@@ -88,10 +88,10 @@ static int SetAudio_gain_4eng(struct audio_pga *pga, pga_gain_nv_t *pga_gain_nv,
     if(0 == lmode){ //Headset
         audio_pga_apply(pga,pga_gain_nv->dac_pga_gain_l,"headphone-l");
         audio_pga_apply(pga,pga_gain_nv->dac_pga_gain_r,"headphone-r");
-        audio_pga_apply(pga,pga_gain_nv->adc_pga_gain_l,"capture-l");
-	    audio_pga_apply(pga,pga_gain_nv->adc_pga_gain_r,"capture-r");
         audio_pga_apply(pga,pga_gain_nv->fm_pga_gain_l,"linein-hp-l");
         audio_pga_apply(pga,pga_gain_nv->fm_pga_gain_r,"linein-hp-r");
+        audio_pga_apply(pga,pga_gain_nv->adc_pga_gain_l,"capture-l");
+	    audio_pga_apply(pga,pga_gain_nv->adc_pga_gain_r,"capture-r");
     }else if(1 == lmode){   //Headfree
         audio_pga_apply(pga,pga_gain_nv->dac_pga_gain_l,"headphone-spk-l");
         audio_pga_apply(pga,pga_gain_nv->dac_pga_gain_r,"headphone-spk-r"); 
@@ -102,10 +102,10 @@ static int SetAudio_gain_4eng(struct audio_pga *pga, pga_gain_nv_t *pga_gain_nv,
     }else if(3 == lmode){   //Handsfree
         audio_pga_apply(pga,pga_gain_nv->dac_pga_gain_l,"speaker-l");
         audio_pga_apply(pga,pga_gain_nv->dac_pga_gain_r,"speaker-r");
+        audio_pga_apply(pga,pga_gain_nv->fm_pga_gain_l,"linein-spk-l");
+        audio_pga_apply(pga,pga_gain_nv->fm_pga_gain_r,"linein-spk-r");
         audio_pga_apply(pga,pga_gain_nv->adc_pga_gain_l,"capture-l");
 	    audio_pga_apply(pga,pga_gain_nv->adc_pga_gain_r,"capture-r");
-        audio_pga_apply(pga,pga_gain_nv->fm_pga_gain_l,"linein-spk-l");
-        audio_pga_apply(pga,pga_gain_nv->fm_pga_gain_r,"linein-spk-l");
     }
     ALOGW("%s, set cp mode(0x%x) ",__func__,lmode);
     return 0;
