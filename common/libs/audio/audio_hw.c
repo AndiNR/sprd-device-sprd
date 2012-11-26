@@ -803,9 +803,16 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             }
             adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
             adev->devices |= val;
-            ALOGW("out_set_parameters want to set devices:0x%x old_mode:%d new_mode:%d incall:%d ",adev->devices,cur_mode,adev->mode,adev->in_call);
+            ALOGW("out_set_parameters want to set devices:0x%x old_dev:0x%x old_mode:%d new_mode:%d incall:%d ",adev->devices,adev->prev_devices,cur_mode,adev->mode,adev->in_call);
             cur_mode = adev->mode;
-            select_devices(adev);
+            #ifndef _VOICE_CALL_VIA_LINEIN
+            if(!adev->in_call)
+            #endif
+            	select_devices(adev);
+            #ifndef _VOICE_CALL_VIA_LINEIN
+            else
+                adev->prev_devices = adev->devices;
+            #endif
             if (AUDIO_MODE_IN_CALL == adev->mode) {
                 ret = at_cmd_route(adev);  //send at command to cp
                 if (ret < 0) {
