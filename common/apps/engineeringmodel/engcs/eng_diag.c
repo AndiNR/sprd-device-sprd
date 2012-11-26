@@ -1007,7 +1007,6 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 		ENG_LOG("g_indicator = 0x%x,%x\n",g_indicator,AUDIO_DATA_READY_INDI_FLAG);
 
 		if ( audio_ptr ) {
-            parse_vb_effect_params((void *)audio_ptr, 4*sizeof(AUDIO_TOTAL_T));
 			msync((void *)audio_ptr,4*sizeof(AUDIO_TOTAL_T),MS_ASYNC);
 			munmap((void *)audio_ptr,4*sizeof(AUDIO_TOTAL_T));
 		}
@@ -1015,6 +1014,7 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 		if ( g_indicator ) {
 			ENG_LOG("data is ready!g_indicator = 0x%x\n",g_indicator);
 			g_indicator = 0;
+			parse_vb_effect_params((void *)audio_total, 4*sizeof(AUDIO_TOTAL_T));
 			SetAudio_pga_parameter_eng(&audio_total[g_index],sizeof(AUDIO_TOTAL_T),1);
 		}
 
