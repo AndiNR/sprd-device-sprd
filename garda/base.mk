@@ -25,15 +25,16 @@ PRODUCT_PACKAGES := \
 	bluetooth-health \
 	hostapd \
 	wpa_supplicant.conf \
+	calibration_init \
+	rawdatad \
+	nvm_daemon \
+	modemd\
 	audio.a2dp.default
 
 PRODUCT_PACKAGES += \
-	nvitemd \
 	charge \
 	vcharged \
-	modemd \
 	mfserial \
-	calibration_init \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \
 	camera.$(TARGET_PLATFORM) \

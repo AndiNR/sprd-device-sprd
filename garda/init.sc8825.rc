@@ -56,6 +56,17 @@ on boot
 on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
 
+#start rawdata daemon.
+service rawdatad /bin/rawdatad
+    class core
+    user root
+    oneshot
+
+#start nvitem daemon.
+service nvm_daemon /system/bin/nvm_daemon
+    class main
+    user root
+    oneshot
 #telephony service
 service sprd_monitor /system/bin/sprd_monitor
     class main
@@ -98,6 +109,10 @@ service phoneserver /system/bin/phoneserver
 service phoneserver_2sim /system/bin/phoneserver_2sim
     class main
     disabled
+    oneshot
+
+service calibrationinit /system/bin/calibration_init
+    class main
     oneshot
 
 #rild service

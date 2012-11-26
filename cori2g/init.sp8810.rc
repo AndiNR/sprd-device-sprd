@@ -55,11 +55,6 @@ on boot
 on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
 
-#modem_control
-service modem_control /system/bin/logwrapper /system/bin/modem_control
-    class main
-    user root
-    oneshot
 
 service mfserial /system/bin/mfserial ts0710mux11 ttyS1 1
     class main
