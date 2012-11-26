@@ -100,6 +100,12 @@ service phoneserver_2sim /system/bin/phoneserver_2sim
     disabled
     oneshot
 
+#mcom monitor
+service mcom_monitor /system/bin/mcom_monitor
+    class main
+    user root
+    oneshot
+
 #rild service
 service ril-daemon /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -- -n 0
     class main
