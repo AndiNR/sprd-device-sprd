@@ -91,7 +91,15 @@ service phoneserver_2sim /system/bin/phoneserver_2sim
     class main
     disabled
     oneshot
+service vcharged /bin/vcharged
+    class core
+    user root
+    oneshot
 
+service charge /bin/charge
+    class charger
+    user root
+    oneshot
 #rild service
 service ril-daemon /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -- -n 0
     class main
