@@ -380,8 +380,9 @@ service console /system/bin/sh
     user shell
     group log
 
-on property:ro.debuggable=1
-    start console
+# leave console to mfserial
+#on property:ro.debuggable=1
+#    start console
 
 # adbd is controlled via property triggers in init.<platform>.usb.rc
 service adbd /sbin/adbd

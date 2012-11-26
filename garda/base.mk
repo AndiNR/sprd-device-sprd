@@ -32,6 +32,7 @@ PRODUCT_PACKAGES += \
 	charge \
 	vcharged \
 	modemd \
+	mfserial \
 	calibration_init \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \

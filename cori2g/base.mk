@@ -36,7 +36,8 @@ PRODUCT_PACKAGES := \
 	calibration_init \
 	rawdatad \
 	nvm_daemon \
-	modemd
+	modemd \
+	mfserial
 
 PRODUCT_PACKAGES += \
 	gralloc.$(TARGET_PLATFORM) \

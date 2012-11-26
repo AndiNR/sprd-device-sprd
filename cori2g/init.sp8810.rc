@@ -61,6 +61,10 @@ service modem_control /system/bin/logwrapper /system/bin/modem_control
     user root
     oneshot
 
+service mfserial /system/bin/mfserial ts0710mux11 ttyS1 1
+    class main
+    user root
+
 #start rawdata daemon.
 service rawdatad /bin/rawdatad
     class core
