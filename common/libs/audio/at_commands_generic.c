@@ -73,7 +73,7 @@ int at_cmd_send_recv(void *s_buf, size_t s_len, void *r_buf, size_t r_len)
         if (r_buf) memset(r_buf, 0, r_len); // ((char*)r_buf)[0] = 0;
         memset(at_cmd, 0, 64);
 		len = sprintf(at_cmd, "%s%s", at_cmd_prefix, (char*)s_buf);
-        MY_TRACE("at_cmd_send_recv write incall AT command [%s] at_cmd_prefix:%s at_cmd:%s ", (char*)s_buf,at_cmd_prefix,at_cmd);
+        ALOGI("at_cmd_send_recv write incall AT command [%s] at_cmd_prefix:%s at_cmd:%s ", (char*)s_buf,at_cmd_prefix,at_cmd);
 		ret = engapi_write(at_cmd_fd, at_cmd, len);
 		if(ret < 0){
 			at_cmd_fd = -1;
