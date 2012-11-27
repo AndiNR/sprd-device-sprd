@@ -131,6 +131,11 @@ void exec_or_dump_content(struct slog_info *info, char *filepath)
 
 	fclose(fp);
 
+	if(!strncmp("apanic_console", info->name, 14) || !strncmp("apanic_threads", info->name, 14)){
+		sprintf(buffer, "rm -r %s", info->content);
+		system(buffer);
+	}
+
 	return;
 }
 
@@ -167,7 +172,7 @@ static int capture_all(struct slog_info *head)
         struct tm tm;
 	struct slog_info *info = head;
 
-	sprintf(filepath, "/%s/%s/%s", current_log_path, top_logdir, info->log_path);
+	sprintf(filepath, "%s/%s/%s", current_log_path, top_logdir, info->log_path);
         ret = mkdir(filepath, S_IRWXU | S_IRWXG | S_IRWXO);
         if(-1 == ret && (errno != EEXIST)){
                 err_log("mkdir %s failed.", filepath);
@@ -176,7 +181,7 @@ static int capture_all(struct slog_info *head)
 
         t = time(NULL);
         localtime_r(&t, &tm);
-	sprintf(filepath, "/%s/%s/%s/snapshot.log_%02d%02d%02d",
+	sprintf(filepath, "%s/%s/%s/snapshot.log_%02d%02d%02d",
 				current_log_path,
 				top_logdir,
 				info->log_path,
@@ -261,7 +266,7 @@ static int cp_internal_to_external()
                 {
                         if( !strncmp(p_dirent->d_name, "20", 2) ) {
 				strcpy(top_logdir, p_dirent->d_name);
-				sprintf(buffer, "cp -r %s/%s %s/", INTERNAL_LOG_PATH, top_logdir, external_storage);
+				sprintf(buffer, "busybox cp -r %s/%s %s/", INTERNAL_LOG_PATH, top_logdir, external_storage);
 				system(buffer);
 				debug_log("%s", buffer);
 				return 1;
@@ -275,14 +280,21 @@ static void create_log_dir()
 {
 	time_t when;
 	struct tm start_tm;
-	char path[256];
+	struct stat st;
+	char path[MAX_NAME_LEN];
 	int ret = 0;
 
 	handler_last_dir();
 
 	if(slog_start_step == 1){
-		if (cp_internal_to_external())
+		if (cp_internal_to_external()){
+			sprintf(path, "%s/modem_memory.log", external_path);
+			if(!stat(path, &st)){
+				sprintf(path, "mv %s/modem_memory.log %s/%s/misc/", external_path, current_log_path, top_logdir);
+				system(path);
+			}
 			return;
+		}
 	}
 
 	/* generate log dir */
@@ -658,7 +670,7 @@ static void handler_internal_log_size()
 	debug_log("internal available %dM", availabledisk >> 20);
 
 	/* default setting internal log size, half of available */
-	internal_log_size = (availabledisk >> 20) /5;
+	internal_log_size = (availabledisk >> 20) /10;
 	debug_log("set internal log size %dM", internal_log_size);
 }
 
