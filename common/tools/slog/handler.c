@@ -557,6 +557,11 @@ void *stream_log_handler(void *arg)
 			open_device(info, KERNEL_LOG_SOURCE);
 			info->fd_out = gen_outfd(info);
 		} else if(!strncmp(info->name, "modem", 5)) {
+			if( !strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)) ) {
+				info->state = SLOG_STATE_OFF;
+				info = info->next;
+				continue;
+			}
 			open_device(info, MODEM_LOG_SOURCE);
 			info->fd_out = gen_outfd(info);
 		} else {
