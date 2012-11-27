@@ -383,7 +383,7 @@ LOCAL int _Sensor_Device_SetFlash(uint32_t flash_mode)
 	return ret;
 }
 
-LOCAL int _Sensor_Device_WriteRegTab(SENSOR_REG_TAB_PTR reg_tab)
+int _Sensor_Device_WriteRegTab(SENSOR_REG_TAB_PTR reg_tab)
 {
 	int ret = SENSOR_SUCCESS;
 
@@ -520,12 +520,13 @@ int Sensor_SetVoltage(SENSOR_AVDD_VAL_E dvdd_val, SENSOR_AVDD_VAL_E avdd_val,
 	if(SENSOR_SUCCESS != err)
 		return err;
 	
-	
 	err = _Sensor_Device_SetVoltageDVDD((uint32_t)dvdd_val);
 	if(SENSOR_SUCCESS != err)
 		return err;
 
 	err = _Sensor_Device_SetVoltageIOVDD((uint32_t)iodd_val);
+	if(SENSOR_SUCCESS != err)
+		return err;
 
 	SENSOR_PRINT_HIGH("Sensor_SetVoltage avdd_val = %d,  dvdd_val=%d, iodd_val=%d \n", avdd_val, dvdd_val, iodd_val);
 
@@ -1490,16 +1491,18 @@ int _Sensor_SetMode(uint32_t mode)
 	if (PNULL != s_sensor_info_ptr->resolution_tab_info_ptr[mode].sensor_reg_tab_ptr) {
 		mclk = s_sensor_info_ptr->resolution_tab_info_ptr[mode].xclk_to_sensor;
 		Sensor_SetMCLK(mclk);
-		s_sensor_exp_info.image_format =
-		    s_sensor_exp_info.sensor_mode_info[mode].image_format;
-		Sensor_SendRegTabToSensor
-		    (&s_sensor_info_ptr->resolution_tab_info_ptr[mode]);
+		s_sensor_exp_info.image_format = s_sensor_exp_info.sensor_mode_info[mode].image_format;
+
+		if((SENSOR_MODE_COMMON_INIT == mode) && set_reg_tab_func){
+			set_reg_tab_func(SENSOR_MODE_COMMON_INIT);
+		}else{
+			Sensor_SendRegTabToSensor(&s_sensor_info_ptr->resolution_tab_info_ptr[mode]);
+		}
 		s_sensor_mode[Sensor_GetCurId()] = mode;
 	} else {
 		if(set_reg_tab_func)
 			set_reg_tab_func(0);
-		SENSOR_PRINT
-		    ("SENSOR: Sensor_SetResolution -> No this resolution information !!!");
+		SENSOR_PRINT("SENSOR: Sensor_SetResolution -> No this resolution information !!!");
 	}
 	return SENSOR_SUCCESS;
 }

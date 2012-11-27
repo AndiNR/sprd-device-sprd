@@ -745,5 +745,6 @@ int Sensor_GetSensorParam(uint8_t *buf,uint8_t *is_saved_ptr);
 int Sensor_GetRawSettings(void **raw_setting, uint32_t *length);
 int Sensor_SetMark(uint8_t *buf);
 int Sensor_GetMark(uint8_t *buf,uint8_t *is_saved_ptr);
+int _Sensor_Device_WriteRegTab(SENSOR_REG_TAB_PTR reg_tab);
 
 #endif

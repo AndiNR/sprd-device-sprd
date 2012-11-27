@@ -98,6 +98,7 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_s5k5ccgx_mipi.c \
 	sensor/sensor_ov5640_mipi.c  \
 	sensor/sensor_ov5640_mipi_raw.c \
+	sensor/sensor_hi351_mipi.c \
 	vsp/sc8825/src/vsp_drv_sc8825.c \
 	jpeg_fw_8825/src/jpegcodec_bufmgr.c \
 	jpeg_fw_8825/src/jpegcodec_global.c \
