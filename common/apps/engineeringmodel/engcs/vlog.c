@@ -41,6 +41,7 @@ int restart_vser(void)
     return 0;
 }
 
+#define MAX_OPEN_TIMES  10
 //int main(int argc, char **argv)
 void *eng_vlog_thread(void *x)
 {
@@ -52,6 +53,7 @@ void *eng_vlog_thread(void *x)
 	char cardlog_property[8];
 	char log_name[40];
 	time_t now;
+    int wait_cnt = 0;
 	struct tm *timenow;
 
 	ENG_LOG("open usb serial\n");
@@ -64,12 +66,18 @@ void *eng_vlog_thread(void *x)
 	vser_fd = ser_fd;
 	
 	ENG_LOG("open vitual pipe\n");
-	pipe_fd = open("/dev/vbpipe0",O_RDONLY);
-	if(pipe_fd < 0) {
-		ALOGE("cannot open vpipe0\n");
-//		exit(1);	
-        return NULL;
-	}
+    do
+    {
+	    pipe_fd = open("/dev/vbpipe0",O_RDONLY);
+	    if(pipe_fd < 0) {
+		    ALOGE("vlog cannot open vpipe0, times:%d\n", wait_cnt);
+            if(wait_cnt++ >= MAX_OPEN_TIMES)
+            {
+                return NULL;
+            }
+            sleep(5);
+	    }
+    }while(pipe_fd < 0);
 
 	sdcard_fd = open("/dev/block/mmcblk0",O_RDONLY);
 	if ( sdcard_fd < 0 ) {
