@@ -37,7 +37,8 @@ PRODUCT_PACKAGES := \
 	VoiceDialer \
 	Phone \
     framework2 \
-	Settings
+	Settings \
+      ES_File_Explorer.apk
 
 # prebuild files
 PRODUCT_PACKAGES += \
