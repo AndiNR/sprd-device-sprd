@@ -25,12 +25,10 @@ extern "C" {
 #define do_cmd(at_cmd) \
     pthread_mutex_lock(&ATlock);\
     if (at_cmd && at_cmd_send_recv((void*)at_cmd, strlen(at_cmd), r_buf, sizeof r_buf)) { \
-        ALOGE("--------------------------------------\n" \
-             "do_cmd Switch incall AT command [%s][%s] failed", at_cmd, r_buf); \
+        ALOGE("do_cmd Switch incall AT command [%s][%s] failed", at_cmd, r_buf); \
     } else if (at_cmd) { \
-        ALOGW("--------------------------------------\n" \
-             "do_cmd Switch incall AT command [%s][%s] good", at_cmd, r_buf); \
-    } \
+        ALOGW("do_cmd Switch incall AT command [%s][%s] good", at_cmd, r_buf); \
+    }\
     pthread_mutex_unlock(&ATlock);
 
 int at_cmd_deinit(void)
@@ -79,7 +77,7 @@ int at_cmd_send_recv(void *s_buf, size_t s_len, void *r_buf, size_t r_len)
 			at_cmd_fd = -1;
             ALOGE("at_cmd_send_recv Switch incall AT command s_buf:%s error:%s(%d) failed", (char*)s_buf, strerror(errno),errno);			
 		}else {
-			ALOGI("at_cmd_send_recv read incall AT command [%s] ret:%d r_buf:%s ret:%d ", (char*)s_buf,ret,(char*)r_buf,ret);
+		    engapi_read(at_cmd_fd, r_buf, r_len);
         }
 
         //at_cmd_deinit();
