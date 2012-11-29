@@ -247,8 +247,11 @@ struct config_element sprd_front_camera_hardware_config[] = {
         {"whitebalance-values",
          "auto,incandescent,fluorescent,daylight,cloudy-daylight"},
         {"whitebalance", "auto"},
-        {"picture-size-values",
-         "2048x1536,1600x1200,1280x960,640x480"},
+#ifdef CONFIG_CAMERA_SUPPORT_2M
+		{"picture-size-values", "1600x1200,1280x960,640x480"},
+#else
+        {"picture-size-values", "2048x1536,1600x1200,1280x960,640x480"},
+#endif
          {"picture-size", "640x480"},
 	{"preview-size-values",
 	 "640x480,352x288,320x240,176x144"},

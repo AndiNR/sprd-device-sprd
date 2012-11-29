@@ -44,6 +44,8 @@ extern "C" {
 }
 #endif
 
+//#define USE_ION_MEM		1
+
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(*x))
 #define PRINT_TIME 0
 
@@ -1378,21 +1380,39 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
                         if((NULL == vaddr) || (NULL == frame_addr)){
                                 ALOGE("Fail to get gralloc buffer.");
                                 goto callbacks;
-                        } else{
-		ALOGI("OK to get gralloc buffer. vaddr: 0x%x, frame_addr: 0x%x, frame->buf_Virt_Addr: 0x%x.", (uint32_t)vaddr, (uint32_t)frame_addr, (uint32_t)frame->buf_Virt_Addr);
-	     }
+						} else{
+							ALOGI("OK to get gralloc buffer. vaddr: 0x%x, frame_addr: 0x%x, frame->buf_Virt_Addr: 0x%x.", (uint32_t)vaddr, (uint32_t)frame_addr, (uint32_t)frame->buf_Virt_Addr);
+						}
 
-	     {
-                       native_handle_t *pNativeHandle = (native_handle_t *)*buf_handle;						
-                       struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
-                       uint32_t phy_addr =  (uint32_t)(private_h->phyaddr);
+						{
+							native_handle_t *pNativeHandle = (native_handle_t *)*buf_handle;
+							struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
+							uint32_t phy_addr =  (uint32_t)(private_h->phyaddr);
+							nsecs_t timestamp_old, timestamp_new;
 
-                        //ALOGE("wxz====: frame->buffer_phy_addr : 0x%x, phy_addr: 0x %x", frame->buffer_phy_addr, phy_addr);
-                        if(0 != camera_rotation_copy_data(width, height, frame->buffer_phy_addr, phy_addr)){
-                                ALOGE("fail to camera_rotation_copy_data() in receivePreviewFrame.");
-                                goto callbacks;
-                        }
-                        }
+							timestamp_old = systemTime();
+
+
+							//ALOGE("wxz====: frame->buffer_phy_addr : 0x%x, phy_addr: 0x %x", frame->buffer_phy_addr, phy_addr);
+#ifdef USE_ION_MEM
+							if(0 != camera_rotation_copy_data(width, height, frame->buffer_phy_addr, phy_addr)){
+							        ALOGE("fail to camera_rotation_copy_data() in receivePreviewFrame.");
+							        goto callbacks;
+							}
+#else
+
+							if(0 != camera_rotation_copy_data_virtual(width, height, frame->buffer_phy_addr, (uint32_t)vaddr)){
+							        ALOGE("fail to camera_rotation_copy_data() in receivePreviewFrame.");
+							        goto callbacks;
+							}
+
+							//memcpy(vaddr, frame_addr, width*height*3/2);
+							//ALOGV("receivePreviewFrame, copy to vaddr: src=%x, dst=%x, dstphy=%x \n", (uint32_t)frame_addr, (uint32_t)vaddr, phy_addr);
+#endif
+							timestamp_new = systemTime();
+							ALOGV("receivePreviewFrame %lld, %lld, time = %lld us \n",timestamp_old, timestamp_new, (timestamp_new-timestamp_old)/1000);
+
+						}
                         mGrallocHal->unlock(mGrallocHal, *buf_handle);
                 }
                 else
@@ -1489,6 +1509,8 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
 {
     void *vaddr;
     int width, height, frame_size, offset_size;
+    nsecs_t timestamp_old, timestamp_new;
+
     ALOGV("receiveRawPicture: E");
     print_time();
 
@@ -1521,18 +1543,41 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
             native_handle_t *pNativeHandle = (native_handle_t *)*buf_handle;
             struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
             uint32_t phy_addr =  (uint32_t)(private_h->phyaddr);
+			uint32_t tmp_phy_addr;
 					   
-            if( 0 != camera_get_data_redisplay(phy_addr, width, height, frame->buffer_phy_addr, frame->dx, frame->dy)){
-                ALOGE("Fail to camera_get_data_redisplay.");
-                goto callbackraw;
-            }
             if(NULL == vaddr){
                 ALOGE("Fail to get gralloc buffer.");
                 goto callbackraw;
             }
             else{
             //ALOGI("OK to get gralloc buffer. vaddr: 0x%x, frame_addr: 0x%x, frame->buf_Virt_Addr: 0x%x.", (uint32_t)vaddr, (uint32_t)frame_addr, (uint32_t)frame->buf_Virt_Addr);
+			}
+
+#ifdef USE_ION_MEM
+            if( 0 != camera_get_data_redisplay(phy_addr, width, height, frame->buffer_phy_addr, frame->dx, frame->dy)){
+                ALOGE("Fail to camera_get_data_redisplay.");
+                goto callbackraw;
             }
+#else
+			if(NULL == get_redisplay_mem(width*height*3/2, 1, &tmp_phy_addr))
+				goto callbackraw;
+
+            if( 0 != camera_get_data_redisplay(tmp_phy_addr, width, height, frame->buffer_phy_addr, frame->dx, frame->dy)){
+                ALOGE("Fail to camera_get_data_redisplay.");
+                goto callbackraw;
+            }
+			timestamp_old = systemTime();
+			if(0 != camera_rotation_copy_data_virtual(width, height, tmp_phy_addr, (uint32_t)vaddr)){
+			        ALOGE("fail to camera_rotation_copy_data() in receiveRawPicture.");
+			        goto callbackraw;
+			}
+
+			//memcpy(vaddr, mReDisplayHeap->data, width*height*3/2);
+			timestamp_new = systemTime();
+			ALOGV("receiveRawPicture: %lld, %lld, time = %lld us \n",timestamp_old, timestamp_new, (timestamp_new-timestamp_old)/1000);
+			FreePmem(mReDisplayHeap);
+#endif
+
             mGrallocHal->unlock(mGrallocHal, *buf_handle);
         }
         else
@@ -2998,15 +3043,25 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 #endif
 
     const char *str_preview_format = mParameters.getPreviewFormat();
+    int usage;
+
     ALOGV("%s: preview format %s", __func__, str_preview_format);
 
+    usage = GRALLOC_USAGE_SW_WRITE_OFTEN;
+
     if (preview_width > 640) {
-    	if (w->set_usage(w, GRALLOC_USAGE_SW_WRITE_OFTEN  | GRALLOC_USAGE_PRIVATE_1)) {
+#ifdef USE_ION_MEM
+		usage |= GRALLOC_USAGE_PRIVATE_1;
+#endif
+		if (w->set_usage(w, usage )) {
         	ALOGE("%s: could not set usage on gralloc buffer", __func__);
         	return INVALID_OPERATION;
     	}		
     } else {
-    	if (w->set_usage(w, GRALLOC_USAGE_SW_WRITE_OFTEN  | GRALLOC_USAGE_PRIVATE_0)) {
+#ifdef USE_ION_MEM
+		usage |= GRALLOC_USAGE_PRIVATE_0;
+#endif
+		if (w->set_usage(w, usage )) {
         	ALOGE("%s: could not set usage on gralloc buffer", __func__);
         	return INVALID_OPERATION;
     	}

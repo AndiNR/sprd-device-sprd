@@ -2732,6 +2732,47 @@ int camera_rotation_copy_data(uint32_t width, uint32_t height, uint32_t in_addr,
 	return 0;
 }
 #endif
+
+/* Copy data from to address */
+int camera_rotation_copy_data_virtual(uint32_t width, uint32_t height, uint32_t in_addr, uint32_t out_virtual_addr)
+{
+	int fd = -1;
+	ROTATION_PARAM_T rot_params;
+
+	rot_params.data_format = ROTATION_YUV420;
+	rot_params.img_size.w = width;
+	rot_params.img_size.h = height;
+	rot_params.src_addr.y_addr = in_addr;
+	rot_params.src_addr.uv_addr = rot_params.src_addr.y_addr + rot_params.img_size.w * rot_params.img_size.h;
+	rot_params.src_addr.v_addr = rot_params.src_addr.uv_addr;
+	rot_params.dst_addr.y_addr = out_virtual_addr;
+	rot_params.dst_addr.uv_addr = rot_params.dst_addr.y_addr + rot_params.img_size.w * rot_params.img_size.h;
+	rot_params.dst_addr.v_addr = rot_params.dst_addr.uv_addr;
+
+	fd = open("/dev/sprd_rotation", O_RDWR /* required */, 0);
+	if (-1 == fd)
+	{
+		ALOGE("Fail to open rotation device.");
+		return -1;
+	}
+
+	//done
+	if (-1 == xioctl(fd, SPRD_ROTATION_DATA_COPY_VIRTUAL, &rot_params))
+	{
+		ALOGE("Fail to SC8800G_ROTATION_DATA_COPY");
+		return -1;
+	}
+
+	if(-1 == close(fd))
+	{
+		ALOGE("Fail to close rotation device.");
+		return -1;
+	}
+	fd = -1;
+	return 0;
+}
+
+
 uint32_t get_stop_flag(void)
 {
 	if(1 ==  g_stop_preview_flag)
