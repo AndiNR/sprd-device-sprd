@@ -651,10 +651,10 @@ void *stream_log_handler(void *arg)
 				}
 
 				do {
-					ret = write(info->fd_out, buf_kmsg, strlen(buf_kmsg));
-				} while (ret < 0 && errno == EINTR);
+					result = write(info->fd_out, buf_kmsg, ret);
+				} while (result < 0 && errno == EINTR);
 
-				info->outbytecount += ret;
+				info->outbytecount += result;
 				log_size_handler(info);
 			} else {
 				ret = read(info->fd_device, buf, LOGGER_ENTRY_MAX_LEN);
