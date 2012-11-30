@@ -51,8 +51,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
 	ro.operator.version=specA
 	
 PRODUCT_COPY_FILES := \
-	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \
-	$(BOARDDIR)/pixcir_ts.kl:system/usr/keylayout/pixcir_ts.kl \
+	$(BOARDDIR)/sci-keypad.kl:system/usr/keylayout/sci-keypad.kl \
 	$(BOARDDIR)/Zinitix_tsp.idc:system/usr/idc/Zinitix_tsp.idc
 
 $(call inherit-product, frameworks/native/build/phone-hdpi-dalvik-heap.mk)
