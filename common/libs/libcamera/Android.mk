@@ -149,6 +149,10 @@ ifeq ($(strip $(TARGET_BOARD_NO_FRONT_SENSOR)),true)
 LOCAL_CFLAGS += -DCONFIG_DCAM_SENSOR_NO_FRONT_SUPPORT
 endif
 
+ifeq ($(strip $(CAMERA_DISP_ION)),true)
+LOCAL_CFLAGS += -DUSE_ION_MEM
+endif
+
 ifeq ($(strip $(TARGET_BOARD_Z788)),true)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_788
 endif
