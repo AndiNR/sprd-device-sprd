@@ -9,6 +9,7 @@ on early-init
     # for backwards compatibility
     symlink /storage/sdcard0 /sdcard
     symlink /storage/sdcard0 /mnt/sdcard
+    symlink /dev/ts0710mux22  /dev/vbpipe0    
 
 on fs
     mount_all /fstab.sp8810

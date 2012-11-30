@@ -147,7 +147,7 @@ int ensure_audio_para_file_exists(char *config_file)
 }
 
 
-	
+#define MAX_OPEN_TIMES  10	
 //int main(int argc, char **argv)
 void *eng_vdiag_thread(void *x)
 {
@@ -155,6 +155,7 @@ void *eng_vdiag_thread(void *x)
 	int ser_fd;
 	ssize_t r_cnt, w_cnt;
 	int res, ret=0;
+    int wait_cnt = 0;
 
 	ser_fd = open("/dev/vser",O_RDONLY);
 	if(ser_fd < 0) {
@@ -162,12 +163,18 @@ void *eng_vdiag_thread(void *x)
 //		exit(1);
         return NULL;
 	}
-	pipe_fd = open("/dev/vbpipe0",O_WRONLY);
-	if(pipe_fd < 0) {
-		ENG_LOG("cannot open vpipe0\n");
-//		exit(1);	
-        return NULL;
-	}
+    do
+    {
+	    pipe_fd = open("/dev/vbpipe0",O_WRONLY);
+	    if(pipe_fd < 0) {
+		    ENG_LOG("vdiag cannot open vpipe0, times:%d\n", wait_cnt);
+            if(wait_cnt++ >= MAX_OPEN_TIMES)
+            {
+                return NULL;
+            }
+            sleep(5);
+	    }
+    }while(pipe_fd < 0);
 	
 	memset(&audio_total,0,sizeof(audio_total));
 	if(0 == ensure_audio_para_file_exists((char *)(ENG_AUDIO_PARA_DEBUG))){
