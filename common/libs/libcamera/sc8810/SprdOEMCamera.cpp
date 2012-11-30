@@ -2733,6 +2733,7 @@ int camera_rotation_copy_data(uint32_t width, uint32_t height, uint32_t in_addr,
 }
 #endif
 
+#ifndef USE_ION_MEM
 /* Copy data from to address */
 int camera_rotation_copy_data_virtual(uint32_t width, uint32_t height, uint32_t in_addr, uint32_t out_virtual_addr)
 {
@@ -2771,7 +2772,7 @@ int camera_rotation_copy_data_virtual(uint32_t width, uint32_t height, uint32_t 
 	fd = -1;
 	return 0;
 }
-
+#endif
 
 uint32_t get_stop_flag(void)
 {
