@@ -56,6 +56,15 @@ on boot
 on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
 
+service vcharged /bin/vcharged
+    class core
+    user root
+    oneshot
+
+service charge /bin/charge
+    class charger
+    user root
+    oneshot
 # create virtual SD card at /storage/sdcard0, based on the /data/media directory
 # daemon will drop to user/group system/media_rw after initializing
 # underlying files in /data/media will be created with user and group media_rw (1023)
