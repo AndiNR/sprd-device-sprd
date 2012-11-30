@@ -142,7 +142,9 @@ int camera_start_af_thread(camera_focus_e_type focus,
 void camera_encoder_start_flash(void);
 int camera_get_data_redisplay(int output_addr, int output_width, int output_height, int input_addr, int input_width, int input_height);
 int camera_rotation_copy_data(uint32_t width, uint32_t height, uint32_t in_addr, uint32_t out_addr);
+#ifndef USE_ION_MEM
 int camera_rotation_copy_data_virtual(uint32_t width, uint32_t height, uint32_t in_addr, uint32_t out_addr);
+#endif
 int camera_convert_420_UV_VU(int src_addr,int dst_addr,int width,int height);
 void camera_set_preview_mode(int mode);
 };

@@ -1102,7 +1102,7 @@ static CameraInfo sCameraInfo[] = {
 #ifndef CONFIG_DCAM_SENSOR_NO_FRONT_SUPPORT
     {
         CAMERA_FACING_FRONT,
-        90,  /* orientation */
+        270,  /* orientation */
     },
 #endif
 };
@@ -1115,7 +1115,7 @@ static CameraInfo sCameraInfo3[] = {
 
     {
         CAMERA_FACING_FRONT,
-        90,  /* orientation */
+        270,  /* orientation */
     },
 
     {
