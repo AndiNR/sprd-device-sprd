@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="app_name">engineering model</string>
+	<string name="thirdverinfo">third version info</string>
+	<string name="verinfo">version info</string>
+	<string name="layer1monitor">Layer1 Monitor</string>
+	<string name="version">version</string>
+	<string name="dynaengmode">Dyna Eng Mode</string>
+	<string name="netinfo">Net Info</string>
+	<string name="netinfotitle">NET Info</string>
+	<!-- ver info -->
+	<string name="verinfotitle">Version Info</string>
+	<string name="modeminfo">Modem Info</string>
+	<string name="imeiinfo">IMEI</string>
+	<string name="swinfo">SW version:</string>
+	<string name="hwinfo">HW version:</string>
+
+	<!-- net info -->
+	<string name="agenttitle">UA Agent</string>
+	<string name="profiletitle">UA Profile</string>
+	<string name="Lock_freq1">Lock_freq1:</string>
+	<string name="ua_setting">UA Setting</string>
+
+	<string name="lfc1">Lock_freq1_cells:</string>
+	<string name="lfc2">Lock_freq2_cells:</string>
+	<string name="lfc3">Lock_freq3_cells:</string>
+	<string name="lfc4">Lock_freq4_cells:</string>
+
+	<string name="unlockfreq">unlock freq cells:</string>
+	<string name="gprsdata">Data number:</string>
+	<string name="gprscontent">Send content:</string>
+
+	<string name="uplmn">UPLMN settings</string>
+	<string name="uplmn_update">Refresh</string>
+	<string name="inputvalue">Modify</string>
+	<string name="uplmn_index">index (start from 0):</string>
+	<string name="uplmn_id">id number:</string>
+	<string name="uplmn_type">type (0:UTRAN 1:GSM):</string>
+
+	<string name="psver1">Build version</string>
+	<string name="psver2">Mocor version</string>
+	<string name="imei">IMEI</string>
+	<string name="read_button">Read</string>
+	<string name="write_button">Write</string>
+
+	<string name="preferred_network_mode_title">Network Mode</string>
+	<string name="preferred_network_mode_summary">Change the network operating mode</string>
+	<string name="preferred_network_mode_dialogtitle">Preferred network mode</string>
+
+	<string name="sim_forbid_plmn">Sim Forbid Plmn</string>
+	<string name="sim_equal_plmn">Sim Equal Plmn</string>
+
+	<string name="set_bands_error">Set Error,Please try again after a few minutes
+	</string>
+	<!-- add by wangxiabin 09-15-11 for Wifi test begin -->
+	<string name="wifi_testing_label">Wifi test</string>
+	<string name="wifi_eut_label">Wifi EUT test</string>
+	<string name="wifi_starting">wifi starting...</string>
+	<string name="wifi_start_scan">wifi scaning...</string>
+	<string name="wifi_stopping">wifi stopping...</string>
+	<string name="wifi_stopped">wifi stopped</string>
+	<string name="wifi_error">open wifi failed</string>
+	<string name="wifi_no_network">No Wifi Network</string>
+	<string name="wifi_pass">Pass</string>
+	<string name="wifi_istesting">is testing now,please wait...</string>
+	<string name="wifi_isclosing_tit">close test</string>
+	<string name="wifi_isclosing">test is closing,please wait...</string>
+	<!-- add by wangxiabin 09-15-11 for Wifi test end -->
+
+	<!-- add by wangxiaobin 2011-10-04 for wifi eut begin -->
+	<string name="wifi_eut_str_band">band</string>
+	<string name="wifi_eut_str_channel">Channel</string>
+	<string name="wifi_eut_str_sFactor">sFactor</string>
+	<string name="wifi_eut_str_frequency">frequency</string>
+	<string name="wifi_eut_str_frequencyOffset">frequencyOffset</string>
+	<string name="wifi_eut_str_amplitude">amplitude</string>
+	<string name="wifi_eut_str_rate">Rate</string>
+	<string name="wifi_eut_str_powerLevel">PowerLevel</string>
+	<string name="wifi_eut_str_length">length</string>
+	<string name="wifi_eut_str_enablelbCsTestMode">enablelbCsTestMode</string>
+	<string name="wifi_eut_str_interval">interval</string>
+	<string name="wifi_eut_str_destMacAddr">destMacAddr</string>
+	<string name="wifi_eut_str_preamble">preamble</string>
+	<string name="wifi_eut_str_filteringEnable">filteringEnable</string>
+	<string name="wifi_eut_str_cw">CW test</string>
+	<string name="wifi_eut_str_rx">RX test</string>
+	<string name="wifi_eut_str_tx">TX test</string>
+	<string name="wifi_eut_label_cw">-------------------CW Parameters-------------------
+	</string>
+	<string name="wifi_eut_label_tx">-------------------Tx Parameters-------------------
+	</string>
+	<string name="wifi_eut_label_rx">-------------------Rx Parameters-------------------
+	</string>
+	<string name="wifi_eut_desc_channel">1-14 for 2.4Ghz,1-200 for 4.9/5Ghz</string>
+	<string name="wifi_eut_desc_sFactor">Multiples of 500KHz, 8000-10000</string>
+	<string name="wifi_eut_desc_frequency">0 or 1970-6000 (MHz)</string>
+	<string name="wifi_eut_desc_frequencyOffset">-20000-20000 (KHz)</string>
+	<string name="wifi_eut_desc_amplitude">0-16</string>
+	<string name="wifi_eut_desc_rate">Mbps, rounded down to the nearest integer</string>
+	<string name="wifi_eut_desc_powerLevel">1-15</string>
+	<string name="wifi_eut_desc_length">0-2304</string>
+	<string name="wifi_eut_desc_interval">microseconds</string>
+	<string name="wifi_eut_desc_destMacAddr">Destination MAC address i.e. c89cdc5c72a2</string>
+	<string name="wifi_eut_band_err1">range of band is 1-14</string>
+	<string name="wifi_eut_band_err2">range of band is 1-200</string>
+	<string name="wifi_eut_sFactor_err">Multiples of 500KHz, 8000-10000</string>
+	<string name="wifi_eut_frequency_err">range of frequency is 1970-6000 (MHz)</string>
+	<string name="wifi_eut_frequencyOffset_err">rang of frequencyOffset is -20000-20000</string>
+	<string name="wifi_eut_length_err">rang of length is 0-2304</string>
+	<string name="wifi_eut_init_fail">init fail</string>
+	<string name="wifi_eut_init_success">init Success</string>
+	<string name="wifi_eut_initing">initing...</string>
+	<string name="wifi_eut_start">start</string>
+	<string name="wifi_eut_stop">stop</string>
+	<!-- add by wangxiaobin 2011-10-04 for wifi eut end -->
+	<string name="fill_memory_alert_msg">Please wait...</string>
+	<string name="fill_memory_stop_msg">Stuffing MEMORY has been deleted</string>
+	<string name="fill_memory_alert_ok">Ok,I got it</string>
+	<string name="memory_low">Warning:out of memory</string>
+	<string name="modem_arm_log_entries_values_default">0</string>
+	<string name="currentvalue">Current Value:</string>
+        <string name="modem_dsp_log_entries_values_default">0</string>
+        <string name="no_sim_card_prompt">Please insert USIM card and try again</string>
+        <string name="choose_sub">Choose SIM</string>
+        <string name="mobile_network_settings_sub_0">SIM1</string>
+        <string name="mobile_network_settings_sub_1">SIM2</string>
+        <string name="mobile_network_settings_other">Other</string>
+        <string name="btut_test">BT EUT test</string>
+        <string name="btut_tag">enter BT EUT mode，waiting...</string>
+
+	<!-- SlogUI add by Yuntao.xiao -->
+    <string name="chk_general_switch">总开关</string>
+    <string name="chk_general_android">Android Log开关</string>
+    <string name="chk_general_modem">Modem Log开关</string>
+    <string name="txv_general_storagelocation">存储路径</string>
+    <string name="rdo_general_sdcard">SD卡</string>
+    <string name="rdo_general_nand">手机内部存储</string>
+    <string name="btn_general_clearlog">清除Log</string>
+    <string name="btn_general_dump">导出Log</string>
+    <string name="chk_general_snapsvc">截屏服务</string>
+    <string name="chk_general_alwaysrun">始终显示Slog提示</string>
+
+
+
+    <string name="chk_android_switch">开始记录AndroidLog</string>
+    <string name="txv_android_branch">分支开关</string>
+    <string name="chk_android_kernel">启用Kernel</string>
+    <string name="chk_android_system">启用System</string>
+    <string name="chk_android_main">启用Main</string>
+    <string name="chk_android_radio">启用Radio</string>
+
+    <string name="chk_modem_switch">启用Modem Log</string>
+    <string name="txv_modem_other">其他选项</string>
+    <string name="chk_modem_bluetooth">蓝牙 Log</string>
+    <string name="chk_modem_wifi">Wifi Log</string>
+    <string name="chk_modem_misc">其他 Log</string>
+
+    <string name="txv_alert_dump">请输入包名</string>
+
+    <string name="txv_alert_clearlog">确实要清除所有Log?</string>
+
+    <string name="alert_dump_title">输入包名</string>
+    <string name="alert_dump_dialog_ok">确认</string>
+    <string name="alert_dump_dialog_cancel">取消</string>
+
+    <string name="alert_clear_title">清除Log</string>
+    <string name="alert_clear_dialog_ok">删除</string>
+    <string name="alert_clear_dialog_cancel">放弃</string>
+    <string name="alert_clear_string">真的要清除所有Log?</string>
+
+    <string name="tabtag_tabhost_tabgeneral">General</string>
+    <string name="tabtag_tabhost_tabandroid">Android Log</string>
+    <string name="tabtag_tabhost_tabmodem">Modem and Misc</string>
+
+    <string name="toast_receiver_failed">启动Slog服务失败</string>
+
+    <string name="notification_slogsvc_title">Slog正在进行</string>
+    <string name="notification_slogsvc_prompt">点击这里进入Slog设置</string>
+    <string name="notification_slogsvc_statusbarprompt">正在开启Slog服务</string>
+
+    <string name="notification_snapsvc_title">Slog截屏服务</string>
+    <string name="notification_snapsvc_prompt">点击这里,截取当前画面</string>
+    <string name="notification_snapsvc_statusbarprompt">截屏服务已经开启,请查看下拉通知查看</string>
+
+    <string name="progressdialog_tabhost_prompt">请稍候</string>
+
+    <string name="toast_snap_success">截屏成功</string>
+    <string name="toast_snap_failed">截屏失败</string>
+    <string name="toast_snap_prompt">截屏服务已经开启,下拉通知栏可找到截屏服务</string>
+
+    <string name="toast_service_snap_start_failed">截屏服务开启失败</string>
+    <string name="toast_service_snap_end_failed">截屏服务停止失败</string>
+    <string name="toast_service_slog_start_failed">Slog服务开启失败</string>
+    <string name="toast_service_slog_end_failed">Slog服务停止失败</string>
+
+    <string name="toast_freespace_nand">手机剩余空间:</string>
+    <string name="toast_freespace_sdcard">SD卡剩余空间</string>
+	<!-- SlogUI Added Done -->
+
+</resources>
