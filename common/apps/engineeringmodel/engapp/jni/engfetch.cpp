@@ -35,7 +35,7 @@ int result = a + b;
 static jint engf_open(JNIEnv* env, jobject obj, int type)
 {
 	int s = engapi_open(type);
-	LOGE("engf_open = %d type = %d", s, type);	
+	ALOGE("engf_open = %d type = %d", s, type);	
 	return s;
 }
 
@@ -61,7 +61,7 @@ engf_write(JNIEnv* env, jobject clazz, int w, jbyteArray data, int size)//writeE
 
     //err = writer->WriteEntityData(dataBytes, size);
 	err = engapi_write(w,dataBytes,size);
-	LOGE("engf_write ret=%d,size=%d", err,size);
+	ALOGE("engf_write ret=%d,size=%d", err,size);
 	
     env->ReleaseByteArrayElements(data, dataBytes, JNI_ABORT);
 
@@ -86,7 +86,7 @@ engf_read(JNIEnv* env, jobject clazz, int r, jbyteArray data, int size)//readEnt
     //err = reader->ReadEntityData(dataBytes+offset, size);
 	//err = eng_read(r,dataBytes,size);
 	err = engapi_read(r,dataBytes,size);
-	LOGE("engf_read err=%d,size=%d,%s", err,size,dataBytes);
+	ALOGE("engf_read err=%d,size=%d,%s", err,size,dataBytes);
     env->ReleaseByteArrayElements(data, dataBytes, 0);
 
     return err;
@@ -98,18 +98,18 @@ engf_getphasecheck(JNIEnv* env, jobject clazz, jbyteArray data, int size)
     int ret = 0;
 
     if (env->GetArrayLength(data) < (size)) {
-        LOGE("engf_getphasecheck size error");
+        ALOGE("engf_getphasecheck size error");
         return 0;
     }
 
     jbyte* dataBytes = env->GetByteArrayElements(data, NULL);
     if (dataBytes == NULL) {
-        LOGE("engf_getphasecheck dataBytes is NULL");
+        ALOGE("engf_getphasecheck dataBytes is NULL");
         return 0;
     }
 
     ret = engapi_getphasecheck(dataBytes, size);
-    LOGE("engf_getphasecheck:%d", ret);
+    ALOGE("engf_getphasecheck:%d", ret);
     env->ReleaseByteArrayElements(data, dataBytes, 0);
 
     return ret;
@@ -136,11 +136,11 @@ static int registerNativeMethods(JNIEnv* env, const char* className,
 
     clazz = env->FindClass(className);
     if (clazz == NULL) {
-        LOGE("Native registration unable to find class '%s'", className);
+        ALOGE("Native registration unable to find class '%s'", className);
         return JNI_FALSE;
     }
     if (env->RegisterNatives(clazz, gMethods, numMethods) < 0) {
-        LOGE("RegisterNatives failed for '%s'", className);
+        ALOGE("RegisterNatives failed for '%s'", className);
         return JNI_FALSE;
     }
 
@@ -181,16 +181,16 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved)
     jint result = -1;
     JNIEnv* env = NULL;
     
-    LOGI("JNI_OnLoad");
+    ALOGI("JNI_OnLoad");
 
     if (vm->GetEnv(&uenv.venv, JNI_VERSION_1_4) != JNI_OK) {
-        LOGE("ERROR: GetEnv failed");
+        ALOGE("ERROR: GetEnv failed");
         goto bail;
     }
     env = uenv.env;
 
     if (registerNatives(env) != JNI_TRUE) {
-        LOGE("ERROR: registerNatives failed");
+        ALOGE("ERROR: registerNatives failed");
         goto bail;
     }
     
