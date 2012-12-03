@@ -182,13 +182,24 @@ void cp_file(char *path, char *new_path)
 
 static int capture_snap_for_notify(struct slog_info *head, char *filepath)
 {
-        struct slog_info *info = head;
+        struct slog_info *procrank_info = NULL, *info = head;
 
         while(info) {
-                if(info->level <= 6)
+                if(info->level <= 6){
+			if(!strncmp(info->name, "procrank", 8)){
+				procrank_info = info;
+				info = info->next;
+				continue;
+			}
                         exec_or_dump_content(info, filepath);
+		}
                 info = info->next;
         }
+
+	sleep(1);
+	if(procrank_info)
+		exec_or_dump_content(procrank_info, filepath);
+
         return 0;
 }
 
@@ -230,17 +241,6 @@ static void handle_notify_file(int wd, const char *name)
                         exit(0);
                 }
 
-		sprintf(dest_file, "%s/%s/%s/%s/snapshot_%02d%02d%02d.log",
-				current_log_path,
-				top_logdir,
-				info->log_path,
-				info->name,
-				tm.tm_hour,
-				tm.tm_min,
-				tm.tm_sec);
-
-		capture_snap_for_notify(snapshot_log_head, dest_file);
-
 		sprintf(dest_file, "%s/%s/%s/%s/screenshot_%02d%02d%02d.jpg",
 				current_log_path,
 				top_logdir,
@@ -251,6 +251,17 @@ static void handle_notify_file(int wd, const char *name)
 				tm.tm_sec);
 
 		screen_shot(dest_file);
+
+		sprintf(dest_file, "%s/%s/%s/%s/snapshot_%02d%02d%02d.log",
+				current_log_path,
+				top_logdir,
+				info->log_path,
+				info->name,
+				tm.tm_hour,
+				tm.tm_min,
+				tm.tm_sec);
+
+		capture_snap_for_notify(snapshot_log_head, dest_file);
 
 		/* for collect log */
 		sleep(2);
