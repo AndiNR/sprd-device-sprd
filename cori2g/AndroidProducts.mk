@@ -16,3 +16,4 @@
 
 PRODUCT_MAKEFILES := $(LOCAL_DIR)/prod_cori2g.mk
 
+PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_cori2gplus.mk

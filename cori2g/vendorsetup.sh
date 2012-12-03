@@ -15,3 +15,4 @@
 #
 
 add_lunch_combo cori2g-userdebug
+add_lunch_combo cori2gplus-userdebug
