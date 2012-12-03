@@ -63,6 +63,7 @@ void exec_or_dump_content(struct slog_info *info, char *filepath)
 	struct tm tm;
 	char buffer[4096];
 
+	/*Separate treating bugreprot*/
 	if(!strncmp("bugreport", info->content, 9)) {
 		sprintf(buffer, "%s/%s/%s", current_log_path, top_logdir, info->log_path);
 		ret = mkdir(buffer, S_IRWXU | S_IRWXG | S_IRWXO);
@@ -131,6 +132,7 @@ void exec_or_dump_content(struct slog_info *info, char *filepath)
 
 	fclose(fp);
 
+	/*Separate treating apanic, copy after delete apanic*/
 	if(!strncmp("apanic_console", info->name, 14) || !strncmp("apanic_threads", info->name, 14)){
 		sprintf(buffer, "rm -r %s", info->content);
 		system(buffer);
@@ -149,7 +151,7 @@ static int capture_by_name(struct slog_info *head, const char *name)
 		}
 		info = info->next;
 	}
-	return -1;
+	return 0;
 }
 
 static int capture_last_log(struct slog_info *head)
@@ -181,7 +183,7 @@ static int capture_all(struct slog_info *head)
 
         t = time(NULL);
         localtime_r(&t, &tm);
-	sprintf(filepath, "%s/%s/%s/snapshot.log_%02d%02d%02d",
+	sprintf(filepath, "%s/%s/%s/snapshot_%02d%02d%02d.log",
 				current_log_path,
 				top_logdir,
 				info->log_path,
@@ -203,7 +205,7 @@ static void handler_last_dir()
         DIR *p_dir;
         struct dirent *p_dirent;
         int log_num = 0, last_flag =0, ret;
-        char buffer[MAX_NAME_LEN], ybuffer[MAX_NAME_LEN], mbuffer[MAX_NAME_LEN];
+        char buffer[MAX_NAME_LEN];
 
         if(( p_dir = opendir(current_log_path)) == NULL)
                 {
@@ -215,7 +217,7 @@ static void handler_last_dir()
                 {
                         if( !strncmp(p_dirent->d_name, "20", 2) ) {
                                 log_num += 1;
-                        }else if( !strncmp(p_dirent->d_name, "last_log", 3) ){
+                        }else if( !strncmp(p_dirent->d_name, LAST_LOG, 3) ){
                                 last_flag = 1;
                         }
                 }
@@ -225,36 +227,34 @@ static void handler_last_dir()
                 return;
         }
 
-        sprintf(buffer, "%s/%s/", current_log_path, LAST_LOG);
-        sprintf(ybuffer, "%s %s", "rm -r", buffer);
-
         if(last_flag == 1){
-                system(ybuffer);
+		sprintf(buffer, "rm -r %s/%s/", current_log_path, LAST_LOG);
+                system(buffer);
         }
-        debug_log("%s\n", ybuffer);
 
+	sprintf(buffer, "%s/%s/", current_log_path, LAST_LOG);
 	ret = mkdir(buffer, S_IRWXU | S_IRWXG | S_IRWXO);
 	if(-1 == ret && (errno != EEXIST)){
 		err_log("mkdir %s failed.", buffer);
 		exit(0);
 	}
 
-        sprintf(mbuffer, "%s %s/%s %s", "mv", current_log_path, "20*", buffer);
-        debug_log("%s\n", mbuffer);
-        system(mbuffer);
+        sprintf(buffer, "%s %s/%s %s/%s", "mv", current_log_path, "20*", current_log_path, LAST_LOG);
+        debug_log("%s\n", buffer);
+        system(buffer);
 
         closedir(p_dir);
         return;
 }
 
 /*
- *
+ * cp /data/slog/20* to external_storage.
  */
 static int cp_internal_to_external()
 {
         DIR *p_dir;
         struct dirent *p_dirent;
-	char buffer[MAX_NAME_LEN], cmd_buffer[MAX_NAME_LEN];
+	char buffer[MAX_NAME_LEN];
 
         if(( p_dir = opendir(INTERNAL_LOG_PATH)) == NULL)
                 {
@@ -329,7 +329,7 @@ static void use_ori_log_dir()
 
         if(( p_dir = opendir(current_log_path)) == NULL)
                 {
-                        err_log("can not open %s.", current_log_path);
+                        err_log("Can't open %s.", current_log_path);
                         return;
                 }
 
@@ -379,7 +379,7 @@ static void init_external_storage()
 	if(p == NULL)
 		p = getenv("EXTERNAL_STORAGE");
 	if(p == NULL){
-		debug_log("cannot find the external storage environment");
+		err_log("Can't find the external storage environment");
 		exit(0);
 	}
 	strcpy(external_path, p);
@@ -448,9 +448,7 @@ int clear_all_log()
 	slog_enable = 0;
 	stop_sub_threads();
 	sleep(3);
-	sprintf(cmd, "rm -r %s/%s/", current_log_path, top_logdir);
-	system(cmd);
-	sprintf(cmd, "rm -r %s/last_log", current_log_path);
+	sprintf(cmd, "rm -r %s/", current_log_path);
 	system(cmd);
 	reload();
 	return 0;
@@ -625,10 +623,6 @@ static void handle_top_logdir()
 			capture_last_log(snapshot_log_head);
 			property_set("slog.step", "1");
 			break;
-		case 2:
-			create_log_dir();
-			property_set("slog.step", "3");
-			break;
 		default:
 			use_ori_log_dir();
 			break;
@@ -636,14 +630,9 @@ static void handle_top_logdir()
 	} else {
 		debug_log("slog use external storage");
 		switch(slog_start_step){
-                case 0:
-			create_log_dir();
-			capture_last_log(snapshot_log_head);
-			property_set("slog.step", "2");
-                        break;
                 case 1:
 			create_log_dir();
-			property_set("slog.step", "3");
+			property_set("slog.step", "2");
                         break;
                 default:
 			use_ori_log_dir();
@@ -809,8 +798,8 @@ static void setup_signals()
  */
 int main(int argc, char *argv[])
 {
-	/* become a background service */
-/*	if(daemon(0, 0)){
+/*
+	if(daemon(0, 0)){
 		err_log("Can't start Slog daemon.");
 		exit(0);
 	}
