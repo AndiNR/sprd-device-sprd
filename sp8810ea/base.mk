@@ -27,6 +27,7 @@ PRODUCT_PACKAGES := \
 	hciconfig \
 	hcitool \
 	hcidump \
+	FMPlayer \
 	bttest\
 	hostapd \
 	wpa_supplicant.conf \
@@ -45,7 +46,16 @@ PRODUCT_PACKAGES += \
 	audio.primary.$(TARGET_PLATFORM) \
 	tinymix \
 	sensors.$(TARGET_BOARD)  \
+	fm.$(TARGET_PLATFORM)  \
 	$(MALI)
+
+ifeq ($(BOARD_HAVE_FM_BCM),true)
+BRCMFM := \
+	FmDaemon \
+	FmTest
+
+PRODUCT_PACKAGES += $(BRCMFM)
+endif
 
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/init.rc:root/init.rc \
