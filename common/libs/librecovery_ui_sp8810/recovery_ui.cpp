@@ -29,6 +29,8 @@ static const char* ITEMS[] =  {"reboot system now",
                                "apply update from ADB",
                                "wipe data/factory reset",
                                "wipe cache partition",
+                               "apply update from external storage",
+                               "apply update from cache",
                                NULL };
 
 class DefaultUI : public ScreenRecoveryUI {
@@ -74,6 +76,8 @@ class DefaultDevice : public Device {
           case 1: return APPLY_ADB_SIDELOAD;
           case 2: return WIPE_DATA;
           case 3: return WIPE_CACHE;
+          case 4: return APPLY_EXT;
+          case 5: return APPLY_CACHE;
           default: return NO_ACTION;
         }
     }
