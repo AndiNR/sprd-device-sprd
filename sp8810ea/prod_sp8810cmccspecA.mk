@@ -43,9 +43,19 @@ PRODUCT_PACKAGES := \
 # prebuild files
 PRODUCT_PACKAGES += \
 	APV_PDF_Viewer.apk \
+        CMCCFetion.apk \
+        CMCCGameHall.apk \
+        CMCCMM.apk \
 	CMCCMobileMusic.apk \
-	CMCCMV_W.apk 
-
+	CMCCMV_W.apk \
+        CMCCREAD.apk \
+        CMCCTelenav_Nav.apk \
+        CMCCWIFI.apk \
+        ES_File_Explorer.apk \
+        PimClient.apk \
+        SecondClock.apk \
+        WorldClock.apk
+        
 # packages files
 PRODUCT_PACKAGES += \
 	ForOPPackageTest \
