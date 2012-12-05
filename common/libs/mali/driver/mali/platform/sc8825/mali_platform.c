@@ -47,10 +47,15 @@ _mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
 	switch(power_mode)
 	{
 	case MALI_POWER_MODE_ON:
+		sci_glb_clr(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
+		udelay(100);
+		sci_glb_set(REG_AHB_AHB_CTL0, BIT_G3D_EB);
 		break;
 	case MALI_POWER_MODE_LIGHT_SLEEP:
+		sci_glb_clr(REG_AHB_AHB_CTL0, BIT_G3D_EB);
 		break;
 	case MALI_POWER_MODE_DEEP_SLEEP:
+		sci_glb_set(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
 		break;
 	};
 	MALI_SUCCESS;
