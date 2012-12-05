@@ -903,11 +903,11 @@ BOOLEAN Filter_CalcLCF(
 
 
         	hpf_a0 = 16384;
-//        	hpf_a1 = (int32_t)((((hsa_Q12_a2 - hsa_Q12_a0)<<1)/dividor)<<2);
-			hpf_a1 = (do_sprddiv64(((hsa_Q12_a2 - hsa_Q12_a0)<<1), dividor))<<2;
+        	hpf_a1 = (int32_t)((((hsa_Q12_a2 - hsa_Q12_a0)<<1)/dividor)<<2);
+//			hpf_a1 = (do_sprddiv64(((hsa_Q12_a2 - hsa_Q12_a0)<<1), dividor))<<2;
 
-//        	hpf_a2 = (int32_t)(((hsa_Q12_a0 - hsa_Q12_a1 + hsa_Q12_a2)/dividor)<<2);
-			hpf_a2 = (do_sprddiv64((hsa_Q12_a0 - hsa_Q12_a1 + hsa_Q12_a2), dividor))<<2;
+        	hpf_a2 = (int32_t)(((hsa_Q12_a0 - hsa_Q12_a1 + hsa_Q12_a2)/dividor)<<2);
+//			hpf_a2 = (do_sprddiv64((hsa_Q12_a0 - hsa_Q12_a1 + hsa_Q12_a2), dividor))<<2;
 
 
         }
@@ -934,8 +934,8 @@ BOOLEAN Filter_CalcLCF(
             dividor = (K + 23170 + Qk2dk);
 
             //calc paras
-//          BUT_GAIN = (int32_t)(-d0/dividor);
-			BUT_GAIN = do_sprddiv64(-d0, dividor);
+			BUT_GAIN = (int32_t)(-d0/dividor);
+			//BUT_GAIN = do_sprddiv64(-d0, dividor);
             if(BUT_GAIN==0)
                 BUT_GAIN = -1;
 
@@ -944,10 +944,10 @@ BOOLEAN Filter_CalcLCF(
             hpf_b2 = BUT_GAIN;
 
             hpf_a0 = 16384;
-//          hpf_a1 = (int32_t)(d1/dividor);
-//          hpf_a2 = (int32_t)(d2/dividor);
-			hpf_a1 = do_sprddiv64(d1, dividor);
-			hpf_a2 = do_sprddiv64(d2, dividor);
+			hpf_a1 = (int32_t)(d1/dividor);
+			hpf_a2 = (int32_t)(d2/dividor);
+			//hpf_a1 = do_sprddiv64(d1, dividor);
+			//hpf_a2 = do_sprddiv64(d2, dividor);
 
         }
         else
@@ -1140,8 +1140,8 @@ BOOLEAN Filter_CalcEqCoeffs_Ex(
         if((Qeqfp/2)>=2048) // in para overflow
 		    return TRUE;
         WP_d   = (int64_t)(1<<26)*cos_Table[2048-Qeqfp/2];
-//      WP     = (int32_t)(WP_d/(G0_ExFour_fix*cos_Table[Qeqfp/2]));//%16384 归一化  int32_t
-		WP = do_sprddiv64(WP_d, (G0_ExFour_fix*cos_Table[Qeqfp/2]));
+        WP     = (int32_t)(WP_d/(G0_ExFour_fix*cos_Table[Qeqfp/2]));//%16384 归一化  int32_t
+//		WP = do_sprddiv64(WP_d, (G0_ExFour_fix*cos_Table[Qeqfp/2]));
         if(WP==0)
         {
             WP=1;
@@ -1157,8 +1157,8 @@ BOOLEAN Filter_CalcEqCoeffs_Ex(
         a0_d = (((int64_t)WP-Qk2dwp)<<15)  ;          //% int64_t
         a1_d = (((int64_t)Qk2dwp - 23170 + WP)<<14) ; //% int64_t
 
-//      EQ_B_GAIN = (int32_t)(((int64_t)b_dividor<<12)/a_dividor);//%scaled by 4096
-        EQ_B_GAIN = do_sprddiv64(((int64_t)b_dividor<<12), a_dividor);
+        EQ_B_GAIN = (int32_t)(((int64_t)b_dividor<<12)/a_dividor);//%scaled by 4096
+//        EQ_B_GAIN = do_sprddiv64(((int64_t)b_dividor<<12), a_dividor);
     }
     else if (fo>=22050)
     {
@@ -1176,8 +1176,8 @@ BOOLEAN Filter_CalcEqCoeffs_Ex(
         if((Qeqfp/2)>=2048) // in para overflow
 		    return TRUE;
         WP_d   = ((int64_t)(G0_ExFour_fix*cos_Table[2048-Qeqfp/2])<<14);
-//      WP     = (int32_t)(WP_d/(cos_Table[Qeqfp/2]<<12));// %16384 归一化  int32_t
-		WP = do_sprddiv64(WP_d, (cos_Table[Qeqfp/2]<<12));
+        WP     = (int32_t)(WP_d/(cos_Table[Qeqfp/2]<<12));// %16384 归一化  int32_t
+//		WP = do_sprddiv64(WP_d, (cos_Table[Qeqfp/2]<<12));
         if(WP==0)
         {
             WP=1;
@@ -1193,8 +1193,8 @@ BOOLEAN Filter_CalcEqCoeffs_Ex(
         a0_d = (((int64_t)WP-Qk2dwp)<<15);   //% int64_t
         a1_d = (((int64_t)Qk2dwp - 23170 + WP)<<14);   //% int64_t
 
-//        EQ_B_GAIN = (int32_t)(((int64_t)b_dividor<<12)/a_dividor);//%scaled by 4096
-		EQ_B_GAIN = do_sprddiv64(((int64_t)b_dividor<<12), a_dividor);
+        EQ_B_GAIN = (int32_t)(((int64_t)b_dividor<<12)/a_dividor);//%scaled by 4096
+//		EQ_B_GAIN = do_sprddiv64(((int64_t)b_dividor<<12), a_dividor);
 
     }
     else
@@ -1220,8 +1220,8 @@ BOOLEAN Filter_CalcEqCoeffs_Ex(
             COSW0 = -cos_Table[4096-Qeqfo];//%scaled by 16384
 
 
-//        b_gain_dividor = (int32_t)(16384 + ((int64_t)GAMA<<12)/QK);//%int32_t
-			b_gain_dividor = 16384 + do_sprddiv64(((int64_t)GAMA<<12), QK);
+        b_gain_dividor = (int32_t)(16384 + ((int64_t)GAMA<<12)/QK);//%int32_t
+//			b_gain_dividor = 16384 + do_sprddiv64(((int64_t)GAMA<<12), QK);
 
         b_dividor = (int32_t)(4096 + (((int64_t)GAMA*QK)>>14)); //%int32_t
         a_dividor = (QK<<2) + GAMA ;//%int32_t
@@ -1231,22 +1231,22 @@ BOOLEAN Filter_CalcEqCoeffs_Ex(
         a0_d =  -((int64_t)COSW0*QK)<<3;       //%int32_t ,for unification set it as int64_t
         a1_d =  (4*QK - (int64_t)GAMA)<<14; //%int64_t
 
-//        EQ_B_GAIN = (int32_t)(((int64_t)b_dividor<<14)/b_gain_dividor);//%scaled by 4096
-		EQ_B_GAIN = do_sprddiv64(((int64_t)b_dividor<<14), b_gain_dividor);
+        EQ_B_GAIN = (int32_t)(((int64_t)b_dividor<<14)/b_gain_dividor);//%scaled by 4096
+//		EQ_B_GAIN = do_sprddiv64(((int64_t)b_dividor<<14), b_gain_dividor);
 
     }
 
     B0 = EQ_B_GAIN<<2;
-//    B1 = (int32_t)(((b0_d/b_dividor)*EQ_B_GAIN)>>12);
-	B1= (do_sprddiv64(b0_d,b_dividor)*EQ_B_GAIN)>>12;
- //   B2 = (int32_t)(((b1_d/b_dividor)*EQ_B_GAIN)>>12);
- 	B2= (do_sprddiv64(b1_d,b_dividor)*EQ_B_GAIN)>>12;
+    B1 = (int32_t)(((b0_d/b_dividor)*EQ_B_GAIN)>>12);
+//	B1= (do_sprddiv64(b0_d,b_dividor)*EQ_B_GAIN)>>12;
+    B2 = (int32_t)(((b1_d/b_dividor)*EQ_B_GAIN)>>12);
+// 	B2= (do_sprddiv64(b1_d,b_dividor)*EQ_B_GAIN)>>12;
 
     A0 = 16384;
-//    A1 = (int32_t)(a0_d/a_dividor);
-	A1=do_sprddiv64(a0_d,a_dividor);
-//  A2 = (int32_t)(a1_d/a_dividor);
-	A2=do_sprddiv64(a1_d,a_dividor);
+    A1 = (int32_t)(a0_d/a_dividor);
+//	A1=do_sprddiv64(a0_d,a_dividor);
+    A2 = (int32_t)(a1_d/a_dividor);
+//	A2=do_sprddiv64(a1_d,a_dividor);
 
 
     if(basegaindB<=0)
