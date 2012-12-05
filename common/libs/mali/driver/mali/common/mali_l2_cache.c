@@ -14,6 +14,8 @@
 #include "mali_hw_core.h"
 #include "mali_pm.h"
 
+#include "arch/base.h"
+
 /**
  * Size of the Mali L2 cache registers in bytes
  */
@@ -84,7 +86,7 @@ struct mali_l2_cache_core
 	u32                  counter_src1; /**< Performance counter 1, MALI_HW_CORE_NO_COUNTER for disabled */
 };
 
-#define MALI400_L2_MAX_READS_DEFAULT 0x04 //0x1C
+//#define MALI400_L2_MAX_READS_DEFAULT 0x04 //0x1C
 
 static struct mali_l2_cache_core *mali_global_l2_cache_cores[MALI_MAX_NUMBER_OF_L2_CACHE_CORES];
 static u32 mali_global_num_l2_cache_cores = 0;
