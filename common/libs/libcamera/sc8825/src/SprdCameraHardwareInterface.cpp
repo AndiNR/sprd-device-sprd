@@ -1023,7 +1023,7 @@ static CameraInfo sCameraInfo[] = {
 #ifndef CONFIG_DCAM_SENSOR_NO_FRONT_SUPPORT
     {
         CAMERA_FACING_FRONT,
-        90,  /* orientation */
+        270,  /* orientation */
     },
 #endif
 };
@@ -1036,7 +1036,7 @@ static CameraInfo sCameraInfo3[] = {
 
     {
         CAMERA_FACING_FRONT,
-        90,  /* orientation */
+        270,  /* orientation */
     },
 
     {
@@ -1184,7 +1184,7 @@ callbacks:
                         nsecs_t timestamp = systemTime();/*frame->timestamp;*/
                         ALOGV("test timestamp = %lld.",timestamp);
                         //mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap->mBuffers[offset], mUser);
-                        mData_cb_timestamp(timestamp, CAMERA_MSG_PREVIEW_FRAME, mPreviewHeap, offset, mUser);
+                        mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap, offset, mUser);
                      //ALOGV("receivePreviewFrame: record index: %d, offset: %x, size: %x, frame->buf_Virt_Addr: 0x%x.", offset, off, size, (uint32_t)frame->buf_Virt_Addr);
                 }
                 else{
@@ -1309,10 +1309,14 @@ callbackraw:
 	        if (offset + frame_size <= (ssize_t)mRawHeap->size) {
 	                offset /= frame_size;
 			   ALOGV("mMsgEnabled: 0x%x, offset: %d.",mMsgEnabled, (uint32_t)offset);
-			   //if (mMsgEnabled & CAMERA_MSG_RAW_IMAGE)
+			   if (mMsgEnabled & CAMERA_MSG_RAW_IMAGE)
 			   {
 				mData_cb(CAMERA_MSG_RAW_IMAGE, mRawHeap, offset, NULL, mUser);
 			    }
+			if(mMsgEnabled & CAMERA_MSG_RAW_IMAGE_NOTIFY) {
+				ALOGV("mMsgEnabled & CAMERA_MSG_RAW_IMAGE_NOTIFY");
+				mNotify_cb(CAMERA_MSG_RAW_IMAGE_NOTIFY, 0,0,mUser);
+			}
 	        }
 	            else ALOGE("receiveRawPicture: virtual address %p is out of range!",
 	                      frame->buf_Virt_Addr);
