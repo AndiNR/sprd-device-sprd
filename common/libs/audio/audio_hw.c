@@ -2231,13 +2231,13 @@ static int adev_config_parse(struct tiny_audio_device *adev)
 static void aud_vb_effect_start(struct tiny_audio_device *adev)
 {
     if (adev)
-        mixer_ctl_set_enum_by_string(adev->private_ctl.vbc_eq_switch, "on");
+        mixer_ctl_set_value(adev->private_ctl.vbc_eq_switch, 0, 1);
 }
 
 static void aud_vb_effect_stop(struct tiny_audio_device *adev)
 {
     if (adev)
-        mixer_ctl_set_enum_by_string(adev->private_ctl.vbc_eq_switch, "off");
+        mixer_ctl_set_value(adev->private_ctl.vbc_eq_switch, 0, 0);
 }
 
 static int adev_open(const hw_module_t* module, const char* name,
