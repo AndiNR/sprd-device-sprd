@@ -402,15 +402,19 @@ static void open_device(struct slog_info *info, char *path)
  */
 static int gen_outfd(struct slog_info *info)
 {
-	int fd;
+	int cur, fd;
 	char buffer[MAX_NAME_LEN];
 
 	gen_logfile(buffer, info);
-	fd = open(buffer, O_WRONLY | O_APPEND | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
+	fd = open(buffer, O_WRONLY | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
 	if(fd < 0){
 		err_log("Unable to open file %s.",buffer);
 		exit(0);
 	}
+
+	lseek(fd, 0, SEEK_END);
+	cur = lseek(fd, 0, SEEK_CUR);
+	info->outbytecount = cur;
 
 	return fd;
 }

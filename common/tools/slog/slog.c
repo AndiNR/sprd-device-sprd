@@ -351,6 +351,9 @@ static void use_ori_log_dir()
 
 static int start_sub_threads()
 {
+	if(slog_enable == 0)
+	return 0;
+
 	if(!stream_log_handler_started)
 		pthread_create(&stream_tid, NULL, stream_log_handler, NULL);
 	if(!snapshot_log_handler_started)
