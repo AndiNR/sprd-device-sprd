@@ -41,6 +41,12 @@ echo "==== Spreadtrum Android Build Start ===="
 N=16
 
 # native version
+# vlx version
+# maxscend cmmb
+export BOARD_CMMB_HW=mxd
+$BINDIR/build_product.sh sp8810eabase userdebug vlx_mxd $OUTDIR -j$N
+$BINDIR/build_product.sh sp8810eaplus userdebug vlx_mxd $OUTDIR -j$N
+unset BOARD_CMMB_HW
 $BINDIR/build_product.sh sp8810eabase userdebug native $OUTDIR -j$N
 
 echo "==== Spreadtrum Android Build Done ===="

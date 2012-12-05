@@ -1,6 +1,10 @@
 
 MALI := libUMP libEGL_mali.so libGLESv1_CM_mali.so libGLESv2_mali.so libMali.so ump.ko mali.ko
 
+MXD_CMMB_PLAYER := mxdcmmbplayer.apk  \
+		   libiwcmmbdev.so libiwcmmb_jni.so  \
+		   libiwmbbms_jni.so libiwmbbms.so libiwmbbms_tel.so \
+		   libiwuam.so  libmxdcmmb.so libplayEngine.so mxdcmmbserver mxdid.id libiwcmmb_jni_demon.so libiwcmmbdev_demon.so mxdcmmbtest.apk
 PRODUCT_PROPERTY_OVERRIDES :=
 
 # original apps copied from generic_no_telephony.mk
@@ -47,6 +51,7 @@ PRODUCT_PACKAGES += \
 	tinymix \
 	sensors.$(TARGET_BOARD)  \
 	fm.$(TARGET_PLATFORM)  \
+	libmbbms_tel_jni.so\
 	$(MALI)
 
 ifeq ($(BOARD_HAVE_FM_BCM),true)
@@ -55,6 +60,12 @@ BRCMFM := \
 	FmTest
 
 PRODUCT_PACKAGES += $(BRCMFM)
+endif
+
+ifeq ($(BOARD_CMMB_HW), mxd)
+PRODUCT_PACKAGES += $(MXD_CMMB_PLAYER)
+else
+PRODUCT_PACKAGES += $(SIANOMTV)
 endif
 
 PRODUCT_COPY_FILES := \
