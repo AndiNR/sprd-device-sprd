@@ -1042,7 +1042,7 @@ void *camera_encoder_thread(void *client_data)
 	g_jpegenc_params.focal_length.denominator = 1000;
 
 	g_jpegenc_params.dc_exif_info_ptr 						= NULL;
-	//wxz??? camera_set_exif_info();
+	camera_set_exif_info();
 
 	//wxz20120229: clear the value of g_position for the CTS test.
 	memset(&g_position, 0, sizeof(camera_position_type));
