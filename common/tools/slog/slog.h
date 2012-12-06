@@ -59,7 +59,8 @@ enum {
 #endif
 
 #define INTERNAL_LOG_PATH		"/data/slog"
-#define DEFAULT_SLOG_CONFIG		"/system/etc/slog.conf"
+#define DEFAULT_DEBUG_SLOG_CONFIG	"/system/etc/slog.conf"
+#define DEFAULT_USER_SLOG_CONFIG	"/system/etc/slog.conf.user"
 #define TMP_FILE_PATH			"/data/local/tmp/slog/"
 #define SLOG_SOCKET_FILE		TMP_FILE_PATH "slog_sock"
 #define PID_FILE			TMP_FILE_PATH "slog.pid"
