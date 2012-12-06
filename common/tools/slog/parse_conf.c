@@ -17,7 +17,7 @@
 #include <sys/stat.h>
 
 #include "slog.h"
-
+#include <cutils/properties.h>
 /*
 	#here is the config file example, all fields are split by '\t'
 #control: enable/disable
@@ -305,11 +305,21 @@ int parse_config()
 
 	/* we use tmp log config file first */
 	if(stat(TMP_SLOG_CONFIG, &st)){
-		if(!stat(DEFAULT_SLOG_CONFIG, &st))
-			cp_file(DEFAULT_SLOG_CONFIG, TMP_SLOG_CONFIG);
-		else {
-			err_log("cannot find config files!");
-			exit(0);
+		property_get("ro.debuggable", buffer, "");
+		if (strcmp(buffer, "1") != 0) {
+			if(!stat(DEFAULT_USER_SLOG_CONFIG, &st))
+				cp_file(DEFAULT_USER_SLOG_CONFIG, TMP_SLOG_CONFIG);
+			else {
+				err_log("cannot find config files!");
+				exit(0);
+			}
+		} else {
+			if(!stat(DEFAULT_DEBUG_SLOG_CONFIG, &st))
+				cp_file(DEFAULT_DEBUG_SLOG_CONFIG, TMP_SLOG_CONFIG);
+			else {
+				err_log("cannot find config files!");
+				exit(0);
+			}
 		}
 	}
 
