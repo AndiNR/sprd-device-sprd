@@ -446,10 +446,10 @@
         minFrameRate="15" maxFrameRate="30" />
 
     <VideoEncoderCap name="m4v" enabled="true"
-        minBitRate="64000" maxBitRate="192000"
-        minFrameWidth="176" maxFrameWidth="320"
-        minFrameHeight="144" maxFrameHeight="240"
-        minFrameRate="15" maxFrameRate="30" />
+        minBitRate="64000" maxBitRate="3600000"
+        minFrameWidth="176" maxFrameWidth="720"
+        minFrameHeight="144" maxFrameHeight="480"
+        minFrameRate="15" maxFrameRate="31" />
 
     <AudioEncoderCap name="aac" enabled="true"
         minBitRate="8000" maxBitRate="96000"
