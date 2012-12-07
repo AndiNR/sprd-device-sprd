@@ -2639,7 +2639,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
     ALOGV("%s: preview format %s", __func__, str_preview_format);
 
     if (preview_width > 640) {
-    	if (w->set_usage(w, GRALLOC_USAGE_SW_WRITE_OFTEN  | GRALLOC_USAGE_PRIVATE_1)) {
+    	if (w->set_usage(w, GRALLOC_USAGE_SW_WRITE_OFTEN  | GRALLOC_USAGE_PRIVATE_0)) { // private 1
         	ALOGE("%s: could not set usage on gralloc buffer", __func__);
         	return INVALID_OPERATION;
     	}
