@@ -150,7 +150,7 @@ static int mali_pwr_suspend_notifier(struct notifier_block *nb,unsigned long eve
 			mali_pm_os_suspend();
 			break;
 		case PM_POST_SUSPEND:
-			MALI_DEBUG_PRINT(2, ("mali_pwr_suspend_notifier(PM_SUSPEND_PREPARE) called\n"));
+			MALI_DEBUG_PRINT(2, ("mali_pwr_suspend_notifier(PM_POST_SUSPEND) called\n"));
 			mali_pm_os_resume();
 			break;
 		default:
