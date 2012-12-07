@@ -2036,10 +2036,13 @@ static int eng_server2modem(eng_fdtype_t *fdtype)
 
 	n = select(soc_fd+1, &readfds, NULL, NULL, NULL);
 	ENG_LOG("%s: Get Command n=0x%x", __FUNCTION__, n);
-	if (n<= 0){
-		ALOGD("eng_thread_server2modem exit n=0x%x",n);
-		return -1;
-	}
+    if (n<= 0){
+        ALOGD("eng_thread_server2modem exit n=0x%x",n);
+        /* Mod for Bug99799 Start */
+        //return -1;
+        return -2;
+        /* Mod for Bug99799 End   */
+    }
 
 	//read data from socket
 	memset(data.buf, 0, ENG_BUF_LEN);
@@ -2047,10 +2050,13 @@ static int eng_server2modem(eng_fdtype_t *fdtype)
 	 
 	length= eng_read(soc_fd, tmp, ENG_BUF_LEN);
 	
-	if(length<=0) {
-		ALOGD("%s: no data receive read from server\n", __FUNCTION__);
-		return -1;
-	}
+    if(length<=0) {
+        ALOGD("%s: no data receive read from server\n", __FUNCTION__);
+        /* Mod for Bug99799 Start */
+        //return -1;
+        return -2;
+        /* Mod for Bug99799 End   */
+    }
 	
 	ENG_LOG("%s: tmp=%s, length=%d\n", __FUNCTION__, tmp, length);
 
@@ -2103,6 +2109,12 @@ static int eng_modem2server(int status, eng_fdtype_t *fdtype)
 	eng_at_response at_response_tmp;
 	struct timeval timeout;	
 
+    /* Add for Bug99799 Start */
+    if(status == -2) {
+        ALOGD("%s: Fatal status Error,do nothing\n",__FUNCTION__);
+        return ret;
+    }
+    /* Add for Bug99799 End   */
 	if(status < 0) {
 		ALOGD("%s: Get status Error\n",__FUNCTION__);
 		eng_write2server(fdtype->fd, "ERROR", strlen("ERROR"));
