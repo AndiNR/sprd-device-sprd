@@ -38,7 +38,8 @@ static const char* RAW_DATA_PARTITION[RAWDATA_PARTITION_NUM] = {
 static const char* PRODUCT_INFO[] = {
 	"/productinfo/productinfo.bin",
 	"/productinfo/factorymode.file",
-	"/productinfo/alarm_flag"
+	"/productinfo/alarm_flag",
+	"/productinfo/poweron_timeinmillis"
 };
 
 static const char* NO_FEADBACK[] = {
@@ -128,6 +129,8 @@ static int write_mmc_partition(const char *partname, loff_t offset, unsigned cha
 		DBG("write error rsize = %d  size = %d\n", wsize, size);
 		return -1;
 	}
+
+	fsync(fd);
 
 	close(fd);
 
@@ -365,109 +368,124 @@ int main(int argc, char **argv)
 	int fd,wd;
 	char buffer[MAX_BUF_SIZE]={0};
 	struct inotify_event * event;
-	unsigned int len, tmp_len,i, index;
+	int len, tmp_len,i, index;
 	char strbuf[32];
 
 	DBG("Start RAWDATAD");
 
 	init_productinfo();
+	while(1)
+	{
+		fd = inotify_init();
 
-	fd = inotify_init();
-
-	if (fd < 0) {
-		DBG("Fail to initialize inotify.");
-		exit(EXIT_FAILURE);
-	}
-
-    //to improve, 1 should be computed
-	for (i=0; i<NUM_ELEMS(monitored_files); i++) {
-		wd_array[i].name = monitored_files[i];
-		wd = inotify_add_watch(fd, wd_array[i].name, IN_ALL_EVENTS);
-		if (wd < 0) {
-			DBG("Can't add watch for %s.", wd_array[i].name);
-			exit(EXIT_FAILURE);
+		if (fd < 0) {
+			DBG("Fail to initialize inotify.");
+			//exit(EXIT_FAILURE);
+			continue;
 		}
-		DBG("Add %s to watch", wd_array[i].name);
-		wd_array[i].wd = wd;
-	}
 
-	property_set(RAWDATA_PROPERTY, RAWDATA_READY);
-
-	while((len=read(fd, buffer, MAX_BUF_SIZE)) > 0) {
-
-		index = 0;
-		DBG("Some event happens, len = %d.", len);
-
-		while (index < len) {
-			event = (struct inotify_event *)(buffer+index);
-
-			DBG("Event mask: 0x%08x, name: %s", event->mask, event->name);
-			for (i=0; i<EVENT_NUM; i++) {
-				if (inotify_event_array[i][0] == '\0')
-					continue;
-				if (event->mask & (1<<i)) {
-					DBG("Event: %s", inotify_event_array[i]);
+		//to improve, 1 should be computed
+		for (i=0; i<NUM_ELEMS(monitored_files); i++) {
+			wd_array[i].name = monitored_files[i];
+			wd = inotify_add_watch(fd, wd_array[i].name, IN_ALL_EVENTS);
+			if (wd < 0) {
+				DBG("Can't add watch for %s.", wd_array[i].name);
+				while(i)
+				{
+					inotify_rm_watch(fd, wd_array[--i].name);
 				}
-			}
-
-			memset(strbuf, 0, sizeof(strbuf));
-
-			if (event->mask & IN_ISDIR) {
-				strcpy(strbuf, "Direcotory");
-			}
-			else {
-				strcpy(strbuf, "File");
-			}
-
-			//IN_CREATE
-			if (event->mask == IN_CREATE) {
-				DBG("Create FILE %s",event->name);
-			}
-
-			//IN_MODIFY
-			if (event->mask == IN_MODIFY) {
-				for(i=0; i<NUM_ELEMS(PRODUCT_INFO); i++) {
-					DBG("event->name=%s, %s", event->name,PRODUCT_INFO[i]);
-					if(strstr(PRODUCT_INFO[i],event->name)!=NULL) {
-						read_productinfo(i, rawdata_buffer[0]);
-						if(rawdata_nofeadback_block(event->name)==0)
-							write_partition(i, rawdata_buffer[0]);
-					}
-				}
-
-			}
-
-			//IN_DELETE IN_MOVE
-			if (event->mask == IN_DELETE || event->mask == IN_MOVE) {
-				//DBG("File %s was deleted or moved",wd_array[i].name);
-				for(i=0; i<NUM_ELEMS(PRODUCT_INFO); i++) {
-					DBG("event->name=%s, %s", event->name,PRODUCT_INFO[i]);
-					if(strstr(PRODUCT_INFO[i],event->name)!=NULL) {
-						memset(rawdata_buffer[0], 0xff, RAWDATA_BUFFER_SIZE);
-						if(rawdata_nofeadback_block(event->name)==0)
-							write_partition(i, rawdata_buffer[0]);
-					}
-				}
-			}
-
-
-			DBG("Object type: %s", strbuf);
-			for (i=0; i<NUM_ELEMS(PRODUCT_INFO); i++) {
-				if (event->wd != wd_array[i].wd)
-					continue;
-				DBG("Object name: %s", wd_array[i].name);
+				close(fd);
 				break;
+				//exit(EXIT_FAILURE);
+			}
+			DBG("Add %s to watch", wd_array[i].name);
+			wd_array[i].wd = wd;
+		}
+		if (wd < 0)
+			continue;
+		property_set(RAWDATA_PROPERTY, RAWDATA_READY);
+
+		while((len=read(fd, buffer, MAX_BUF_SIZE)) > 0) {
+
+			index = 0;
+			DBG("Some event happens, len = %d.", len);
+
+			while (index < len) {
+				event = (struct inotify_event *)(buffer+index);
+
+				DBG("Event mask: 0x%08x, name: %s", event->mask, event->name);
+				for (i=0; i<EVENT_NUM; i++) {
+					if (inotify_event_array[i][0] == '\0')
+						continue;
+					if (event->mask & (1<<i)) {
+						DBG("Event: %s", inotify_event_array[i]);
+					}
+				}
+
+				memset(strbuf, 0, sizeof(strbuf));
+
+				if (event->mask & IN_ISDIR) {
+					strcpy(strbuf, "Direcotory");
+				}
+				else {
+					strcpy(strbuf, "File");
+				}
+
+				//IN_CREATE
+				if (event->mask & IN_CREATE) {
+					DBG("Create FILE %s",event->name);
+				}
+
+				//IN_MODIFY
+				if (event->mask & IN_MODIFY) {
+					for(i=0; i<NUM_ELEMS(PRODUCT_INFO); i++) {
+						DBG("event->name=%s, %s", event->name,PRODUCT_INFO[i]);
+						if(strstr(PRODUCT_INFO[i],event->name)!=NULL) {
+							read_productinfo(i, rawdata_buffer[0]);
+							if(rawdata_nofeadback_block(event->name)==0)
+								write_partition(i, rawdata_buffer[0]);
+						}
+					}
+
+				}
+
+				//IN_DELETE IN_MOVE
+				if (event->mask & IN_DELETE || event->mask & IN_MOVE) {
+					//DBG("File %s was deleted or moved",wd_array[i].name);
+					for(i=0; i<NUM_ELEMS(PRODUCT_INFO); i++) {
+						DBG("event->name=%s, %s", event->name,PRODUCT_INFO[i]);
+						if(strstr(PRODUCT_INFO[i],event->name)!=NULL) {
+							memset(rawdata_buffer[0], 0xff, RAWDATA_BUFFER_SIZE);
+							if(rawdata_nofeadback_block(event->name)==0)
+								write_partition(i, rawdata_buffer[0]);
+						}
+					}
+				}
+
+
+				DBG("Object type: %s", strbuf);
+				for (i=0; i<NUM_ELEMS(PRODUCT_INFO); i++) {
+					if (event->wd != wd_array[i].wd)
+						continue;
+					DBG("Object name: %s", wd_array[i].name);
+					break;
+				}
+
+				DBG("index=%d; event->len=%d",index, event->len);
+				index += sizeof(struct inotify_event) + event->len;
 			}
 
-			DBG("index=%d; event->len=%d",index, event->len);
-			index += sizeof(struct inotify_event) + event->len;
-		}
+			memset(buffer, 0, sizeof(buffer));
+			DBG("#############################################");
 
-		memset(buffer, 0, sizeof(buffer));
-		DBG("#############################################");
+		}
+		DBG("**************zhaiyfSome event happens, len = %d.", len);
+		for (i=0; i<NUM_ELEMS(monitored_files); i++) {
+			inotify_rm_watch(fd, wd_array[i].name);
+		}
+		close(fd);
 
 	}
-
 	return 0;
 }
 

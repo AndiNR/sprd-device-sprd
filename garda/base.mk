@@ -35,6 +35,8 @@ PRODUCT_PACKAGES += \
 	charge \
 	vcharged \
 	mfserial \
+	poweroff_alarm \
+	mplayer \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \
 	camera.$(TARGET_PLATFORM) \

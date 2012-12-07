@@ -38,9 +38,12 @@ PRODUCT_PACKAGES := \
     SoundRecorder
 
 PRODUCT_PACKAGES += \
+	rawdatad \
 	nvitemd \
 	charge \
 	vcharged \
+	poweroff_alarm \
+	mplayer \
 	modemd \
 	calibration_init \
 	gralloc.$(TARGET_PLATFORM) \
