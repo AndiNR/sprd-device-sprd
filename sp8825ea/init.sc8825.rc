@@ -56,6 +56,21 @@ on boot
 on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
 
+on property:ro.nativemodem=true
+    symlink /dev/slog_td /dev/vbpipe0
+    symlink /dev/spipe_td1 /dev/vbpipe1
+    symlink /dev/spipe_td2 /dev/vbpipe2
+    symlink /dev/spipe_td3 /dev/vbpipe3
+    symlink /dev/spipe_td6 /dev/vbpipe6
+
+#####################################
+###### calibration mode #############
+#####################################
+service calibration /system/bin/calibration
+    user root
+    oneshot
+    console
+
 service vcharged /bin/vcharged
     class core
     user root

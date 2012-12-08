@@ -21,3 +21,6 @@
 /dev/vbpipe1            0660     system  system
 /dev/vbpipe0            0660     system  system
 /dev/vbpipe6            0660     media   audio
+
+/dev/slog_td            0666     system  system
+/dev/spipe_td*          0666     system  system
