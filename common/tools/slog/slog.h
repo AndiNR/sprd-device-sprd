@@ -156,5 +156,6 @@ extern int notify_log_handler_started;
 extern int gen_config_string(char *buffer);
 extern void cp_file(char *path, char *new_path);
 extern void exec_or_dump_content(struct slog_info *info, char *filepath);
+extern int capture_by_name(struct slog_info *head, const char *name);
 extern int screen_shot(const char *name);
 #endif /*_SLOG_H*/

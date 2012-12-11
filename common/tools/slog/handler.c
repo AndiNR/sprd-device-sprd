@@ -193,6 +193,7 @@ static int capture_snap_for_notify(struct slog_info *head, char *filepath)
 			}
                         exec_or_dump_content(info, filepath);
 		}
+
                 info = info->next;
         }
 
@@ -222,7 +223,7 @@ static void handle_notify_file(int wd, const char *name)
 		}
 
 		gettimeofday(&info->current, NULL);
-		if(info->current.tv_sec > info->last.tv_sec + 10) {
+		if(info->current.tv_sec > info->last.tv_sec + 20) {
 			info->last.tv_sec = info->current.tv_sec;
 		} else {
 			return;
@@ -264,7 +265,11 @@ static void handle_notify_file(int wd, const char *name)
 		capture_snap_for_notify(snapshot_log_head, dest_file);
 
 		/* for collect log */
-		sleep(2);
+		if( !strncmp(info->name, "hprofs", 6) ) {
+			capture_by_name(snapshot_log_head, "dumpsys");
+			sleep(10);
+		} else
+			sleep(2);
 
 		sprintf(src_file, "%s/%s", info->content, name);
 		sprintf(dest_file, "%s/%s/%s/%s/%s_%02d%02d%02d.log",

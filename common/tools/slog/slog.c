@@ -141,7 +141,7 @@ void exec_or_dump_content(struct slog_info *info, char *filepath)
 	return;
 }
 
-static int capture_by_name(struct slog_info *head, const char *name)
+int capture_by_name(struct slog_info *head, const char *name)
 {
 	struct slog_info *info = head;
 	while(info) {
@@ -377,6 +377,29 @@ static int reload()
 static void init_external_storage()
 {
 	char *p;
+	int type;
+
+	p = getenv("SECOND_STORAGE_TYPE");
+	if(p){
+		type = atoi(p);
+		p = NULL;
+		if(type == 0 || type == 1){
+			p = getenv("EXTERNAL_STORAGE");
+		} else if(type == 1) {
+			p = getenv("SECONDARY_STORAGE");
+		}
+
+		if(p){
+			strcpy(external_path, p);
+			sprintf(external_storage, "%s/slog", p);
+			debug_log("the external storage : %s", external_storage);
+			return;
+		} else {
+			err_log("SECOND_STORAGE_TYPE is %d, but can't find the external storage environment", type);
+			exit(0);
+		}
+
+	}
 
 	p = getenv("SECONDARY_STORAGE");
 	if(p == NULL)

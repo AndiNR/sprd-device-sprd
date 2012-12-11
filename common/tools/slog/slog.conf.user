@@ -29,6 +29,7 @@ snap	df		cmd	6	300	df
 snap	procrank	cmd	6	300	procrank
 snap	bugreport	cmd	9	0	bugreport
 snap	getprop		cmd	9	0	getprop
+snap	dumpsys		cmd	9	0	dumpsys
 
 #type	name		level	file
 notify	anr		1	/data/anr
