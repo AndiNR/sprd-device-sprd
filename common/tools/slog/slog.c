@@ -141,12 +141,12 @@ void exec_or_dump_content(struct slog_info *info, char *filepath)
 	return;
 }
 
-int capture_by_name(struct slog_info *head, const char *name)
+int capture_by_name(struct slog_info *head, const char *name, char *filepath)
 {
 	struct slog_info *info = head;
 	while(info) {
 		if(!strncmp(info->name, name, strlen(name))) {
-			exec_or_dump_content(info, NULL);
+			exec_or_dump_content(info, filepath);
 			return 0;
 		}
 		info = info->next;
@@ -484,8 +484,8 @@ int dump_all_log(const char *name)
 {
 	char cmd[MAX_NAME_LEN];
 	capture_all(snapshot_log_head);
-	capture_by_name(snapshot_log_head, "bugreport");
-	capture_by_name(snapshot_log_head, "getprop");
+	capture_by_name(snapshot_log_head, "bugreport", NULL);
+	capture_by_name(snapshot_log_head, "getprop", NULL);
 	if(!strncmp(current_log_path ,INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)))
 		return -1;
 	sprintf(cmd, "tar czf %s/../%s /%s %s", current_log_path, name, current_log_path, INTERNAL_LOG_PATH);
@@ -549,7 +549,7 @@ void *command_handler(void *arg)
 
 		switch(cmd.type) {
 		case CTRL_CMD_TYPE_SNAP:
-			ret = capture_by_name(snapshot_log_head, cmd.content);
+			ret = capture_by_name(snapshot_log_head, cmd.content, NULL);
 			break;
 		case CTRL_CMD_TYPE_SNAP_ALL:
 			ret = capture_all(snapshot_log_head);
