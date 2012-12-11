@@ -38,6 +38,8 @@ PRODUCT_PACKAGES := \
 	VoiceDialer \
 	MsmsPhone \
 	Settings \
+	MsmsStk \
+	Stk1 \
 	framework2
 
 # prebuild files

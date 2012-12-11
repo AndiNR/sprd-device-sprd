@@ -34,7 +34,10 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 	persist.sys.usb.config=mtp
 
 PRODUCT_PACKAGES := \
+	MsmsStk \
+	Stk1 \
 	VoiceDialer
+
 
 # prebuild files
 PRODUCT_PACKAGES += \
