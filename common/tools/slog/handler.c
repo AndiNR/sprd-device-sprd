@@ -266,7 +266,7 @@ static void handle_notify_file(int wd, const char *name)
 
 		/* for collect log */
 		if( !strncmp(info->name, "hprofs", 6) ) {
-			capture_by_name(snapshot_log_head, "dumpsys");
+			capture_by_name(snapshot_log_head, "dumpsys", dest_file);
 			sleep(10);
 		} else
 			sleep(2);
