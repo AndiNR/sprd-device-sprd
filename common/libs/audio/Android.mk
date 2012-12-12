@@ -29,7 +29,6 @@ ifeq ($(strip $(BOARD_USES_LINE_CALL)), true)
 LOCAL_CFLAGS += -D_VOICE_CALL_VIA_LINEIN
 endif
 
-LOCAL_SRC_FILES := audio_hw.c tinyalsa_util.c audio_pga.c
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
 	external/expat/lib \
@@ -37,7 +36,12 @@ LOCAL_C_INCLUDES += \
 	system/media/audio_effects/include \
 	device/sprd/common/apps/engineeringmodel/engcs \
 	device/sprd/common/libs/audio/vb_effect	\
-	device/sprd/common/libs/audio/vb_pga
+	device/sprd/common/libs/audio/vb_pga \
+	device/sprd/common/libs/audio/record_process
+
+LOCAL_SRC_FILES := audio_hw.c tinyalsa_util.c audio_pga.c \
+			record_process/aud_proc_config.c \
+			record_process/aud_filter_calc.c
 
 LOCAL_SHARED_LIBRARIES := \
 	liblog libcutils libtinyalsa libaudioutils \
