@@ -21,7 +21,10 @@
 #include <pthread.h>
 #include <stdint.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/mman.h>
 
 #include <cutils/log.h>
 #include <cutils/str_parms.h>
@@ -41,6 +44,9 @@
 #include "audio_pga.h"
 #include "vb_effect_if.h"
 #include "vb_pga.h"
+
+#include "eng_audio.h"
+#include "aud_proc.h"
 
 //#define XRUN_DEBUG
 
@@ -234,6 +240,7 @@ struct tiny_stream_in {
     int read_status;
 
     struct tiny_audio_device *dev;
+    int active_rec_proc;
 };
 
 struct config_parse_state {
@@ -295,6 +302,10 @@ static int get_route_depth (
     struct tiny_audio_device *adev,
     int devices,
     int on);
+
+static int get_mode_from_devices(int devices);
+static int init_rec_process(int rec_mode, int sample_rate);
+static int aud_rec_do_process(void * buffer, size_t bytes);
 
 #ifndef _VOICE_CALL_VIA_LINEIN
 #include "vb_control_parameters.c"
@@ -728,14 +739,6 @@ static int do_output_standby(struct tiny_stream_out *out)
         BLUE_TRACE("do_output_standby.mode:%d ",adev->mode);
         adev->active_output = 0;
 
-        /* if in call, don't turn off the output stage. This will
-        be done when the call is ended */
-        if (adev->mode != AUDIO_MODE_IN_CALL) {
-            /* FIXME: only works if only one output can be active at a time */
-            //set_route_by_array(adev->mixer, hs_output, 0);
-            //set_route_by_array(adev->mixer, hf_output, 0);
-        }
-
         /* stop writing to echo reference */
         if (out->echo_reference != NULL) {
             out->echo_reference->write(out->echo_reference, NULL);
@@ -774,7 +777,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     char *str;
     char value[32];
     int ret, val = 0;
-    bool force_input_standby = false;
     static int cur_mode = 0;
 
     BLUE_TRACE("[out_set_parameters], kvpairs=%s devices:0x%x mode:%d ", kvpairs,adev->devices,adev->mode);
@@ -788,19 +790,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         pthread_mutex_lock(&adev->lock);
         pthread_mutex_lock(&out->lock);
         if ((((adev->devices & AUDIO_DEVICE_OUT_ALL) != val) && (val != 0)) || (AUDIO_MODE_IN_CALL == adev->mode)) {
-            if (out == adev->active_output) {
-                /* a change in output device may change the microphone selection */
-                if (adev->active_input &&
-                        adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
-                    force_input_standby = true;
-                }
-                /* force standby if moving to/from HDMI */
-                if (((val & AUDIO_DEVICE_OUT_AUX_DIGITAL) ^
-                        (adev->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)) ||
-                        ((val & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) ^
-                        (adev->devices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET)))
-                    do_output_standby(out);
-            }
             adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
             adev->devices |= val;
             ALOGW("out_set_parameters want to set devices:0x%x old_dev:0x%x old_mode:%d new_mode:%d incall:%d ",adev->devices,adev->prev_devices,cur_mode,adev->mode,adev->in_call);
@@ -831,12 +820,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             ALOGW("the same devices(0x%x) with val(0x%x) val is zero...",adev->devices,val);
         }
         pthread_mutex_unlock(&out->lock);
-        if (force_input_standby) {
-            in = adev->active_input;
-            pthread_mutex_lock(&in->lock);
-            do_input_standby(in);
-            pthread_mutex_unlock(&in->lock);
-        }
         pthread_mutex_unlock(&adev->lock);
     }
 
@@ -872,7 +855,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
     size_t frame_size = audio_stream_frame_size(&out->stream.common);
     size_t in_frames = bytes / frame_size;
     size_t out_frames = RESAMPLER_BUFFER_SIZE / frame_size;
-    bool force_input_standby = false;
     struct tiny_stream_in *in;
     bool low_power;
     int kernel_frames;
@@ -899,10 +881,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
             goto exit;
         }
         out->standby = 0;
-        /* a change in output device may change the microphone selection */
-        if (adev->active_input &&
-                adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION)
-            force_input_standby = true;
     }
     low_power = adev->low_power && !adev->active_input;
     pthread_mutex_unlock(&adev->lock);
@@ -972,17 +950,6 @@ exit:
         do_output_standby(out);
     }
 
-    if (force_input_standby) {
-        pthread_mutex_lock(&adev->lock);
-        if (adev->active_input) {
-            in = adev->active_input;
-            pthread_mutex_lock(&in->lock);
-            do_input_standby(in);
-            pthread_mutex_unlock(&in->lock);
-        }
-        pthread_mutex_unlock(&adev->lock);
-    }
-
     return bytes;
 }
 
@@ -1029,6 +996,7 @@ static int start_input_stream(struct tiny_stream_in *in)
     /* this assumes routing is done previously */
 
     if(adev->in_call) {
+        in->active_rec_proc = 0;
         in->pcm = pcm_open(s_vaudio,PORT_MM,PCM_IN,&pcm_config_vrec_vx);
         if (!pcm_is_ready(in->pcm)) {
             ALOGE("voice-call rec cannot open pcm_in driver: %s", pcm_get_error(in->pcm));
@@ -1044,6 +1012,9 @@ static int start_input_stream(struct tiny_stream_in *in)
             adev->active_input = NULL;
             return -ENOMEM;
         }
+        /* start to process pcm data captured, such as noise suppression.*/
+        in->active_rec_proc = init_rec_process(get_mode_from_devices(in->device), in->config.rate);
+        ALOGI("record process module created is %s.", in->active_rec_proc ? "successful" : "failed");
     }
     /* if no supported sample rate is available, use the resampler */
     if (in->resampler) {
@@ -1125,7 +1096,10 @@ static int do_input_standby(struct tiny_stream_in *in)
             put_echo_reference(adev, in->echo_reference);
             in->echo_reference = NULL;
         }
-
+        if (in->active_rec_proc) {
+            AUDPROC_DeInitDp();
+            in->active_rec_proc = 0;
+        }
         in->standby = 1;
     }
     return 0;
@@ -1159,6 +1133,7 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     int ret, val = 0;
     bool do_standby = false;
 
+    BLUE_TRACE("[in_set_parameters], kvpairs=%s devices:0x%x mode:%d ", kvpairs,adev->devices,adev->mode);
     parms = str_parms_create_str(kvpairs);
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_INPUT_SOURCE, value, sizeof(value));
@@ -1378,6 +1353,9 @@ static int get_next_buffer(struct resampler_buffer_provider *buffer_provider,
             buffer->frame_count = 0;
             return in->read_status;
         }
+        if (in->active_rec_proc)
+            aud_rec_do_process((void *)in->buffer,
+                                in->config.period_size *audio_stream_frame_size(&in->stream.common));
         in->frames_in = in->config.period_size;
     }
 
@@ -1540,8 +1518,11 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
         ret = process_frames(in, buffer, frames_rq);
     else if (in->resampler != NULL)
         ret = read_frames(in, buffer, frames_rq);
-    else
+    else {
         ret = pcm_read(in->pcm, buffer, bytes);
+        if (ret == 0 && in->active_rec_proc)
+            aud_rec_do_process(buffer, bytes);
+    }
 
     if (ret > 0)
         ret = 0;
@@ -1550,10 +1531,10 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
         memset(buffer, 0, bytes);
     /*BLUE_TRACE("in_read OK, bytes=%d", bytes);*/
 exit:
-    if (ret < 0)
-        usleep(bytes * 1000000 / audio_stream_frame_size(&stream->common) /
-               in_get_sample_rate(&stream->common));
-
+    if (ret < 0) {
+        ALOGW("in_read,warning: ret=%d, (%s)", ret, pcm_get_error(in->pcm));
+        do_input_standby(in);
+    }
     pthread_mutex_unlock(&in->lock);
     return bytes;
 }
@@ -2238,6 +2219,88 @@ static void aud_vb_effect_stop(struct tiny_audio_device *adev)
 {
     if (adev)
         mixer_ctl_set_value(adev->private_ctl.vbc_eq_switch, 0, 0);
+}
+
+/* Headset is 0, Handsfree is 3 */
+static int get_mode_from_devices(int devices)
+{
+    int ret = 3;
+
+    if ((devices & AUDIO_DEVICE_IN_BUILTIN_MIC) ||(devices & AUDIO_DEVICE_IN_BACK_MIC))
+        ret = 3;
+    else if (devices & AUDIO_DEVICE_IN_WIRED_HEADSET)
+        ret = 0;
+
+    return ret;
+}
+/*
+ * Read audproc params from nv and config.
+ * return value: TRUE:success, FALSE:failed
+*/
+static int init_rec_process(int rec_mode, int sample_rate)
+{
+    int audio_fd;
+    int ret0 = 0; //failed
+    int ret1 = 0;
+    AUDIO_TOTAL_T *aud_params_ptr = NULL;
+    DP_CONTROL_PARAM_T *ctrl_param_ptr = 0;
+    RECORDEQ_CONTROL_PARAM_T *eq_param_ptr = 0;
+    unsigned int extendArraySize = 0;
+    
+    ALOGW("rec_mode(%d), sample_rate(%d)", rec_mode, sample_rate);
+    audio_fd = open(ENG_AUDIO_PARA_DEBUG, O_RDONLY);
+    if (-1 == audio_fd) {
+        ALOGW("file %s open failed:%s\n",ENG_AUDIO_PARA_DEBUG,strerror(errno));
+        audio_fd = open(ENG_AUDIO_PARA,O_RDONLY);
+        if(-1 == audio_fd){
+            ALOGE("file %s open error:%s\n",ENG_AUDIO_PARA,strerror(errno));
+            return 0;
+        }
+    }
+    aud_params_ptr = (AUDIO_TOTAL_T *)mmap(0, 4*sizeof(AUDIO_TOTAL_T),PROT_READ,MAP_SHARED,audio_fd,0);
+    if ( NULL == aud_params_ptr ) {
+        ALOGE("mmap failed %s",strerror(errno));
+        return 0;
+    }
+    ctrl_param_ptr = (DP_CONTROL_PARAM_T *)((aud_params_ptr+rec_mode)->audio_enha_eq.externdArray);
+ 
+    ret0 = AUDPROC_initDp(ctrl_param_ptr, sample_rate);
+
+    //get total items of extend array.
+    extendArraySize = sizeof((aud_params_ptr+rec_mode)->audio_enha_eq.externdArray);
+    ALOGW("extendArraySize=%d, eq_size=%d, dp_size=%d",
+                  extendArraySize, sizeof(RECORDEQ_CONTROL_PARAM_T), sizeof(DP_CONTROL_PARAM_T));
+    if ((sizeof(RECORDEQ_CONTROL_PARAM_T) + sizeof(DP_CONTROL_PARAM_T)) <= extendArraySize)
+    {
+        eq_param_ptr =(RECORDEQ_CONTROL_PARAM_T *)&((aud_params_ptr+rec_mode)->audio_enha_eq.externdArray[19]);
+        ret1 = AUDPROC_initRecordEq(eq_param_ptr, sample_rate);
+    }else{
+        ALOGE("Parameters error: No EQ params to init.");
+    }
+    
+    munmap((void *)aud_params_ptr, 4*sizeof(AUDIO_TOTAL_T));
+    close(audio_fd);
+    
+    return (ret0 || ret1);
+}
+
+static int aud_rec_do_process(void * buffer, size_t bytes)
+{
+    int16_t *temp_buf = NULL;
+    size_t read_bytes = bytes;
+    unsigned int dest_count = 0;
+
+    temp_buf = (int16_t *) malloc(read_bytes);
+    if (temp_buf) {
+        AUDPROC_ProcessDp((int16 *) buffer, (int16 *) buffer, read_bytes >> 1, temp_buf, temp_buf, &dest_count);
+        memcpy(buffer, temp_buf, read_bytes);
+    } else {
+        ALOGE("temp_buf malloc failed.(len=%d)", (int) read_bytes);
+        return -1;
+    }
+    if (temp_buf)
+        free(temp_buf);
+    return 0;
 }
 
 static int adev_open(const hw_module_t* module, const char* name,
