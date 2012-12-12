@@ -385,7 +385,7 @@ static void init_external_storage()
 		p = NULL;
 		if(type == 0 || type == 1){
 			p = getenv("EXTERNAL_STORAGE");
-		} else if(type == 1) {
+		} else if(type == 2) {
 			p = getenv("SECONDARY_STORAGE");
 		}
 
