@@ -57,13 +57,11 @@ PRODUCT_PACKAGES += \
 	libmbbms_tel_jni.so\
 	$(MALI)
 
-ifeq ($(BOARD_HAVE_FM_BCM),true)
 BRCMFM := \
 	FmDaemon \
 	FmTest
 
 PRODUCT_PACKAGES += $(BRCMFM)
-endif
 
 ifeq ($(BOARD_CMMB_HW), mxd)
 PRODUCT_PACKAGES += $(MXD_CMMB_PLAYER)
@@ -81,13 +79,12 @@ PRODUCT_COPY_FILES := \
         $(BOARDDIR)/hw_params/tiny_hw.xml:system/etc/tiny_hw.xml \
         $(BOARDDIR)/hw_params/codec_pga.xml:system/etc/codec_pga.xml \
         $(BOARDDIR)/hw_params/audio_para:system/etc/audio_para \
-        $(BOARDDIR)/features/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml \
-        $(BOARDDIR)/features/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml \
 	device/sprd/common/libs/mali/egl.cfg:system/lib/egl/egl.cfg \
 	device/sprd/common/libs/audio/audio_policy.conf:system/etc/audio_policy.conf \
 	device/sprd/common/res/media/media_codecs.xml:system/etc/media_codecs.xml \
 	device/sprd/common/res/media/media_profiles.xml:system/etc/media_profiles.xml \
 	frameworks/native/data/etc/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml \
+	frameworks/native/data/etc/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml \
 	frameworks/native/data/etc/android.software.live_wallpaper.xml:system/etc/permissions/android.software.live_wallpaper.xml \
 	frameworks/native/data/etc/handheld_core_hardware.xml:system/etc/permissions/handheld_core_hardware.xml \
 	frameworks/native/data/etc/android.hardware.sensor.light.xml:system/etc/permissions/android.hardware.sensor.light.xml \

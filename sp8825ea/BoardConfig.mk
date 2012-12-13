@@ -35,7 +35,7 @@ endif
 # config kernel
 TARGET_NO_KERNEL := false
 ifeq ($(TARGET_VLX_ENABLE), true)
-KERNEL_DEFCONFIG := sp8825ea-vlx_defconfig
+KERNEL_DEFCONFIG := sp8825ea-vlx_4p1_defconfig
 else
 KERNEL_DEFCONFIG := sp8825ea-native_defconfig
 endif
@@ -46,6 +46,8 @@ BOARD_KERNEL_CMDLINE := console=ttyS1,115200n8
 # use default init.rc
 TARGET_PROVIDES_INIT_RC := true
 
+BOARD_HAVE_BLUETOOTH := true
+BOARD_HAVE_BLUETOOTH_BCM := true
 # board specific modules
 BOARD_USES_TINYALSA_AUDIO := true
 BOARD_USES_ALSA_AUDIO := false
@@ -63,8 +65,19 @@ BOARD_FLASH_BLOCK_SIZE := 4096
 BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE := ext4
 USE_OPENGL_RENDERER := true
 
+
+BOARD_WPA_SUPPLICANT_DRIVER := NL80211
+WPA_SUPPLICANT_VERSION     := VER_0_8_X
+BOARD_WPA_SUPPLICANT_PRIVATE_LIB := lib_driver_cmd_bcmdhd
+BOARD_HOSTAPD_DRIVER        := NL80211
+BOARD_HOSTAPD_PRIVATE_LIB   := lib_driver_cmd_bcmdhd
+BOARD_WLAN_DEVICE           := bcmdhd
+
+WIFI_DRIVER_FW_PATH_PARAM   := "/sys/module/bcmdhd/parameters/firmware_path"
+WIFI_DRIVER_FW_PATH_STA     := "/etc/wifi/fw_bcmdhd.bin"
+WIFI_DRIVER_FW_PATH_P2P     := "/etc/wifi/fw_bcmdhd_p2p.bin"
+WIFI_DRIVER_FW_PATH_AP      := "/etc/wifi/fw_bcmdhd_apsta.bin"
 USE_CAMERA_STUB := true
 
 BOARD_USES_GENERIC_AUDIO := false
 
-BOARD_HAVE_BLUETOOTH := true
