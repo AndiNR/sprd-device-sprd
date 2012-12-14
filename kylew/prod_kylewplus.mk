@@ -37,8 +37,10 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 PRODUCT_PACKAGES := \
 	VoiceDialer \
 	MsmsPhone \
-    framework2 \
-	Settings
+	Settings \
+	MsmsStk \
+	Stk1 \
+	framework2
 	
 # prebuild files
 PRODUCT_PACKAGES += \
