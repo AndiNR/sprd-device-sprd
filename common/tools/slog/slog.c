@@ -832,6 +832,9 @@ int main(int argc, char *argv[])
 */
 	err_log("Slog begin to work.");
 
+	/* sets slog process's file mode creation mask */
+	umask(0);
+
 	/* pid file */
 	create_pidfile();
 
