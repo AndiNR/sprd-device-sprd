@@ -28,6 +28,15 @@ LOCAL_C_INCLUDES += external/jpeg external/zlib
 LOCAL_SHARED_LIBRARIES := liblog libz libjpeg
 include $(BUILD_EXECUTABLE)
 
+#tar
+include $(CLEAR_VARS)
+LOCAL_MODULE := tar
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_CLASS := EXECUTABLES
+LOCAL_MODULE_PATH := $(TARGET_OUT_EXECUTABLES)
+LOCAL_SRC_FILES := $(LOCAL_MODULE)
+include $(BUILD_PREBUILT)
+
 include $(CLEAR_VARS)
 LOCAL_MODULE := slog.conf
 LOCAL_MODULE_TAGS := optional
@@ -46,5 +55,6 @@ include $(BUILD_PREBUILT)
 
 CUSTOM_MODULES += slog
 CUSTOM_MODULES += slogctl
+CUSTOM_MODULES += tar
 CUSTOM_MODULES += slog.conf
 CUSTOM_MODULES += slog.conf.user

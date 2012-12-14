@@ -266,7 +266,10 @@ static int cp_internal_to_external()
                 {
                         if( !strncmp(p_dirent->d_name, "20", 2) ) {
 				strcpy(top_logdir, p_dirent->d_name);
-				sprintf(buffer, "busybox cp -r %s/%s %s/", INTERNAL_LOG_PATH, top_logdir, external_storage);
+				sprintf(buffer, "tar c %s | tar x -C %s/", p_dirent->d_name, external_storage);
+				if(chdir(INTERNAL_LOG_PATH) == -1){
+					err_log("chdir %s failed!", INTERNAL_LOG_PATH);
+				}
 				system(buffer);
 				debug_log("%s", buffer);
 				return 1;
