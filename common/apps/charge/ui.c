@@ -678,7 +678,7 @@ int alarm_flag_check(void)
 	ret = read(alarm_flag_fd, read_buf, sizeof(read_buf));
 	read_buf[sizeof(read_buf)-2] = '\n';
 	read_buf[sizeof(read_buf)-1] = '\0';
-	if(ret >= 0){
+	if(ret >= 0 && read_buf[0]!= 0xff){
           LOGD("%s get: %s\n", alarm_name, read_buf);
           buf_pos = strstr(read_buf, "\n");
           buf_pos += 1;
@@ -691,7 +691,7 @@ int alarm_flag_check(void)
 	ret = read(poweron_flag_fd, read_buf1, sizeof(read_buf1));
 	read_buf1[sizeof(read_buf1)-2] = '\n';
 	read_buf1[sizeof(read_buf1)-1] = '\0';
-	if(ret >= 0){
+	if(ret >= 0 && read_buf1[0]!= 0xff){
           LOGD("%s get: %s\n", poweron_name, read_buf1);
           buf_pos = strstr(read_buf1, "\n");
           buf_pos += 1;
