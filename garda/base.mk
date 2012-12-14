@@ -55,6 +55,8 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/ueventd.sc8825.rc:root/ueventd.sc8825.rc \
 	$(BOARDDIR)/fstab.sc8825:root/fstab.sc8825 \
 	$(BOARDDIR)/vold.fstab:system/etc/vold.fstab \
+	device/sprd/common/libs/audio/apm/devicevolume.xml:system/etc/devicevolume.xml \
+	device/sprd/common/libs/audio/apm/formatvolume.xml:system/etc/formatvolume.xml \
         $(BOARDDIR)/hw_params/tiny_hw.xml:system/etc/tiny_hw.xml \
         $(BOARDDIR)/hw_params/codec_pga.xml:system/etc/codec_pga.xml \
         $(BOARDDIR)/hw_params/audio_para:system/etc/audio_para \
