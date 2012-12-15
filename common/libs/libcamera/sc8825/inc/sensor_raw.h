@@ -238,8 +238,8 @@ struct sensor_saturation_param{
 };
 
 struct sensor_af_param{
-	struct sensor_pos_rect win[9];
-	uint32_t valid_win;
+	uint32_t max_step;
+	uint32_t stab_period;
 };
 
 struct sensor_emboss_param{

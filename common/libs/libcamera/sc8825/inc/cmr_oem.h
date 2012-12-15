@@ -39,12 +39,16 @@ extern "C"
 #define CMR_EVT_EXIT                                (CMR_EVT_OEM_BASE + 3)
 #define CMR_EVT_BEFORE_SET                          (CMR_EVT_OEM_BASE + 4)
 #define CMR_EVT_AFTER_SET                           (CMR_EVT_OEM_BASE + 5)
+#define CMR_EVT_AF_START                            (CMR_EVT_OEM_BASE + 10)
+#define CMR_EVT_AF_EXIT                             (CMR_EVT_OEM_BASE + 11)
+#define CMR_EVT_AF_INIT                             (CMR_EVT_OEM_BASE + 12)
 #define CAMERA_OEM_MSG_QUEUE_SIZE                    50
+#define CAMERA_AF_MSG_QUEUE_SIZE                     5
 #define CAMERA_PREV_ID_BASE                          0x1000
 #define CAMERA_CAP0_ID_BASE                          0x2000
 #define CAMERA_CAP1_ID_BASE                          0x4000
 #define CAMERA_PREV_FRM_CNT                          V4L2_BUF_MAX
-#define CAMERA_PREV_ROT_FRM_CNT                      2
+#define CAMERA_PREV_ROT_FRM_CNT                      4
 #define CAMERA_CAP_FRM_CNT                           2
 #define CAMERA_ZOOM_LEVEL_MAX                        8
 #define ZOOM_STEP(x)                                 ((x - x / CMR_ZOOM_FACTOR) / CAMERA_ZOOM_LEVEL_MAX)
@@ -126,6 +130,7 @@ struct v4l2_context {
 	uint32_t                 v4l2_state; // 0 for preview, 1 for snapshot;
 	struct process_status    proc_status;
 	uint32_t                 sc_capability;
+	uint32_t                 sc_factor;
 };
 
 struct sensor_context {
@@ -142,6 +147,10 @@ struct sensor_context {
 struct isp_context {
 	uint32_t                 isp_state; // 0 for preview, 1 for post process;
 	uint32_t                 width_limit;
+	uint32_t                 is_first_slice;
+	uint32_t                 drop_slice_num;
+	uint32_t                 drop_slice_cnt;
+	struct img_addr          cur_dst;
 	struct process_status    proc_status;
 };
 
@@ -158,6 +167,7 @@ struct scaler_context {
 	uint32_t                 scale_state;
 	struct process_status    proc_status;
 	uint32_t                 sc_capability;
+	uint32_t                 sc_factor;
 	uint32_t                 out_fmt;
 };
 
@@ -183,7 +193,6 @@ struct camera_settings {
 	uint32_t                 iso;
 	uint32_t                 luma_adapt;
 	uint32_t                 video_mode;
-	uint32_t                 af_inited;
 	uint32_t                 af_cancelled;
 	uint8_t                  focus_zone_param[CAMERA_FOCUS_RECT_PARAM_LEN];
 	pthread_mutex_t          set_mutex;
@@ -203,6 +212,7 @@ struct camera_context {
 	pthread_t                camera_main_thr;
 	pthread_t                af_thread;
 	uint32_t                 msg_queue_handle;
+	uint32_t                 af_msg_que_handle;
 	volatile uint32_t        is_working;
 	uint32_t                 camera_status;
 	uint32_t                 recover_status;
@@ -211,6 +221,7 @@ struct camera_context {
 	camera_cb_f_type         camera_cb;
 	pthread_mutex_t          data_mutex;
 	void*                    client_data;
+	uint32_t                 af_inited;
 	pthread_mutex_t          af_cb_mutex;
 	camera_cb_f_type         camera_af_cb;
 	uint32_t                 zoom_level;
@@ -218,6 +229,7 @@ struct camera_context {
 	uint32_t                 skip_num;
 	uint32_t                 pre_frm_cnt;
 	pthread_mutex_t          prev_mutex;
+	sem_t                    af_sync_sem;
 	sem_t                    init_sem;
 	sem_t                    exit_sem;
 	sem_t                    start_sem;
@@ -259,6 +271,7 @@ struct camera_context {
 	struct cmr_cap_2_frm     cap_2_mems;
 	/*for setting*/
 	struct camera_settings   cmr_set;
+	uint32_t 				 orientation;
 	
 };
 

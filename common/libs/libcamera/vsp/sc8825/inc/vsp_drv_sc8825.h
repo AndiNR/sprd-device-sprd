@@ -49,9 +49,24 @@ extern "C"
 #define SCI_ASSERT(...) 
 #define SCI_PASSERT(condition, format...)
 #endif 
+#include <linux/ioctl.h>
 /*----------------------------------------------------------------------------*
 **                            Macro Definitions                               *
 **---------------------------------------------------------------------------*/
+#define SPRD_VSP_MAP_SIZE 0x13000
+
+#define SPRD_VSP_IOCTL_MAGIC 	'm'
+#define VSP_CONFIG_FREQ 		_IOW(SPRD_VSP_IOCTL_MAGIC, 1, unsigned int)
+#define VSP_GET_FREQ    			_IOR(SPRD_VSP_IOCTL_MAGIC, 2, unsigned int)
+#define VSP_ENABLE      			_IO(SPRD_VSP_IOCTL_MAGIC, 3)
+#define VSP_DISABLE     			_IO(SPRD_VSP_IOCTL_MAGIC, 4)
+#define VSP_ACQUAIRE    			_IO(SPRD_VSP_IOCTL_MAGIC, 5)
+#define VSP_RELEASE     			_IO(SPRD_VSP_IOCTL_MAGIC, 6)
+#define VSP_START       			_IO(SPRD_VSP_IOCTL_MAGIC, 7)
+#define VSP_RESET       			_IO(SPRD_VSP_IOCTL_MAGIC, 8)
+#define VSP_REG_IRQ                   _IO(SPRD_VSP_IOCTL_MAGIC, 9)
+#define VSP_UNREG_IRQ              _IO(SPRD_VSP_IOCTL_MAGIC, 10)
+#define VSP_ACQUAIRE_MEA_DONE _IO(SPRD_VSP_IOCTL_MAGIC, 11)
 
 #define TIME_OUT_CLK			0xffff
 

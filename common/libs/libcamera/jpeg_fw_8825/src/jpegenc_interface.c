@@ -245,7 +245,7 @@ PUBLIC uint32  JPEG_HWGetSize(void)
 		VSP_READ_REG_POLL(VSP_DCAM_REG_BASE+DCAM_INT_STS_OFF, 0x100, 0x100, TIME_OUT_CLK, "DCAM_INT_STS: polling the vlc is done!");
 	#endif//SMALL_SYS
 
-		VSP_READ_REG_POLL(VSP_VLC_REG_BASE+VLC_ST_OFF, 0x4, 0x4, TIME_OUT_CLK, "VLC_CTRL_OFF: polling the vlc is done!");
+		VSP_READ_REG_POLL(VSP_VLC_REG_BASE+VLC_ST_OFF, 0x0, 0x0, TIME_OUT_CLK, "VLC_CTRL_OFF: polling the vlc is done!");
 
 		//clear vlc, Hardware should flush vlc internal buffer and byte align(if the last aligned byte value is 0xff, then 0x00 will be followed).
 		VSP_WRITE_REG(VSP_VLC_REG_BASE+VLC_ST_OFF, 1, "VLC_ST_OFF: clear vlc module");

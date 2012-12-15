@@ -55,6 +55,7 @@ LOCAL uint32_t _ov5640_GetExifInfo(uint32_t param);
 LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param);
 LOCAL uint32_t _ov5640_StreamOn(uint32_t param);
 LOCAL uint32_t _ov5640_StreamOff(uint32_t param);
+LOCAL uint32_t _ov5640_set_iso(uint32_t mode);
 
 LOCAL const SENSOR_REG_T ov5640_common_init[] = {
 	{0x3103, 0x11},		/* sysclk from pad*/
@@ -456,6 +457,59 @@ LOCAL const SENSOR_REG_T ov5640_1024x768_setting[] = {
 	{0x3503,0x00}	// AEC/AGC off
 };
 
+LOCAL const SENSOR_REG_T ov5640_1280X720_setting[] = {
+	/*@@YUV_720p_subsample_30fps*/
+	{0x3c07,0x08},	// lightmeter 1 threshold[7:0]
+	{0x3820,0x41},	// flip
+	{0x3821,0x07},	// mirror
+	{0x3814,0x31},	// timing X inc
+	{0x3815,0x31},	// timing Y inc
+	{0x3800,0x00},	// HS
+	{0x3801,0x00},	// HS
+	{0x3802,0x00},	// VS
+	{0x3803,0x04},	// VS
+	{0x3804,0x0a},	// HW (HE)
+	{0x3805,0x3f},	// HW (HE)
+	{0x3806,0x07},	// VH (VE)
+	{0x3807,0x9b},	// VH (VE)
+	{0x3808,0x05},	// DVPHO
+	{0x3809,0x00},	// DVPHO
+	{0x380a,0x02},	// DVPVO
+	{0x380b,0xd0},	// DVPVO
+	{0x380c,0x07},	// HTS
+	{0x380d,0x68},	// HTS
+	{0x380e,0x03},	// VTS
+	{0x380f,0xd8},	// VTS
+	{0x3813,0x7e},	// timing V offset
+	{0x3618,0x00},
+	{0x3612,0x29},
+	{0x3709,0x52},
+	{0x370c,0x03},
+	{0x3a02,0x0b},	// 60Hz max exposure, night mode 5fps
+	{0x3a03,0x88},	// 60Hz max exposure
+	{0x3a14,0x0b},	// 50Hz max exposure, night mode 5fps
+	{0x3a15,0x88},	// 50Hz max exposure
+	{0x4004,0x02},	// BLC line number
+	{0x3002,0x1c},	// reset JFIFO, SFIFO, JPG
+	{0x3006,0xc3},	// disable clock of JPEG2x, JPEG
+	{0x4713,0x03},	// JPEG mode 3
+	{0x4407,0x04},	// Quantization sacle
+	{0x460b,0x35},
+	{0x460c,0x22},
+	{0x4837,0x22},	// MIPI global timing
+	{0x3824,0x02},	// PCLK manual divider
+	{0x5001,0xa3},	// SDE on, CMX on, AWB on
+	/*pll*/
+	{0x3034,0x18},
+	{0x3035,0x12},
+	{0x3036,0x54},
+	{0x3037,0x13},
+	{0x3108,0x02},
+	{0x4837,0x0a},
+	/*AEC/AGC on*/
+	{0x3503,0x00}
+};
+
 
 LOCAL const SENSOR_REG_T ov5640_1280x960_setting[] = {
      /*@@YUV_1280*960_15fps*/
@@ -733,7 +787,7 @@ LOCAL const SENSOR_REG_T ov5640_2048x1536_setting[] = {
      {0x460b,0x37},
      {0x460c,0x22},
      {0x4837,0x2c},	// MIPI global timing
-     {0x3824,0x02},	// PCLK manual divider
+     {0x3824,0x01},	// PCLK manual divider
      {0x5001,0x83},	// SDE on, CMX on, AWB on, scale off
      {0x3c07,0x07},	// lightmeter 1 threshold[7:0]
      {0x3820,0x40},	// flip
@@ -745,11 +799,11 @@ LOCAL const SENSOR_REG_T ov5640_2048x1536_setting[] = {
 		 /*pll*/
 	
      {0x3034,0x18},
-     {0x3035,0x13},
-     {0x3036,0x70},
+     {0x3035,0x11},
+     {0x3036,0x54},
      {0x3037,0x13},
      {0x4837,0x0a},
-     {0x3108, 0x02},	
+     {0x3108, 0x01},	
 
 
      /*
@@ -892,7 +946,7 @@ LOCAL const SENSOR_REG_T ov5640_2592x1944_setting[] = {
 
 		 /*pll*/
      {0x3034,0x18},
-     {0x3035,0x21},
+     {0x3035,0x11},
      {0x3036,0x54},
      {0x3037,0x13},
      {0x4837,0x0a},
@@ -980,6 +1034,7 @@ LOCAL SENSOR_REG_TAB_INFO_T s_ov5640_resolution_Tab_YUV[] = {
 	{ADDR_AND_LEN_OF_ARRAY(ov5640_common_init), 640, 480, 24,SENSOR_IMAGE_FORMAT_YUV422},
 //	{ADDR_AND_LEN_OF_ARRAY(ov5640_640x480_setting), 640, 480, 24, SENSOR_IMAGE_FORMAT_YUV422},
 	{ADDR_AND_LEN_OF_ARRAY(ov5640_1024x768_setting), 1024, 768, 24, SENSOR_IMAGE_FORMAT_YUV422},
+	{ADDR_AND_LEN_OF_ARRAY(ov5640_1280X720_setting), 1280, 720, 24, SENSOR_IMAGE_FORMAT_YUV422},
  	{ADDR_AND_LEN_OF_ARRAY(ov5640_1280x960_setting), 1280, 960, 24, SENSOR_IMAGE_FORMAT_YUV422},
  	{ADDR_AND_LEN_OF_ARRAY(ov5640_1600x1200_setting), 1600, 1200, 24, SENSOR_IMAGE_FORMAT_YUV422},
   	{ADDR_AND_LEN_OF_ARRAY(ov5640_2048x1536_setting), 2048, 1536, 24, SENSOR_IMAGE_FORMAT_YUV422},
@@ -992,6 +1047,7 @@ LOCAL SENSOR_REG_TAB_INFO_T s_ov5640_resolution_Tab_YUV[] = {
 LOCAL SENSOR_TRIM_T s_ov5640_Resolution_Trim_Tab[] = {
 	{0, 0, 640, 480, 0, 0},
 	{0, 0, 1024, 768, 68, 56},
+	{0, 0, 1280, 720, 68, 56},
 	{0, 0, 1280, 960, 122, 42},
 	{0, 0, 1600, 1200, 122, 42},
 	{0, 0, 2048, 1536, 122, 42},
@@ -1009,24 +1065,21 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5640_ioctl_func_tab = {
 	_ov5640_PowerOn,
 	PNULL,
 	_ov5640_Identify,
-
 	PNULL,			// write register
 	PNULL,			// read  register
 	PNULL,
 	_ov5640_GetResolutionTrimTab,
-
 	// External
 	PNULL,
 	PNULL,
 	PNULL,
-
-	PNULL, //_ov5640_set_brightness,
-	PNULL, // _ov5640_set_contrast,
+	_ov5640_set_brightness,
+	_ov5640_set_contrast,
 	PNULL,
 	PNULL,			//_ov5640_set_saturation,
 
-	PNULL, //_ov5640_set_work_mode,
-	PNULL, //_ov5640_set_image_effect,
+	_ov5640_set_work_mode,
+	_ov5640_set_image_effect,
 
 	_ov5640_BeforeSnapshot,
 	_ov5640_after_snapshot,
@@ -1039,16 +1092,16 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5640_ioctl_func_tab = {
 	PNULL,
 	PNULL,
 	PNULL,
-	PNULL, //_ov5640_set_awb,
+	_ov5640_set_awb,
 	PNULL,
-	PNULL,
-	PNULL, //_ov5640_set_ev,
+	_ov5640_set_iso,
+	_ov5640_set_ev,
 	_ov5640_check_image_format_support,
 	PNULL,
 	PNULL,
 	_ov5640_GetExifInfo,
 	_ov5640_ExtFunc,
-	PNULL, //_ov5640_set_anti_flicker,
+	_ov5640_set_anti_flicker,
 	PNULL, //_ov5640_set_video_mode,
 	_ov5640_pick_out_jpeg_stream,
 	PNULL, //meter_mode
@@ -1114,8 +1167,8 @@ SENSOR_INFO_T g_ov5640_mipi_yuv_info = {
 	NULL,			//&g_ov5640_ext_info,                // extend information about sensor
 	SENSOR_AVDD_1800MV,	// iovdd
 	SENSOR_AVDD_1500MV,	// dvdd
-	3,			// skip frame num before preview
-	3,			// skip frame num before capture
+	0,			// skip frame num before preview
+	1,			// skip frame num before capture
 	0,			// deci frame num during preview
 	0,			// deci frame num during video preview
 
@@ -1947,8 +2000,13 @@ LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param)
 	}
 
 	if (SENSOR_MODE_PREVIEW_ONE >= param) {
+
+		SENSOR_PRINT_HIGH("_ov5640_BeforeSnapshot, do not change");
 		return SENSOR_SUCCESS;
 	}
+
+
+	
 	Sensor_WriteReg(0x3406, 0x01);
 	Sensor_WriteReg(0x3503, 0x07);
 
@@ -1960,36 +2018,24 @@ LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param)
 	g_preview_exposure = (ret_h << 12) + (ret_m << 4) + (ret_l >> 4);
 
 	ret_h = ret_m = ret_l = 0;
-	Preview_Maxlines = 0;
-	ret_h = (uint8_t) Sensor_ReadReg(0x380e);
-	ret_l = (uint8_t) Sensor_ReadReg(0x380f);
-	Preview_Maxlines = (ret_h << 8) + ret_l;
 	//Read back AGC Gain for preview
 	Gain = (uint8_t) Sensor_ReadReg(0x350b);
 	Sensor_SetMode(param);
 
-	ret_h = ret_m = ret_l = 0;
-	ret_h = (uint8_t) Sensor_ReadReg(0x380e);
-	ret_l = (uint8_t) Sensor_ReadReg(0x380f);
-	Capture_MaxLines = (ret_h << 8) + ret_l;
-
-	Lines_10ms = (uint8_t) (Capture_Framerate * Capture_MaxLines / 12000);
-
-	if (Preview_Maxlines == 0) {
-		Preview_Maxlines = 1;
-	}
-
-	ulCapture_Exposure =
-	    (g_preview_exposure * (Capture_Framerate) * (Capture_MaxLines)) /
-	    (((Preview_Maxlines) * (g_Preview_FrameRate)));
-
 	ulCapture_Exposure = g_preview_exposure;
 
+//do not change gain
+/*
 	if (Gain > 32) {
 		Gain = Gain / 2;
-		ulCapture_Exposure = 2 * g_preview_exposure;
+		ulCapture_Exposure = 2 * ulCapture_Exposure;
 	}
+	if(0 == ulCapture_Exposure){
 
+		ulCapture_Exposure = 1;
+	}
+	
+	
 	ExposureLow = ((unsigned char)ulCapture_Exposure) << 4;
 	ExposureMid = (unsigned char)(ulCapture_Exposure >> 4) & 0xff;
 	ExposureHigh = (unsigned char)(ulCapture_Exposure >> 12);
@@ -2004,6 +2050,7 @@ LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param)
 	Sensor_WriteReg(0x350b, Gain + 1);
 	usleep(100*1000);
 	Sensor_WriteReg(0x350b, Gain);
+*/
 	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_EXPOSURETIME,
 				 (uint32_t) ulCapture_Exposure);
 	return SENSOR_SUCCESS;
@@ -6700,5 +6747,73 @@ LOCAL uint32_t _ov5640_StreamOff(uint32_t param)
 
 	Sensor_WriteReg(0x3008, 0x42);
 
+	return 0;
+}
+
+/*
+// Description:
+// mode:
+//           0:auto
+// 	      1:ISO 100
+// 	      2:ISO 200
+// 	      3:ISO 400
+// 	      4:ISO 800
+// 	      5:ISO 1600
+*/
+LOCAL const SENSOR_REG_BITS_T ov5640_iso_tab[][8] =
+{
+	/*AUTO*/
+	{
+		{0x3a18, 0x00,0xff}, {0x3a19, 0x7c,0xff}, {0xffff, 0xff,0}
+	},
+	/*ISO 100*/
+	{
+		{0x3a18, 0x00,0xff}, {0x3a19, 0x3c,0xff}, {0xffff, 0xff,0}
+	},
+	/*ISO 200*/
+	{
+		{0x3a18, 0x00,0xff}, {0x3a19, 0x7c,0xff}, {0xffff, 0xff,0}
+	},
+	/*ISO 400*/
+	{
+		{0x3a18, 0x00,0xff}, {0x3a19, 0xf8,0xff}, {0xffff, 0xff,0}
+	},
+	/*ISO 800*/
+	{
+		{0x3a18, 0x01,0xff}, {0x3a19, 0xf8,0xff}, {0xffff, 0xff,0}
+	},
+	/*ISO 1600*/
+	{
+		{0x3a18, 0x03,0xff}, {0x3a19, 0xf8,0xff}, {0xffff, 0xff,0}
+	}
+};
+
+LOCAL uint32_t _ov5640_set_iso(uint32_t mode)
+{
+	uint16_t i=0x00;
+	uint32_t reg_bits = 0;
+	uint32_t reg_value = 0;
+	SENSOR_REG_BITS_T_PTR sensor_reg_ptr=(SENSOR_REG_BITS_T_PTR)ov5640_iso_tab[mode];
+	SENSOR_PRINT("_ov5640_set_iso:mode = %d.\n",mode);
+	if(mode>5)
+		return 0;
+
+	for(i=0; (0xffff!=sensor_reg_ptr[i].reg_addr)||(0xFF!=sensor_reg_ptr[i].reg_value); i++)
+	{
+		if(0xff == sensor_reg_ptr[i].reg_bits)
+		{
+			Sensor_WriteReg(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
+		}
+		else
+		{
+			reg_bits = sensor_reg_ptr[i].reg_bits;
+			reg_value = Sensor_ReadReg(sensor_reg_ptr[i].reg_addr);
+			reg_value &= ~reg_bits;
+			reg_value |= sensor_reg_ptr[i].reg_value;
+			Sensor_WriteReg(sensor_reg_ptr[i].reg_addr, (uint16_t)reg_value);
+		}
+	}
+
+	SENSOR_PRINT("SENSOR: _ov5640_set_iso ,read 0x%x,0x%x.\n", Sensor_ReadReg(0x3a18),Sensor_ReadReg(0x3a19));
 	return 0;
 }

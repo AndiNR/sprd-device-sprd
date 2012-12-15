@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,45 +13,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef _ISP_LOG_H_
+#define _ISP_LOG_H_
 
-#ifndef _ISP_AF_H_
-#define _ISP_AF_H_
-/*------------------------------------------------------------------------------*
-*					Dependencies				*
-*-------------------------------------------------------------------------------*/
-#include <linux/types.h>
+#include <sys/types.h>
+#include <utils/Log.h>
+#include <stdlib.h>
+#include <fcntl.h>/* low-level i/o */
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <errno.h>
 /*------------------------------------------------------------------------------*
 *					Compiler Flag				*
 *-------------------------------------------------------------------------------*/
-#ifdef  __cplusplus
-extern "C"
+#ifdef   __cplusplus
+extern   "C"
 {
 #endif
-
 /*------------------------------------------------------------------------------*
 *					Micro Define				*
 *-------------------------------------------------------------------------------*/
+#if 0
+#define ISP_DEBUG_STR      "%s, %s, %d line,: "
+#define ISP_DEBUG_ARGS    __FILE__,__FUNCTION__,__LINE__
+#else
+#define ISP_DEBUG_STR      "%s, %d line,: "
+#define ISP_DEBUG_ARGS    __FUNCTION__,__LINE__
+#endif
+
+#define ISP_LOG(format,...) ALOGE(ISP_DEBUG_STR format, ISP_DEBUG_ARGS, ##__VA_ARGS__)
+
+#define ISP_TRAC(_x_) ISP_LOG _x_
+#define ISP_RETURN_IF_FAIL(exp,warning) do{if(exp) {ISP_TRAC(warning); return exp;}}while(0)
+#define ISP_TRACE_IF_FAIL(exp,warning) do{if(exp) {ISP_TRAC(warning);}}while(0)
+
+//#define ISP_USER_DRV_DEBUG	0
 
 /*------------------------------------------------------------------------------*
 *					Data Structures				*
 *-------------------------------------------------------------------------------*/
-struct isp_af_param{
-	uint32_t bypass;
-	uint16_t win[9][4];
-	uint32_t valid_win;
-};
-
-/*------------------------------------------------------------------------------*
-*					Data Prototype				*
-*-------------------------------------------------------------------------------*/
-uint32_t isp_af_init(void);
-uint32_t isp_af_calculation(void);
-uint32_t isp_af_set(void);
 
 /*------------------------------------------------------------------------------*
 *					Compiler Flag				*
 *-------------------------------------------------------------------------------*/
-#ifdef	 __cplusplus
+#ifdef   __cplusplus
 }
 #endif
 /*-----------------------------------------------------------------------------*/

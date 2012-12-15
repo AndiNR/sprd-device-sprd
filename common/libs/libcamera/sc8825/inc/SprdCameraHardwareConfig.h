@@ -244,8 +244,11 @@ struct config_element sprd_front_camera_hardware_config[] = {
         {"whitebalance-values",
          "auto,incandescent,fluorescent,daylight,cloudy-daylight"},
         {"whitebalance", "auto"},
-        {"picture-size-values",
-         "2048x1536,1600x1200,1280x960,640x480"},
+#ifdef CONFIG_CAMERA_SUPPORT_2M
+		{"picture-size-values", "1600x1200,1280x960,640x480"},
+#else
+        {"picture-size-values", "2048x1536,1600x1200,1280x960,640x480"},
+#endif
          {"picture-size", "640x480"},
 	{"preview-size-values",
 	 "640x480,352x288,320x240,176x144"},
@@ -326,7 +329,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"preview-size-values",
 	 "640x480,352x288,320x240,176x144"},
 	 {"preview-size", "640x480"},
-	{"video-size-values", "720x480,352x288,320x240,176x144"},
+	{"video-size-values", "1280x720,720x480,352x288,320x240,176x144"},
 	{"video-size", "176x144"},
 	{"preferred-preview-size-for-video", "320x240"},
 	{"video-frame-format-values", "yuv420sp,yuv420p"},
@@ -375,6 +378,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
         {"contrast", "3"}  ,
 #ifndef CONFIG_CAMERA_788
 	{"focus-mode-values", "auto"},
+	{"focus-mode-values", "auto,auto-multi,macro"},
 #else
 	{"focus-mode-values", "auto,auto-multi,macro"},
 #endif
@@ -397,10 +401,14 @@ struct config_element sprd_back_camera_hardware_config[] = {
         {"focus-distances", "2.0,2.5,3.75"},
 	{"max-num-detected-faces-hw", "0"},
 #ifdef CONFIG_CAMERA_788
-	{"max-num-focus-areas", "0"}
+	{"max-num-focus-areas", "0"},
 #else
-	{"max-num-focus-areas", "3"}
+	{"max-num-focus-areas", "3"},
 #endif
+	{"iso-supported", "true"},
+	{"max-iso", "5"},
+	{"iso-values", "auto,100,200,400,800,1600"},
+	{"iso", "auto"}
 };
 
 #endif //_SPRD_CAMERA_HARDWARE_CONFIG_H_

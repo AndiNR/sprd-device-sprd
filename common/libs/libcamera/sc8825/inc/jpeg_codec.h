@@ -77,10 +77,10 @@ typedef struct{
 
 }JPEG_DEC_CB_PARAM_T;
 
-typedef struct{
+struct jpeg_wexif_cb_param{
 	uint32_t      output_buf_virt_addr;
 	uint32_t      output_buf_size;  //bytes
-}JPEG_WEXIF_CB_PARAM_T;
+};
 
 
 typedef struct
@@ -91,7 +91,7 @@ typedef struct
 
 
 //only support YUV slice, do not support stream slice for simplicity. 
-typedef struct{
+struct jpeg_enc_in_param{
 
 	uint32_t                            src_fmt;
 
@@ -117,18 +117,18 @@ typedef struct{
 	uint32_t      temp_buf_size;  //bytes	
 
 	
-}JPEG_ENC_INPUT_PARAM;
+};
 
 
-typedef struct{
+struct jpeg_enc_out_param {
 
         uint32_t       handle;  //no useful for jpeg code can decode one image at one time.
         				    //only to check the error
 
-}JPEG_ENC_OUTPUT_PARAM;
+};
 
 
-typedef struct{
+struct jpeg_enc_next_param{
 
 	uint32_t handle;// to check the error
 
@@ -137,11 +137,10 @@ typedef struct{
 	uint32_t   slice_height;  //the slice_height may be different. 
 						  //slice height must be 8X
 	uint32_t ready_line_num;
+};
 
-}JPEG_ENC_NXT_PARAM;
 
-
-typedef struct{
+struct jpeg_dec_in_param{
 
 	uint32_t      stream_buf_phy;
 	uint32_t      stream_buf_vir;
@@ -164,26 +163,25 @@ typedef struct{
 	uint32_t      temp_buf_vir;	
 	uint32_t      temp_buf_size;  //bytes	
 
-}JPEG_DEC_IN_PARAM;
+};
 
 
-typedef struct
+struct jpeg_dec_out_param
 {
 	 uint32_t	handle;
-}JPEG_DEC_OUT_PARAM;
+};
 
 
-typedef struct{
+struct jpeg_dec_next_param{
 
 	uint32_t handle;
 
 	struct img_addr                     dst_addr_phy;
 	struct img_addr                     dst_addr_vir;
 	uint32_t        slice_height; 
+};
 
-}JPEG_DEC_NXT_PARAM;
-
-typedef struct
+struct jpeg_enc_exif_param
 {
 	uint32_t src_jpeg_addr_virt;
 	uint32_t src_jpeg_size;
@@ -192,26 +190,27 @@ typedef struct
 	uint32_t target_addr_virt;
 	uint32_t target_size;
 	JINF_EXIF_INFO_T *exif_ptr;	
-}JPEG_ENC_EXIT_PARAM;
+};
 
 int jpeg_init(void);
 
 void jpeg_getcapability(JPEG_CAPABLIITY_T *param_ptr);
 
-int jpeg_enc_start(JPEG_ENC_INPUT_PARAM *start_in_parm_ptr, JPEG_ENC_OUTPUT_PARAM *start_out_parm_ptr);
+int jpeg_enc_start(struct jpeg_enc_in_param *start_in_parm_ptr, struct jpeg_enc_out_param *start_out_parm_ptr);
 
-int jpeg_enc_next(JPEG_ENC_NXT_PARAM *nxt_param_ptr);
+int jpeg_enc_next(struct jpeg_enc_next_param *nxt_param_ptr);
 
-int jpeg_dec_start(JPEG_DEC_IN_PARAM *start_in_parm_ptr, JPEG_DEC_OUT_PARAM *start_out_parm_ptr);
+int jpeg_dec_start(struct jpeg_dec_in_param *start_in_parm_ptr, struct jpeg_dec_out_param *start_out_parm_ptr);
 
-int jpeg_dec_next(JPEG_DEC_NXT_PARAM *next_param_ptr);
+int jpeg_dec_next(struct jpeg_dec_next_param *next_param_ptr);
 
 int jpeg_stop(uint32_t handle);
 
 int jpeg_deinit(void);
 
 void jpeg_evt_reg(cmr_evt_cb  adp_event_cb);
-int jpeg_enc_add_eixf(JPEG_ENC_EXIT_PARAM *param_ptr,JPEG_WEXIF_CB_PARAM_T *output_ptr);
+int jpeg_enc_add_eixf(struct jpeg_enc_exif_param *param_ptr,struct jpeg_wexif_cb_param *output_ptr);
+int jpeg_enc_thumbnail(struct jpeg_enc_in_param *in_parm_ptr, uint32_t *stream_size_ptr);
 
 #ifdef __cplusplus
 }

@@ -123,6 +123,7 @@ PUBLIC void JpegEnc_VspTopRegCfg(void)
 	VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_INT_MASK_OFF, cmd, "DCAM_INT_MASK: enable related INT bit");
 #else
 	//restore the INT
+	int_mask |=   (1 << 7) | (1 << 8)  |(1 << 12)| (1 << 14);
 	VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_INT_MASK_OFF, int_mask, "DCAM_INT_MASK: enable related INT bit");
 
 	JPEG_TRACE("[JpegEnc_VspTopRegCfg] after reset, int mask = 0x%x", VSP_READ_REG(VSP_DCAM_REG_BASE+DCAM_INT_MASK_OFF, "DCAM_INT_MASK: read  INT bit"));	
@@ -180,7 +181,8 @@ PUBLIC void JpegEnc_VspTopRegCfg(void)
 	cmd = (jpeg_fw_codec->input_mcu_info << 24) | ((jpeg_fw_codec->mcu_num_y & 0x3ff) << 12) | (jpeg_fw_codec->mcu_num_x & 0x3ff);
 	VSP_WRITE_REG(VSP_GLB_REG_BASE+GLB_CFG1_OFF, cmd, "VSP_CFG1: input mcu infor, mcu max number x and y");
 	
-	cmd = ((uint32)0xffff << 0) | (0 << 16);
+	//cmd = ((uint32)0xffff << 0) | (0 << 16);
+	cmd = (0<< 31)|(0 << 30)|((uint32)TIME_OUT_CLK);
 	VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_VSP_TIME_OUT_OFF, cmd, "DCAM_VSP_TIME_OUT: disable hardware timer out");
 
 	cmd = (jpeg_fw_codec->YUV_Info_0.v_data_ptr == NULL)?0:1;//1: uv_interleaved, two plane, 0: three plane
@@ -244,7 +246,11 @@ PUBLIC void JpegEnc_VspSubModuleCfg(void)
 	SCI_ASSERT(jpeg_fw_codec != PNULL);
 
 	//BSM Module cfg
-	cmd = (0<<31) | ((jpeg_fw_codec->pingpang_buf_len+3)>>2);
+	cmd = (jpeg_fw_codec->pingpang_buf_len+3)>>2;
+	if(cmd > 0xFFFFF) {
+		cmd = 0xFFFFF;
+	}
+	/*cmd = (0<<31) | ((jpeg_fw_codec->pingpang_buf_len+3)>>2);*/
 	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG0_OFF, cmd, "BSM_CFG0: buffer0 for write, and the max buffer size");
 #if _CMODEL_
 	g_bs_pingpang_bfr0 = jpeg_fw_codec->stream_0;

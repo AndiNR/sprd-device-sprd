@@ -42,6 +42,7 @@ PRODUCT_PACKAGES += \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \
 	camera.$(TARGET_PLATFORM) \
+        libisp.so \
 	lights.$(TARGET_PLATFORM) \
 	audio.primary.$(TARGET_PLATFORM) \
 	tinymix \

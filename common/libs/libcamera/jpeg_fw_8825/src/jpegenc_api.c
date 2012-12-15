@@ -580,12 +580,12 @@ void JPEGENC_Handle_BSM_INT_Ext(void)
 	uint32_t tmp = stream_buf_id;
 
 	JPGEENC_Clear_INT(0x80);
-	if(0 == stream_buf_id){				
+/*	if(0 == stream_buf_id){
 		stream_buf_id = 1;
 	}else{
 		stream_buf_id = 0;				
 	}
-	JPEG_HWSet_BSM_Buf_WriteOnly(stream_buf_id);
+	JPEG_HWSet_BSM_Buf_WriteOnly(stream_buf_id);*/
 	jpeg_fw_codec->stream_buf_id = stream_buf_id;
 	
 	SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM JPEG_HWSet_BSM_Buf_WriteOnly after.stream_buf_id: %d.\n", stream_buf_id);
@@ -648,12 +648,14 @@ uint32_t JPEGENC_Poll_MEA_BSM_OneSlice(uint32_t time, uint32_t slice_num)
 	uint32_t value;
 	uint32_t vsp_time_out_cnt = 0;
 	uint32_t buf_id = 1; 
+	int vsp_fd = -1;
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGEncCodec();
 
 	SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM E,slice_num=%d.\n",jpeg_fw_codec->slice_num);
 
 	jpeg_fw_codec->stream_switch_num = 0;
-
+	vsp_fd = jpeg_fw_codec->fd;
+#if 0
 	while(1)
 	{
 		value = VSP_READ_REG(VSP_DCAM_REG_BASE + DCAM_INT_RAW_OFF, "read the interrupt register.");		
@@ -699,8 +701,32 @@ uint32_t JPEGENC_Poll_MEA_BSM_OneSlice(uint32_t time, uint32_t slice_num)
 		vsp_time_out_cnt++;
 		usleep(1000);
 	}	
+#else
+	ret = ioctl(vsp_fd,VSP_ACQUAIRE_MEA_DONE,time);
+	SCI_TRACE_LOW("after ioctl VSP_ACQUAIRE_MEA_DONE");
+	value = VSP_READ_REG(VSP_DCAM_REG_BASE + DCAM_INT_RAW_OFF, "read the interrupt register.");
 
-	SCI_TRACE_LOW("hansen: slice_num=%d.\n",jpeg_fw_codec->slice_num);
+	SCI_TRACE_LOW("DCAM_INT_RAW_OFF value %x",value);
+	if(2 == ret) {
+		SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM_OneSlice stream buf is small.\n");
+		ret = 2;
+	} else if(1 == ret) {
+		SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM X, timeout..\n");
+			ret = 1;
+	} else if (0 == ret) {
+			slice_num--;
+			if(slice_num>0) {
+				JPEG_HWUpdateMEABufInfo();
+				JPGEENC_Clear_INT(0x4000);
+				ret = 0;
+			 } else {
+			 	JPGEENC_Clear_INT(0x4000);
+				SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM X done.\n");
+				ret = 0;
+			 }
+	}
+#endif
+	SCI_TRACE_LOW("slice_num=%d.\n",jpeg_fw_codec->slice_num);
 
 	jpeg_fw_codec->slice_num--;
 	jpeg_fw_codec->buf_id = 1;
@@ -708,7 +734,6 @@ uint32_t JPEGENC_Poll_MEA_BSM_OneSlice(uint32_t time, uint32_t slice_num)
 	SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM E,end : slice_num=%d.\n",jpeg_fw_codec->slice_num);
 
 	return ret;
-	
 }
 
 //poll MEA done and BSM done
@@ -720,7 +745,7 @@ static uint32_t _Encode_NextSlice(uint32_t time,JPEGENC_SLICE_NEXT_T *update_par
 	uint32_t ret = 0;
 	uint32_t value;
 	uint32_t vsp_time_out_cnt = 0;
-
+	int vsp_fd = -1;
 	uint32_t slice_num;
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGEncCodec();
 
@@ -728,16 +753,17 @@ static uint32_t _Encode_NextSlice(uint32_t time,JPEGENC_SLICE_NEXT_T *update_par
 	if(PNULL != update_parm_ptr) {
 		JpegEnc_VspTopUpdateYUVAddr(update_parm_ptr->yuv_phy_buf,update_parm_ptr->yuv_u_phy_buf);
 	}
+	vsp_fd = jpeg_fw_codec->fd;
 	JPEG_HWUpdateMEABufInfo();
 	slice_num = jpeg_fw_codec->slice_num;
 	buf_id = jpeg_fw_codec->buf_id;
-	
+
 	SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM E,slice_num=%d.\n",slice_num);
 
 	JPEG_HWSet_MEA_Buf_ReadOnly(buf_id);
 
 	SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM X, buf_id: %d.\n", buf_id);
-
+#if 0
 	while(1)
 	{
 		value = VSP_READ_REG(VSP_DCAM_REG_BASE + DCAM_INT_RAW_OFF, "read the interrupt register.");
@@ -779,14 +805,33 @@ static uint32_t _Encode_NextSlice(uint32_t time,JPEGENC_SLICE_NEXT_T *update_par
 		vsp_time_out_cnt++;
 		usleep(1000);
 	}	
-
+#else
+	ret = ioctl(vsp_fd,VSP_ACQUAIRE_MEA_DONE,time);
+	SCI_TRACE_LOW("after ioctl VSP_ACQUAIRE_MEA_DONE ret %d",ret);
+	if(2 == ret) {
+		SCI_TRACE_LOW("_Encode_NextSlice stream buf is small.\n");
+		ret = 2;
+	} else if(1 == ret) {
+		SCI_TRACE_LOW("_Encode_NextSlice, time out..\n");
+		ret = 1;
+	} else if (0 == ret) {
+		SCI_TRACE_LOW("VSP_ACQUAIRE_MEA_DONE OK!\n");
+		 if(slice_num>0) {
+			JPEG_HWUpdateMEABufInfo();
+			JPGEENC_Clear_INT(0x4000);
+			ret = 0;
+		 } else {
+		 	JPGEENC_Clear_INT(0x4000);
+			SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM X done.\n");
+			ret = 0;
+		 }
+	}
+#endif
 	//match with start, update buf_id and slice_num
 	jpeg_fw_codec->buf_id = !jpeg_fw_codec->buf_id;
 	jpeg_fw_codec->slice_num--;
 
 	return ret;
-
-	
 }
 
 
@@ -796,8 +841,11 @@ uint32_t JPEGENC_Poll_VLC_BSM_Slice(uint32_t time)
 	uint32_t ret = 0;
 	uint32_t value;
 	uint32_t vsp_time_out_cnt = 0;
-	
-	SCI_TRACE_LOW("JPEGENC_Poll_VLC_BSM E.\n");	
+	int vsp_fd = -1;
+	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGEncCodec();
+	vsp_fd = jpeg_fw_codec->fd;
+	SCI_TRACE_LOW("JPEGENC_Poll_VLC_BSM E.\n");
+#if 0
 	while (1)
 	{
 		value = VSP_READ_REG(VSP_DCAM_REG_BASE + DCAM_INT_RAW_OFF, "read the interrupt register.");		
@@ -820,7 +868,32 @@ uint32_t JPEGENC_Poll_VLC_BSM_Slice(uint32_t time)
 		vsp_time_out_cnt++;
 		usleep(1000);
 	}	
+#else
+while(1)
+	{
+		ret = ioctl(vsp_fd,VSP_ACQUAIRE_MEA_DONE,time);
+		SCI_TRACE_LOW("after  JPEGENC_Poll_VLC_BSM");
+		value = VSP_READ_REG(VSP_DCAM_REG_BASE + DCAM_INT_RAW_OFF, "read the interrupt register.");
 
+		SCI_TRACE_LOW("DCAM_INT_RAW_OFF value %x",value);
+		if(2 == ret) {
+			SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM_OneSlice stream buf is small.\n");
+			JPEGENC_Handle_BSM_INT_Ext();
+			break;
+		} else if(1 == ret) {
+			SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM X, timeout..\n");
+			ret =  0xffffffff;
+			break;
+		} else if (4 == ret) {//VLC done
+			JPGEENC_Clear_INT(0x100);
+			SCI_TRACE_LOW("JPEGENC_Poll_VLC_BSM X.\n");
+			ret = 1;
+			break;
+		} else if (0 == ret) {
+			JPGEENC_Clear_INT(0x4000);
+		}
+	}
+#endif
 	return ret;
 }
 
@@ -949,6 +1022,7 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 	JPEG_ENC_INPUT_PARA_T input_para_ptr;
 	uint32_t slice_height=SLICE_HEIGHT;
 	uint32_t slice_num=0;
+	uint32_t stream_size = 0;
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGEncCodec();
 
 	memset(out_ptr, 0, sizeof(JPEGENC_SLICE_OUT_T));
@@ -966,7 +1040,7 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 		vsp_addr = mmap(NULL,SPRD_VSP_MAP_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,vsp_fd,0);
 		SCI_TRACE_LOW("JPEGENC  vsp addr 0x%x\n",(uint32_t)vsp_addr);
     }
-	
+
     ret =  ioctl(vsp_fd,VSP_ACQUAIRE,NULL);
 	if(ret){
 		SCI_TRACE_LOW("VSP hardware timeout try again %d\n",ret);
@@ -990,13 +1064,33 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 	}
 	jpeg_fw_codec->slice_num = slice_num;
 	jpeg_fw_codec->total_slice_num = slice_num;
-
+    jpeg_fw_codec->fd = vsp_fd;
 	JPEGENC_Poll_MEA_BSM_OneSlice(0xFFF,slice_num);
 
-	jpeg_fw_codec->fd =vsp_fd;
 	jpeg_fw_codec->addr = (uint32)vsp_addr;
 
 	SCI_TRACE_LOW("JPEGENC_Slice_Start: slice num%d.\n", jpeg_fw_codec->slice_num);   
+	if(0 == (slice_num-1)) {
+		SCI_TRACE_LOW("hansen: final.");
+		JPEGENC_Poll_VLC_BSM_Slice(0xFFF);
+
+		if(JPEG_SUCCESS != JPEGENC_stop_encode_ext(&stream_size)) {
+			SCI_TRACE_LOW("JPEGENC fail to JPEGENC_stop_encode.");
+			ret = -1;
+			goto error;
+		}
+		munmap(vsp_addr,SPRD_VSP_MAP_SIZE);
+		ioctl(vsp_fd,VSP_DISABLE,NULL);
+		ioctl(vsp_fd,VSP_RELEASE,NULL);
+		if(vsp_fd >= 0){
+			close(vsp_fd);
+		}
+
+		out_ptr->is_over = 1;
+		out_ptr->stream_size =  stream_size;
+		SCI_TRACE_LOW("JPEGENC_Slice_Start,end stream_size %d.",stream_size);
+
+	}
 	
 error: 
 	if(-1==ret) {

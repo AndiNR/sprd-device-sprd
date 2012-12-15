@@ -114,6 +114,7 @@ private:
 
 	camera_memory_t* GetPmem(const char *device_name, int buf_size, int num_bufs);
 	void FreePmem(camera_memory_t* camera_memory);
+	void* get_redisplay_mem(uint32_t size, uint32_t count, uint32_t *phy_addr);
        
     //SprdCameraHardware();
     //virtual ~SprdCameraHardware();
@@ -128,7 +129,8 @@ private:
        for preview and raw, and need to be updated when libqcamera
        changes.
     */
-    static const int kPreviewBufferCount = 8;
+    static const int kPreviewBufferCount = 4;
+	static const int kPreviewRotBufferCount = 4;
     static const int kRawBufferCount = 1;
     static const int kJpegBufferCount = 1;
     static const int kRawFrameHeaderSize = 0x0;
@@ -145,6 +147,7 @@ private:
     int zoom_flag;
     int zoom_level;
     int mOrientation_parm;
+	int mPreviewStartFlag;
 
     void receivePreviewFrame(camera_frame_type *frame);
     void HandleErrorState(void);
@@ -220,6 +223,7 @@ private:
     camera_memory_t *mRawHeap;
     camera_memory_t *mMiscHeap;
     sp<AshmemPool> mJpegHeap;
+	camera_memory_t *mReDisplayHeap;
 
     bool startCameraIfNecessary();
     bool initPreview();

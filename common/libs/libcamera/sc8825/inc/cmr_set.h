@@ -30,9 +30,6 @@ extern "C"
 
 int camera_setting_init(void);
 int camera_setting_deinit(void);
-int camera_af_ctrl(uint32_t step);
-int camera_ae_get_gain(uint32_t * val);
-int camera_ae_set_gain(uint32_t val);
 int camera_skip_frame_cb(uint32_t rtn,void *param_ptr);
 int camera_proc_start_cb(uint32_t rtn,void *param_ptr);
 int camera_preview_start_set(void);
@@ -47,6 +44,7 @@ int camera_set_ctrl(camera_parm_type id,
 			uint32_t          parm,
 			cmr_before_set_cb before_set,
 			cmr_after_set_cb  after_set);
+int camera_isp_ctrl_done(uint32_t cmd, void* data);
 
 #ifdef __cplusplus
 }

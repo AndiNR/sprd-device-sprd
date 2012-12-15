@@ -123,6 +123,7 @@ int camera_get_trim_rect(struct img_rect *src_trim_rect, uint32_t zoom_level, st
 		src_trim_rect->start_y,
 		src_trim_rect->width,
 		src_trim_rect->height);
+
 	return CAMERA_SUCCESS;
 }
 
@@ -571,7 +572,7 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 		CMR_LOGV("file name %s", file_name);
 
 		fp = fopen(file_name, "wb");
-		fwrite((void*)addr->addr_y, 1,  width * height, fp);
+		fwrite((void*)addr->addr_y, 1,  (uint32_t)(width * height * 5 / 4), fp);
 	        fclose(fp);
 	}
 	return 0;

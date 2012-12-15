@@ -259,10 +259,10 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *cfg)
 		format.fmt.pix.height = cfg->cfg0.dst_img_size.height;
 		format.fmt.pix.pixelformat = pxl_fmt; //fourecc
 		format.fmt.pix.priv = cfg->cfg0.need_isp;
+		ret = ioctl(fd, VIDIOC_TRY_FMT, &format);
+		CMR_RTN_IF_ERR(ret);
+		ret_channel_num++;
 	}
-	ret = ioctl(fd, VIDIOC_TRY_FMT, &format);
-	CMR_RTN_IF_ERR(ret);
-	ret_channel_num++;
 
 	/* lastly,  check whether the output format described by cfg->cfg1 can be supported by the low layer */
 	if (cfg->channel_num == 2) {
@@ -292,12 +292,19 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *cfg)
 			format.fmt.pix.width = cfg->cfg1.dst_img_size.width;
 			format.fmt.pix.height = cfg->cfg1.dst_img_size.height;
 			format.fmt.pix.pixelformat = pxl_fmt; //fourecc
+			CMR_LOGI("type, w, h, pixelformat, 0x%x %d %d 0x%x",
+				format.type, format.fmt.pix.width,
+				format.fmt.pix.height, format.fmt.pix.pixelformat);
+
+			ret = ioctl(fd, VIDIOC_TRY_FMT, &format);
+			if (0 == ret) {
+				ret_channel_num++;
+				cfg->cfg1.need_isp = format.fmt.pix.priv;
+			} else {
+				CMR_LOGV("Failed, %d", ret);
+			}
 		}
-		ret = ioctl(fd, VIDIOC_TRY_FMT, &format);
-		if (0 == ret) {
-			ret_channel_num++;
-			cfg->cfg1.need_isp = format.fmt.pix.priv;
-		}
+
 	}
 
 exit:
@@ -385,7 +392,7 @@ int cmr_v4l2_cap_start(uint32_t skip_num)
 	}
 
 exit:
-    CMR_LOGV("ret = %d.",ret);
+	CMR_LOGV("ret = %d.",ret);
 	return ret;
 }
 
@@ -487,14 +494,21 @@ int cmr_v4l2_free_frame(uint32_t channel_num, uint32_t index)
 	return ret;
 }
 
-int cmr_v4l2_scale_capability(uint32_t *width)
+int cmr_v4l2_scale_capability(uint32_t *width, uint32_t *sc_factor)
 {
+	uint32_t                 rd_word[2];
 	int                      ret = 0;
 
+	if (NULL == width || NULL == sc_factor) {
+		CMR_LOGE("Wrong param, 0x%x 0x%x", width, sc_factor);
+		return -ENODEV;
+	}
 	CMR_CHECK_FD;
 
-	ret = read(fd, width, sizeof(uint32_t));
-	CMR_LOGV("width %d", *width);
+	ret = read(fd, rd_word, 2*sizeof(uint32_t));
+	*width = rd_word[0];
+	*sc_factor = rd_word[1];
+	CMR_LOGV("width %d, sc_factor %d", *width, *sc_factor);
 	return ret;
 }
 
@@ -606,14 +620,14 @@ static void* cmr_v4l2_thread_proc(void* data)
 				on_flag = is_on;
 				pthread_mutex_unlock(&status_mutex);
 				if (on_flag) {
-				pthread_mutex_lock(&cb_mutex);
-				if (v4l2_evt_cb) {
-					(*v4l2_evt_cb)(evt_id, &frame);
+					pthread_mutex_lock(&cb_mutex);
+					if (v4l2_evt_cb) {
+						(*v4l2_evt_cb)(evt_id, &frame);
+					}
+					pthread_mutex_unlock(&cb_mutex);
 				}
-				pthread_mutex_unlock(&cb_mutex);
-			}
 
-		}
+			}
 
 		}
 	}

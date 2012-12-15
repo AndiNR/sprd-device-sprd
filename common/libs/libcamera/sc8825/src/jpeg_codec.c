@@ -31,10 +31,11 @@
 #define JPEG_EVT_STOP		(1 << 20)
 #define JPEG_EVT_KILL		(1 << 21)
 #define JPEG_EVT_ENC_EXIF	(1 << 22)
-
+#define JPEG_EVT_ENC_THUMB	(1 << 23)
 
 #define JPEG_EVT_MASK_BITS	(uint32_t)(JPEG_EVT_ENC_START | JPEG_EVT_ENC_NEXT | \
-	JPEG_EVT_DEC_START | JPEG_EVT_DEC_NEXT | JPEG_EVT_STOP | JPEG_EVT_KILL | JPEG_EVT_ENC_EXIF)
+	JPEG_EVT_DEC_START | JPEG_EVT_DEC_NEXT | JPEG_EVT_STOP | JPEG_EVT_KILL | \
+	JPEG_EVT_ENC_EXIF | JPEG_EVT_ENC_THUMB)
 
 typedef struct
 {
@@ -119,14 +120,16 @@ typedef struct
 	uint32_t    cur_line_num;
 	uint32_t    cur_id; /*0: ping; 1: pang*/
 	uint32_t	is_finish;   /*0: on going; 1: finished*/
+	uint32_t    is_thumbnail;
 }JPEG_ENC_T;
 
-static JPEG_WEXIF_CB_PARAM_T s_exif_output;
+static struct jpeg_wexif_cb_param s_exif_output;
 
 static JPEG_CONTEXT_T  jcontext;
+static JPEG_ENC_CB_PARAM_T s_thumbnail;
 static void* _thread_proc(void* data);
 static int _kill_thread(void);
-static  int  _dec_next(uint32_t handle, JPEG_DEC_NXT_PARAM *param_ptr);
+static  int  _dec_next(uint32_t handle, struct jpeg_dec_next_param *param_ptr);
 
 static void savedata(uint32_t buf_addr, uint32_t size)
 {
@@ -249,7 +252,7 @@ static  int  _enc_start(uint32_t handle)
 	uint32_t jpeg_enc_buf_phys_addr;
 	uint32_t *jpeg_enc_buf_virt_addr;
 	uint32_t jpeg_enc_buf_len;
-	uint32_t i;
+	uint32_t i = 0;
 	uint32_t jpeg_ret = 0;
 	JPEG_ENC_T *enc_cxt_ptr = NULL;
 	JPEGENC_SLICE_OUT_T slice_out;
@@ -268,6 +271,10 @@ static  int  _enc_start(uint32_t handle)
 		jenc_parm_ptr->set_slice_height = 128;//enc_cxt_ptr->slice_height;
 	} else{
 		jenc_parm_ptr->set_slice_height = enc_cxt_ptr->slice_height;
+	}
+	if(1 == enc_cxt_ptr->is_thumbnail) {
+		jenc_parm_ptr->set_slice_height = enc_cxt_ptr->size.height;
+		CMR_LOGV("thumbnail enc: set_slice_height = %d.",jenc_parm_ptr->set_slice_height);
 	}
 #if 0
 	enc_cxt_ptr->ping_buf_y_phy = enc_cxt_ptr->temp_buf_phy;
@@ -317,7 +324,8 @@ static  int  _enc_start(uint32_t handle)
 #endif
 	jenc_parm_ptr->stream_virt_buf[0] = jpeg_enc_buf_virt_addr;
 	jenc_parm_ptr->stream_phy_buf[0] = jpeg_enc_buf_phys_addr;
-	CMR_LOGV("encoder: jpegenc_params[%d]: virt: %x, phys: %x.",i,(uint32_t)jenc_parm_ptr->stream_virt_buf[i],jenc_parm_ptr->stream_phy_buf[i]);
+	CMR_LOGV("encoder: jpegenc_params[%d]: virt: %x, phys: %x,size %d.",
+		i,(uint32_t)jenc_parm_ptr->stream_virt_buf[i],jenc_parm_ptr->stream_phy_buf[i],jpeg_enc_buf_len);
 
 	jenc_parm_ptr->stream_buf_len = jpeg_enc_buf_len;
 	jenc_parm_ptr->stream_size = 0;
@@ -331,7 +339,7 @@ static  int  _enc_start(uint32_t handle)
 	//if frame, and still use slice mode for sc8810 to keep the same  interface to top layer
 	if(enc_cxt_ptr->slice_height == enc_cxt_ptr->size.height ){
 		uint32_t cur_slice_height = jenc_parm_ptr->set_slice_height;
-		uint32_t slice_num =  enc_cxt_ptr->size.height/cur_slice_height;
+		int slice_num =  (int)(enc_cxt_ptr->size.height/cur_slice_height);
 		uint32_t cur_ver_pos = enc_cxt_ptr->cur_line_num;
 		uint32_t buf_id = 1;
 		uint32_t cur_y_buf_adr = 0;
@@ -345,6 +353,7 @@ static  int  _enc_start(uint32_t handle)
 
 		CMR_LOGV("jpeg: slice num: %d", slice_num);
 		slice_num--;/*start has process one slice*/
+		if(0 != slice_num) {
 		do {
 			if(1 == jcontext.is_stop) {
 				CMR_LOGI("force stop enode.");
@@ -371,6 +380,12 @@ static  int  _enc_start(uint32_t handle)
 			}
 			slice_num--;
 		}while(0 <  slice_num);
+		} else {
+			enc_cxt_ptr->is_finish = 1;
+			enc_cxt_ptr->stream_real_size = slice_out.stream_size;
+			enc_cxt_ptr->cur_line_num = enc_cxt_ptr->size.height;
+			CMR_LOGE("jpeg: slice num:slice size: %d", slice_out.stream_size);
+		}
 		CMR_LOGV("slice_num %d.",slice_num);
 	}
 
@@ -386,7 +401,7 @@ enc_start_end:
 
 
 //assume the slice height is the same, except the last one
-static  int  _enc_next(uint32_t handle, JPEG_ENC_NXT_PARAM *param_ptr)
+static  int  _enc_next(uint32_t handle, struct jpeg_enc_next_param *param_ptr)
 {
 	int ret = JPEG_CODEC_SUCCESS;
 	uint32_t jpeg_enc_buf_phys_addr;
@@ -618,7 +633,7 @@ static int _dec_start(uint32_t handle)
 	JPEG_DEC_T *dec_cxt_ptr = (JPEG_DEC_T *)handle;
 	JPEGDEC_PARAMS_T  jpegdec_params;
 	JPEGDEC_SLICE_OUT_T slice_out;
-	JPEG_DEC_NXT_PARAM next_param;
+	struct jpeg_dec_next_param next_param;
 
 	CMR_LOGI("dec slice height %d.",dec_cxt_ptr->slice_height);
 
@@ -685,7 +700,7 @@ static int _dec_start(uint32_t handle)
 
 }
 
-static  int  _dec_next(uint32_t handle, JPEG_DEC_NXT_PARAM *param_ptr)
+static  int  _dec_next(uint32_t handle, struct jpeg_dec_next_param *param_ptr)
 {
 	int ret = JPEG_CODEC_SUCCESS;
 	JPEGDEC_SLICE_OUT_T slice_out;
@@ -784,7 +799,7 @@ static int _jpeg_stop(uint32_t handle)
 	return JPEG_CODEC_SUCCESS;
 }
 
-static int _jpeg_enc_wexif(JPEG_ENC_EXIT_PARAM *param_ptr,JPEG_WEXIF_CB_PARAM_T *out_ptr)
+static int _jpeg_enc_wexif(struct jpeg_enc_exif_param *param_ptr,struct jpeg_wexif_cb_param *out_ptr)
 {
 	int ret = JPEG_CODEC_SUCCESS;
 	JINF_WEXIF_IN_PARAM_T input_param;
@@ -827,10 +842,10 @@ static void* _thread_proc(void* data)
 	uint32_t evt;
 	uint32_t handle = 0;
 	JPEG_HANDLE_T *handle_ptr = NULL;
-	JPEG_ENC_NXT_PARAM *param_ptr = NULL;
-	JPEG_DEC_NXT_PARAM *dec_param_ptr = NULL;
+	struct jpeg_enc_next_param *param_ptr = NULL;
+	struct jpeg_dec_next_param *dec_param_ptr = NULL;
 	JPEG_ENC_T *enc_cxt_ptr = NULL;
-	JPEG_WEXIF_CB_PARAM_T wexif_out_param;
+	struct jpeg_wexif_cb_param wexif_out_param;
 	CMR_MSG_INIT(message);
 	CMR_LOGV("JPEG Thread In \n");
 
@@ -866,7 +881,7 @@ static void* _thread_proc(void* data)
 			CMR_LOGE("jpeg:receive JPEG_EVT_ENC_START message");
 			break;
 		case  JPEG_EVT_ENC_NEXT:
-			param_ptr = (JPEG_ENC_NXT_PARAM*)message.data;
+			param_ptr = (struct jpeg_enc_next_param*)message.data;
 			handle_ptr = (JPEG_HANDLE_T*)param_ptr->handle;
 			handle = handle_ptr->handle;
 			enc_cxt_ptr = (JPEG_ENC_T * )handle;
@@ -902,11 +917,11 @@ static void* _thread_proc(void* data)
 			CMR_LOGI("jpeg:receive JPEG_EVT_DEC_START message");
 			break;
 		case  JPEG_EVT_DEC_NEXT:
-			dec_param_ptr = (JPEG_DEC_NXT_PARAM*)message.data;
+			dec_param_ptr = (struct jpeg_dec_next_param*)message.data;
 			handle_ptr = (JPEG_HANDLE_T*)dec_param_ptr->handle;
 			handle = handle_ptr->handle;
 			if(0 != message.data) {
-				ret = _dec_next( handle, (JPEG_DEC_NXT_PARAM *)message.data);
+				ret = _dec_next( handle, (struct jpeg_dec_next_param *)message.data);
 			}
 
 			if(JPEG_CODEC_SUCCESS == ret){
@@ -927,7 +942,7 @@ static void* _thread_proc(void* data)
 			break;
 
 		case JPEG_EVT_ENC_EXIF:
-			ret = _jpeg_enc_wexif((JPEG_ENC_EXIT_PARAM*)message.data,&wexif_out_param);
+			ret = _jpeg_enc_wexif((struct jpeg_enc_exif_param*)message.data,&wexif_out_param);
 			if(JPEG_CODEC_SUCCESS == ret){
 				s_exif_output = wexif_out_param;
 			} else {
@@ -944,6 +959,17 @@ static void* _thread_proc(void* data)
 				jcontext.event_cb(CMR_JPEG_ERR, NULL );
 			}
 			#endif
+			break;
+		case JPEG_EVT_ENC_THUMB:
+			handle = (uint32_t )message.data;
+			ret = _enc_start(handle);
+			memset((void*)&s_thumbnail,0,sizeof(JPEG_ENC_CB_PARAM_T));
+			if(JPEG_CODEC_SUCCESS == ret){
+				_prc_enc_cbparam(handle, &s_thumbnail);
+			}
+			sem_post(&jcontext.sync_sem);
+			CMR_LOGI("enc thumbnail enc done,ret = %d.",ret);
+			break;
 		default:
 			CMR_LOGE("jpeg: not correct message");
 			break;
@@ -979,7 +1005,7 @@ int jpeg_init(void)
 	return ret;
 }
 
-static int _check_enc_start_param(JPEG_ENC_INPUT_PARAM *in_parm_ptr, JPEG_ENC_OUTPUT_PARAM *out_parm_ptr)
+static int _check_enc_start_param(struct jpeg_enc_in_param *in_parm_ptr, struct jpeg_enc_out_param *out_parm_ptr)
 {
 	int ret = JPEG_CODEC_SUCCESS;
 
@@ -1004,7 +1030,7 @@ static int _check_enc_start_param(JPEG_ENC_INPUT_PARAM *in_parm_ptr, JPEG_ENC_OU
 }
 
 
-static int _get_enc_start_param(JPEG_ENC_T *cxt_ptr, JPEG_ENC_INPUT_PARAM *in_parm_ptr, JPEG_ENC_OUTPUT_PARAM *out_parm_ptr)
+static int _get_enc_start_param(JPEG_ENC_T *cxt_ptr, struct jpeg_enc_in_param *in_parm_ptr, struct jpeg_enc_out_param *out_parm_ptr)
 {
 	int ret = JPEG_CODEC_SUCCESS;
 
@@ -1053,13 +1079,13 @@ void jpeg_getcapability(JPEG_CAPABLIITY_T *param_ptr)
 	param_ptr->max_ytouvoffset = 1024;
 }
 
-static int _check_dec_start_param(JPEG_DEC_IN_PARAM *start_in_parm_ptr, JPEG_DEC_OUT_PARAM *start_out_parm_ptr)
+static int _check_dec_start_param(struct jpeg_dec_in_param *start_in_parm_ptr, struct jpeg_dec_out_param *start_out_parm_ptr)
 {
 	int ret = JPEG_CODEC_SUCCESS;
 	return ret;
 }
 
-static int _get_dec_start_param(JPEG_DEC_T *cxt_ptr, JPEG_DEC_IN_PARAM *in_parm_ptr, JPEG_DEC_OUT_PARAM *out_parm_ptr)
+static int _get_dec_start_param(JPEG_DEC_T *cxt_ptr, struct jpeg_dec_in_param *in_parm_ptr, struct jpeg_dec_out_param *out_parm_ptr)
 {
 	int ret = JPEG_CODEC_SUCCESS;
 
@@ -1093,7 +1119,7 @@ static int _get_dec_start_param(JPEG_DEC_T *cxt_ptr, JPEG_DEC_IN_PARAM *in_parm_
 
 }
 
-static int _check_wexif_param(JPEG_ENC_EXIT_PARAM *param_ptr)
+static int _check_wexif_param(struct jpeg_enc_exif_param *param_ptr)
 {
 	int ret = JPEG_CODEC_SUCCESS;
 
@@ -1109,7 +1135,7 @@ static int _check_wexif_param(JPEG_ENC_EXIT_PARAM *param_ptr)
 	return ret;
 }
 
-int jpeg_enc_start(JPEG_ENC_INPUT_PARAM *in_parm_ptr, JPEG_ENC_OUTPUT_PARAM *out_parm_ptr)
+int jpeg_enc_start(struct jpeg_enc_in_param *in_parm_ptr, struct jpeg_enc_out_param *out_parm_ptr)
 {
 	int ret = JPEG_CODEC_SUCCESS;
 	JPEG_ENC_T *enc_cxt_ptr = 0;
@@ -1159,12 +1185,12 @@ int jpeg_enc_start(JPEG_ENC_INPUT_PARAM *in_parm_ptr, JPEG_ENC_OUTPUT_PARAM *out
 	return JPEG_CODEC_SUCCESS;
 }
 
-int jpeg_enc_next(JPEG_ENC_NXT_PARAM *param_ptr)
+int jpeg_enc_next(struct jpeg_enc_next_param *param_ptr)
 {
 	JPEG_ENC_T *enc_cxt_ptr = 0;
 	uint32_t  ret = CMR_MSG_SUCCESS;
 	JPEG_HANDLE_T *handle_ptr = NULL;
-	JPEG_ENC_NXT_PARAM *data_ptr = NULL;
+	struct jpeg_enc_next_param *data_ptr = NULL;
 
 	uint32_t handle = 0;
 
@@ -1198,13 +1224,13 @@ int jpeg_enc_next(JPEG_ENC_NXT_PARAM *param_ptr)
 		}
 	}
 
-	data_ptr = (JPEG_ENC_NXT_PARAM *)malloc(sizeof(JPEG_ENC_NXT_PARAM ));
+	data_ptr = (struct jpeg_enc_next_param *)malloc(sizeof(struct jpeg_enc_next_param ));
 
 	if(0 == data_ptr){
 		return JPEG_CODEC_NO_MEM;
 	}
 
-	memcpy(data_ptr, param_ptr, sizeof(JPEG_ENC_NXT_PARAM));
+	memcpy(data_ptr, param_ptr, sizeof(struct jpeg_enc_next_param));
 
 
 	message.msg_type = JPEG_EVT_ENC_NEXT;
@@ -1223,7 +1249,7 @@ int jpeg_enc_next(JPEG_ENC_NXT_PARAM *param_ptr)
 }
 
 
-int jpeg_dec_start(JPEG_DEC_IN_PARAM  *in_parm_ptr, JPEG_DEC_OUT_PARAM *out_parm_ptr)
+int jpeg_dec_start(struct jpeg_dec_in_param  *in_parm_ptr, struct jpeg_dec_out_param *out_parm_ptr)
 {
 	int ret = JPEG_CODEC_SUCCESS;
 	JPEG_DEC_T *dec_cxt_ptr = 0;
@@ -1273,13 +1299,13 @@ int jpeg_dec_start(JPEG_DEC_IN_PARAM  *in_parm_ptr, JPEG_DEC_OUT_PARAM *out_parm
 
 //useless function, some mode can not be support.
 //slice mode can not be supp
-int jpeg_dec_next(JPEG_DEC_NXT_PARAM *param_ptr)
+int jpeg_dec_next(struct jpeg_dec_next_param *param_ptr)
 {
 	int ret = JPEG_CODEC_SUCCESS;
 	JPEG_DEC_T *dec_cxt_ptr = 0;
 	JPEG_HANDLE_T * handle_ptr = 0;
 	uint32_t handle = 0;
-	JPEG_DEC_NXT_PARAM *data_ptr = NULL;
+	struct jpeg_dec_next_param *data_ptr = NULL;
 
 	CMR_MSG_INIT(message);
 
@@ -1307,11 +1333,11 @@ int jpeg_dec_next(JPEG_DEC_NXT_PARAM *param_ptr)
 			return JPEG_CODEC_PARAM_ERR;
 		}
 	}
-	data_ptr = (JPEG_DEC_NXT_PARAM*)malloc(sizeof(JPEG_DEC_NXT_PARAM));
+	data_ptr = (struct jpeg_dec_next_param*)malloc(sizeof(struct jpeg_dec_next_param));
 	if(0 == data_ptr){
 		return JPEG_CODEC_NO_MEM;
 	}
-	memcpy(data_ptr, param_ptr, sizeof(JPEG_DEC_NXT_PARAM));
+	memcpy(data_ptr, param_ptr, sizeof(struct jpeg_dec_next_param));
 
 	message.msg_type = JPEG_EVT_DEC_NEXT;
 	message.data = data_ptr;
@@ -1380,10 +1406,10 @@ void jpeg_evt_reg(cmr_evt_cb  adp_event_cb)
 	return ;
 }
 
-int jpeg_enc_add_eixf(JPEG_ENC_EXIT_PARAM *param_ptr,JPEG_WEXIF_CB_PARAM_T *output_ptr)
+int jpeg_enc_add_eixf(struct jpeg_enc_exif_param *param_ptr,struct jpeg_wexif_cb_param *output_ptr)
 {
 	int ret = JPEG_CODEC_SUCCESS;
-	JPEG_ENC_EXIT_PARAM *data = NULL;
+	struct jpeg_enc_exif_param *data = NULL;
 	CMR_MSG_INIT(message);
 
 	message.msg_type = JPEG_EVT_ENC_EXIF;
@@ -1397,7 +1423,7 @@ int jpeg_enc_add_eixf(JPEG_ENC_EXIT_PARAM *param_ptr,JPEG_WEXIF_CB_PARAM_T *outp
 		return JPEG_CODEC_PARAM_ERR;
 	}
 
-	data = (JPEG_ENC_EXIT_PARAM*)malloc(sizeof(JPEG_ENC_EXIT_PARAM));
+	data = (struct jpeg_enc_exif_param*)malloc(sizeof(struct jpeg_enc_exif_param));
 
 	if(NULL == data) {
 		return JPEG_CODEC_NO_MEM;
@@ -1425,6 +1451,66 @@ int jpeg_enc_add_eixf(JPEG_ENC_EXIT_PARAM *param_ptr,JPEG_WEXIF_CB_PARAM_T *outp
 	}
 
 	CMR_LOGI("output addr 0x%x,size %d.",output_ptr->output_buf_virt_addr,output_ptr->output_buf_size);
+	return ret;
+}
+
+int jpeg_enc_thumbnail(struct jpeg_enc_in_param *in_parm_ptr, uint32_t *stream_size_ptr)
+{
+	int ret = JPEG_CODEC_SUCCESS;
+	JPEG_ENC_T *enc_cxt_ptr = 0;
+	JPEG_HANDLE_T * handle_ptr = 0;
+	CMR_MSG_INIT(message);
+
+	message.msg_type = JPEG_EVT_ENC_THUMB;
+
+	if(JPEG_SUCCESS != _check_enc_start_param(in_parm_ptr, NULL)){
+		return JPEG_CODEC_PARAM_ERR;
+	}
+/*	save_inputdata(in_parm_ptr->src_addr_vir.addr_y,in_parm_ptr->src_addr_vir.addr_u,320*240);*/
+
+	enc_cxt_ptr = (JPEG_ENC_T *)malloc(sizeof(JPEG_ENC_T));
+
+	CMR_LOGV("thumbnail enc: 0x%x", (uint32_t)enc_cxt_ptr);
+
+	if(NULL == enc_cxt_ptr  ) {
+		return JPEG_CODEC_NO_MEM;
+	}
+	memset(enc_cxt_ptr, 0, sizeof(JPEG_ENC_T));
+
+	handle_ptr = (JPEG_HANDLE_T *)malloc(sizeof(JPEG_HANDLE_T));
+
+	if(NULL == handle_ptr ) {
+		free(enc_cxt_ptr);
+		return JPEG_CODEC_NO_MEM;
+	}
+
+	if(JPEG_SUCCESS != _get_enc_start_param(enc_cxt_ptr,in_parm_ptr, NULL )) {
+		return JPEG_CODEC_PARAM_ERR;
+	}
+
+	message.msg_type = JPEG_EVT_ENC_THUMB;
+	message.data = enc_cxt_ptr;
+	enc_cxt_ptr->is_thumbnail = 1;
+	ret = cmr_msg_post(jcontext.msg_queue_handle, &message);
+
+	if(CMR_MSG_SUCCESS != ret) {
+		free(handle_ptr);
+		free(enc_cxt_ptr);
+		return JPEG_CODEC_ERROR;
+	}
+
+	sem_wait(&jcontext.sync_sem);
+	jcontext.active_handle = (uint32_t)(handle_ptr);
+
+	*stream_size_ptr = 0;
+	if(0 != s_thumbnail.stream_size) {
+		*stream_size_ptr = s_thumbnail.stream_size;
+	} else {
+		ret = JPEG_CODEC_ERROR;
+	}
+/*	savedata(in_parm_ptr->stream_buf_vir,s_thumbnail.stream_size);*/
+	CMR_LOGV("return %d.",ret);
+
 	return ret;
 }
 

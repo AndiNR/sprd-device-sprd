@@ -24,6 +24,7 @@ extern "C"
 #include "cmr_common.h"
 
 #define JPEG_EXIF_SIZE	(64*1024)
+#define CMR_ISP_YUV422  0
 
 
 struct cmr_cap_2_frm {
@@ -41,17 +42,21 @@ struct cmr_cap_mem {
 	struct img_frm  jpeg_tmp;
 	struct img_frm  scale_tmp;
 	struct img_frm  cap_yuv_rot;
+	struct img_frm  isp_tmp;
 };
 
-int camera_capture_buf_size(struct img_size *image_size,
+int camera_capture_buf_size(uint32_t camera_id,
+								struct img_size *image_size,
 								uint32_t *size_major,
 								uint32_t *size_minor);
 int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
-								struct img_size *image_size,
-								uint32_t orig_fmt,
-								struct img_rect *cap_rect,
-								struct img_size *thum_size,
-								struct cmr_cap_mem *capture_mem);
+						struct img_size *sn_size,
+						struct img_rect *sn_trim,
+						struct img_size *image_size,
+						uint32_t orig_fmt,
+						struct img_size *cap_size,
+						struct img_size *thum_size,
+						struct cmr_cap_mem *capture_mem);
 
 #ifdef __cplusplus
 }

@@ -23,7 +23,7 @@ extern "C"
 
 #include "cmr_common.h"
 
-#define V4L2_BUF_MAX                   8
+#define V4L2_BUF_MAX                   4
 
 enum v4l2_sensor_format {
 	V4L2_SENSOR_FORMAT_YUV = 0,
@@ -87,7 +87,7 @@ int cmr_v4l2_cap_stop(void);
 int cmr_v4l2_cap_resume(uint32_t skip_number);
 int cmr_v4l2_cap_pause(void);
 int cmr_v4l2_free_frame(uint32_t channel_num, uint32_t index);
-int cmr_v4l2_scale_capability(uint32_t *width);
+int cmr_v4l2_scale_capability(uint32_t *width, uint32_t *sc_factor);
 
 #ifdef __cplusplus
 }

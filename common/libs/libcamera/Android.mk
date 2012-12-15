@@ -55,6 +55,7 @@ endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
 LOCAL_C_INCLUDES := \
+	$(LOCAL_PATH)/ispvideo	\
 	$(LOCAL_PATH)/vsp/sc8825/inc	\
 	$(LOCAL_PATH)/vsp/sc8825/src \
 	$(LOCAL_PATH)/jpeg_fw_8825/inc \
@@ -83,11 +84,6 @@ LOCAL_SRC_FILES:= \
 	sc8825/src/dc_product_cfg.c \
 	sc8825/src/sensor_cfg.c \
 	sc8825/src/sensor_drv_u.c \
-	sc8825/isp/src/isp_app.c \
-	sc8825/isp/src/isp_ae.c \
-	sc8825/isp/src/isp_af.c \
-	sc8825/isp/src/isp_awb.c \
-	sc8825/isp/src/isp_drv_v0000.c \
 	sensor/sensor_ov5640_raw.c  \
 	sensor/sensor_ov5640.c  \
 	sensor/sensor_ov2640.c  \
@@ -122,7 +118,8 @@ LOCAL_SRC_FILES:= \
 	jpeg_fw_8825/src/jpegdec_vld.c \
 	jpeg_fw_8825/src/jpegdec_api.c  \
 	jpeg_fw_8825/src/exif_writer.c  \
-	jpeg_fw_8825/src/jpeg_stream.c
+	jpeg_fw_8825/src/jpeg_stream.c \
+	ispvideo/isp_video.c
 endif
 
 
@@ -149,24 +146,44 @@ ifeq ($(strip $(TARGET_BOARD_NO_FRONT_SENSOR)),true)
 LOCAL_CFLAGS += -DCONFIG_DCAM_SENSOR_NO_FRONT_SUPPORT
 endif
 
-ifeq ($(strip $(CAMERA_DISP_ION)),true)
-LOCAL_CFLAGS += -DUSE_ION_MEM
-endif
-
 ifeq ($(strip $(TARGET_BOARD_Z788)),true)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_788
 endif
 
+ifneq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_ISP
+endif
 
 ifeq ($(strip $(TARGET_BOARD_FRONT_CAMERA_ROTATION)),true)
-LOCAL_CFLAGS += -DCONFIG_CAMERA_ROTATION
+LOCAL_CFLAGS += -DCONFIG_FRONT_CAMERA_ROTATION
+endif
+
+ifeq ($(strip $(TARGET_BOARD_BACK_CAMERA_ROTATION)),true)
+LOCAL_CFLAGS += -DCONFIG_BACK_CAMERA_ROTATION
+endif
+
+ifeq ($(strip $(CAMERA_DISP_ION)),true)
+LOCAL_CFLAGS += -DUSE_ION_MEM
 endif
         
 LOCAL_MODULE := camera.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_TAGS := optional
-
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
+LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp
+else
 LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware
+endif
 
 include $(BUILD_SHARED_LIBRARY)
 
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
+include $(CLEAR_VARS)
+
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE := libisp.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)
+LOCAL_SRC_FILES := sc8825/isp/$(LOCAL_MODULE)
+
+include $(BUILD_PREBUILT)
+endif

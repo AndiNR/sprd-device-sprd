@@ -28,6 +28,9 @@ enum cmr_img_cvt_evt {
 	CMR_IMG_CVT_SC_DONE,
 };
 
+enum cmr_img_cvt_ret {
+	CVT_RET_LAST = 1,
+};
 //#define ROT_IO_IS_DONE             0xEE000000
 #define SCALER_IS_DONE             0xFF000000
 
@@ -43,6 +46,11 @@ int cmr_rot(enum img_rot_angle  angle,
 
 int cmr_rot_cpy(struct img_frm  *src_img,
 			struct img_frm  *dst_img);
+
+int cmr_rot_cpy_to_virtual(struct img_frm  *src_img,
+			struct img_frm  *dst_img);
+
+int cmr_rot_wait_done(void);
 
 int cmr_rot_deinit(void);
 
@@ -63,7 +71,7 @@ int  cmr_scale_next(uint32_t     slice_height,
 		struct img_frm  *dst_frm);
 
 int cmr_scale_deinit(void);
-int cmr_scale_capability(uint32_t *width);
+int cmr_scale_capability(uint32_t *width, uint32_t *sc_factor);
 
 #ifdef __cplusplus
 }

@@ -58,8 +58,8 @@ typedef struct {
 }ISP_IMAGE_HEADER_T;
 
 #define CMD_BUF_SIZE  1024 // 1k
-#define SEND_IMAGE_SIZE 2048 // 2k
-#define DATA_BUF_SIZE 6144 // 6k
+#define SEND_IMAGE_SIZE 64512 // 63k
+#define DATA_BUF_SIZE 65536 //64k
 #define PORT_NUM 16666        /* Port number for server */
 #define BACKLOG 5
 #define ISP_CMD_SUCCESS             0x0000
@@ -79,63 +79,7 @@ static int getpic_flag = 0; // 1: call get pic
 static sem_t thread_sem_lock;
 static int wire_connected = 0;
 static int sockfd = 0;
-
-static int eng_diag_decode7d7e(char *buf,int len)
-{
-	int i, j;
-	char tmp;
-	DBG("%s: len=%d\n",__FUNCTION__, len);
-	for(i=0; i<len; i++) {
-//		if((buf[i]==0x7d)||(buf[i]==0x7e)){
-		if(buf[i]==0x7d){
-			tmp = buf[i+1]^0x20;
-			DBG("%s: tmp=%x, buf[%d]=%x\n",__FUNCTION__, tmp, i+1, buf[i+1]);
-			buf[i] = tmp;
-			j = i+1;
-			memcpy(&buf[j], &buf[j+1],len-j);
-			len--;	
-			DBG("%s AFTER:[%d]\n",__FUNCTION__, len);
-			for(j=0; j<len; j++) {
-				DBG("%x,",buf[j]);
-			}
-			DBG("\n");
-		}
-	}
-
-	return 0;
-}
-
-static int eng_diag_encode7d7e(char *buf, int len,int *extra_len)
-{
-	int i, j;
-	char tmp;
-
-	DBG("%s: len=%d\n",__FUNCTION__, len);
-
-	for(i=0; i<len; i++) {
-//		if((buf[i]==0x7d)||(buf[i]==0x7e)){
-		if(buf[i]==0x7e){
-			tmp=buf[i]^0x20;
-			DBG("%s: tmp=%x, buf[%d]=%x\n",__FUNCTION__, tmp, i, buf[i]);
-			buf[i]=0x7d;
-			for(j=len; j>i+1; j--) {
-				buf[j] = buf[j-1];
-			}
-			buf[i+1]=tmp;
-			len++;
-			(*extra_len)++;
-
-			DBG("%s: AFTER:[%d]\n",__FUNCTION__, len);
-			for(j=0; j<len; j++) {
-				DBG("%x,",buf[j]);
-			}
-			DBG("\n");
-		}
-	}
-
-	return len;
-
-}
+int sequence_num = 0;
 
 static int handle_img_data(char *imgptr, int imagelen)
 {
@@ -144,32 +88,37 @@ static int handle_img_data(char *imgptr, int imagelen)
 	MSG_HEAD_T *msg_ret;
 	ISP_IMAGE_HEADER_T isp_msg;
 
-	number = imagelen/SEND_IMAGE_SIZE+1;
+	number = (imagelen + SEND_IMAGE_SIZE - 1) /SEND_IMAGE_SIZE;
 	msg_ret = (MSG_HEAD_T *)(eng_rsp_diag+1);
+	DBG("%s: imagelen[%d] number[%d]\n",__FUNCTION__, imagelen, number);
+
 	for (i=0; i<number; i++)
 	{
 		if (i < number-1)
 			len = SEND_IMAGE_SIZE;
 		else
-			len = imagelen-SEND_IMAGE_SIZE*number;
+			len = imagelen-SEND_IMAGE_SIZE*i;
 		rsp_len = sizeof(MSG_HEAD_T)+1;
 
 		// combine data
-		isp_msg.headlen = 4;
+		isp_msg.headlen = 12;
 		isp_msg.imgtype = IMAGE_YUV_TYPE;
 		isp_msg.totalpacket = number;
 		isp_msg.packetsn = i+1;
-
+		DBG("%s: request rsp_len[%d] index[%d] len[%d]\n",__FUNCTION__, rsp_len, i, len);
 		memcpy(eng_rsp_diag+rsp_len, (char *)&isp_msg, sizeof(ISP_IMAGE_HEADER_T));
 		rsp_len += sizeof(ISP_IMAGE_HEADER_T);
 
-		memcpy(eng_rsp_diag+rsp_len, (char *)imgptr+number*SEND_IMAGE_SIZE, len);
-		rlen = eng_diag_encode7d7e((char *)eng_rsp_diag+sizeof(MSG_HEAD_T)+1, rlen, &extra_len);
-		rsp_len = rlen+sizeof(MSG_HEAD_T)+1;
+		DBG("%s: request rsp_len[%d]\n",__FUNCTION__, rsp_len);
+		memcpy(eng_rsp_diag+rsp_len, (char *)imgptr+i*SEND_IMAGE_SIZE, len);
+		rsp_len += len;
 
 		eng_rsp_diag[rsp_len] = 0x7e;
 		msg_ret->len = rsp_len-1;
+		msg_ret->seq_num = sequence_num++;
+		DBG("%s: request rsp_len[%d]\n",__FUNCTION__, rsp_len);
 		res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
+		DBG("%s: send success. res: %d, rsp_len: %d.\n",__FUNCTION__, res, rsp_len + 1);
 	}
 	return 0;
 }
@@ -194,6 +143,10 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 	memset(eng_rsp_diag,0,sizeof(eng_rsp_diag));
 	memcpy(eng_rsp_diag,buf,rsp_len);
 	msg_ret = (MSG_HEAD_T *)(eng_rsp_diag+1);
+
+	if(CMD_GET_PIC != msg->subtype) {
+		msg_ret->seq_num = sequence_num++;
+	}
 
 	switch ( msg->subtype ) {
 		case CMD_START_PREVIEW:
@@ -221,7 +174,6 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 			// rlen is the size of isp_param
 			// pass eng_rsp_diag+rsp_len
 
-			rlen = eng_diag_encode7d7e((char *)eng_rsp_diag+rsp_len, rlen, &extra_len);
 			rsp_len += rlen;
 			eng_rsp_diag[rsp_len] = 0x7e;
 			msg_ret->len = rsp_len-1;
@@ -229,7 +181,6 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 			break;
 
 		case CMD_WRITE_ISP_PARAM:
-			eng_diag_decode7d7e((char *)(buf+sizeof(MSG_HEAD_T)+1),msg->len - sizeof(MSG_HEAD_T));
 			/* TODO:write isp param operation */
 			// pass buf+sizeof(MSG_HEAD_T)+1
 
@@ -257,13 +208,19 @@ void send_img_data(char *imgptr, int imagelen)
 {
 	int ret;
 
-	if ((preview_flag == 1) && (getpic_flag == 1))
+	if (( (preview_flag == 1) && (getpic_flag == 1)) ||
+		( (preview_flag == 0) && (getpic_flag == 1)))
 	{
-		DBG("send_img_data\n");
+		DBG("%s: preview_flag: %d, getpic_flag: %d, imagelen: %d.\n", __FUNCTION__, preview_flag, getpic_flag, imagelen);
+		getpic_flag = 0;
 		ret = handle_img_data(imgptr, imagelen);
-		if (ret != 0)
-			return;
 		sem_post(&thread_sem_lock);
+		if (ret != 0) {
+			DBG("%s: Fail to handle_img_data(). ret = %d.", __FUNCTION__, ret);
+		}
+	}
+	else {
+		DBG("%s: no data. preview_flag: %d, getpic_flag: %d.\n", __FUNCTION__, preview_flag, getpic_flag);
 	}
 }
 
@@ -369,6 +326,7 @@ static void * ispserver_thread(void *args)
 		}
 		DBG("log server connected with client\n");
 		wire_connected = 1;
+		sequence_num = 0;
 		/* Ignore the SIGPIPE signal, so that we find out about broken
 		 * connection errors via a failure from write().
 		 */

@@ -132,7 +132,7 @@ LOCAL uint32_t s_preview_mode;
     {0x0e, 0x61},                                
     {0x0f, 0x4b},                                  
     {0x16, 0x02},                                  
-    {0x1e, 0x17},
+    {0x1e, 0x37},
     {0x21, 0x02},                                  
     {0x22, 0x91},                                  
     {0x29, 0x07},                                  
@@ -311,7 +311,7 @@ LOCAL uint32_t s_preview_mode;
     {0x0e, 0x61},
     {0x0f, 0x4b},
     {0x16, 0x02},
-    {0x1e, 0x17},
+    {0x1e, 0x37},
     {0x21, 0x02},
     {0x22, 0x91},
     {0x29, 0x07},
@@ -504,8 +504,8 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
 
         // External
         set_ov7675_ae_enable,
-        set_hmirror_enable,
-        set_vmirror_enable,
+        PNULL,//set_hmirror_enable,
+        PNULL,//set_vmirror_enable,
 
         set_brightness,
         set_contrast,
@@ -1113,6 +1113,8 @@ LOCAL uint32_t set_brightness(uint32_t level)
 {
         uint16_t i;
         SENSOR_REG_T* sensor_reg_ptr = (SENSOR_REG_T*)ov7675_brightness_tab[level];
+
+		SENSOR_PRINT("wjp:0x%x.",OV7675_ReadReg(0x1e));
 
         if(level>6)
                 return 0;

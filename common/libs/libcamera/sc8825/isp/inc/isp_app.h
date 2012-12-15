@@ -16,22 +16,46 @@
 #ifndef _ISP_APP_H_
 #define _ISP_APP_H_
 /*----------------------------------------------------------------------------*
- **                          Dependencies                                     *
- **---------------------------------------------------------------------------*/
+**				Dependencies					*
+**---------------------------------------------------------------------------*/
 //#include <linux/types.h>
 #include <sys/types.h>
 
 /**---------------------------------------------------------------------------*
-**                               Micro Define                                **
+**				Micro Define					*
 **----------------------------------------------------------------------------*/
 
 typedef int32_t ( *isp_callback)(uint32_t rtn, void* param_ptr);
-typedef int32_t ( *proc_callback)(uint32_t mode, void* param_ptr);
+typedef int32_t ( *proc_callback)(int32_t mode, void* param_ptr);
 typedef int32_t ( *isp_ctrl_fun)(uint32_t param);
+
+#define ISP_EVT_MASK	0x00000F00
 /**---------------------------------------------------------------------------*
-**                               Data Prototype                              **
+**				Data Prototype					*
 **----------------------------------------------------------------------------*/
 //enum
+enum isp_callback_evt{
+	ISP_CALLBACK_EVT=0x00040000,
+	ISP_CALLBACK_MAX
+};
+
+enum isp_callback_cmd{
+	ISP_CTRL_CALLBAC=0x00000000,
+	ISP_PROC_CALLBACK=0x00000100,
+	ISP_AF_NOTICE_CALLBACK=0x00000200,
+	ISP_SKIP_FRAME_CALLBACK=0x00000300,
+	ISP_CALLBACK_CMD_MAX=0xffffffff
+};
+
+enum isp_focus_mode{
+	ISP_FOCUS_NONE=0x00,
+	ISP_FOCUS_TRIG,
+	ISP_FOCUS_ZONE,
+	ISP_FOCUS_MULTI_ZONE,
+	ISP_FOCUS_MACRO,
+	ISP_FOCUS_MAX
+};
+
 enum isp_hdr_level{
 	ISP_HDR_LOW=0x00,
 	ISP_HDR_HIGH,
@@ -161,12 +185,14 @@ enum isp_ctrl_cmd{
 	ISP_CTRL_AUTO_CONTRAST,
 	ISP_CTRL_SATURATION,
 	ISP_CTRL_AF,
+	ISP_CTRL_AF_MODE,
 	ISP_CTRL_CSS,
 	ISP_CTRL_HDR,
 	ISP_CTRL_GLOBAL_GAIN,
 	ISP_CTRL_CHN_GAIN,
 	ISP_CTRL_EXIF,
 	ISP_CTRL_ISO,
+	ISP_CTRL_WB_TRIM,
 	ISP_CTRL_MAX
 };
 
@@ -213,9 +239,14 @@ struct isp_skip_num{
 	uint32_t skip_num;
 };
 
-struct isp_ctrl_func{
-	isp_callback af_notice_cb;
-	isp_callback skip_frame_cb;
+struct isp_af_notice{
+	uint32_t valid_win;
+};
+
+struct isp_af_win{
+	enum isp_focus_mode mode;
+	struct isp_pos_rect win[9];
+	uint32_t valid_win;
 };
 
 struct isp_img_frm{
@@ -228,7 +259,7 @@ struct isp_img_frm{
 struct isp_init_param{
 	void* setting_param_ptr;
 	struct isp_size size;
-	struct isp_ctrl_func ctrl_func;
+	proc_callback ctrl_callback;
 };
 
 struct isp_video_limit{
@@ -248,7 +279,6 @@ struct ips_in_param{
 	uint32_t src_slice_height;
 	struct isp_img_frm dst_frame;
 	uint32_t dst_slice_height;
-	isp_callback callback;
 };
 
 struct ips_out_param{
@@ -259,14 +289,15 @@ struct ipn_in_param{
 	uint32_t src_avail_height;
 	uint32_t src_slice_height;
 	struct isp_addr img_addr_phy;
-	isp_callback callback;
+	struct isp_addr src_addr_phy;
+	struct isp_addr dst_addr_phy;
 };
 
 
 int isp_init(struct isp_init_param* ptr);
 int isp_deinit(void);
 int isp_capbility(enum isp_capbility_cmd cmd, void* param_ptr);
-int isp_ioctl(enum isp_ctrl_cmd cmd, void* param_ptr, int(*callback)());
+int isp_ioctl(enum isp_ctrl_cmd cmd, void* param_ptr);
 int isp_video_start(struct isp_video_start* param_ptr);
 int isp_video_stop(void);
 int isp_proc_start(struct ips_in_param* in_param_ptr, struct ips_out_param* out_param_ptr);

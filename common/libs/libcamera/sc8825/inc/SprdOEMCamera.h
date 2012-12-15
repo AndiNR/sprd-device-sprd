@@ -195,6 +195,7 @@ typedef struct {
 	
 	uint32_t                 buf_id;
 	int64_t                  timestamp;
+	uint32_t                 buffer_uv_phy_addr;	
 } camera_frame_type;
 
 typedef enum
@@ -484,7 +485,8 @@ int camerea_set_preview_format(uint32_t pre_format);
 
 int camera_set_preview_mem(uint32_t phy_addr, uint32_t vir_addr, uint32_t mem_size);
 
-int camera_capture_get_buffer_size(uint32_t width, 
+int camera_capture_get_buffer_size(uint32_t camera_id,
+						uint32_t width,
 						uint32_t height, 
 						uint32_t *size0, 
 						uint32_t *size1);
@@ -504,10 +506,14 @@ int camera_copy_data(uint32_t width,
 int camera_get_data_redisplay(int output_addr, 
 					int output_width, 
 					int output_height, 
-					int input_addr, 
+					int input_addr_y, 
+					int input_addr_uv, 					
 					int input_width, 
 					int input_height);
 
+uint32_t camera_get_rot_set(void);
+
+int camera_copy_data_virtual(uint32_t width, uint32_t height, uint32_t in_addr, uint32_t out_addr);
 
 #ifdef __cplusplus
 }
