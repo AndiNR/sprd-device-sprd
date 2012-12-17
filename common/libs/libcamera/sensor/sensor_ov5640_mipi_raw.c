@@ -30,6 +30,7 @@ LOCAL uint32_t _ov5640_StreamOff(uint32_t param);
 LOCAL uint32_t _ov5640_write_exposure(uint32_t param);
 LOCAL uint32_t _ov5640_write_gain(uint32_t param);
 LOCAL uint32_t _ov5640_write_af(uint32_t param);
+LOCAL uint32_t _ov540_flash(uint32_t param);
 
 
 static uint32_t g_flash_mode_en = 0;
@@ -498,7 +499,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5640_ioctl_func_tab = {
 
 	_ov5640_BeforeSnapshot,
 	_ov5640_after_snapshot,
-	PNULL, //_ov540_flash,
+	_ov540_flash,
 	PNULL,
 	_ov5640_write_exposure,
 	PNULL,
@@ -1274,7 +1275,21 @@ LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param)
 LOCAL uint32_t _ov5640_after_snapshot(uint32_t param)
 {
 	SENSOR_PRINT("SENSOR_OV5640: after_snapshot mode:%d", param);
+	if (g_flash_mode_en) {
+		Sensor_SetFlash(0x10);
+	}
 	Sensor_SetMode(param);
+	return SENSOR_SUCCESS;
+}
+
+LOCAL uint32_t _ov540_flash(uint32_t param)
+{
+	SENSOR_PRINT("Start:param=%d", param);
+
+	/* enable flash, disable in _ov5640_BeforeSnapshot */
+	g_flash_mode_en = param;
+	Sensor_SetFlash(param);
+	SENSOR_PRINT_HIGH("end");
 	return SENSOR_SUCCESS;
 }
 

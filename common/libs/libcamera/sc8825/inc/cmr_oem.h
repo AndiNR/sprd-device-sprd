@@ -193,9 +193,14 @@ struct camera_settings {
 	uint32_t                 iso;
 	uint32_t                 luma_adapt;
 	uint32_t                 video_mode;
+	/*all the above value will be set as 0xFFFFFFFF after inited*/
+	uint32_t                 set_end;
+
 	uint32_t                 af_cancelled;
 	uint8_t                  focus_zone_param[CAMERA_FOCUS_RECT_PARAM_LEN];
 	pthread_mutex_t          set_mutex;
+	sem_t                    isp_af_sem;
+	uint32_t                 isp_af_win_val;
 };
 
 struct camera_context {

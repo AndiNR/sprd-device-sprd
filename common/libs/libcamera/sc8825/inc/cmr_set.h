@@ -45,6 +45,9 @@ int camera_set_ctrl(camera_parm_type id,
 			cmr_before_set_cb before_set,
 			cmr_after_set_cb  after_set);
 int camera_isp_ctrl_done(uint32_t cmd, void* data);
+int camera_isp_af_done(void *data);
+
+
 
 #ifdef __cplusplus
 }

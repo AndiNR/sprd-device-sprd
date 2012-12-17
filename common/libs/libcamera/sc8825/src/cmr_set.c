@@ -225,24 +225,6 @@ int camera_set_hdr(uint32_t hdr_mode, uint32_t *skip_mode, uint32_t *skip_num)
 	return ret;
 }
 
-/*set af windows*/
-int camera_set_af(void* af_win_param, uint32_t *skip_mode, uint32_t *skip_num)
-{
-	struct camera_context    *cxt = camera_get_cxt();
-	int                      ret = CAMERA_SUCCESS;
-
-	CMR_LOGI ("af win addr %d\n", af_win_param);
-
-	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
-		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
-		ret = isp_ioctl(ISP_CTRL_AF, af_win_param);
-	} else {
-		CMR_LOGE("set af:sensor not support\n");
-		ret = CAMERA_NOT_SUPPORTED;
-	}
-	return ret;
-}
 int camera_set_brightness(uint32_t brightness, uint32_t *skip_mode, uint32_t *skip_num)
 {
 	struct camera_context    *cxt = camera_get_cxt();
@@ -472,10 +454,15 @@ int camera_setting_init(void)
 	struct camera_context    *cxt = camera_get_cxt();
 	int                      ret = CAMERA_SUCCESS;
 
-	memset((void*)&cxt->cmr_set, INVALID_SET_BYTE, 
-		sizeof(struct camera_settings) - sizeof(pthread_mutex_t));
-	
+	memset((void*)&cxt->cmr_set, INVALID_SET_BYTE,
+		offsetof(struct camera_settings, set_end));
+
+	CMR_LOGI("0x%x 0x%x 0x%x", cxt->cmr_set.video_mode,
+		cxt->cmr_set.set_end,
+		cxt->cmr_set.af_cancelled);
+
 	pthread_mutex_init (&cxt->cmr_set.set_mutex, NULL);
+	sem_init(&cxt->cmr_set.isp_af_sem, 0, 0);
 
 	return ret;
 }
@@ -485,6 +472,7 @@ int camera_setting_deinit(void)
 	struct camera_context    *cxt = camera_get_cxt();
 	int                      ret = CAMERA_SUCCESS;
 
+	sem_destroy(&cxt->cmr_set.isp_af_sem);
 	pthread_mutex_destroy(&cxt->cmr_set.set_mutex);
 
 	return ret;
@@ -966,8 +954,6 @@ int camera_autofocus_start(void)
 	uint32_t                 i = 0;
 	uint32_t                 zone_cnt = *ptr++;
 	SENSOR_EXT_FUN_PARAM_T   af_param;
-	uint32_t skip_mode=0x00;
-	uint32_t skip_num=0x00;
 
 	CMR_LOGV("zone_cnt %d, x y w h, %d %d %d %d", zone_cnt, ptr[0], ptr[1], ptr[2], ptr[3]);
 	CMR_PRINT_TIME;
@@ -1016,20 +1002,30 @@ int camera_autofocus_start(void)
 
 	if (CAMERA_SUCCESS == ret) {
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
+			struct isp_af_win isp_af_param;
 
-			struct isp_af_win isp_af_param={0x00};
-			isp_af_param.mode=af_param.param;
-			isp_af_param.valid_win=af_param.zone_cnt;
+			memset(&isp_af_param, 0, sizeof(struct isp_af_win));
+			isp_af_param.mode      = af_param.param;
+			isp_af_param.valid_win = af_param.zone_cnt;
 
 			for (i = 0; i < af_param.zone_cnt; i++) {
-				isp_af_param.win[i].start_x=af_param.zone[i].x;
-				isp_af_param.win[i].start_y=af_param.zone[i].y;
-				isp_af_param.win[i].end_x=af_param.zone[i].x+af_param.zone[i].w-0x01;
-				isp_af_param.win[i].end_y=af_param.zone[i].y+af_param.zone[i].h-0x01;
+				isp_af_param.win[i].start_x = af_param.zone[i].x;
+				isp_af_param.win[i].start_y = af_param.zone[i].y;
+				isp_af_param.win[i].end_x   = af_param.zone[i].x + af_param.zone[i].w - 1;
+				isp_af_param.win[i].end_y   = af_param.zone[i].y + af_param.zone[i].h - 1;
 
-				CMR_LOGE("ISP_RAW:af_win num:%d, x:%d y:%d e_x:%d e_y%d", zone_cnt, isp_af_param.win[i].start_x, isp_af_param.win[i].start_y, isp_af_param.win[i].end_x, isp_af_param.win[i].end_y);
+				CMR_LOGE("ISP_RAW:af_win num:%d, x:%d y:%d e_x:%d e_y:%d",
+					zone_cnt,
+					isp_af_param.win[i].start_x,
+					isp_af_param.win[i].start_y,
+					isp_af_param.win[i].end_x,
+					isp_af_param.win[i].end_y);
 			}
-			camera_set_af((void*)&isp_af_param, &skip_mode, &skip_num);
+			ret = isp_ioctl(ISP_CTRL_AF, &isp_af_param);
+			sem_wait(&cxt->cmr_set.isp_af_sem);
+			if (0 == cxt->cmr_set.isp_af_win_val) {
+				ret = -1;
+			}
 		} else {
 			ret = Sensor_Ioctl(SENSOR_IOCTL_FOCUS, (uint32_t) & af_param);
 		}
@@ -1091,6 +1087,7 @@ int camera_autofocus_need_exit(void)
 
 int camera_isp_ctrl_done(uint32_t cmd, void* data)
 {
+	struct camera_context    *cxt = camera_get_cxt();
 	int                      ret = 0;
 
 	if (cmd >= ISP_CTRL_MAX) {
@@ -1101,7 +1098,6 @@ int camera_isp_ctrl_done(uint32_t cmd, void* data)
 	switch (cmd) {
 
 	case ISP_CTRL_AF:
-		CMR_LOGV("AF done ");
 		break;
 	default:
 		break;
@@ -1109,4 +1105,16 @@ int camera_isp_ctrl_done(uint32_t cmd, void* data)
 
 	CMR_LOGV("cmd, 0x%x, ret %d", cmd, ret);
 	return ret;
+}
+
+int camera_isp_af_done(void *data)
+{
+	struct camera_context    *cxt = camera_get_cxt();
+	struct isp_af_notice     *isp_af = (struct isp_af_notice*)data;
+
+	CMR_LOGV("AF done, 0x%x", isp_af->valid_win);
+
+	cxt->cmr_set.isp_af_win_val = isp_af->valid_win;
+	sem_post(&cxt->cmr_set.isp_af_sem);
+	return 0;
 }

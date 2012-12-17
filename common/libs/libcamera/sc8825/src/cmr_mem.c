@@ -30,10 +30,10 @@
 #define PIXEL_3P0_MEGA            0x300000 //actually 3.0 *1024*1024
 #define PIXEL_5P0_MEGA            0x500000 //5.0 *1024*1024
 #define PIXEL_8P0_MEGA            0x800000 //8.0 *1024*1024
-#define ISP_YUV_TO_RAW_GAP        16
-#define BACK_CAMERA_ID				0
-#define FRONT_CAMERA_ID				1
-
+#define ISP_YUV_TO_RAW_GAP        CMR_SLICE_HEIGHT
+#define BACK_CAMERA_ID            0
+#define FRONT_CAMERA_ID           1
+#define ADDR_BY_WORD(a)           (((a) + 3 ) & (~3))
 #define CMR_NO_MEM(a, b)                                                                  \
 	do {                                                                              \
 		if ((a) > (b)) {                                                          \
@@ -163,41 +163,46 @@ static const cmr_get_size get_size[BUF_TYPE_NUM] = {
 	get_thum_jpeg_size,
 	get_jpg_tmp_size,
 	get_scaler_tmp_size,
+#if CMR_ISP_YUV422
 	get_isp_tmp_size
+#endif
 };
 
-int camera_capture_buf_size(uint32_t camera_id,
-									struct img_size *image_size,
-									uint32_t *size_major,
-									uint32_t *size_minor)
+int camera_capture_buf_size(uint32_t     camera_id,
+					uint32_t        sn_fmt,
+					struct img_size *image_size,
+					uint32_t        *size_major,
+					uint32_t        *size_minor)
 {
-	uint32_t     size_pixel = (uint32_t)(image_size->width * image_size->height);
-	int          i;
-	struct camera_context    *cxt = camera_get_cxt();
+	uint32_t               size_pixel = (uint32_t)(image_size->width * image_size->height);
+	int                    i;
 	struct cap_size_to_mem *mem_tab_ptr = NULL;
 
 	if (NULL == image_size ||
 		NULL == size_major ||
 		NULL == size_minor) {
-		CMR_LOGE("Parameter error 0x%x 0x%x 0x%x", (uint32_t)image_size, (uint32_t)size_major, (uint32_t)size_minor);
+		CMR_LOGE("Parameter error 0x%x 0x%x 0x%x",
+			(uint32_t)image_size,
+			(uint32_t)size_major,
+			(uint32_t)size_minor);
 		return -1;
 	}
 
-	if (SENSOR_IMAGE_FORMAT_RAW == cxt->sn_cxt.sensor_info->image_format) {
+	if (SENSOR_IMAGE_FORMAT_RAW == sn_fmt) {
 		if (BACK_CAMERA_ID == camera_id) {
-			mem_tab_ptr = &back_cam_raw_mem_size_tab[0];
+			mem_tab_ptr = (struct cap_size_to_mem*)&back_cam_raw_mem_size_tab[0];
 		} else if(FRONT_CAMERA_ID == camera_id) {
-			mem_tab_ptr = &front_cam_raw_mem_size_tab[0];
+			mem_tab_ptr = (struct cap_size_to_mem*)&front_cam_raw_mem_size_tab[0];
 		} else {
-			mem_tab_ptr = &raw_mem_size_tab[0];
+			mem_tab_ptr = (struct cap_size_to_mem*)&raw_mem_size_tab[0];
 		}
 	} else {
 		if (BACK_CAMERA_ID == camera_id) {
-			mem_tab_ptr = &back_cam_mem_size_tab[0];
+			mem_tab_ptr = (struct cap_size_to_mem*)&back_cam_mem_size_tab[0];
 		} else if(FRONT_CAMERA_ID == camera_id) {
-			mem_tab_ptr = &front_cam_mem_size_tab[0];
+			mem_tab_ptr = (struct cap_size_to_mem*)&front_cam_mem_size_tab[0];
 		} else {
-			mem_tab_ptr = &raw_mem_size_tab[0];
+			mem_tab_ptr = (struct cap_size_to_mem*)&raw_mem_size_tab[0];
 		}
 	}
 
@@ -281,13 +286,20 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 	if (IMG_DATA_TYPE_RAW == orig_fmt) {
 		raw_size = (uint32_t)(channel_size * RAWRGB_BIT_WIDTH / 8);
 		y_to_raw = (uint32_t)(ISP_YUV_TO_RAW_GAP * sn_size->width);
-		if (sn_trim && sn_trim->start_y) {
+		uv_size = (channel_size >> 1);
+		if (image_size->width != sn_size->width ||
+			image_size->height != sn_size->height) {
+			yy_to_y = (uint32_t)(ISP_YUV_TO_RAW_GAP * sn_size->width);
+			uv_size = uv_size + (yy_to_y >> 1);
+			tmp = (sn_size->height - image_size->height) >> 1;
+			CMR_LOGV("Need scaling down, Recovered height, %d", tmp);
+			useless_raw = (uint32_t)(yy_to_y * RAWRGB_BIT_WIDTH / 8);
+		} else if (sn_trim && sn_trim->start_y) {
 			tmp = sn_size->height - sn_trim->height - sn_trim->start_y;
 			CMR_LOGV("Recovered height, %d", tmp);
 			yy_to_y = (uint32_t)(tmp * sn_size->width);
-			uv_size = (channel_size >> 1);
 			uv_size = uv_size + (yy_to_y >> 1);
-			useless_raw = (uint32_t)(tmp * RAWRGB_BIT_WIDTH / 8);
+			useless_raw = (uint32_t)(yy_to_y * RAWRGB_BIT_WIDTH / 8);
 		}
 		capture_mem->target_yuv.addr_phy.addr_y = cap_2_frm->major_frm.addr_phy.addr_y;
 		capture_mem->target_yuv.addr_vir.addr_y = cap_2_frm->major_frm.addr_vir.addr_y;
@@ -296,8 +308,8 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 		capture_mem->cap_raw.addr_phy.addr_y = capture_mem->cap_yuv.addr_phy.addr_y + y_to_raw;
 		capture_mem->cap_raw.addr_vir.addr_y = capture_mem->cap_yuv.addr_vir.addr_y + y_to_raw;
 		capture_mem->cap_raw.buf_size        = raw_size;
-		CMR_LOGI("y_to_raw 0x%x, yy_to_y 0x%x, raw size 0x%x",
-			y_to_raw, yy_to_y, raw_size);
+		CMR_LOGI("y_to_raw 0x%x, yy_to_y 0x%x, raw size 0x%x useless_raw 0x%x",
+			y_to_raw, yy_to_y, raw_size, useless_raw);
 
 		offset = raw_size + y_to_raw + yy_to_y - useless_raw;// the end of RawRGB
 		CMR_NO_MEM(offset, major_res);
@@ -540,8 +552,12 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 
 uint32_t get_jpeg_size(uint32_t width, uint32_t height, uint32_t thum_width, uint32_t thum_height)
 {
+	uint32_t       size;
 	(void)thum_width; (void)thum_height;
-	return CMR_JPEG_SZIE(width, height)+JPEG_EXIF_SIZE;
+
+	size = CMR_JPEG_SZIE(width, height)+JPEG_EXIF_SIZE;
+
+	return ADDR_BY_WORD(size);
 }
 uint32_t get_thum_yuv_size(uint32_t width, uint32_t height, uint32_t thum_width, uint32_t thum_height)
 {
@@ -550,8 +566,11 @@ uint32_t get_thum_yuv_size(uint32_t width, uint32_t height, uint32_t thum_width,
 }
 uint32_t get_thum_jpeg_size(uint32_t width, uint32_t height, uint32_t thum_width, uint32_t thum_height)
 {
+	uint32_t       size;
+
 	(void)width; (void)height;
-	return CMR_JPEG_SZIE(thum_width, thum_height);
+	size = CMR_JPEG_SZIE(thum_width, thum_height);
+	return ADDR_BY_WORD(size);
 }
 
 uint32_t get_jpg_tmp_size(uint32_t width, uint32_t height, uint32_t thum_width, uint32_t thum_height)

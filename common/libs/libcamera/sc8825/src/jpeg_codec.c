@@ -13,16 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+#include "exif_writer.h"
 #include "cmr_msg.h"
 #include "jpeg_codec.h"
 #include "cmr_common.h"
 #include "jpegdec_api.h"
 #include "jpegenc_api.h"
-#include "exif_writer.h"
 
 
-#define JPEG_MSG_QUEUE_SIZE		10
+#define JPEG_MSG_QUEUE_SIZE		40
 #define JPEG_EXIT_THREAD_FLAG	1
 #define JPEG_EVT_ENC_START	(1 << 16)
 #define JPEG_EVT_ENC_NEXT	(1 << 17)

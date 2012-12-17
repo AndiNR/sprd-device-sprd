@@ -6744,8 +6744,6 @@ LOCAL const SENSOR_REG_T HI351_640X480[]=
 	{0x03, 0xc0}, 
 	{0x33, 0x00},
 	{0x32, 0x01}, //DMA On
-	
-	{0xff, 0xff}, 
 
 };
 
@@ -6835,8 +6833,6 @@ LOCAL const SENSOR_REG_T HI351_1280X960[] =
 	{0x33, 0x00},
 	{0x32, 0x01}, //DMA On
 	
-	{0xff, 0xff},
-
 }; 
  
 //1600X1200  YUV   Mode
@@ -6925,9 +6921,6 @@ LOCAL const SENSOR_REG_T HI351_1600X1200[] =
 	{0x03, 0xc0}, 
 	{0x33, 0x00},
 	{0x32, 0x01}, //DMA On
-	
-	{0xff, 0xff},
-
 }; 
 
 //20480X1536  JPG   Mode
@@ -6995,9 +6988,6 @@ LOCAL const SENSOR_REG_T HI351_2048X1536[] =
 	{0x03, 0xc0}, 
 	{0x33, 0x00},
 	{0x32, 0x01}, //DMA On
-
-	{0xff, 0xff},
-
 };
 
 
@@ -7132,7 +7122,7 @@ SENSOR_INFO_T g_hi351_mipi_yuv_info =
 {
     HI351_I2C_ADDR_W,                // salve i2c write address
     HI351_I2C_ADDR_R,                 // salve i2c read address
-    SENSOR_I2C_FREQ_200,
+    SENSOR_I2C_FREQ_400,
                                     // bit1: 0: i2c register addr  is 8 bit, 1: i2c register addr  is 16 bit
                                     // other bit: reseved
     SENSOR_HW_SIGNAL_PCLK_P|\
@@ -7163,7 +7153,7 @@ SENSOR_INFO_T g_hi351_mipi_yuv_info =
                                     // bit[8:31] reseved
     
     SENSOR_LOW_PULSE_RESET,            // reset pulse level
-    50,                                // reset pulse width(ms)
+    10,                                // reset pulse width(ms)
     
     SENSOR_LOW_LEVEL_PWDN,            // 1: high level valid; 0: low level valid
     
@@ -7189,8 +7179,8 @@ SENSOR_INFO_T g_hi351_mipi_yuv_info =
     //5,
     SENSOR_AVDD_1800MV,                     // iovdd
     SENSOR_AVDD_1300MV,                      // dvdd
-    3,                     // skip frame num before preview 
-    3,                      // skip frame num before capture        
+    0,                     // skip frame num before preview
+    1,                      // skip frame num before capture
     0,                      // deci frame num during preview    
     0,                      // deci frame num during video preview      
 
@@ -7253,13 +7243,13 @@ LOCAL uint32_t _HI351_PowerOn(uint32_t power_on)
 		Sensor_PowerDown(power_down);
 		// Open power
 		Sensor_SetVoltage(dvdd_val, avdd_val, iovdd_val);
-		SENSOR_Sleep(20);
+		SENSOR_Sleep(10);
 		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
 		SENSOR_Sleep(10);
 		Sensor_PowerDown(!power_down);
 		// Reset sensor
 		Sensor_Reset(reset_level);
-		SENSOR_Sleep(12);
+		SENSOR_Sleep(10);
 	} else {
 		Sensor_PowerDown(power_down);
 		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
@@ -8135,7 +8125,7 @@ LOCAL uint32_t _HI351_set_awb(uint32_t mode)
 /*Scene Off*/
 	{0x03, 0x00},
 //	{0x0c, 0xf1}, /*sleep on*/
-	{SENSOR_WRITE_DELAY,0xfa}, //delay 250ms
+	//{SENSOR_WRITE_DELAY,0xfa}, //delay 250ms
 	{0x03, 0x30},
 	{0x36, 0xA3}, /*DMA off*/
 	{0x03, 0x30},

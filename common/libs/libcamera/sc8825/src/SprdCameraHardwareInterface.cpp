@@ -417,29 +417,40 @@ bool SprdCameraHardware::initRaw(bool initJpegHeap)
                 ALOGE("Fail to GetPmem mRawHeap. buffer_size: 0x%x.", buffer_size);
                 return false;
         }
-
-        buffer_size = camera_get_size_align_page(mem_size1);
-        mMiscHeap = GetPmem("/dev/pmem_adsp", buffer_size, kRawBufferCount);
-        if(NULL == mMiscHeap) {
-            FreePmem(mRawHeap);
-            mRawHeap = NULL;
-            return false;
-        }
-        if(NULL == mMiscHeap->handle){
-                ALOGE("Fail to GetPmem mRawHeap. buffer_size: 0x%x.", buffer_size);
+        if(0 != mem_size1) {
+            buffer_size = camera_get_size_align_page(mem_size1);
+            mMiscHeap = GetPmem("/dev/pmem_adsp", buffer_size, kRawBufferCount);
+            if(NULL == mMiscHeap) {
                 FreePmem(mRawHeap);
                 mRawHeap = NULL;
                 return false;
+            }
+            if(NULL == mMiscHeap->handle){
+                    ALOGE("Fail to GetPmem mRawHeap. buffer_size: 0x%x.", buffer_size);
+                    FreePmem(mRawHeap);
+                    mRawHeap = NULL;
+                    return false;
+            }
+       }
+        if(0 != mem_size1) {
+            if (camera_set_capture_mem(0,
+            (uint32_t)mRawHeap->phys_addr,
+            (uint32_t)mRawHeap->data,
+            (uint32_t)mRawHeap->phys_size,
+            (uint32_t)mMiscHeap->phys_addr,
+            (uint32_t)mMiscHeap->data,
+            (uint32_t)mMiscHeap->phys_size))
+                return false;
+        }else {
+            if (camera_set_capture_mem(0,
+            (uint32_t)mRawHeap->phys_addr,
+            (uint32_t)mRawHeap->data,
+            (uint32_t)mRawHeap->phys_size,
+            0,
+            0,
+            0))
+                return false;
         }
-
-	if (camera_set_capture_mem(0,
-				(uint32_t)mRawHeap->phys_addr,
-				(uint32_t)mRawHeap->data,
-				(uint32_t)mRawHeap->phys_size,
-				(uint32_t)mMiscHeap->phys_addr,
-				(uint32_t)mMiscHeap->data,
-				(uint32_t)mMiscHeap->phys_size))
-            return false;
 
         if (initJpegHeap) {
                 ALOGV("initRaw: initializing mJpegHeap.");
@@ -1654,13 +1665,6 @@ void   SprdCameraHardware::receiveJpegPosPicture(void)//(camera_frame_type *fram
         print_time();
         ALOGV("receiveJpegPicture: X callback done.");
     }
-
-
-    static const struct str_map iso_map[] = {
-        { "auto", CAMERA_ISO_AUTO },
-        { "high", CAMERA_ISO_HIGH },
-        { NULL, 0 }
-    };
 
     static int lookupvalue(const struct str_map *const arr, const char *name)
     {

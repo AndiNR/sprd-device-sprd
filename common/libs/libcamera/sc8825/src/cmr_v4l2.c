@@ -115,7 +115,7 @@ int cmr_v4l2_deinit(void)
 		}
 		fd = -1;
 	}
-
+	CMR_LOGI("thread kill done.");
 	pthread_mutex_lock(&cb_mutex);
 	v4l2_evt_cb = NULL;
 	pthread_mutex_unlock(&cb_mutex);

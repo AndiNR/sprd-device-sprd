@@ -119,6 +119,7 @@ typedef enum
     CAMERA_FOCUS_MODE_AUTO = 0,
     CAMERA_FOCUS_MODE_AUTO_MULTI = 1,
     CAMERA_FOCUS_MODE_MACRO = 2,
+    CAMERA_FOCUS_MODE_INFINITY = 3,
     CAMERA_FOCUS_MODE_MAX
 } camera_focus_mode_type;
 
@@ -127,6 +128,7 @@ typedef enum
     CAMERA_FLASH_MODE_OFF = 0,
     CAMERA_FLASH_MODE_ON = 1,
     CAMERA_FLASH_MODE_TORCH = 2,
+    CAMERA_FLASH_MODE_AUTO = 3,
     CAMERA_FLASH_MODE_MAX
 } camera_flash_mode_type;
 
@@ -154,6 +156,7 @@ struct str_map {
         { "antique", CAMERA_EFFECT_YELLOW },
         { "negative", CAMERA_EFFECT_NEGATIVE },
         { "sepia", CAMERA_EFFECT_SEPIA },
+        { "cold", CAMERA_EFFECT_BLUE },
         { NULL, 0 }
     };
   const struct str_map scene_mode_map[] = {
@@ -191,6 +194,17 @@ struct str_map {
         { "6", CAMERA_BRIGHTNESS_6 },
         { NULL, 0 }
    };
+
+   const struct str_map iso_map[] = {
+        { "auto",  CAMERA_ISO_AUTO},
+        { "100",   CAMERA_ISO_100},
+        { "200",   CAMERA_ISO_200 },
+        { "400",   CAMERA_ISO_400 },
+        { "800",   CAMERA_ISO_800 },
+        { "1600", CAMERA_ISO_1600 },
+        { NULL, 0 }
+   };
+
    const struct str_map contrast_map[] = {
         { "0", CAMERA_CONTRAST_0 },
         { "1", CAMERA_CONTRAST_1 },
@@ -225,6 +239,7 @@ const struct str_map exposure_compensation_map[] = {
         { "auto", 			CAMERA_FOCUS_MODE_AUTO },
         { "auto-multi", 	CAMERA_FOCUS_MODE_AUTO_MULTI },
         { "macro", 		CAMERA_FOCUS_MODE_MACRO },
+	{ "infinity", 		CAMERA_FOCUS_MODE_INFINITY },
         { NULL, 0 }
    };
 
@@ -232,6 +247,7 @@ const struct str_map exposure_compensation_map[] = {
         { "on", 			CAMERA_FLASH_MODE_ON },
         { "off", 			CAMERA_FLASH_MODE_OFF },
 	{ "torch", 			CAMERA_FLASH_MODE_TORCH },
+	{ "auto", 			CAMERA_FLASH_MODE_AUTO },
         { NULL, 0 }
    };
 
@@ -272,7 +288,7 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"jpeg-thumbnail-height", "240"},
 	{"jpeg-thumbnail-quality", "80"},
         {"effect-values",
-         "none,mono,negative,sepia,antique"},
+         "none,mono,negative,sepia,cold,antique"},
          {"effect", "none"},
         {"scene-mode-values",
          "auto,night"},
@@ -351,7 +367,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
 #ifdef CONFIG_CAMERA_788
 		"none,mono,negative,antique"},
 #else
-     	"none,mono,negative,sepia,antique"},
+     	"none,mono,negative,sepia,cold,antique"},
 #endif
          {"effect", "none"},
 	{"scene-mode-values",

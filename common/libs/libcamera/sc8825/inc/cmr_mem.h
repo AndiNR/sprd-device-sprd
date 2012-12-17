@@ -46,6 +46,7 @@ struct cmr_cap_mem {
 };
 
 int camera_capture_buf_size(uint32_t camera_id,
+					uint32_t        sn_fmt,
 								struct img_size *image_size,
 								uint32_t *size_major,
 								uint32_t *size_minor);

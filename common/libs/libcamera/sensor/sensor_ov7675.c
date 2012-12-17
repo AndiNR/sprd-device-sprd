@@ -584,7 +584,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
 
 
         SENSOR_LOW_PULSE_RESET,			// reset pulse level
-        20,								// reset pulse width(ms)
+        10,								// reset pulse width(ms)
 
         SENSOR_HIGH_LEVEL_PWDN,			// 1: high level valid; 0: low level valid
 
@@ -609,8 +609,8 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
         PNULL,							// extend information about sensor	
         SENSOR_AVDD_1800MV,                     // iovdd
         SENSOR_AVDD_1800MV,                      // dvdd
-        4,                     // skip frame num before preview 
-        3,                      // skip frame num before capture
+        1,                     // skip frame num before preview 
+        1,                      // skip frame num before capture
         0,                      // deci frame num during preview	
         2,                      // deci frame num during video preview
         0,                     // threshold enable(only analog TV)	

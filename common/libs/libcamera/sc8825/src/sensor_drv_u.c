@@ -271,14 +271,14 @@ LOCAL int _Sensor_Device_SetMCLK(uint32_t mclk)
 	return ret;
 }
 
-LOCAL int _Sensor_Device_Reset(uint32_t level)
+LOCAL int _Sensor_Device_Reset(uint32_t *reset_val)
 {
 	int ret = SENSOR_SUCCESS;
 
-	ret = xioctl(g_fd_sensor, SENSOR_IO_RST, &level);
-	if (0 != ret)
-	{
-		SENSOR_PRINT_ERR("_Sensor_Device_Reset failed,  level = %d, ret=%d \n", level, ret);
+	SENSOR_PRINT_ERR("level %d, width %d",reset_val[0],reset_val[1]);
+
+	ret = xioctl(g_fd_sensor, SENSOR_IO_RST, reset_val);
+	if (ret) {
 		ret = -1;
 	}
 
@@ -487,7 +487,9 @@ void Sensor_Reset_EX(uint32_t power_down, uint32_t level)
 void Sensor_Reset(uint32_t level)
 {
 	int err = 0xff;
+	uint32_t rst_val[2];
 	SENSOR_IOCTL_FUNC_PTR reset_func;
+
 	SENSOR_PRINT_HIGH("Sensor_Reset.\n");
 
 	reset_func = s_sensor_info_ptr->ioctl_func_tab_ptr->reset;
@@ -495,7 +497,14 @@ void Sensor_Reset(uint32_t level)
 	if (PNULL != reset_func) {
 		reset_func(level);
 	}else{
-		_Sensor_Device_Reset(level);
+		rst_val[0] = level;
+		rst_val[1] = s_sensor_info_ptr->reset_pulse_width;
+		if (rst_val[1] < SENSOR_RESET_PULSE_WIDTH_DEFAULT) {
+			rst_val[1] = SENSOR_RESET_PULSE_WIDTH_DEFAULT;
+		} else if (rst_val[1] > SENSOR_RESET_PULSE_WIDTH_MAX) {
+			rst_val[1] = SENSOR_RESET_PULSE_WIDTH_MAX;
+		}
+		_Sensor_Device_Reset(rst_val);
 	}
 }
 
