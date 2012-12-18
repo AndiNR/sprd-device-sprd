@@ -37,7 +37,7 @@ endif
 
 # Set default USB interface
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
-	persist.sys.usb.config=mtp
+	persist.sys.usb.config=mass_storage
 
 PRODUCT_PACKAGES := \
 	VoiceDialer \
