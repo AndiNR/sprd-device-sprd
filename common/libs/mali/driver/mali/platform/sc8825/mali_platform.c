@@ -31,6 +31,7 @@ _mali_osk_errcode_t mali_platform_init(void)
 {
 	sci_glb_clr(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
 	msleep(2);
+	sci_glb_set(REG_GLB_PCTRL, BIT_MCU_GPLL_EN);
 	sci_glb_set(REG_AHB_AHB_CTL0, BIT_G3D_EB);
 	MALI_SUCCESS;
 }
@@ -38,6 +39,7 @@ _mali_osk_errcode_t mali_platform_init(void)
 _mali_osk_errcode_t mali_platform_deinit(void)
 {
 	sci_glb_clr(REG_AHB_AHB_CTL0, BIT_G3D_EB);
+	sci_glb_clr(REG_GLB_PCTRL, BIT_MCU_GPLL_EN);
 	sci_glb_set(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
 	MALI_SUCCESS;
 }
@@ -49,13 +51,16 @@ _mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
 	case MALI_POWER_MODE_ON:
 		sci_glb_clr(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
 		msleep(2);
+		sci_glb_set(REG_GLB_PCTRL, BIT_MCU_GPLL_EN);
 		sci_glb_set(REG_AHB_AHB_CTL0, BIT_G3D_EB);
 		break;
 	case MALI_POWER_MODE_LIGHT_SLEEP:
 		sci_glb_clr(REG_AHB_AHB_CTL0, BIT_G3D_EB);
+		sci_glb_clr(REG_GLB_PCTRL, BIT_MCU_GPLL_EN);
 		break;
 	case MALI_POWER_MODE_DEEP_SLEEP:
 		sci_glb_clr(REG_AHB_AHB_CTL0, BIT_G3D_EB);
+		sci_glb_clr(REG_GLB_PCTRL, BIT_MCU_GPLL_EN);
 		sci_glb_set(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
 		break;
 	};
