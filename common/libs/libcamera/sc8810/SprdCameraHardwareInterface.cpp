@@ -1452,7 +1452,7 @@ callbacks:
                         FreePmem(tempHeap);
                         tempHeap = NULL;
 #else
-                        mData_cb(CAMERA_MSG_PREVIEW_FRAME, mPreviewHeap, offset, mUser);
+                        mData_cb(CAMERA_MSG_PREVIEW_FRAME, mPreviewHeap, offset, NULL, mUser);
 #endif
                 }
                 if ((mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) &&(mRecordingMode==1))
@@ -3051,7 +3051,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 
     if (preview_width > 640) {
 #ifdef USE_ION_MEM
-		usage |= GRALLOC_USAGE_PRIVATE_1;
+		usage |= GRALLOC_USAGE_PRIVATE_0;
 #endif
 		if (w->set_usage(w, usage )) {
         	ALOGE("%s: could not set usage on gralloc buffer", __func__);

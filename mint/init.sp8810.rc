@@ -21,6 +21,8 @@ on post-fs
 on post-fs-data
     # we will remap this as /storage/sdcard0 with the sdcard fuse tool
     mkdir /data/media 0770 media_rw media_rw
+    mkdir /data/misc/sensors 0777 system system
+
     chown media_rw media_rw /data/media
 
     # Set indication (checked by vold) that we have finished this action
