@@ -431,7 +431,7 @@ void eng_check_factorymode_fornand(void)
 			close(fd);
 		if (strstr(config_property, "adb")) { 
 			property_set("sys.usb.config","adb,vser,gser");
-			property_set("persist.sys.usb.config","adb,vser,gser");
+			property_set("persist.sys.usb.config","mass_storage,adb,vser,gser");
 		} else {
 			property_set("sys.usb.config","vser,gser");
 			property_set("persist.sys.usb.config","vser,gser");
