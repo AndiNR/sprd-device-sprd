@@ -175,6 +175,8 @@ static int do_parse(AUDIO_TOTAL_T *audio_params_ptr, unsigned int params_size)
     //vb effect paras file-->fd_dest
     fd_dest_paras = fopen(STORED_VBC_EFFECT_PARAS_PATH, "wb");
     if (NULL  == fd_dest_paras) {
+        free(fw_header);
+        free(effect_profile);
         ALOGE("file %s open failed:%s", STORED_VBC_EFFECT_PARAS_PATH, strerror(errno));
         return -1;
     }
@@ -204,7 +206,8 @@ static int do_parse(AUDIO_TOTAL_T *audio_params_ptr, unsigned int params_size)
         fwrite(effect_profile, sizeof(struct vbc_eq_profile), 1, fd_dest_paras);
     }
     fclose(fd_dest_paras);
-
+    free(fw_header);
+    free(effect_profile);
     ALOGI("do_parse...end");
     return 0;
 }
@@ -224,8 +227,10 @@ int create_vb_effect_params(void)
 
     ret = do_parse(aud_params_ptr, 4*sizeof(AUDIO_TOTAL_T));
     //close fd
-    munmap((void *)aud_params_ptr, 4*sizeof(AUDIO_TOTAL_T));
-    close(fd_src_paras);
+    if (aud_params_ptr) {
+        munmap((void *)aud_params_ptr, 4*sizeof(AUDIO_TOTAL_T));
+        close(fd_src_paras);
+    }
 
     ALOGI("create_vb_effect_params...done");
     return ret;
@@ -253,6 +258,7 @@ static AUDIO_TOTAL_T *get_aud_paras(uint32_t aud_dev_mode)
 
     aud_params_ptr = (AUDIO_TOTAL_T *)mmap(0, 4*sizeof(AUDIO_TOTAL_T),PROT_READ,MAP_SHARED,fd_src_paras,0);
     if ( NULL == aud_params_ptr ) {
+        close(fd_src_paras);
         ALOGE("mmap failed %s",strerror(errno));
         return NULL;
     }

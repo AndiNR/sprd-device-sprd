@@ -169,6 +169,13 @@ struct tiny_private_ctl {
     struct mixer_ctl *vbc_eq_profile_select;
 };
 
+struct stream_routing_manager {
+    pthread_t        routing_switch_thread;
+    pthread_mutex_t  device_switch_mutex;
+    pthread_cond_t   device_switch_cv;
+    bool             is_exit;
+};
+
 struct tiny_audio_device {
     struct audio_hw_device hw_device;
 
@@ -194,6 +201,7 @@ struct tiny_audio_device {
     struct tiny_private_ctl private_ctl;
     struct audio_pga *pga;
     int eq_available;
+    struct stream_routing_manager  routing_mgr;
 };
 
 struct tiny_stream_out {
@@ -287,7 +295,8 @@ static int s_vaudio = 0;
  */
 extern int get_snd_card_number(const char *card_name);
 int set_call_route(struct tiny_audio_device *adev, int device, int on);
-static void select_devices(struct tiny_audio_device *adev);
+static void select_devices_signal(struct tiny_audio_device *adev);
+static void do_select_devices(struct tiny_audio_device *adev);
 static int set_route_by_array(struct mixer *mixer, struct route_setting *route,unsigned int len);
 static int adev_set_voice_volume(struct audio_hw_device *dev, float volume);
 static int do_input_standby(struct tiny_stream_in *in);
@@ -306,6 +315,10 @@ static int get_route_depth (
 static int get_mode_from_devices(int devices);
 static int init_rec_process(int rec_mode, int sample_rate);
 static int aud_rec_do_process(void * buffer, size_t bytes);
+
+static void *stream_routing_thread_entry(void * adev);
+static int stream_routing_manager_create(struct tiny_audio_device *adev);
+static void stream_routing_manager_close(struct tiny_audio_device *adev);
 
 #ifndef _VOICE_CALL_VIA_LINEIN
 #include "vb_control_parameters.c"
@@ -410,7 +423,7 @@ static int set_route_by_array(struct mixer *mixer, struct route_setting *route,
 }
 
 /* Must be called with route_lock */
-static void select_devices(struct tiny_audio_device *adev)
+static void do_select_devices(struct tiny_audio_device *adev)
 {
     unsigned int i;
 
@@ -448,6 +461,18 @@ static void select_devices(struct tiny_audio_device *adev)
 
     /* update EQ profile*/
     if(adev->eq_available) vb_effect_profile_apply();
+#ifndef _VOICE_CALL_VIA_LINEIN
+	SetAudio_gain_route(adev,1);
+#endif
+}
+
+static void select_devices_signal(struct tiny_audio_device *adev)
+{
+    ALOGI("select_devices_signal starting...");
+    pthread_mutex_lock(&adev->routing_mgr.device_switch_mutex);
+    pthread_cond_signal(&adev->routing_mgr.device_switch_cv);
+    pthread_mutex_unlock(&adev->routing_mgr.device_switch_mutex);
+    ALOGI("select_devices_signal finished.");
 }
 
 static int start_call(struct tiny_audio_device *adev)
@@ -537,7 +562,7 @@ static int start_output_stream(struct tiny_stream_out *out)
 
     if (adev->mode != AUDIO_MODE_IN_CALL) {
         /* FIXME: only works if only one output can be active at a time */
-        select_devices(adev);
+        select_devices_signal(adev);
     }
     /* default to low power: will be corrected in out_write if necessary before first write to
      * tinyalsa.
@@ -734,8 +759,10 @@ static int do_output_standby(struct tiny_stream_out *out)
     struct tiny_audio_device *adev = out->dev;
 
     if (!out->standby) {
-        pcm_close(out->pcm);
-        out->pcm = NULL;
+        if (out->pcm) {
+            pcm_close(out->pcm);
+            out->pcm = NULL;
+        }
         BLUE_TRACE("do_output_standby.mode:%d ",adev->mode);
         adev->active_output = 0;
 
@@ -797,7 +824,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             #ifndef _VOICE_CALL_VIA_LINEIN
             if(!adev->in_call)
             #endif
-            	select_devices(adev);
+                select_devices_signal(adev);
             #ifndef _VOICE_CALL_VIA_LINEIN
             else
                 adev->prev_devices = adev->devices;
@@ -811,11 +838,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                     return ret;
             	}
             }
-            #ifndef _VOICE_CALL_VIA_LINEIN
-            else{
-                SetAudio_gain_route(adev,1);
-            }
-            #endif
         }else{
             ALOGW("the same devices(0x%x) with val(0x%x) val is zero...",adev->devices,val);
         }
@@ -944,12 +966,13 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
     ret = pcm_mmap_write(out->pcm, (void *)buf, out_frames * frame_size);
 
 exit:
-    pthread_mutex_unlock(&out->lock);
     if (ret != 0) {
-        ALOGW("warning: ret=%d, (%s)", ret, pcm_get_error(out->pcm));
+        if (out->pcm)
+            ALOGW("warning: ret=%d, (%s)", ret, pcm_get_error(out->pcm));
         do_output_standby(out);
     }
-
+    pthread_mutex_unlock(&out->lock);
+    
     return bytes;
 }
 
@@ -982,7 +1005,7 @@ static int start_input_stream(struct tiny_stream_in *in)
     if (adev->mode != AUDIO_MODE_IN_CALL) {
         adev->devices &= ~AUDIO_DEVICE_IN_ALL;
         adev->devices |= in->device;
-        select_devices(adev);
+        select_devices_signal(adev);
     }
 
     if (in->need_echo_reference && in->echo_reference == NULL)
@@ -1081,13 +1104,14 @@ static int do_input_standby(struct tiny_stream_in *in)
     struct tiny_audio_device *adev = in->dev;
 
     if (!in->standby) {
-        pcm_close(in->pcm);
-        in->pcm = NULL;
-
+        if (in->pcm) {
+            pcm_close(in->pcm);
+            in->pcm = NULL;
+        }
         adev->active_input = 0;
         if (adev->mode != AUDIO_MODE_IN_CALL) {
             adev->devices &= ~AUDIO_DEVICE_IN_ALL;
-            select_devices(adev);
+            select_devices_signal(adev);
         }
 
         if (in->echo_reference != NULL) {
@@ -1954,6 +1978,7 @@ static int adev_close(hw_device_t *device)
     free(adev->dev_cfgs);
 
     mixer_close(adev->mixer);
+    stream_routing_manager_close(adev);
     free(device);
     return 0;
 }
@@ -2303,6 +2328,49 @@ static int aud_rec_do_process(void * buffer, size_t bytes)
     return 0;
 }
 
+static void *stream_routing_thread_entry(void * adev)
+{
+    struct tiny_audio_device *cur_adev = (struct tiny_audio_device *)adev;
+    while(!cur_adev->routing_mgr.is_exit) {
+        ALOGI("stream_routing_thread looping now...");
+        pthread_mutex_lock(&cur_adev->routing_mgr.device_switch_mutex);
+        pthread_cond_wait(&cur_adev->routing_mgr.device_switch_cv,
+                            &cur_adev->routing_mgr.device_switch_mutex);
+        /* switch device routing here.*/
+        do_select_devices(cur_adev);
+        pthread_mutex_unlock(&cur_adev->routing_mgr.device_switch_mutex);
+        ALOGI("stream_routing_thread looping done.");
+    }
+    ALOGW("stream_routing_thread_entry exit!!!");
+    return 0;
+}
+
+static int stream_routing_manager_create(struct tiny_audio_device *adev)
+{
+    int ret;
+
+    adev->routing_mgr.is_exit = false;
+    /* create a thread to manager the device routing switch.*/
+    ret = pthread_create(&adev->routing_mgr.routing_switch_thread, NULL,
+                            stream_routing_thread_entry, (void *)adev);
+    if (ret) {
+        ALOGE("pthread_create falied, code is %d", ret);
+        return ret;
+    }
+    /* initialize mutex and condition variable objects */
+    pthread_mutex_init(&adev->routing_mgr.device_switch_mutex, NULL);
+    pthread_cond_init(&adev->routing_mgr.device_switch_cv, NULL);
+    return ret;
+}
+
+static void stream_routing_manager_close(struct tiny_audio_device *adev)
+{
+    adev->routing_mgr.is_exit = true;
+    /* release associated thread resource.*/
+    pthread_mutex_destroy(&adev->routing_mgr.device_switch_mutex);
+    pthread_cond_destroy(&adev->routing_mgr.device_switch_cv);
+}
+
 static int adev_open(const hw_module_t* module, const char* name,
                      hw_device_t** device)
 {
@@ -2357,10 +2425,10 @@ static int adev_open(const hw_module_t* module, const char* name,
     /* generate eq params file of vbc effect*/
     ret = create_vb_effect_params();
     if (ret != 0) {
-	adev->eq_available = 0;
+        adev->eq_available = 0;
         ALOGW("Warning: Failed to create the parameters file of vbc_eq");
     } else {
-	adev->eq_available = 1;
+        adev->eq_available = 1;
         eq_update = mixer_get_ctl_by_name(adev->mixer, MIXER_CTL_VBC_EQ_UPDATE);
         ret = mixer_ctl_set_enum_by_string(eq_update, "loading");
         ALOGI("eq_loading, ret(%d)", ret);
@@ -2388,10 +2456,11 @@ static int adev_open(const hw_module_t* module, const char* name,
     pthread_mutex_lock(&adev->lock);
     adev->mode = AUDIO_MODE_NORMAL;
     adev->devices = AUDIO_DEVICE_OUT_SPEAKER;
-    select_devices(adev);
+    select_devices_signal(adev);
 
     adev->pcm_modem_dl = NULL;
     adev->pcm_modem_ul = NULL;
+    adev->in_call = 0;
     adev->voice_volume = 1.0f;
     adev->bluetooth_nrec = false;
 
@@ -2407,6 +2476,12 @@ static int adev_open(const hw_module_t* module, const char* name,
 #endif
     ret = mmi_audio_loop_open();
     if (ret)  ALOGW("Warning: audio loop can NOT work.");
+    
+    ret = stream_routing_manager_create(adev);
+    if (ret) {
+        ALOGE("Unable to create stream_routing_manager, aborting.");
+        return -EINVAL;
+    }
     return 0;
 }
 
