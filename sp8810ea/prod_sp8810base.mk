@@ -44,8 +44,12 @@ PRODUCT_PACKAGES := \
 # prebuild files
 PRODUCT_PACKAGES += \
 	
-# packages files
+# own copyright packages files
 PRODUCT_PACKAGES += \
+    AppBackup \
+    AudioProfile \
+    SprdNote \
+    ValidationTools
 	
 # add  system properties
 PRODUCT_PROPERTY_OVERRIDES += \

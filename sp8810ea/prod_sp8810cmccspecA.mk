@@ -61,7 +61,15 @@ PRODUCT_PACKAGES += \
 	ForOPPackageTest \
 	ForOPCModuleTest
 	
-
+# own copyright packages files
+PRODUCT_PACKAGES += \
+    10086cn \
+    Monternet \
+    MyFavorites \
+    AppBackup \
+    AudioProfile \
+    SprdNote \
+    ValidationTools
 
 # add  system properties
 PRODUCT_PROPERTY_OVERRIDES += \
