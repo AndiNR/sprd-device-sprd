@@ -13,6 +13,7 @@ PRODUCT_PACKAGES := \
 	sprd_monitor \
 	phoneserver \
 	phoneserver_2sim \
+	open_ttyNK \
 	akmd8975
 
 else
@@ -31,6 +32,7 @@ PROPMODS := \
 	system/bin/sprd_monitor \
 	system/bin/phoneserver \
 	system/bin/phoneserver_2sim \
+	system/bin/open_ttyNK \
 	system/bin/akmd8975
 
 PRODUCT_COPY_FILES := $(foreach f,$(PROPMODS),vendor/sprd/proprietories/sp8825ea/$(f):$(f))

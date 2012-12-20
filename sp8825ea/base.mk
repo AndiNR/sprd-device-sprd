@@ -32,6 +32,7 @@ PRODUCT_PACKAGES := \
 	audio.a2dp.default
 
 PRODUCT_PACKAGES += \
+	rawdatad \
 	nvitemd \
 	charge \
 	vcharged \
@@ -42,7 +43,7 @@ PRODUCT_PACKAGES += \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \
 	camera.$(TARGET_PLATFORM) \
-        libisp.so \
+	libisp.so \
 	lights.$(TARGET_PLATFORM) \
 	audio.primary.$(TARGET_PLATFORM) \
 	tinymix \
@@ -72,3 +73,5 @@ PRODUCT_COPY_FILES := \
 
 BOARD_WLAN_DEVICE_REV       := bcm4330_b2
 $(call inherit-product, hardware/broadcom/wlan/bcmdhd/firmware/bcm4330/device-bcm.mk)
+$(call inherit-product, $(BOARDDIR)/../common/apps/engineeringmodel/module.mk)
+
