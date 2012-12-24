@@ -17,3 +17,4 @@
 add_lunch_combo sp8810eabase-userdebug
 add_lunch_combo sp8810eaplus-userdebug
 add_lunch_combo sp8810eacmccspecA-userdebug
+add_lunch_combo sp8810eacmccspecAplus-userdebug

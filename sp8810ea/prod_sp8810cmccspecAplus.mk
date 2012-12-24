@@ -45,19 +45,40 @@ PRODUCT_PACKAGES := \
 
 # prebuild files
 PRODUCT_PACKAGES += \
+    APV_PDF_Viewer.apk \
+    CMCCFetion.apk \
+    CMCCGameHall.apk \
+    CMCCMM.apk \
+    CMCCMobileMusic.apk \
+    CMCCMV_W.apk \
+    CMCCREAD.apk \
+    CMCCTelenav_Nav.apk \
+    CMCCWIFI.apk \
+    ES_File_Explorer.apk \
+    PimClient.apk \
+    SecondClock.apk \
+    WorldClock.apk
+        
+# packages files
+PRODUCT_PACKAGES += \
+	ForOPPackageTest \
+	ForOPCModuleTest
 	
 # own copyright packages files
 PRODUCT_PACKAGES += \
+    10086cn \
+    Monternet \
+    MyFavorites \
     AppBackup \
     AudioProfile \
     SprdNote \
     ValidationTools
-	
+
 # add  system properties
 PRODUCT_PROPERTY_OVERRIDES += \
 	ro.operator=cmcc \
 	ro.operator.version=specA
-	
+
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \
 	$(BOARDDIR)/pixcir_ts.kl:system/usr/keylayout/pixcir_ts.kl \
@@ -75,8 +96,9 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/telephony.mk)
 
 # Overrides
-PRODUCT_NAME := sp8810eaplus
+PRODUCT_NAME := sp8810eacmccspecAplus
 PRODUCT_DEVICE := $(TARGET_BOARD)
+# for operator demo
 PRODUCT_MODEL := ZTE U970
 PRODUCT_BRAND := Spreadtrum
 PRODUCT_MANUFACTURER := Spreadtrum
