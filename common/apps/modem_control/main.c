@@ -157,6 +157,45 @@ static void *modemd_listenaccept_thread(void *par)
 		}
 	}
 }
+static int get_modem_assert_information(char *assert_info,int size)
+{
+        extern int open_uart_device(int mode);
+        char ch, *buffer;
+        int     read_len=0,ret=0,timeout;
+        int uart_fd = open_uart_device(1);
+
+        if((assert_info == NULL) || (size == 0))
+                return 0;
+        if(uart_fd < 0){
+               printf("open_uart_device failed in %s \n",__FUNCTION__);
+               return 0;
+        }
+        printf("dump modem assert information...... \n");
+        ch = 'P';
+        ret = write(uart_fd,&ch,1);
+
+        buffer = assert_info;
+        read_len = 0;
+        timeout=0;
+        do{
+                ret = read(uart_fd,buffer,size);
+                timeout++;
+                if(ret > 0){
+                        printf("read_len[%d] = %d \n",timeout,read_len);
+                        size -= ret;
+                        read_len += ret;
+                        buffer += ret;
+                }
+                if(timeout > 100000)
+                        break;
+        }while(size >0);
+        ch = 'O';
+        write(uart_fd,&ch,1);
+        if(read_len > 0)
+                printf("assert_info: %s \n",assert_info);
+        close(uart_fd);
+        return read_len;
+}
 
 static int translate_modem_state_message(char *message)
 {
@@ -242,6 +281,7 @@ static void process_modem_state_message(char *message,int size)
 					int pid;
 					modem_state = MODEM_STA_ALIVE;
 					printf("modem_state0 = MODEM_STA_ALIVE\n"); 
+					broadcast_modem_state("Modem Alive",strlen("Modem Alive"));
 					pid = get_task_pid(MONITOR_APP);
 					if((pid > 0)&&(!first_alive))
 						kill(pid, SIGUSR2);
@@ -251,7 +291,14 @@ static void process_modem_state_message(char *message,int size)
         	case MODEM_STA_ALIVE:
 			if(alive_status == 0){
 				modem_state = MODEM_STA_ASSERT;
-				printf("modem_state4 = MODEM_STA_ASSERT\n");
+                                memset(test_buffer,0,300);
+                                ret = get_modem_assert_information(test_buffer,256);
+                                printf("modem_state4 = MODEM_STA_ASSERT(%d)\n",ret);
+                                if(ret > 0){
+                                        broadcast_modem_state(test_buffer,strlen(test_buffer));
+                                } else {
+                                        broadcast_modem_state("Modem Assert\n",strlen("Modem Assert\n"));
+                                }
 			}
 			
 			if(reset_status==1){

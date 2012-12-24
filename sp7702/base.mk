@@ -38,6 +38,7 @@ PRODUCT_PACKAGES := \
     SoundRecorder
 
 PRODUCT_PACKAGES += \
+	modem_control\
 	nvitemd \
 	charge \
 	vcharged \

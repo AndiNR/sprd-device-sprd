@@ -24,7 +24,6 @@ struct image_info {
 
 #define FDL_DL_ADDRESS		0x40000000
 
-#define FDL_IMAGE_PATH		"/dev/block/mmcblk0p1"
 #define FDL_OFFSET		0
 #define	FDL_PACKET_SIZE 	256
 #define	FDL_IMAGE_SIZE  	(12*1024)
@@ -34,7 +33,8 @@ struct image_info {
 #define DL_SUCCESS		(0)
 char test_buffer[HS_PACKET_SIZE]={0};
 unsigned long fdl_image_data[FDL_IMAGE_SIZE+4];
-
+#ifdef BOARD_7710g2
+#define FDL_IMAGE_PATH		"/dev/block/mmcblk0p1"
 struct image_info download_image_info[]={
 	{ //fixvn
 		"/dev/block/mmcblk0p4",
@@ -62,7 +62,37 @@ struct image_info download_image_info[]={
 		0x02120000,
 	},
 };
-
+#endif
+#ifdef BOARD_7702_STINRAY
+#define FDL_IMAGE_PATH          "/dev/mtd/mtd3"
+struct image_info download_image_info[]={
+        { //fixvn
+                "/fixnv/fixnv.bin",
+                0x1E000,
+                0x400,
+        },
+        { //fixvn
+                "/fixnv/fixnv.bin",
+                0x1E000,
+                0x02100000,
+        },
+        { //DSP code
+                "/dev/mtd/mtd7",
+                0x200000,
+                0x00020000,
+        },
+        { //ARM code
+                "/dev/mtd/mtd19",
+                0x009F8000,
+                0x00400000,
+        },
+        { //running nv
+                "/runtimenv/runtimenv.bin",
+                0x20000,
+                0x02120000,
+        },
+};
+#endif
 static int modem_interface_fd = -1;
 static int boot_status = 0;
 int speed_arr[] = {B921600,B115200, B38400, B19200, B9600, B4800, B2400, B1200, B300,
@@ -192,7 +222,7 @@ int download_image(int channel_fd,struct image_info *info)
 
 	if(image_fd < 0){
 		printf("open file: %s error %s\n", info->image_path, strerror(errno));
-		return -1;
+		return DL_SUCCESS;
 	}
 
 	printf("Start download image %s image_size 0x%x address 0x%x\n",info->image_path,info->image_size,info->address);

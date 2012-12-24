@@ -7,6 +7,11 @@ LOCAL_SRC_FILES:= \
 LOCAL_SHARED_LIBRARIES := \
     libcutils 
 
+
+ifeq ($(strip $(BOARD_7702_STINRAY)),true)
+LOCAL_CFLAGS := -DBOARD_7702_STINRAY
+endif
+
 LOCAL_MODULE := modem_control
 
 LOCAL_MODULE_TAGS := optional

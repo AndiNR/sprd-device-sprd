@@ -55,6 +55,12 @@ on boot
 on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
 
+#modem_control
+service modem_control /system/bin/logwrapper /system/bin/modem_control
+    class main
+    user root
+    oneshot
+
 #telephony service
 service sprd_monitor /system/bin/sprd_monitor
     class main
@@ -120,6 +126,12 @@ service ril-daemon1 /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -
 
 on property:persist.msms.phone_count=2
     start ril-daemon1
+
+#nvitemd
+service nvitemd /system/bin/nvitemd
+    class main
+    disabled
+    oneshot
 
 # create virtual SD card at /storage/sdcard0, based on the /data/media directory
 # daemon will drop to user/group system/media_rw after initializing

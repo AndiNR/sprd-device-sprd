@@ -22,7 +22,7 @@ ARCH_ARM_HAVE_TLS_REGISTER := true
 TARGET_BOARD_PLATFORM := sc8810
 TARGET_BOOTLOADER_BOARD_NAME := sp7702
 
-TARGET_VLX_ENABLE ?= true
+TARGET_VLX_ENABLE ?= false
 
 # config u-boot
 TARGET_NO_BOOTLOADER := false
@@ -43,6 +43,10 @@ USES_UNCOMPRESSED_KERNEL := true
 BOARD_KERNEL_BASE := 0x00000000
 BOARD_KERNEL_CMDLINE := console=ttyS1,115200n8
 
+
+# define for modem_control and nvitemd
+BOARD_7702_STINRAY	:= true
+
 # use default init.rc
 TARGET_PROVIDES_INIT_RC := true
 
@@ -50,6 +54,7 @@ BOARD_HAVE_BLUETOOTH := false
 BOARD_HAVE_BLUETOOTH_BCM := false
 # board specific modules
 BOARD_USES_TINYALSA_AUDIO := true
+BOARD_USES_LINE_CALL	:= true
 BOARD_USE_VETH := true
 BOARD_SPRD_RIL := true
 BOARD_SAMSUNG_RIL := false

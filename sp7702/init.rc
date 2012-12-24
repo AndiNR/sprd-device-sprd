@@ -50,6 +50,10 @@ loglevel 3
     mkdir /system
     mkdir /data 0771 system system
     mkdir /cache 0770 system cache
+    mkdir /runtimenv 0774 system system
+    mkdir /backupfixnv 0774 system system
+    mkdir /productinfo 0774 system system
+    mkdir /fixnv 0774 system system
     mkdir /config 0500 root root
 
     # Directory for putting things only root should see.
@@ -129,6 +133,31 @@ on post-fs
     # We chown/chmod /cache again so because mount is run as root + defaults
     chown system cache /cache
     chmod 0770 /cache
+
+    mount yaffs2 mtd@runtimenv /runtimenv nosuid nodev no-checkpoint,tags-ecc-off
+    chown system system /runtimenv
+    chmod 0774 /runtimenv
+
+    mount yaffs2 mtd@backupfixnv /backupfixnv nosuid nodev no-checkpoint,tags-ecc-off
+    chown system system /backupfixnv
+    chmod 0774 /backupfixnv
+
+    mount yaffs2 mtd@productinfo /productinfo nosuid nodev no-checkpoint,tags-ecc-off
+    chown system system /productinfo
+    chmod 0774 /productinfo
+
+    mount yaffs2 mtd@fixnv /fixnv nosuid nodev no-checkpoint,tags-ecc-off
+    chown system system /fixnv
+    chmod 0774 /fixnv
+
+    chmod 0660 /fixnv/fixnv.bin
+    chmod 0660 /backupfixnv/fixnv.bin
+    chmod 0660 /productinfo/productinfo.bin
+    chmod 0660 /productinfo/productinfobkup.bin
+    chown system system /fixnv/fixnv.bin
+    chown system system /backupfixnv/fixnv.bin
+    chown system system /productinfo/productinfo.bin
+    chown system system /productinfo/productinfobkup.bin
 
     # This may have been created by the recovery system with odd permissions
     chown system cache /cache/recovery
