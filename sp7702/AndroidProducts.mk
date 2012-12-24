@@ -15,5 +15,5 @@
 #
 
 PRODUCT_MAKEFILES := $(LOCAL_DIR)/prod_sp7702base.mk
-PRODUCT_MAKEFILES := $(LOCAL_DIR)/prod_sp7702plus.mk
+PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_sp7702plus.mk
 
