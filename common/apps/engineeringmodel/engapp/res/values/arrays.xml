@@ -49,13 +49,13 @@
         <item>Auto</item>
     </string-array>
     <string-array name="preferred_network_mode_values">
-        <item>"15"</item>
-        <item>"13"</item>
         <item>"2"</item>
+        <item>"1"</item>
+        <item>"0"</item>
     </string-array>
         <string-array name="preferred_network_mode_values_gsm_only">
-        <item>"13"</item>
-        <item>"2"</item>
+        <item>"1"</item>
+        <item>"0"</item>
     </string-array>
 
     <string-array name="band_select_choices">
