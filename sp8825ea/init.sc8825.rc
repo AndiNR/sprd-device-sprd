@@ -147,13 +147,58 @@ on property:ro.nativemodem=true
     symlink /dev/spipe_td3 /dev/vbpipe3
     symlink /dev/spipe_td6 /dev/vbpipe6
 
-#####################################
-###### calibration mode #############
-#####################################
-service calibration /system/bin/calibration
+#start nvitem daemon.
+service nvm_daemon /system/bin/nvm_daemon
+    class main
     user root
     oneshot
-    console
+#telephony service
+service sprd_monitor /system/bin/sprd_monitor
+    class main
+    user root
+    oneshot
+
+service modemd /system/bin/modemd
+    class main
+    oneshot
+
+service engpcclient /system/bin/engpcclient
+    class main
+    disabled
+    oneshot
+
+service engservice /system/bin/engservice
+    class main
+    disabled
+    oneshot
+
+service engmodemclient /system/bin/engmodemclient
+    class main
+    disabled
+    oneshot
+
+service engsetmacaddr /system/bin/engsetmacaddr
+    class main
+    oneshot
+
+service start_ttyNK /system/bin/open_ttyNK 3
+    class main
+    disabled
+    oneshot
+
+service phoneserver /system/bin/phoneserver
+    class main
+    disabled
+    oneshot
+
+service phoneserver_2sim /system/bin/phoneserver_2sim
+    class main
+    disabled
+    oneshot
+
+service calibrationinit /system/bin/calibration_init
+    class main
+    oneshot
 
 service vcharged /bin/vcharged
     class core
@@ -164,6 +209,36 @@ service charge /bin/charge
     class charger
     user root
     oneshot
+#rild service
+service ril-daemon /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -- -n 0
+    class main
+    socket rild stream 660 root radio
+    socket rild-debug stream 660 radio system
+    user root
+    group radio cache inet misc audio sdcard_rw log
+
+service ril-daemon1 /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -- -n 1
+    class main
+    socket rild1 stream 660 root radio
+    socket rild-debug1 stream 660 radio system
+    disabled
+    user root
+    group radio cache inet misc audio sdcard_rw log
+
+on property:persist.msms.phone_count=2
+    start ril-daemon1
+
+service bootsound /system/bin/mplayer /system/media/bootsound
+    user media
+    group audio
+    oneshot
+
+service startupsound /system/bin/mplayer /system/media/startupsound
+    user media
+    group audio
+    disabled
+    oneshot
+
 # create virtual SD card at /storage/sdcard0, based on the /data/media directory
 # daemon will drop to user/group system/media_rw after initializing
 # underlying files in /data/media will be created with user and group media_rw (1023)
@@ -240,3 +315,4 @@ service iprenew_p2p /system/bin/dhcpcd -n
 service slog /system/bin/slog
     class main
     user root
+

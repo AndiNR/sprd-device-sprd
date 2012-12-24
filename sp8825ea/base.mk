@@ -29,17 +29,18 @@ PRODUCT_PACKAGES := \
 	bttest\
 	hostapd \
 	wpa_supplicant.conf \
+	calibration_init \
+	rawdatad \
+	nvm_daemon \
+	modemd\
 	audio.a2dp.default
 
 PRODUCT_PACKAGES += \
-	rawdatad \
 	nvitemd \
 	charge \
 	vcharged \
 	poweroff_alarm \
 	mplayer \
-	modemd \
-	calibration_init \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \
 	camera.$(TARGET_PLATFORM) \
