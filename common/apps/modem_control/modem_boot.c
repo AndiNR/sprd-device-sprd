@@ -33,7 +33,7 @@ struct image_info {
 #define DL_SUCCESS		(0)
 char test_buffer[HS_PACKET_SIZE]={0};
 unsigned long fdl_image_data[FDL_IMAGE_SIZE+4];
-#ifdef BOARD_7710g2
+#if defined(BOARD_7702_KYLEW) || defined(BOARD_SP7710G2)
 #define FDL_IMAGE_PATH		"/dev/block/mmcblk0p1"
 struct image_info download_image_info[]={
 	{ //fixvn

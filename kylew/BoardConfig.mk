@@ -32,6 +32,9 @@ USES_UNCOMPRESSED_KERNEL := true
 BOARD_KERNEL_BASE := 0x00000000
 BOARD_KERNEL_CMDLINE := console=ttyS1,115200n8
 
+# define for modem_control and nvitemd
+BOARD_7702_KYLEW        := true
+
 # use default init.rc
 TARGET_PROVIDES_INIT_RC := true
 
