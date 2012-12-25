@@ -200,7 +200,7 @@ struct tiny_audio_device {
 
     struct tiny_private_ctl private_ctl;
     struct audio_pga *pga;
-    int eq_available;
+    bool eq_available;
     struct stream_routing_manager  routing_mgr;
 };
 
@@ -2374,10 +2374,7 @@ static void stream_routing_manager_close(struct tiny_audio_device *adev)
 static int adev_open(const hw_module_t* module, const char* name,
                      hw_device_t** device)
 {
-#define MIXER_CTL_VBC_EQ_UPDATE            "VBC EQ Update"
-
     struct tiny_audio_device *adev;
-    struct mixer_ctl *eq_update;
     int ret;
     BLUE_TRACE("adev_open");
     if (strcmp(name, AUDIO_HARDWARE_INTERFACE) != 0)
@@ -2386,6 +2383,7 @@ static int adev_open(const hw_module_t* module, const char* name,
     adev = calloc(1, sizeof(struct tiny_audio_device));
     if (!adev)
         return -ENOMEM;
+    memset(adev, 0, sizeof(struct tiny_audio_device));
 
     adev->hw_device.common.tag = HARDWARE_DEVICE_TAG;
     adev->hw_device.common.version = AUDIO_DEVICE_API_VERSION_1_0;
@@ -2414,39 +2412,36 @@ static int adev_open(const hw_module_t* module, const char* name,
     ALOGI("s_tinycard = %d, s_vaudio = %d", s_tinycard, s_vaudio);
     if (s_tinycard < 0 && s_vaudio < 0) {
         ALOGE("Unable to load sound card, aborting.");
-        return -EINVAL;
+        goto ERROR;
     }
     adev->mixer = mixer_open(s_tinycard);
     if (!adev->mixer) {
-        free(adev);
         ALOGE("Unable to open the mixer, aborting.");
-        return -EINVAL;
-    }
-    /* generate eq params file of vbc effect*/
-    ret = create_vb_effect_params();
-    if (ret != 0) {
-        adev->eq_available = 0;
-        ALOGW("Warning: Failed to create the parameters file of vbc_eq");
-    } else {
-        adev->eq_available = 1;
-        eq_update = mixer_get_ctl_by_name(adev->mixer, MIXER_CTL_VBC_EQ_UPDATE);
-        ret = mixer_ctl_set_enum_by_string(eq_update, "loading");
-        ALOGI("eq_loading, ret(%d)", ret);
+        goto ERROR;
     }
     /* parse mixer ctl */
     ret = adev_config_parse(adev);
     if (ret < 0) {
         ALOGE("Unable to locate all mixer controls from XML, aborting.");
-        return -EINVAL;
+        goto ERROR;
     }
     BLUE_TRACE("ret=%d, num_dev_cfgs=%d", ret, adev->num_dev_cfgs);
     BLUE_TRACE("dev_cfgs_on depth=%d, dev_cfgs_off depth=%d", adev->dev_cfgs->on_len,  adev->dev_cfgs->off_len);
 
+    /* generate eq params file of vbc effect*/
+    adev->eq_available = false;
+    ret = create_vb_effect_params();
+    if (ret != 0) {
+        ALOGW("Warning: Failed to create the parameters file of vbc_eq");
+    } else {
+        ret = mixer_ctl_set_enum_by_string(adev->private_ctl.vbc_eq_update, "loading");
+        if (ret == 0) adev->eq_available = true;
+        ALOGI("eq_loading, ret(%d), eq_available(%d)", ret, adev->eq_available);
+    }
     if (adev->eq_available) {
         vb_effect_config_mixer_ctl(adev->private_ctl.vbc_eq_update, adev->private_ctl.vbc_eq_profile_select);
         aud_vb_effect_start(adev);
     }
-    
     /*Parse PGA*/
     adev->pga = audio_pga_init(adev->mixer);
     if (!adev->pga) {
@@ -2470,9 +2465,7 @@ static int adev_open(const hw_module_t* module, const char* name,
 #ifndef _VOICE_CALL_VIA_LINEIN
     /* Create a task to get vbpipe message from cp when voice-call */
     ret = vbc_ctrl_open(adev);
-    if(ret < 0){
-        return -EINVAL;
-    }
+    if (ret < 0)  goto ERROR;
 #endif
     ret = mmi_audio_loop_open();
     if (ret)  ALOGW("Warning: audio loop can NOT work.");
@@ -2480,9 +2473,15 @@ static int adev_open(const hw_module_t* module, const char* name,
     ret = stream_routing_manager_create(adev);
     if (ret) {
         ALOGE("Unable to create stream_routing_manager, aborting.");
-        return -EINVAL;
+        goto ERROR;
     }
     return 0;
+
+ERROR:
+    if (adev->pga)    audio_pga_free(adev->pga);
+    if (adev->mixer)  mixer_close(adev->mixer);
+    if (adev)         free(adev);
+    return -EINVAL;
 }
 
 static struct hw_module_methods_t hal_module_methods = {
