@@ -49,6 +49,7 @@ PRODUCT_PACKAGES += \
     AppBackup \
     AudioProfile \
     SprdNote \
+    CallFireWall \
     ValidationTools
 	
 # add  system properties

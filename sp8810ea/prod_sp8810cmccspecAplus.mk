@@ -56,6 +56,7 @@ PRODUCT_PACKAGES += \
     CMCCWIFI.apk \
     ES_File_Explorer.apk \
     PimClient.apk \
+    CallFireWall \
     SecondClock.apk \
     WorldClock.apk
         
