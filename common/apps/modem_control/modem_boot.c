@@ -62,8 +62,7 @@ struct image_info download_image_info[]={
 		0x02120000,
 	},
 };
-#endif
-#ifdef BOARD_7702_STINRAY
+#elif defined BOARD_7702_STINRAY
 #define FDL_IMAGE_PATH          "/dev/mtd/mtd3"
 struct image_info download_image_info[]={
         { //fixvn
@@ -91,6 +90,35 @@ struct image_info download_image_info[]={
                 0x20000,
                 0x02120000,
         },
+};
+#else
+#define FDL_IMAGE_PATH		"/dev/block/mmcblk0p1"
+struct image_info download_image_info[]={
+	{ //fixvn
+		"/dev/block/mmcblk0p4",
+		0x1E000,
+		0x400,
+	},
+	{ //fixvn
+		"/dev/block/mmcblk0p4",
+		0x1E000,
+		0x02100000,
+	},
+	{ //DSP code
+		"/dev/block/mmcblk0p3",
+		0x200000,
+		0x00020000,
+	},
+	{ //ARM code
+		"/dev/block/mmcblk0p19",
+		0x009F8000,
+		0x00400000,
+	},
+	{ //running nv
+		"/dev/block/mmcblk0p6",
+		0x20000,
+		0x02120000,
+	},
 };
 #endif
 static int modem_interface_fd = -1;
