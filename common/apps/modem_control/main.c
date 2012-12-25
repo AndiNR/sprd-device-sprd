@@ -328,6 +328,13 @@ int main(int argc, char *argv[])
 	}
 	close(modem_state_fd);
 
+	{
+                extern int get_modem_images_info(void);
+                extern void print_modem_image_info(void);
+                get_modem_images_info();
+                print_modem_image_info();
+	}
+
 	pthread_create(&t1, NULL, (void*)modemd_listenaccept_thread, NULL);
 	printf(">>>>>> start modem manager program ......\n");
 	

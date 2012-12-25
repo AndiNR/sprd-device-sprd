@@ -22,49 +22,21 @@ struct image_info {
 #define	DLOADER_PATH		"/dev/dloader"
 #define	UART_DEVICE_NAME	"/dev/ttyS1"
 
-#define FDL_DL_ADDRESS		0x40000000
-
 #define FDL_OFFSET		0
 #define	FDL_PACKET_SIZE 	256
-#define	FDL_IMAGE_SIZE  	(12*1024)
 #define HS_PACKET_SIZE		0x8000
 
 #define	DL_FAILURE		(-1)
 #define DL_SUCCESS		(0)
 char test_buffer[HS_PACKET_SIZE]={0};
-unsigned long fdl_image_data[FDL_IMAGE_SIZE+4];
-#if defined(BOARD_7702_KYLEW) || defined(BOARD_SP7710G2)
-#define FDL_IMAGE_PATH		"/dev/block/mmcblk0p1"
+static int modem_images_count=6;
+static char *uart_dev = UART_DEVICE_NAME;
 struct image_info download_image_info[]={
-	{ //fixvn
-		"/dev/block/mmcblk0p4",
-		0x1E000,
-		0x400,
-	},
-	{ //fixvn
-		"/dev/block/mmcblk0p4",
-		0x1E000,
-		0x02100000,
-	},
-	{ //DSP code
-		"/dev/block/mmcblk0p3",
-		0x200000,
-		0x00020000,
-	},
-	{ //ARM code
-		"/dev/block/mmcblk0p19",
-		0x009F8000,
-		0x00400000,
-	},
-	{ //running nv
-		"/dev/block/mmcblk0p6",
-		0x20000,
-		0x02120000,
-	},
-};
-#elif defined BOARD_7702_STINRAY
-#define FDL_IMAGE_PATH          "/dev/mtd/mtd3"
-struct image_info download_image_info[]={
+        { //fixvn
+                "/dev/mtd/mtd3",
+                0x3000,
+                0x40000000,
+        },
         { //fixvn
                 "/fixnv/fixnv.bin",
                 0x1E000,
@@ -90,43 +62,87 @@ struct image_info download_image_info[]={
                 0x20000,
                 0x02120000,
         },
+        { //running nv
+                NULL,
+                0,
+                0,
+        },
 };
-#else
-#define FDL_IMAGE_PATH		"/dev/block/mmcblk0p1"
-struct image_info download_image_info[]={
-	{ //fixvn
-		"/dev/block/mmcblk0p4",
-		0x1E000,
-		0x400,
-	},
-	{ //fixvn
-		"/dev/block/mmcblk0p4",
-		0x1E000,
-		0x02100000,
-	},
-	{ //DSP code
-		"/dev/block/mmcblk0p3",
-		0x200000,
-		0x00020000,
-	},
-	{ //ARM code
-		"/dev/block/mmcblk0p19",
-		0x009F8000,
-		0x00400000,
-	},
-	{ //running nv
-		"/dev/block/mmcblk0p6",
-		0x20000,
-		0x02120000,
-	},
-};
-#endif
 static int modem_interface_fd = -1;
 static int boot_status = 0;
 int speed_arr[] = {B921600,B115200, B38400, B19200, B9600, B4800, B2400, B1200, B300,
                    B921600,B115200, B38400, B19200, B9600, B4800, B2400, B1200, B300, };
 int name_arr[] = {921600,115200,38400,  19200, 9600,  4800,  2400,  1200,  300,
         921600, 115200,38400,  19200,  9600, 4800, 2400, 1200,  300, };
+
+int get_modem_images_info(void)
+{
+    FILE *fp;
+    int images_count = 0;
+    char line[256];
+    unsigned long address,length;
+    struct image_info *info = download_image_info;
+    int max_item = sizeof(download_image_info)/sizeof(download_image_info[0]);
+
+    if(info == NULL)
+        return 0;
+
+    if(max_item == 0)
+        return 0;
+
+    if (!(fp = fopen("/etc/modem_images.info", "r"))) {
+        return 0;
+    }
+    printf("start parse modem images file\n");
+
+    while(fgets(line, sizeof(line), fp)) {
+        const char *delim = " \t";
+        char *save_ptr;
+        char *filename, *address_ptr, *length_ptr;
+
+
+        line[strlen(line)-1] = '\0';
+
+        if (line[0] == '#' || line[0] == '\0')
+            continue;
+
+        if (!(filename = strtok_r(line, delim, &save_ptr))) {
+            printf("Error parsing type");
+            break;
+        }
+        if (!(length_ptr = strtok_r(NULL, delim, &save_ptr))) {
+            break;
+        }
+        if (!(address_ptr = strtok_r(NULL, delim, &save_ptr))) {
+            printf("Error parsing label");
+            break;
+        }
+        printf("%s:%s:%s\n",filename,&length_ptr[2],&address_ptr[2]);
+        info[images_count].image_path = strdup(filename);
+        info[images_count].image_size = strtol(&length_ptr[2],&save_ptr,16);
+        info[images_count].address = strtol(&address_ptr[2],&save_ptr,16);
+        if((info[images_count].address == 0) || (info[images_count].image_size==0)){
+                uart_dev = info[images_count].image_path;
+                printf("UART Device = %s",uart_dev);
+        } else {
+                images_count++;
+        }
+        if(images_count >= max_item) break;
+    }
+    fclose(fp);
+    modem_images_count = images_count;
+    return images_count;
+}
+void print_modem_image_info(void)
+{
+        int i;
+        struct image_info *info = download_image_info;
+        printf("modem_images_count = %d .\n",modem_images_count);
+
+        for(i=0;i<modem_images_count;i++){
+                printf("image[%d]: %s  size 0x%x  address 0x%x\n",i,info[i].image_path,info[i].image_size,info[i].address);
+        }
+}
 
 static void reset_modem(void)
 {
@@ -246,6 +262,9 @@ int download_image(int channel_fd,struct image_info *info)
 	int count = 0;
 	int ret;
 	
+        if(info->image_path == NULL)
+                return DL_SUCCESS;
+
 	image_fd = open(info->image_path, O_RDONLY,0);
 
 	if(image_fd < 0){
@@ -294,9 +313,9 @@ int download_images(int channel_fd)
 {
 	struct image_info *info;
 	int i ,ret;
-	int image_count = sizeof(download_image_info)/sizeof(download_image_info[0]);
-	
-	info = &download_image_info[0];
+	int image_count = modem_images_count - 1;
+
+	info = &download_image_info[1];
 	for(i=0;i<image_count;i++){
 		ret = download_image(channel_fd,info);
 		if(ret != DL_SUCCESS)
@@ -311,14 +330,23 @@ void * load_fdl2memory(int *length)
 {
 	int fdl_fd;
 	int read_len,size;
-	char *buffer = (char *)fdl_image_data;
-	
-	fdl_fd = open(FDL_IMAGE_PATH, O_RDONLY,0);
+	char *buffer = NULL;
+	char *ret_val = NULL;
+	struct image_info *info;
+
+	info = &download_image_info[0];
+	fdl_fd = open(info->image_path, O_RDONLY,0);
 	if(fdl_fd < 0){
-		printf("open file %s error %s\n", FDL_IMAGE_PATH, strerror(errno));
+		printf("open file %s error %s\n", info->image_path, strerror(errno));
 		return NULL;
 	}
-	size = FDL_IMAGE_SIZE;
+	size = info->image_size;
+        buffer = malloc(size+4);
+        if(buffer == NULL){
+                printf("no memory\n");
+                return NULL;
+        }
+        ret_val = buffer;
 	do{
 		read_len = read(fdl_fd,buffer,size);
 		if(read_len > 0)
@@ -329,8 +357,8 @@ void * load_fdl2memory(int *length)
 	}while(size > 0);
 	close(fdl_fd);
 	if(length)
-		*length = FDL_IMAGE_SIZE;
-	return fdl_image_data;
+		*length = info->image_size;
+	return ret_val;
 }
 static int download_fdl(int uart_fd)
 {
@@ -340,30 +368,35 @@ static int download_fdl(int uart_fd)
 	int translated_size=0;
 	int ack_size = 0;
 	char *buffer,data = 0;
+	char *ret_val = NULL;
 	char test_buffer1[256]={0};
 
 	buffer = load_fdl2memory(&size);
 	printf("fdl image info : address %p size %x\n",buffer,size);
-	printf("fdl_content:  0x%x 0x%x 0x%x\n",*(int *)buffer,*(int*)(buffer+4),*(int *)(buffer+8));
 	if(buffer == NULL)
-		return -1;
-	ret = send_start_message(uart_fd,size,FDL_DL_ADDRESS,0);
-	if(ret == DL_FAILURE)
-		return ret;
+		return DL_FAILURE;
+        ret_val = buffer;
+        ret = send_start_message(uart_fd,size,download_image_info[0].address,0);
+        if(ret == DL_FAILURE){
+                free(ret_val);
+                return ret;
+        }
 	while(size){
 		ret = send_data_message(uart_fd,buffer,FDL_PACKET_SIZE,0);
-		if(ret == DL_FAILURE)
-			return ret;		
+		if(ret == DL_FAILURE){
+			free(ret_val);
+			return ret;
+		}
 		buffer += FDL_PACKET_SIZE;
 		size -= FDL_PACKET_SIZE;
 	}
 	ret = send_end_message(uart_fd,0);
-	if(ret == DL_FAILURE)
+	if(ret == DL_FAILURE){
+		free(ret_val);
 		return ret;
-	ret = send_exec_message(uart_fd,FDL_DL_ADDRESS,0);
-	if(ret == DL_FAILURE)
-		return ret;
-
+	}
+	ret = send_exec_message(uart_fd,download_image_info[0].address,0);
+	free(ret_val);
 	return ret;
 }
 static void print_log_data(char *buf, int cnt)
@@ -406,12 +439,11 @@ int open_uart_device(int polling_mode,int speed)
 {
     int fd;
     if(polling_mode == 1)	
-    	fd = open( UART_DEVICE_NAME, O_RDWR|O_NONBLOCK );         //| O_NOCTTY | O_NDELAY  
+	fd = open( uart_dev, O_RDWR|O_NONBLOCK );         //| O_NOCTTY | O_NDELAY
     else
-    	fd = open( UART_DEVICE_NAME, O_RDWR);          
+	fd = open( uart_dev, O_RDWR);
     if(fd > 0)
     	set_raw_data_speed(fd,speed);  
-    	//set_raw_data_speed(fd,115200);  
     return fd;
 }
 int modem_boot(void)  
