@@ -43,7 +43,7 @@ PRODUCT_PACKAGES := \
 
 # prebuild files
 PRODUCT_PACKAGES += \
-	
+	CallFireWall
 # packages files
 PRODUCT_PACKAGES += \
 	
