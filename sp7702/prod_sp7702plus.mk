@@ -37,9 +37,11 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 PRODUCT_PACKAGES := \
 	VoiceDialer \
 	MsmsPhone \
-    framework2 \
 	Settings \
-      ES_File_Explorer.apk
+	MsmsStk \
+	Stk1 \
+	framework2\
+	ES_File_Explorer.apk
 
 # prebuild files
 PRODUCT_PACKAGES += \

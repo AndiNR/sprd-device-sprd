@@ -1,10 +1,13 @@
 
 MALI := libUMP libEGL_mali.so libGLESv1_CM_mali.so libGLESv2_mali.so libMali.so ump.ko mali.ko
 
-MXD_CMMB_PLAYER := mxdcmmbplayer.apk  \
-		   libiwcmmbdev.so libiwcmmb_jni.so  \
-		   libiwmbbms_jni.so libiwmbbms.so libiwmbbms_tel.so \
-		   libiwuam.so  libmxdcmmb.so libplayEngine.so mxdcmmbserver mxdid.id libiwcmmb_jni_demon.so libiwcmmbdev_demon.so mxdcmmbtest.apk
+BRCMFM := \
+	com.broadcom.bt.service \
+	libfmpmservice \
+	libfmservice \
+	BtFmServiceReg \
+	FmRadio
+
 PRODUCT_PROPERTY_OVERRIDES :=
 
 # original apps copied from generic_no_telephony.mk
@@ -35,6 +38,7 @@ PRODUCT_PACKAGES := \
 	bttest\
 	hostapd \
 	wpa_supplicant.conf \
+	audio.a2dp.default \
     SoundRecorder
 
 PRODUCT_PACKAGES += \
@@ -76,6 +80,8 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/ueventd.sp8810.rc:root/ueventd.sp8810.rc \
 	$(BOARDDIR)/fstab.sp8810:root/fstab.sp8810 \
 	$(BOARDDIR)/vold.fstab:system/etc/vold.fstab \
+	device/sprd/common/libs/audio/apm/devicevolume.xml:system/etc/devicevolume.xml \
+	device/sprd/common/libs/audio/apm/formatvolume.xml:system/etc/formatvolume.xml \
         $(BOARDDIR)/hw_params/tiny_hw.xml:system/etc/tiny_hw.xml \
         $(BOARDDIR)/hw_params/codec_pga.xml:system/etc/codec_pga.xml \
         $(BOARDDIR)/hw_params/audio_para:system/etc/audio_para \

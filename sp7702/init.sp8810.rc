@@ -11,6 +11,7 @@ on early-init
     # for backwards compatibility
     symlink /storage/sdcard0 /sdcard
     symlink /storage/sdcard0 /mnt/sdcard
+    symlink /dev/ts0710mux22  /dev/vbpipe0    
 
 on fs
     mount_all /fstab.sp8810
@@ -51,7 +52,9 @@ on boot
     mkdir /etc/wifi 0770 wifi wifi
     mkdir /data/system/wpa_supplicant 0771 wifi wifi
     mkdir /data/misc/dhcp 0770 dhcp dhcp
+    chown dhcp dhcp /data/misc/dhcp
     setprop wifi.interface wlan0
+
 on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
 
@@ -108,6 +111,13 @@ service charge /bin/charge
     class charger
     user root
     oneshot
+
+#mcom monitor
+service mcom_monitor /system/bin/mcom_monitor
+    class main
+    user root
+    oneshot
+
 #rild service
 service ril-daemon /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -- -n 0
     class main
