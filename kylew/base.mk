@@ -35,6 +35,18 @@ PRODUCT_PACKAGES := \
 	wpa_supplicant.conf \
 	audio.a2dp.default
 
+# own copyright packages files
+PRODUCT_PACKAGES += \
+    AppBackup \
+    AudioProfile \
+    SprdNote \
+    CallFireWall \
+    ValidationTools
+
+# prebuild files
+PRODUCT_PACKAGES += \
+    ES_File_Explorer.apk
+
 PRODUCT_PACKAGES += \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \

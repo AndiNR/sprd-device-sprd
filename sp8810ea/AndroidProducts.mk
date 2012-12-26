@@ -17,4 +17,5 @@
 PRODUCT_MAKEFILES := $(LOCAL_DIR)/prod_sp8810base.mk
 PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_sp8810plus.mk
 PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_sp8810cmccspecA.mk
+PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_sp8810cmccspecAplus.mk
 

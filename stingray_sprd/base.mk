@@ -12,6 +12,18 @@ PRODUCT_PACKAGES := \
 	sensors.$(TARGET_BOARD)  \
 	$(MALI)
 
+# own copyright packages files
+PRODUCT_PACKAGES += \
+    AppBackup \
+    AudioProfile \
+    SprdNote \
+    CallFireWall \
+    ValidationTools
+
+# prebuild files
+PRODUCT_PACKAGES += \
+    ES_File_Explorer.apk
+
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/init.sp8810.rc:root/init.sp8810.rc \
 	$(BOARDDIR)/init.sp8810.usb.rc:root/init.sp8810.usb.rc \

@@ -41,6 +41,18 @@ PRODUCT_PACKAGES := \
 	audio.a2dp.default \
     SoundRecorder
 
+# own copyright packages files
+PRODUCT_PACKAGES += \
+    AppBackup \
+    AudioProfile \
+    SprdNote \
+    CallFireWall \
+    ValidationTools
+
+# prebuild files
+PRODUCT_PACKAGES += \
+    ES_File_Explorer.apk
+
 PRODUCT_PACKAGES += \
 	modem_control\
 	nvitemd \

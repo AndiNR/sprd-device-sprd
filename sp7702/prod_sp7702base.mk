@@ -38,12 +38,11 @@ PRODUCT_PACKAGES := \
 	Phone \
 	framework2 \
 	Settings \
-	Stk \
-	ES_File_Explorer.apk
+	Stk
 
 # prebuild files
 PRODUCT_PACKAGES += \
-	CallFireWall
+
 # packages files
 PRODUCT_PACKAGES += \
 	
