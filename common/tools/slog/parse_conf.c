@@ -95,6 +95,11 @@ int parse_3_entries(char *type)
 			screenshot_enable = 1;
 		else
 			screenshot_enable = 0;
+	} else if(!strncmp(name, "slogsaveall", 11)) {
+		if(!strncmp(pos3, "on", 2))
+			slog_save_all = 1;
+		else
+			slog_save_all = 0;
 	}
 	return 0;
 }
@@ -175,6 +180,8 @@ int parse_5_entries(char *type)
 			info->log_path = strdup("kernel");
 		} else if(!strncmp(info->name, "modem", 5)) {
 			info->log_path = strdup("modem");
+		} else if(!strncmp(info->name, "bt", 2)) {
+			info->log_path = strdup("bt");
 		} else {
 			info->log_path = strdup("android");
 		}
@@ -261,9 +268,9 @@ int gen_config_string(char *buffer)
 	int off = 0;
 	struct slog_info *info;
 
-	off += sprintf(buffer + off, "enable: %s\nbackend threads(stream snapshot notify): %d %d %d\n",
+	off += sprintf(buffer + off, "enable: %s\nbackend threads(stream snapshot notify bt): %d %d %d %d\n",
 					slog_enable ? "on" : "off", stream_log_handler_started,
-					snapshot_log_handler_started, notify_log_handler_started);
+					snapshot_log_handler_started, notify_log_handler_started, bt_log_handler_started);
 	off += sprintf(buffer + off, "current logpath,%s,\n", current_log_path);
 	off += sprintf(buffer + off, "config logpath,%s,\n", config_log_path);
 	off += sprintf(buffer + off, "internal storage,%s,\n", INTERNAL_LOG_PATH);

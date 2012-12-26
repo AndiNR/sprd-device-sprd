@@ -34,11 +34,12 @@
 
 int slog_enable = 1;
 int screenshot_enable = 1;
-int slog_initialized = 0;
+int slog_save_all = 0;
 int slog_start_step = 0;
 int stream_log_handler_started = 0;
 int snapshot_log_handler_started = 0;
 int notify_log_handler_started = 0;
+int bt_log_handler_started = 0;
 
 int internal_log_size = 10; /*M*/
 
@@ -51,7 +52,7 @@ char external_path[MAX_NAME_LEN];
 struct slog_info *stream_log_head, *snapshot_log_head;
 struct slog_info *notify_log_head, *misc_log;
 
-pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, command_tid;
+pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, command_tid, bt_tid;
 
 
 void exec_or_dump_content(struct slog_info *info, char *filepath)
@@ -62,6 +63,14 @@ void exec_or_dump_content(struct slog_info *info, char *filepath)
 	time_t t;
 	struct tm tm;
 	char buffer[4096];
+
+	/* slog_enable on/off state will control all snapshot log */
+	if(slog_enable == 0)
+		return;
+
+	/* misc_log on/off state will control all snapshot log */
+	if(misc_log->state != SLOG_STATE_ON)
+		return;
 
 	/*Separate treating bugreprot*/
 	if(!strncmp("bugreport", info->content, 9)) {
@@ -154,7 +163,7 @@ int capture_by_name(struct slog_info *head, const char *name, char *filepath)
 	return 0;
 }
 
-static int capture_last_log(struct slog_info *head)
+static int capture_snap_for_last(struct slog_info *head)
 {
         struct slog_info *info = head;
         while(info) {
@@ -173,6 +182,9 @@ static int capture_all(struct slog_info *head)
 	time_t t;
         struct tm tm;
 	struct slog_info *info = head;
+
+	if(!head)
+		return 0;
 
 	sprintf(filepath, "%s/%s/%s", current_log_path, top_logdir, info->log_path);
         ret = mkdir(filepath, S_IRWXU | S_IRWXG | S_IRWXO);
@@ -227,7 +239,7 @@ static void handler_last_dir()
                 return;
         }
 
-        if(last_flag == 1){
+        if(last_flag == 1 && slog_save_all == 0){
 		sprintf(buffer, "rm -r %s/%s/", current_log_path, LAST_LOG);
                 system(buffer);
         }
@@ -279,26 +291,29 @@ static int cp_internal_to_external()
 	return 0;
 }
 
+static void handler_modem_memory_log()
+{
+	char path[MAX_NAME_LEN];
+	struct stat st;
+
+	sprintf(path, "%s/modem_memory.log", external_path);
+	if(!stat(path, &st)){
+		sprintf(path, "mv %s/modem_memory.log %s/%s/misc/", external_path, current_log_path, top_logdir);
+		system(path);
+	}
+}
+
 static void create_log_dir()
 {
 	time_t when;
 	struct tm start_tm;
-	struct stat st;
 	char path[MAX_NAME_LEN];
 	int ret = 0;
 
 	handler_last_dir();
 
-	if(slog_start_step == 1){
-		if (cp_internal_to_external()){
-			sprintf(path, "%s/modem_memory.log", external_path);
-			if(!stat(path, &st)){
-				sprintf(path, "mv %s/modem_memory.log %s/%s/misc/", external_path, current_log_path, top_logdir);
-				system(path);
-			}
-			return;
-		}
-	}
+	if(slog_start_step == 1 && cp_internal_to_external() == 1)
+		return;
 
 	/* generate log dir */
 	when = time(NULL);
@@ -355,7 +370,7 @@ static void use_ori_log_dir()
 static int start_sub_threads()
 {
 	if(slog_enable == 0)
-	return 0;
+		return 0;
 
 	if(!stream_log_handler_started)
 		pthread_create(&stream_tid, NULL, stream_log_handler, NULL);
@@ -363,6 +378,8 @@ static int start_sub_threads()
 		pthread_create(&snapshot_tid, NULL, snapshot_log_handler, NULL);
 	if(!notify_log_handler_started)
 		pthread_create(&notify_tid, NULL, notify_log_handler, NULL);
+	if(!bt_log_handler_started)
+		pthread_create(&bt_tid, NULL, bt_log_handler, NULL);
 	return 0;
 }
 
@@ -422,20 +439,20 @@ static int sdcard_mounted()
 	FILE *str;
 	char buffer[MAX_LINE_LEN];
 
-	str = fopen("/proc/mounts", "r+");
+	str = popen("mount", "r");
 	if(str == NULL) {
-		err_log("can't open /proc/mounts!");
+		err_log("can't popen mount!");
 		return 0;
 	}
 
 	while(fgets(buffer, MAX_LINE_LEN, str) != NULL){
 		if(strstr(buffer, external_path)){
-			fclose(str);
+			pclose(str);
 			return 1;
 		}
 	}
 
-	fclose(str);
+	pclose(str);
 	return 0;
 }
 
@@ -495,6 +512,132 @@ int dump_all_log(const char *name)
 	return system(cmd);
 }
 
+/* monitoring sdcard status thread */
+static void *monitor_sdcard_fun()
+{
+	char *last = current_log_path;
+	while( !strncmp (config_log_path, external_storage, strlen(external_storage))) {
+		if(sdcard_mounted()) {
+			current_log_path = external_storage;
+			if(last != current_log_path)
+				reload();
+			last = current_log_path;
+		} else {
+			current_log_path = INTERNAL_LOG_PATH;
+			if(last != current_log_path)
+				reload();
+			last = current_log_path;
+		}
+		sleep(TIMEOUT_FOR_SD_MOUNT);
+	}
+	return 0;
+}
+
+/*
+ *handler log size according to internal available space
+ *
+ */
+static void handler_internal_log_size()
+{
+	struct statfs diskInfo;
+
+	if(!strncmp(current_log_path, external_storage, strlen(external_storage)))
+		return;
+	statfs(current_log_path, &diskInfo);
+	unsigned int blocksize = diskInfo.f_bsize;
+	unsigned int availabledisk = diskInfo.f_bavail * blocksize;
+	debug_log("internal available %dM", availabledisk >> 20);
+
+	/* default setting internal log size, half of available */
+	internal_log_size = (availabledisk >> 20) /10;
+	debug_log("set internal log size %dM", internal_log_size);
+}
+
+/*
+ * handle top_logdir
+ *
+ */
+static void handle_top_logdir()
+{
+	int ret;
+	char value[PROPERTY_VALUE_MAX];
+
+	property_get("slog.step", value, "");
+	slog_start_step = atoi(value);
+
+	ret = mkdir(current_log_path, S_IRWXU | S_IRWXG | S_IRWXO);
+	if(-1 == ret && (errno != EEXIST)){
+		err_log("mkdir %s failed.", current_log_path);
+                exit(0);
+	}
+
+	if( !strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH))) {
+		debug_log("slog use internal storage");
+		handler_internal_log_size();
+		switch(slog_start_step){
+		case 0:
+			create_log_dir();
+			capture_snap_for_last(snapshot_log_head);
+			property_set("slog.step", "1");
+			break;
+		default:
+			use_ori_log_dir();
+			break;
+		}
+	} else {
+		debug_log("slog use external storage");
+		switch(slog_start_step){
+                case 1:
+			create_log_dir();
+			handler_modem_memory_log();
+			property_set("slog.step", "2");
+                        break;
+                default:
+			use_ori_log_dir();
+                        break;
+		}
+	}
+}
+
+/*
+ *  monitoring sdcard status
+ */
+static int start_monitor_sdcard_fun()
+{
+	/* handle sdcard issue */
+	if(!strncmp(config_log_path, external_storage, strlen(external_storage))) {
+		if(!sdcard_mounted())
+			current_log_path = INTERNAL_LOG_PATH;
+		else {
+			/*avoid can't unload SD card*/
+			sleep(TIMEOUT_FOR_SD_MOUNT);
+			current_log_path = external_storage;
+		}
+		/* create a sdcard monitor thread */
+		pthread_create(&sdcard_tid, NULL, monitor_sdcard_fun, NULL);
+	} else
+		current_log_path = INTERNAL_LOG_PATH;
+
+	return 0;
+}
+
+/*
+ * 1.start running slog system(stream,snapshot,inotify)
+ * 2.monitoring sdcard status
+ */
+static int do_init()
+{
+	if(slog_enable == 0)
+		return 0;
+
+	handle_top_logdir();
+
+	/* all backend log capture handled by follows threads */
+	start_sub_threads();
+
+	return 0;
+}
+
 void *command_handler(void *arg)
 {
 	struct slog_cmd cmd;
@@ -506,11 +649,11 @@ void *command_handler(void *arg)
 
 	/* init unix domain socket */
 	memset(&serv_addr, 0, sizeof(serv_addr));
-	serv_addr.sun_family=AF_UNIX; 
+	serv_addr.sun_family=AF_UNIX;
 	strcpy(serv_addr.sun_path, SLOG_SOCKET_FILE);
 	unlink(serv_addr.sun_path);
 
- 	server_sock = socket(AF_UNIX, SOCK_STREAM, 0);
+	server_sock = socket(AF_UNIX, SOCK_STREAM, 0);
         if (server_sock < 0) {
 		err_log("create socket failed!");
 		return NULL;
@@ -520,7 +663,7 @@ void *command_handler(void *arg)
 		err_log("bind socket failed!");
 		return NULL;
 	}
-	
+
 	if (listen(server_sock, 5) < 0) {
 		err_log("listen socket failed!");
 		return NULL;
@@ -548,8 +691,6 @@ void *command_handler(void *arg)
 			continue;
 		}
 
-		while(slog_initialized == 0) sleep(1);
-
 		switch(cmd.type) {
 		case CTRL_CMD_TYPE_SNAP:
 			ret = capture_by_name(snapshot_log_head, cmd.content, NULL);
@@ -563,7 +704,7 @@ void *command_handler(void *arg)
 			break;
 		case CTRL_CMD_TYPE_ON:
 			slog_enable = 1;
-			ret = start_sub_threads();
+			ret = do_init();
 			break;
 		case CTRL_CMD_TYPE_OFF:
 			slog_enable = 0;
@@ -580,6 +721,8 @@ void *command_handler(void *arg)
 			ret = dump_all_log(cmd.content);
 			break;
 		case CTRL_CMD_TYPE_SCREEN:
+			if(slog_enable == 0)
+				break;
 			if(cmd.content[0])
 				ret = screen_shot(cmd.content);
 			else {
@@ -587,7 +730,7 @@ void *command_handler(void *arg)
 				localtime_r(&t, &tm);
 				sprintf(filename, "%s/%s/misc/screenshot_%02d%02d%02d.jpg",
 						current_log_path, top_logdir,
-						tm.tm_hour, tm.tm_min, tm.tm_sec); 
+						tm.tm_hour, tm.tm_min, tm.tm_sec);
 				ret = screen_shot(filename);
 			}
 			break;
@@ -603,125 +746,6 @@ void *command_handler(void *arg)
 		send_socket(client_sock, (void *)&cmd, sizeof(cmd));
 		close(client_sock);
 	}
-}
-
-/* monitoring sdcard status thread */
-static void *monitor_sdcard_fun()
-{
-	char *last = current_log_path;
-	while( !strncmp (config_log_path, external_storage, strlen(external_storage))) {
-		if(sdcard_mounted()) {
-			current_log_path = external_storage;
-			if(last != current_log_path)
-				reload();
-			last = current_log_path;
-		} else {
-			current_log_path = INTERNAL_LOG_PATH;
-			if(last != current_log_path)
-				reload();
-			last = current_log_path;
-		}
-		sleep(TIMEOUT_FOR_SD_MOUNT);
-	}
-	return 0;
-}
-
-/*
- * handle top_logdir
- *
- */
-static void handle_top_logdir()
-{
-	int ret;
-	char value[PROPERTY_VALUE_MAX];
-
-	property_get("slog.step", value, "");
-	slog_start_step = atoi(value);
-
-	ret = mkdir(current_log_path, S_IRWXU | S_IRWXG | S_IRWXO);
-	if(-1 == ret && (errno != EEXIST)){
-		err_log("mkdir %s failed.", current_log_path);
-                exit(0);
-	}
-
-	if( !strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH))) {
-		debug_log("slog use internal storage");
-		switch(slog_start_step){
-		case 0:
-			create_log_dir();
-			capture_last_log(snapshot_log_head);
-			property_set("slog.step", "1");
-			break;
-		default:
-			use_ori_log_dir();
-			break;
-		}
-	} else {
-		debug_log("slog use external storage");
-		switch(slog_start_step){
-                case 1:
-			create_log_dir();
-			property_set("slog.step", "2");
-                        break;
-                default:
-			use_ori_log_dir();
-                        break;
-		}
-	}
-
-	capture_all(snapshot_log_head);
-}
-
-/*
- *handler log size according to internal available space
- *
- */
-static void handler_internal_log_size()
-{
-	struct statfs diskInfo;
-
-	if(!strncmp(current_log_path, external_storage, strlen(external_storage)))
-		return;
-	statfs(current_log_path, &diskInfo);
-	unsigned int blocksize = diskInfo.f_bsize;
-	unsigned int availabledisk = diskInfo.f_bavail * blocksize;
-	debug_log("internal available %dM", availabledisk >> 20);
-
-	/* default setting internal log size, half of available */
-	internal_log_size = (availabledisk >> 20) /10;
-	debug_log("set internal log size %dM", internal_log_size);
-}
-
-/*
- * 1.start running slog system(stream,snapshot,inotify)
- * 2.monitoring sdcard status
- */
-static int do_init()
-{
-	/* handle sdcard issue */
-	if(!strncmp(config_log_path, external_storage, strlen(external_storage))) {
-		if(!sdcard_mounted())
-			current_log_path = INTERNAL_LOG_PATH;
-		else {
-			/*avoid can't unload SD card*/
-			sleep(TIMEOUT_FOR_SD_MOUNT);
-			current_log_path = external_storage;
-		}
-		/* create a sdcard monitor thread */
-		pthread_create(&sdcard_tid, NULL, monitor_sdcard_fun, NULL);
-	} else
-		current_log_path = INTERNAL_LOG_PATH;
-
-	handle_top_logdir();
-
-	handler_internal_log_size();
-
-	/* all backend log capture handled by follows threads */
-	start_sub_threads();
-
-	slog_initialized = 1;
-
-	return 0;
 }
 
 void create_pidfile()
@@ -844,14 +868,17 @@ int main(int argc, char *argv[])
 	/* handle signal */
 	setup_signals();
 
-	/*find the external storage environment*/
-	init_external_storage();
-
 	/* read and parse config file */
 	parse_config();
 
 	/* even backend capture threads disabled, we also accept user command */
 	pthread_create(&command_tid, NULL, command_handler, NULL);
+
+	/*find the external storage environment*/
+	init_external_storage();
+
+	/*start monitor sdcard*/
+	start_monitor_sdcard_fun();
 
 	/* backend capture threads started here */
 	do_init();

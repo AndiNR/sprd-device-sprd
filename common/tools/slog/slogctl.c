@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
 		if(argc == 2)
 			snprintf(cmd.content, MAX_NAME_LEN, "%s", DEFAULT_DUMP_FILE_NAME);
 		else
-			snprintf(cmd.content, MAX_NAME_LEN, "%s", argv[2]);
+			snprintf(cmd.content, MAX_NAME_LEN, "%s.tgz", argv[2]);
 	} else if(!strncmp(argv[1], "screen", 6)) {
 		cmd.type = CTRL_CMD_TYPE_SCREEN;
 		if(argc == 3)
