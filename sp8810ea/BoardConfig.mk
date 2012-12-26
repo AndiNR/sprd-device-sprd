@@ -89,10 +89,11 @@ USE_BOOT_AT_DIAG := true
 BOARD_HAVE_FM_BCM := true
 
 ####################!!!! DONT'T FOLLOW THIS WAY TO CUSTOMIZE  !!!###############
-BOARD_CMMB_HW ?= siano
+#We confirm(2012-12-26):we will only use maxscend
+#BOARD_CMMB_HW ?= siano
 
-ifeq ($(BOARD_CMMB_HW), mxd)
+#ifeq ($(BOARD_CMMB_HW), mxd)
 KERNEL_DEFCONFIG := sp8810ea-vlx-mxd_defconfig
 CMMB_MXDID       := 0266
-endif
+#endif
 ################################################################################

@@ -75,11 +75,12 @@ BRCMFM := \
 
 PRODUCT_PACKAGES += $(BRCMFM)
 
-ifeq ($(BOARD_CMMB_HW), mxd)
+#We confirm(2012-12-26):we will only use maxscend
+#ifeq ($(BOARD_CMMB_HW), mxd)
 PRODUCT_PACKAGES += $(MXD_CMMB_PLAYER)
-else
-PRODUCT_PACKAGES += $(SIANOMTV)
-endif
+#else
+#PRODUCT_PACKAGES += $(SIANOMTV)
+#endif
 
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/init.rc:root/init.rc \

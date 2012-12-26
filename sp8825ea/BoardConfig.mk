@@ -82,3 +82,13 @@ USE_CAMERA_STUB := true
 
 BOARD_USES_GENERIC_AUDIO := false
 
+
+####################!!!! DONT'T FOLLOW THIS WAY TO CUSTOMIZE  !!!###############
+#We confirm(2012-12-26):we will only use maxscend
+#BOARD_CMMB_HW ?= siano
+
+#ifeq ($(BOARD_CMMB_HW), mxd)
+KERNEL_DEFCONFIG := sp8810ea-vlx-mxd_defconfig
+CMMB_MXDID       := 0266
+#endif
+################################################################################
