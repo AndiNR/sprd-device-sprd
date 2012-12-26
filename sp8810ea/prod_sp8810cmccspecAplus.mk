@@ -40,8 +40,7 @@ PRODUCT_PACKAGES := \
     Settings \
     MsmsStk \
     Stk1 \
-    framework2 \
-    ES_File_Explorer.apk
+    framework2
 
 # prebuild files
 PRODUCT_PACKAGES += \
@@ -54,9 +53,7 @@ PRODUCT_PACKAGES += \
     CMCCREAD.apk \
     CMCCTelenav_Nav.apk \
     CMCCWIFI.apk \
-    ES_File_Explorer.apk \
     PimClient.apk \
-    CallFireWall \
     SecondClock.apk \
     WorldClock.apk
         
@@ -69,11 +66,7 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     10086cn \
     Monternet \
-    MyFavorites \
-    AppBackup \
-    AudioProfile \
-    SprdNote \
-    ValidationTools
+    MyFavorites
 
 # add  system properties
 PRODUCT_PROPERTY_OVERRIDES += \

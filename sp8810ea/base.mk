@@ -37,6 +37,18 @@ PRODUCT_PACKAGES := \
 	wpa_supplicant.conf \
     SoundRecorder
 
+# own copyright packages files
+PRODUCT_PACKAGES += \
+    AppBackup \
+    AudioProfile \
+    SprdNote \
+    CallFireWall \
+    ValidationTools
+
+# prebuild files
+PRODUCT_PACKAGES += \
+    ES_File_Explorer.apk
+
 PRODUCT_PACKAGES += \
 	rawdatad \
 	nvitemd \

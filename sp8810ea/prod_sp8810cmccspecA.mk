@@ -43,19 +43,17 @@ PRODUCT_PACKAGES := \
 # prebuild files
 PRODUCT_PACKAGES += \
 	APV_PDF_Viewer.apk \
-        CMCCFetion.apk \
-        CMCCGameHall.apk \
-        CMCCMM.apk \
+    CMCCFetion.apk \
+    CMCCGameHall.apk \
+    CMCCMM.apk \
 	CMCCMobileMusic.apk \
 	CMCCMV_W.apk \
-        CMCCREAD.apk \
-        CMCCTelenav_Nav.apk \
-        CMCCWIFI.apk \
-        ES_File_Explorer.apk \
-        PimClient.apk \
-	CallFireWall \
-        SecondClock.apk \
-        WorldClock.apk
+    CMCCREAD.apk \
+    CMCCTelenav_Nav.apk \
+    CMCCWIFI.apk \
+    PimClient.apk \
+    SecondClock.apk \
+    WorldClock.apk
         
 # packages files
 PRODUCT_PACKAGES += \
@@ -66,11 +64,7 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     10086cn \
     Monternet \
-    MyFavorites \
-    AppBackup \
-    AudioProfile \
-    SprdNote \
-    ValidationTools
+    MyFavorites
 
 # add  system properties
 PRODUCT_PROPERTY_OVERRIDES += \

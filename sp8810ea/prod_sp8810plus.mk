@@ -40,19 +40,10 @@ PRODUCT_PACKAGES := \
     Settings \
     MsmsStk \
     Stk1 \
-    framework2 \
-    ES_File_Explorer.apk
+    framework2
 
 # prebuild files
 PRODUCT_PACKAGES += \
-	
-# own copyright packages files
-PRODUCT_PACKAGES += \
-    AppBackup \
-    AudioProfile \
-    SprdNote \
-    CallFireWall \
-    ValidationTools
 	
 # add  system properties
 PRODUCT_PROPERTY_OVERRIDES += \
