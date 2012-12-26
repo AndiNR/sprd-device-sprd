@@ -140,19 +140,22 @@ extern char top_logdir[MAX_NAME_LEN];
 extern char external_storage[MAX_NAME_LEN];
 extern struct slog_info *stream_log_head, *snapshot_log_head;
 extern struct slog_info *notify_log_head, *misc_log;
-extern pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid;
+extern pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, bt_tid;
 extern int slog_enable;
 extern int internal_log_size;
 extern int screenshot_enable;
+extern int slog_save_all;
 
 /* function */
 extern int parse_config();
 extern void *stream_log_handler(void *arg);
 extern void *snapshot_log_handler(void *arg);
 extern void *notify_log_handler(void *arg);
+extern void *bt_log_handler(void *arg);
 extern int stream_log_handler_started;
 extern int snapshot_log_handler_started;
 extern int notify_log_handler_started;
+extern int bt_log_handler_started;
 extern int gen_config_string(char *buffer);
 extern void cp_file(char *path, char *new_path);
 extern void exec_or_dump_content(struct slog_info *info, char *filepath);

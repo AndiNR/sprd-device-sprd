@@ -584,10 +584,13 @@ void *stream_log_handler(void *arg)
 			}
 			open_device(info, MODEM_LOG_SOURCE);
 			info->fd_out = gen_outfd(info);
-		} else {
+		} else if( !strncmp(info->name, "main", 4) || !strncmp(info->name, "system", 6) || !strncmp(info->name, "radio", 5) ){
 			sprintf(devname, "%s/%s", "/dev/log", info->name);
 			open_device(info, devname);
 			info->fd_out = gen_outfd(info);
+		} else {
+			info = info->next;
+			continue;
 		}
 
 		FD_SET(info->fd_device, &readset_tmp);
@@ -595,6 +598,7 @@ void *stream_log_handler(void *arg)
 		/*find the max fd*/
 		if(info->fd_device > max)
 			max = info->fd_device;
+
 		info = info->next;
 	}
 
@@ -676,7 +680,8 @@ void *stream_log_handler(void *arg)
 
 				info->outbytecount += result;
 				log_size_handler(info);
-			} else {
+			} else if(!strncmp(info->name, "main", 4) || !strncmp(info->name, "system", 6)
+				|| !strncmp(info->name, "radio", 5) ){
 				ret = read(info->fd_device, buf, LOGGER_ENTRY_MAX_LEN);
 				if(ret <= 0) {
 					err_log("read %s log failed!", info->name);
@@ -708,6 +713,84 @@ void *stream_log_handler(void *arg)
 		info = info->next;
 	}
 	stream_log_handler_started = 0;
+
 	return NULL;
 }
 
+void *bt_log_handler(void *arg)
+{
+	struct slog_info *info = NULL, *bt = NULL;
+	char buffer[MAX_NAME_LEN];
+	int ret, i, err;
+	pid_t pid;
+
+	info = stream_log_head;
+	while(info){
+		if( (info->state == SLOG_STATE_ON) && !strncmp(info->name, "bt", 2) ){
+			bt = info;
+			break;
+		}
+		info = info->next;
+	}
+
+	if( !bt)
+		return NULL;
+
+	if( !strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)) ) {
+		bt->state = SLOG_STATE_OFF;
+		return NULL;
+	}
+
+	pid = fork();
+	if(pid < 0){
+		err_log("fork error!");
+	}
+
+	if(pid == 0){
+		bt_log_handler_started = 1;
+		sprintf(buffer, "%s/%s/%s", current_log_path, top_logdir, bt->log_path);
+		ret = mkdir(buffer, S_IRWXU | S_IRWXG | S_IRWXO);
+		if (-1 == ret && (errno != EEXIST)){
+			err_log("mkdir %s failed.", buffer);
+			exit(0);
+		}
+		sprintf(buffer, "%s/%s/%s/%s.log",
+			current_log_path, top_logdir, bt->log_path, bt->log_basename);
+
+		for (i = MAXROLLLOGS ; i > 0 ; i--) {
+			char *file0, *file1;
+
+			asprintf(&file1, "%s.%d", buffer, i);
+
+			if (i - 1 == 0) {
+				asprintf(&file0, "%s", buffer);
+			} else {
+				asprintf(&file0, "%s.%d", buffer, i - 1);
+			}
+
+			err = rename (file0, file1);
+
+			if (err < 0 && errno != ENOENT) {
+				perror("while rotating log files");
+			}
+
+			free(file1);
+			free(file0);
+		}
+#ifdef SLOG_BTLOG_B
+		execl("/system/xbin/hcidump", "hcidump", "-Bw", buffer, (char *)0);
+#else
+		execl("/system/xbin/hcidump", "hcidump", "-w", buffer, (char *)0);
+#endif
+		exit(0);
+	}
+
+	while(slog_enable){
+		sleep(1);
+	}
+
+	kill(pid, SIGTERM);
+	bt_log_handler_started = 0;
+
+	return NULL;
+}
