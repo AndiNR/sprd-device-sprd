@@ -168,7 +168,7 @@ service slog /system/bin/slog
     class main
     user root
 
-service mfserial /system/bin/mfserial ts0710mux11 ttyS1 1
+service mfserial /system/bin/mfserial ts0710mux9 ttyS1 1
     class main
     user root
 

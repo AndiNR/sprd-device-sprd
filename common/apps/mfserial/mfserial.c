@@ -43,11 +43,13 @@ do{	\
 
 /* default parameters */
 static char * uart_devname = "/dev/ttyS1";
-static char * at_mux1_devname = "/dev/ts0710mux11";
+static char * at_mux1_devname = "/dev/ts0710mux9";
+#if 0
 static char * at_mux2_devname = "/dev/ts0710mux0"; /* channel unsol. command from */
+static int at_mux2_fd;
+#endif
 static int uart_fd;
 static int at_mux1_fd;
-static int at_mux2_fd;
 static int have_phoneserver = 1;
 static pthread_mutex_t uart_mutex;
 
@@ -69,9 +71,9 @@ void usage(void)
 		"  at_devname        the AT device name, e.g. mux1 (for /dev/mux1)\n"
 		"  uart_devname      the UART device name, e.g. ttyS1 (for /dev/ttyS1)\n"
 		"  have_phoneserver  0 if there's no phoneserver, 1 otherwise\n"
-		"  if there is no arguments, ts0710mux11/ttyS1/1 will be used by default\n\n"
+		"  if there is no arguments, ts0710mux9/ttyS1/1 will be used by default\n\n"
 		"Example:\n"
-		"  mfserial ts0710mux11 ttyS1 1\n"
+		"  mfserial ts0710mux9 ttyS1 1\n"
 		"\n");
 }
 
@@ -127,6 +129,7 @@ static int open_devices(void)
 	}
 
 	/* at device */
+#if 0
 	ALOGD("open mux0 device.");
 	at_mux2_fd = open(at_mux2_devname, O_RDONLY);
 	if(at_mux2_fd < 0){
@@ -134,8 +137,8 @@ static int open_devices(void)
 				__func__, at_mux2_devname, strerror(errno));
 		return -1;
 	}
-
-	ALOGD("open mux11 device.");
+#endif
+	ALOGD("open mux9 device.");
 	at_mux1_fd = open(at_mux1_devname, O_RDWR/* | O_NONBLOCK*/);
 	if(at_mux1_fd < 0){
 		ALOGD("%s: open %s failed [%s]\n",
@@ -153,7 +156,9 @@ void close_devices(void)
 
 	close(uart_fd);
 	close(at_mux1_fd);
+#if 0
 	close(at_mux2_fd);
+#endif
 }
 
 int is_calibration_mode(void)
@@ -310,14 +315,14 @@ void *at_resp_reader_thread(void *pa)
 
 	return NULL;
 }
-
+#if 0
 void *unsol_resp_reader_thread(void *pa)
 {
 	mux_reader_thread("Unsol resp reader", at_mux2_fd, pa);
 
 	return NULL;
 }
-
+#endif
 void cleanup_to_exit(void)
 {
 	pthread_mutex_destroy(&uart_mutex);
@@ -374,16 +379,18 @@ int main(int argc, char **argv)
 
 	status = 1;
 
+#if 0
 	if (pthread_create(&tid1, NULL, (void*)unsol_resp_reader_thread, &status) != 0) {
 		ALOGD("unsol resp reading thread create error! ");
 		return -1;
 	}
-
+#endif
 	if (pthread_create(&tid2, NULL, (void*)at_resp_reader_thread, &status) != 0) {
 		ALOGD("at resp reading thread create error! ");
 		status = 0;
+#if 0
 		pthread_join(tid1, NULL);
-
+#endif
 		cleanup_to_exit();
 
 		return -1;
@@ -396,8 +403,9 @@ int main(int argc, char **argv)
 		ALOGD("mfserail exited!\n");
 
 		status = 0;
-
+#if 0
 		pthread_join(tid1, NULL);
+#endif
 		pthread_join(tid2, NULL);
 
 		cleanup_to_exit();
