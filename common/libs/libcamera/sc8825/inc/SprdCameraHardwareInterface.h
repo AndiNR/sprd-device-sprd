@@ -223,7 +223,8 @@ private:
     camera_memory_t *mRawHeap;
     camera_memory_t *mMiscHeap;
     sp<AshmemPool> mJpegHeap;
-	camera_memory_t *mReDisplayHeap;
+    camera_memory_t *mReDisplayHeap;
+    camera_memory_t *mMetadataHeap;
 
     bool startCameraIfNecessary();
     bool initPreview();
@@ -327,6 +328,7 @@ private:
 
    int32_t             mMsgEnabled;
    //sp<CameraHardwareInterface> mHardware;
+   bool mIsStoreMetaData;
 };
 
 }; // namespace android

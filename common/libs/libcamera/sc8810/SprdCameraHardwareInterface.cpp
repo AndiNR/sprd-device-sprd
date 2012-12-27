@@ -32,6 +32,7 @@
 
 #include "../../gralloc/gralloc_priv.h"
 
+#include <media/hardware/MetadataBufferType.h>
 #include <camera/Camera.h>
 
 #include "../sc8810/SprdOEMCamera.h"
@@ -48,6 +49,7 @@ extern "C" {
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(*x))
 #define PRINT_TIME 0
+#define METADATA_SIZE 12 // (4 * 3)
 
 extern "C" {
 
@@ -133,7 +135,9 @@ gralloc_module_t const* SprdCameraHardware::mGrallocHal;
         mTempHWHeap(NULL),
         mTempJpegSliceHeap(NULL),
         mJpegencZoomHeap(NULL),
-        mJpegencSwapHeap(NULL)
+        mMetadataHeap(NULL),
+        mJpegencSwapHeap(NULL),
+        mIsStoreMetaData(false)
     {
         ALOGV("openCameraHardware: call createInstance. cameraId: %d.", cameraId);
 
@@ -497,6 +501,9 @@ void SprdCameraHardware::release()
                 if(CAMERA_SUCCESS != camera_stop(stop_camera_cb, this)){
                         mCameraState = QCS_ERROR;
                         mStateLock.unlock();
+			if(mIsStoreMetaData) {
+				mMetadataHeap = NULL;
+			}
                         ALOGE("release: fail to camera_stop().");
                         ALOGV("mLock:release E.\n");
                         return;
@@ -514,6 +521,9 @@ void SprdCameraHardware::release()
                 if(QCS_ERROR != mCameraState)
                         mCameraState = QCS_INIT;
         }
+	if(mIsStoreMetaData) {
+		mMetadataHeap = NULL;
+	}
         mStateLock.unlock();
         ALOGV("release X");
         ALOGV("mLock:release E.\n");
@@ -747,7 +757,12 @@ void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
                 return;
         }
 
-        index = (addr - (uint8_t *)mPreviewHeap->data) / (mPreviewWidth * mPreviewHeight * 3 / 2);
+	if(mIsStoreMetaData) {
+		index = (addr - (uint8_t *)mMetadataHeap->data) / (METADATA_SIZE);
+	}
+	else {
+        	index = (addr - (uint8_t *)mPreviewHeap->data) / (mPreviewWidth * mPreviewHeight * 3 / 2);
+	}
 
 	if(index > kPreviewBufferCount){
 		ALOGV("releaseRecordingFrame error: index: %d, addr: %x, data: %x, w=%d, h=%d \n",
@@ -1434,7 +1449,7 @@ callbacks:
 #endif
         if(mData_cb != NULL)
         {
-                ALOGV("receivePreviewFrame mMsgEnabled: 0x%x",mMsgEnabled);
+                ALOGV("receivePreviewFrame mMsgEnabled: 0x%x, mRecordingMode: %d.",mMsgEnabled, mRecordingMode);
                 if (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME) {
 #if CAM_OUT_YUV420_UV
                         camera_memory_t *tempHeap = GetPmem("/dev/pmem_adsp", frame->dx * frame->dy * 3 /2, 1);
@@ -1455,13 +1470,21 @@ callbacks:
                         mData_cb(CAMERA_MSG_PREVIEW_FRAME, mPreviewHeap, offset, NULL, mUser);
 #endif
                 }
-                if ((mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) &&(mRecordingMode==1))
+
+		if ((mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) &&(mRecordingMode==1))
                 {
                         nsecs_t timestamp = systemTime();/*frame->timestamp;*/
-                        ALOGV("test timestamp = %lld.",timestamp);
-                        //mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap->mBuffers[offset], mUser);
-                        mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap, offset, mUser);
-                     //ALOGV("receivePreviewFrame: record index: %d, offset: %x, size: %x, frame->buf_Virt_Addr: 0x%x.", offset, off, size, (uint32_t)frame->buf_Virt_Addr);
+                        ALOGV("CAMERA_MSG_VIDEO_FRAME test timestamp = %lld, mIsStoreMetaData: %d.",timestamp, mIsStoreMetaData);
+			if(mIsStoreMetaData) {
+	                        uint32_t *data = (uint32_t *)mMetadataHeap->data + offset * METADATA_SIZE / 4;
+				*data++ = kMetadataBufferTypeCameraSource;
+				*data++ = frame->buffer_phy_addr;
+				*data = (uint32_t)frame->buf_Virt_Addr;
+	                        mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mMetadataHeap,  offset, mUser);
+			}
+			else {
+				mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap, offset, mUser);
+			}
                 }
 		else {
                         if(CAMERA_SUCCESS != camera_release_frame(offset)){
@@ -2984,15 +3007,23 @@ status_t SprdCameraHardware::sendCommand(int32_t cmd, int32_t arg1, int32_t arg2
 
 status_t SprdCameraHardware::storeMetaDataInBuffers(bool enable)
 {
-   return INVALID_OPERATION;
     // FIXME:
     // metadata buffer mode can be turned on or off.
     // Spreadtrum needs to fix this.
     if (!enable) {
         ALOGE("Non-metadata buffer mode is not supported!");
-        return INVALID_OPERATION;
+	mIsStoreMetaData = false;
+        return NO_ERROR;
     }
-    return NO_ERROR;
+	if(NULL == mMetadataHeap) {
+		if(NULL == (mMetadataHeap = mGetMemory_cb(-1, METADATA_SIZE, kPreviewBufferCount, NULL))){
+			ALOGE("fail to alloc memory for the metadata for storeMetaDataInBuffers.");
+			return INVALID_OPERATION;
+		}
+	}
+    mIsStoreMetaData = true;
+
+	return NO_ERROR;
 }
 
 status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)

@@ -263,8 +263,7 @@ sp<RawPmemPool> mJpegencSwapHeap; //for capture zoom scale.
     camera_memory_t *mJpegencZoomHeap; //for capture zoom.
     camera_memory_t *mJpegencSwapHeap; //for capture zoom scale.
     camera_memory_t *mReDisplayHeap;
-
-
+    camera_memory_t *mMetadataHeap;		
 
     bool startCameraIfNecessary();
     bool initPreview();
@@ -369,6 +368,7 @@ sp<RawPmemPool> mJpegencSwapHeap; //for capture zoom scale.
 
    int32_t             mMsgEnabled;
    //sp<CameraHardwareInterface> mHardware;
+   bool mIsStoreMetaData;
 };
 
 }; // namespace android
