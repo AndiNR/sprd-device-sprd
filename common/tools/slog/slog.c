@@ -183,6 +183,10 @@ static int capture_all(struct slog_info *head)
         struct tm tm;
 	struct slog_info *info = head;
 
+	/* slog_enable on/off state will control all snapshot log */
+	if(slog_enable == 0)
+		return 0;
+
 	if(!head)
 		return 0;
 
@@ -205,7 +209,7 @@ static int capture_all(struct slog_info *head)
 	);
 
 	while(info) {
-		if(info->level <= 6)
+		if(info->level == 6)
 			exec_or_dump_content(info, filepath);
 		info = info->next;
 	}
@@ -494,7 +498,9 @@ int clear_all_log()
 	slog_enable = 0;
 	stop_sub_threads();
 	sleep(3);
-	sprintf(cmd, "rm -r %s/", current_log_path);
+	sprintf(cmd, "rm -r %s", INTERNAL_LOG_PATH);
+	system(cmd);
+	sprintf(cmd, "rm -r %s", external_storage);
 	system(cmd);
 	reload();
 	return 0;
@@ -503,11 +509,11 @@ int clear_all_log()
 int dump_all_log(const char *name)
 {
 	char cmd[MAX_NAME_LEN];
+	if(!strncmp(current_log_path ,INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)))
+		return -1;
 	capture_all(snapshot_log_head);
 	capture_by_name(snapshot_log_head, "bugreport", NULL);
 	capture_by_name(snapshot_log_head, "getprop", NULL);
-	if(!strncmp(current_log_path ,INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)))
-		return -1;
 	sprintf(cmd, "tar czf %s/../%s /%s %s", current_log_path, name, current_log_path, INTERNAL_LOG_PATH);
 	return system(cmd);
 }
@@ -516,6 +522,7 @@ int dump_all_log(const char *name)
 static void *monitor_sdcard_fun()
 {
 	char *last = current_log_path;
+
 	while( !strncmp (config_log_path, external_storage, strlen(external_storage))) {
 		if(sdcard_mounted()) {
 			current_log_path = external_storage;
@@ -549,7 +556,7 @@ static void handler_internal_log_size()
 	debug_log("internal available %dM", availabledisk >> 20);
 
 	/* default setting internal log size, half of available */
-	internal_log_size = (availabledisk >> 20) /10;
+	internal_log_size = (availabledisk >> 20) /20;
 	debug_log("set internal log size %dM", internal_log_size);
 }
 
@@ -703,8 +710,8 @@ void *command_handler(void *arg)
 			ret = -1;
 			break;
 		case CTRL_CMD_TYPE_ON:
-			slog_enable = 1;
-			ret = do_init();
+			/* not implement */
+			ret = -1;
 			break;
 		case CTRL_CMD_TYPE_OFF:
 			slog_enable = 0;
