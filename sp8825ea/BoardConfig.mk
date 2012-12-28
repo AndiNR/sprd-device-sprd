@@ -88,7 +88,7 @@ BOARD_USES_GENERIC_AUDIO := false
 #BOARD_CMMB_HW ?= siano
 
 #ifeq ($(BOARD_CMMB_HW), mxd)
-KERNEL_DEFCONFIG := sp8810ea-vlx-mxd_defconfig
-CMMB_MXDID       := 0266
+#KERNEL_DEFCONFIG := sp8810ea-vlx-mxd_defconfig
+#CMMB_MXDID       := 0266
 #endif
 ################################################################################
