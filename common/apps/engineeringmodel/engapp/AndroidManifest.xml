@@ -50,7 +50,10 @@
 		</intent-filter>
 	</activity>
 
-	<activity android:name="netinfo" android:label="@string/verinfo" android:screenOrientation="portrait">
+    <!-- Modify 20121228 Spreadst of 109998 netinfo activity's title is version info start -->
+    <activity android:name="netinfo" android:label="@string/netinfo" android:screenOrientation="portrait">
+    <!-- <activity android:name="netinfo" android:label="@string/verinfo" android:screenOrientation="portrait"> -->
+    <!-- Modify 20121228 Spreadst of 109998 netinfo activity's title is version info end  -->
 		<intent-filter>
 		<action android:name="android.intent.action.MAIN" />
 		</intent-filter>
