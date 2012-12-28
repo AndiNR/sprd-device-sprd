@@ -3,6 +3,13 @@ MALI := libUMP libEGL_mali.so libGLESv1_CM_mali.so libGLESv2_mali.so libMali.so 
 
 PRODUCT_PROPERTY_OVERRIDES :=
 
+BRCMFM := \
+	com.broadcom.bt.service \
+	libfmpmservice \
+	libfmservice \
+	BtFmServiceReg \
+	FmRadio
+
 PRODUCT_PACKAGES := \
 	DeskClock \
 	Bluetooth \
@@ -59,7 +66,15 @@ PRODUCT_PACKAGES += \
 	libvbeffect \
 	libvbpga \
 	sensors.$(TARGET_BOARD)  \
-	$(MALI)
+	$(MALI) \
+	hciconfig \
+	hcitool \
+	hcidump \
+	bttest\
+	hostapd \
+	wpa_supplicant.conf
+
+PRODUCT_PACKAGES += $(BRCMFM)
 
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/init.rc:root/init.rc \
@@ -77,6 +92,10 @@ PRODUCT_COPY_FILES := \
 	device/sprd/common/libs/audio/audio_policy.conf:system/etc/audio_policy.conf \
 	device/sprd/common/res/media/media_codecs.xml:system/etc/media_codecs.xml \
 	device/sprd/common/res/media/media_profiles.xml:system/etc/media_profiles.xml \
-	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml
+	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml \
+	frameworks/native/data/etc/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml \
+	frameworks/native/data/etc/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml
 
+BOARD_WLAN_DEVICE_REV       := bcm4330_b2
+$(call inherit-product, hardware/broadcom/wlan/bcmdhd/firmware/bcm4330/device-bcm.mk)
 $(call inherit-product, $(BOARDDIR)/../common/apps/engineeringmodel/module.mk)
