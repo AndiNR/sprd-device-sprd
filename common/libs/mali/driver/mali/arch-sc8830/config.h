@@ -23,76 +23,76 @@ static _mali_osk_resource_t arch_configuration [] =
 		.type = PMU,
 		.description = "Mali-400 PMU",
 		.base = SPRD_MALI_PHYS+0x2000,
-		.irq = IRQ_G3D_INT,
+		.irq = IRQ_GPU_INT,
 		.mmu_id = 0
 	},
 	{
 		.type = MALI400GP,
 		.description = "Mali-400 GP",
 		.base = SPRD_MALI_PHYS,
-		.irq = IRQ_G3D_INT,
+		.irq = IRQ_GPU_INT,
 		.mmu_id = 1
 	},
 	{
 		.type = MALI400PP,
 		.base = SPRD_MALI_PHYS+0x8000,
-		.irq = IRQ_G3D_INT,
+		.irq = IRQ_GPU_INT,
 		.description = "Mali-400 PP 0",
 		.mmu_id = 2
 	},
 	{
 		.type = MALI400PP,
 		.base = SPRD_MALI_PHYS+0xA000,
-		.irq = IRQ_G3D_INT,
+		.irq = IRQ_GPU_INT,
 		.description = "Mali-400 PP 1",
 		.mmu_id = 3
 	},
 	{
 		.type = MALI400PP,
 		.base = SPRD_MALI_PHYS+0xC000,
-		.irq = IRQ_G3D_INT,
+		.irq = IRQ_GPU_INT,
 		.description = "Mali-400 PP 2",
 		.mmu_id = 4
 	},
 	{
 		.type = MALI400PP,
 		.base = SPRD_MALI_PHYS+0xE000,
-		.irq = IRQ_G3D_INT,
+		.irq = IRQ_GPU_INT,
 		.description = "Mali-400 PP 3",
 		.mmu_id = 5
 	},
 	{
 		.type = MMU,
 		.base = SPRD_MALI_PHYS+0x3000,
-		.irq = IRQ_G3D_INT,
+		.irq = IRQ_GPU_INT,
 		.description = "Mali-400 MMU for GP",
 		.mmu_id = 1
 	},
 	{
 		.type = MMU,
 		.base = SPRD_MALI_PHYS+0x4000,
-		.irq = IRQ_G3D_INT,
+		.irq = IRQ_GPU_INT,
 		.description = "Mali-400 MMU for PP 0",
 		.mmu_id = 2
 	},
 	{
 		.type = MMU,
 		.base = SPRD_MALI_PHYS+0x5000,
-		.irq = IRQ_G3D_INT,
+		.irq = IRQ_GPU_INT,
 		.description = "Mali-400 MMU for PP 1",
 		.mmu_id = 3
 	},
 	{
 		.type = MMU,
 		.base = SPRD_MALI_PHYS+0x6000,
-		.irq = IRQ_G3D_INT,
+		.irq = IRQ_GPU_INT,
 		.description = "Mali-400 MMU for PP 2",
 		.mmu_id = 4
 	},
 	{
 		.type = MMU,
 		.base = SPRD_MALI_PHYS+0x7000,
-		.irq = IRQ_G3D_INT,
+		.irq = IRQ_GPU_INT,
 		.description = "Mali-400 MMU for PP 3",
 		.mmu_id = 5
 	},
