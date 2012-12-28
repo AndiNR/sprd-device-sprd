@@ -25,11 +25,11 @@
     libcutils \
     libutils \
     libmedia \
-    libxlist \
-    libexpat
+    libbinder \
+    libvolumemanager
 
   LOCAL_C_INCLUDES += \
-    external/expat/lib
+    frameworks/av/services/volumemanager
 
   include $(BUILD_SHARED_LIBRARY)
 
@@ -39,8 +39,8 @@ LOCAL_SHARED_LIBRARIES := \
     libcutils \
     libutils \
     libmedia \
-    libxlist \
-    libexpat
+    libbinder \
+    libvolumemanager
 
 LOCAL_STATIC_LIBRARIES := \
     libmedia_helper

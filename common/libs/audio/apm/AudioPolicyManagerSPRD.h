@@ -24,8 +24,6 @@
 #include <utils/KeyedVector.h>
 #include <hardware_legacy/AudioPolicyManagerBase.h>
 
-#include <xlist/MapDataFile.h>
-
 using namespace android;
 
 namespace android_audio_legacy {
@@ -45,20 +43,13 @@ class AudioPolicyManagerSPRD : public AudioPolicyManagerBase
 public:
     AudioPolicyManagerSPRD(AudioPolicyClientInterface *clientInterface);
     virtual ~AudioPolicyManagerSPRD();
-
-protected:
-
-    class CurveEditor : public ElementEditorInterface {
-    public:
-        int getSize() const;
-        int readDataFromTree(XListNode *node, void *dataBuf);
-        int writeDataToTree(XListNode *node, void *dataBuf);
-    };
+    virtual status_t loadVolumeProfiles();
 
 private:
     VolumeCurvePoint *mVolumeProfiles[AudioSystem::NUM_STREAM_TYPES][DEVICE_CATEGORY_CNT];
-    int loadVolumeProfiles();
+    status_t loadVolumeProfilesInternal();
     void freeVolumeProfiles();
+    void applyVolumeProfiles();
 };
 
 };

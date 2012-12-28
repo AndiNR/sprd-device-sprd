@@ -20,64 +20,13 @@
 #include "AudioPolicyManagerSPRD.h"
 #include <media/mediarecorder.h>
 
+#include <binder/IServiceManager.h>
+
+#include <IVolumeManager.h>
+
 namespace android_audio_legacy {
 
 using namespace android;
-
-int AudioPolicyManagerSPRD::CurveEditor::getSize() const
-{
-    return sizeof(AudioPolicyManagerBase::VolumeCurvePoint) * AudioPolicyManagerBase::VOLCNT;
-}
-
-int AudioPolicyManagerSPRD::CurveEditor::readDataFromTree(XListNode *node, void *dataBuf)
-{
-    //ALOGE("dump pointer tree");
-    //node->dump();
-    VolumeCurvePoint *curve = (VolumeCurvePoint *)dataBuf;
-    if (!node || node->type() != XLIST_NODE_LIST) {
-        ALOGE("bad data");
-        return 0;
-    }
-    XListValueList *curveValue = (XListValueList *)node->value();
-    XListTree *curveTree = curveValue->list();
-    int index = -1;
-    for (int i = 0; i < VOLCNT; i++) {
-        XListNode *point = curveTree->find("point", &index, index + 1);
-        if (!point || point->type() != XLIST_NODE_LIST) {
-            curveTree->dump();
-            ALOGE("can't find point %d %p", i, point);
-            return 0;
-        }
-        XListValueList *pointValue = (XListValueList *)point->value();
-        XListTree *pointTree = pointValue->list();
-        XListNode *volIndex = pointTree->find("index");
-        if (!volIndex || volIndex->type() != XLIST_NODE_INTEGER) {
-            pointTree->dump();
-            ALOGE("can't find index in %d %p", i, volIndex);
-            return 0;
-        }
-        XListNode *volDb = pointTree->find("db");
-        if (!volDb || volDb->type() != XLIST_NODE_FLOAT) {
-            pointTree->dump();
-            ALOGE("can't find db in %d %p", i, volDb);
-            return 0;
-        }
-        XListValueInt *indexValue = (XListValueInt *)volIndex->value();
-        XListValueFloat *dbValue = (XListValueFloat *)volDb->value();
-        curve->mIndex = indexValue->value();
-        curve->mDBAttenuation = dbValue->value();
-        curve++;
-    }
-    return 1;
-}
-
-int AudioPolicyManagerSPRD::CurveEditor::writeDataToTree(XListNode *node, void *dataBuf)
-{
-    ALOGE("dump pointer tree for write");
-    node->dump();
-
-    return 1;
-}
 
 // ----------------------------------------------------------------------------
 // AudioPolicyManagerSPRD
@@ -100,7 +49,7 @@ extern "C" void destroyAudioPolicyManager(AudioPolicyInterface *interface)
 AudioPolicyManagerSPRD::AudioPolicyManagerSPRD(AudioPolicyClientInterface *clientInterface)
     : AudioPolicyManagerBase(clientInterface)
 {
-    loadVolumeProfiles();
+    //loadVolumeProfilesInternal();
 }
 
 AudioPolicyManagerSPRD::~AudioPolicyManagerSPRD()
@@ -108,46 +57,86 @@ AudioPolicyManagerSPRD::~AudioPolicyManagerSPRD()
     freeVolumeProfiles();
 }
 
-int AudioPolicyManagerSPRD::loadVolumeProfiles()
+static sp<IVolumeManager> gVolumeManager;
+//sp<VolumeManagerClient> gVolumeManagerClient;
+
+// establish binder interface to VolumeManager service
+static const sp<IVolumeManager>& get_volume_manager()
+{
+    if (gVolumeManager.get() == 0) {
+        sp<IServiceManager> sm = defaultServiceManager();
+        sp<IBinder> binder;
+        do {
+            binder = sm->getService(String16("sprd.volume_manager"));
+            if (binder != 0)
+                break;
+            ALOGW("VolumeManager not published, waiting...");
+            usleep(500000); // 0.5 s
+        } while(true);
+//        if (gVolumeManagerClient == NULL) {
+//            gVolumeManagerClient = new VolumeManagerClient();
+//        } else {
+//            ALOGE("VolumeManager error");
+//        }
+//        binder->linkToDeath(gAudioFlingerClient);
+        gVolumeManager = interface_cast<IVolumeManager>(binder);
+//        gVolumeManager->registerClient(gVolumeManagerClient);
+    }
+    ALOGE_IF(gVolumeManager==0, "no VolumeManager!?");
+
+    return gVolumeManager;
+}
+
+status_t AudioPolicyManagerSPRD::loadVolumeProfiles()
+{
+    status_t result = loadVolumeProfilesInternal();
+    if (result == NO_ERROR) {
+        applyVolumeProfiles();
+    }
+    return result;
+}
+
+status_t AudioPolicyManagerSPRD::loadVolumeProfilesInternal()
 {
     int rowCount;
     int columeCount;
-    int ret = true;
 
     memset(mVolumeProfiles, 0, sizeof(mVolumeProfiles));
 
-    // load device volume profiles
-    CurveEditor curveEditor;
-    MapDataFile editor(&curveEditor);
+	sp<IVolumeManager> sVolMgr = get_volume_manager();
+    if (sVolMgr.get() == 0) {
+        return UNKNOWN_ERROR;
+    }
 
-    // parse file
-    ret = editor.open("/data/devicevolume.xml", "streams", "devices", "profiles", MapDataFile::open_ro);
-    if (!ret)
-        ret = editor.open("/system/etc/devicevolume.xml", "streams", "devices", "profiles", MapDataFile::open_ro);
-    if (!ret)
-        return 0;
-
-    // check brief info
-    if (ret) {
-        rowCount = editor.getRowSize();
-        columeCount = editor.getColumeSize();
-        if (rowCount != AudioSystem::NUM_STREAM_TYPES || columeCount != DEVICE_CATEGORY_CNT) {
-            ALOGW("corrupt profile data: %d rows should be %d, %d columes should be %d",
-                rowCount, AudioSystem::NUM_STREAM_TYPES,
-                columeCount, DEVICE_CATEGORY_CNT);
-            ret = 0;
-        }
+    int status = sVolMgr->open(IVolumeManager::STREAM_DEVICE);
+    if (status != NO_ERROR) {
+        ALOGE("loadVolumeProfiles, can't load device profile");
+        return PERMISSION_DENIED;
+    }
+    int streamCount = sVolMgr->streamCount(IVolumeManager::STREAM_DEVICE);
+    int deviceCount = sVolMgr->deviceCount(IVolumeManager::STREAM_DEVICE);
+    if (streamCount < AudioSystem::NUM_STREAM_TYPES || deviceCount != DEVICE_CATEGORY_CNT) {
+        ALOGE("corrupt profile data: %d streams should be %d, %d devices",
+                streamCount, AUDIO_STREAM_CNT, deviceCount);
+        return NOT_ENOUGH_DATA;
     }
 
     // alloc mem, read all data
-    if (ret) {
-        for (int i = 0; i < AudioSystem::NUM_STREAM_TYPES; i++) {
-            for (int j = 0; j < DEVICE_CATEGORY_CNT; j++) {
-                mVolumeProfiles[i][j] = new VolumeCurvePoint[VOLCNT];
-                if (mVolumeProfiles[i][j]) {
-                    ret = editor.readElement(i, j, mVolumeProfiles[i][j]);
-                    if (!ret) {
-                        ALOGE("wrong data @%d, %d", i, j);
+    for (int i = 0; i < AudioSystem::NUM_STREAM_TYPES; i++) {
+        for (int j = 0; j < DEVICE_CATEGORY_CNT; j++) {
+            mVolumeProfiles[i][j] = new VolumeCurvePoint[VOLCNT];
+            if (mVolumeProfiles[i][j]) {
+                for (int volIdx = 0; volIdx < VOLCNT; volIdx++) {
+                    status_t result = sVolMgr->getStreamDevicePointIndex(IVolumeManager::STREAM_DEVICE,
+                        i, j, volIdx, mVolumeProfiles[i][j][volIdx].mIndex);
+                    if (result != NO_ERROR) {
+                        ALOGE("wrong index @%d, %d, %d", i, j, volIdx);
+                        goto read_failed;
+                    }
+                    result = sVolMgr->getStreamDevicePointGain(IVolumeManager::STREAM_DEVICE,
+                        i, j, volIdx, mVolumeProfiles[i][j][volIdx].mDBAttenuation);
+                    if (result != NO_ERROR) {
+                        ALOGE("wrong db @%d, %d %d", i, j, volIdx);
                         goto read_failed;
                     }
                 }
@@ -156,31 +145,20 @@ int AudioPolicyManagerSPRD::loadVolumeProfiles()
     }
 
     // using new profiles
-    if (ret) {
-        for (int i = 0; i < AudioSystem::NUM_STREAM_TYPES; i++) {
-            for (int j = 0; j < DEVICE_CATEGORY_CNT; j++) {
-                mStreams[i].mVolumeCurve[j] = mVolumeProfiles[i][j];
-            }
+    for (int i = 0; i < AudioSystem::NUM_STREAM_TYPES; i++) {
+        for (int j = 0; j < DEVICE_CATEGORY_CNT; j++) {
+            mStreams[i].mVolumeCurve[j] = mVolumeProfiles[i][j];
         }
     }
+    sVolMgr->close(IVolumeManager::STREAM_DEVICE);
+    return NO_ERROR;
 
 read_failed:
-    editor.close();
-
-    if (!ret) {
-        // cleanup
-        for (int i = 0; i < AudioSystem::NUM_STREAM_TYPES; i++) {
-            for (int j = 0; j < DEVICE_CATEGORY_CNT; j++) {
-                if (mVolumeProfiles[i][j]) {
-                    delete [] mVolumeProfiles[i][j];
-                    mVolumeProfiles[i][j] = 0;
-                }
-            }
-        }
-        ALOGW("can't load device volume profiles, using default");
-    }
-
-    return ret;
+    sVolMgr->close(IVolumeManager::STREAM_DEVICE);
+    // cleanup
+    freeVolumeProfiles();
+    ALOGW("can't load device volume profiles, using default");
+    return BAD_VALUE;
 }
 
 void AudioPolicyManagerSPRD::freeVolumeProfiles()
@@ -190,6 +168,28 @@ void AudioPolicyManagerSPRD::freeVolumeProfiles()
             if (mVolumeProfiles[i][j]) {
                 delete [] mVolumeProfiles[i][j];
                 mVolumeProfiles[i][j] = 0;
+            }
+        }
+    }
+}
+
+void AudioPolicyManagerSPRD::applyVolumeProfiles()
+{
+    for (int stream = 0; stream < AudioSystem::NUM_STREAM_TYPES; stream++) {
+        for (size_t i = 0; i < mOutputs.size(); i++) {
+            for (int device = 0; device < mStreams[stream].mIndexCur.size(); device++) {
+                status_t volStatus = checkAndSetVolume(
+                    stream,
+                    mStreams[stream].mIndexCur.valueAt(device),
+                    mOutputs.keyAt(i),
+                    mOutputs.valueAt(i)->device());
+                if (volStatus != NO_ERROR) {
+                    ALOGW("error setting vol for %d, %d, curIdx %d, output %d, device %d",
+                        stream, device,
+                        mStreams[stream].mIndexCur.valueAt(device),
+                        i,
+                        mOutputs.valueAt(i)->device());
+                }
             }
         }
     }

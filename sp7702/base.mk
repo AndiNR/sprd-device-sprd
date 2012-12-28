@@ -66,6 +66,7 @@ PRODUCT_PACKAGES += \
 	camera.$(TARGET_PLATFORM) \
 	lights.$(TARGET_PLATFORM) \
 	audio.primary.$(TARGET_PLATFORM) \
+	audio_policy.$(TARGET_PLATFORM) \
 	tinymix \
 	sensors.$(TARGET_BOARD)  \
 	fm.$(TARGET_PLATFORM)  \
