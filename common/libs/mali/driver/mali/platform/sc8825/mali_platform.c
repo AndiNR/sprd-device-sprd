@@ -92,8 +92,40 @@ _mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
 	MALI_SUCCESS;
 }
 
+static int g_gpu_clock_div = 1;
+
 void mali_gpu_utilization_handler(u32 utilization)
 {
+	if(utilization >= 250)
+	{
+		g_gpu_clock_div = 1;
+		sci_glb_write(REG_GLB_GEN2, BITS_CLK_GPU_AXI_DIV(g_gpu_clock_div-1), BITS_CLK_GPU_AXI_DIV(7));
+		return;
+	}
+
+	if(utilization == 0)
+	{
+		utilization = 1;
+	}
+
+	// the absolute loading ratio is 1/g_gpu_clock_div * utilization/256
+	// the absolute loading level is 256*g_gpu_clock_div/utilization
+	// so the relative level delta against current loading level is
+	int delta = g_gpu_clock_div*(256/utilization - 1);
+
+	if(delta < 1)
+	{
+		g_gpu_clock_div -= 1;
+	}
+	else if(delta > 1)
+	{
+		g_gpu_clock_div += 1;
+	}
+
+	if(g_gpu_clock_div < 1) g_gpu_clock_div = 1;
+	if(g_gpu_clock_div > 8) g_gpu_clock_div = 8;
+
+	sci_glb_write(REG_GLB_GEN2, BITS_CLK_GPU_AXI_DIV(g_gpu_clock_div-1), BITS_CLK_GPU_AXI_DIV(7));
 }
 
 void set_mali_parent_power_domain(void* dev)
