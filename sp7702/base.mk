@@ -47,7 +47,8 @@ PRODUCT_PACKAGES += \
     AudioProfile \
     SprdNote \
     CallFireWall \
-    ValidationTools
+    ValidationTools \
+    libvalidationtoolsjni
 
 # prebuild files
 PRODUCT_PACKAGES += \
