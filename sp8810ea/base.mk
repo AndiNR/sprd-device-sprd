@@ -31,6 +31,7 @@ PRODUCT_PACKAGES := \
 	hciconfig \
 	hcitool \
 	hcidump \
+	audio.a2dp.default \
 	FMPlayer \
 	bttest\
 	hostapd \
