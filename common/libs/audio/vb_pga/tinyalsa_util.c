@@ -15,7 +15,7 @@
  */
 
 //#define ALOG_NDEBUG 0
-#define LOG_TAG "Alsa_Util"
+#define LOG_TAG "audio_hw_pga"
 #include <utils/Log.h>
 
 #include <stdio.h>
