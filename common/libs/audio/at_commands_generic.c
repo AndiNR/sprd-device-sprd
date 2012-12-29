@@ -31,9 +31,9 @@ extern "C" {
     }\
     pthread_mutex_unlock(&ATlock);
 
+
 int at_cmd_deinit(void)
 {
-    ALOGI("at_cmd_deinit in...");
     if (at_cmd_fd > 0) {
         engapi_close(at_cmd_fd);
         at_cmd_fd = -1;
@@ -41,20 +41,29 @@ int at_cmd_deinit(void)
     return 0;
 }
 
-// external/sprd/engineeringmodel/engcs/eng_appclient.c
+static int cur_call_sim = 0;
 int at_cmd_init(void)
 {
+#ifndef _VOICE_CALL_VIA_LINEIN
+    if (at_cmd_fd <= 0 || cur_call_sim != android_sim_num) {
+        at_cmd_deinit();
+        cur_call_sim = android_sim_num;
+        at_cmd_fd = engapi_open(cur_call_sim);
+        at_cmd_prefix_len = sprintf(at_cmd_prefix, "%d,%d,", ENG_AT_NOHANDLE_CMD, 1);
+    }
+#else
     char buf[8];
     int sim = 0;
     if (at_cmd_fd <= 0 /*|| sim != android_sim_num */) {
         at_cmd_deinit();
         at_cmd_fd = engapi_open(sim);
-//        android_sim_num = sim;
         at_cmd_prefix_len = sprintf(at_cmd_prefix, "%d,%d,", ENG_AT_NOHANDLE_CMD, 1);
-    }
+     }
+#endif
     if (at_cmd_fd > 0)
-        ALOGW("at cmd using sim%d", sim);
-    else ALOGE("at cmd using sim%d failed", sim);
+        ALOGW("at cmd using sim%d", cur_call_sim);
+    else
+        ALOGE("at cmd using sim%d failed", cur_call_sim);
     return 0;
 }
 

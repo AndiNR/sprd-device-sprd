@@ -33,8 +33,8 @@ static int tiny_card_num = -1;
 typedef struct {
 	unsigned short adc_pga_gain_l;
 	unsigned short adc_pga_gain_r;
-    unsigned short fm_pga_gain_l;
-    unsigned short fm_pga_gain_r;
+    uint32_t fm_pga_gain_l;
+    uint32_t fm_pga_gain_r;
 	uint32_t dac_pga_gain_l;
 	uint32_t dac_pga_gain_r;
 	uint32_t devices;
@@ -43,7 +43,7 @@ typedef struct {
 
 static int32_t GetAudio_mode_number_from_nv(AUDIO_TOTAL_T *aud_params_ptr)
 {
-    int32_t lmode;
+    int32_t lmode = 0;
     if(!strcmp((char *)aud_params_ptr->audio_nv_arm_mode_info.ucModeName, "Headset")){
         lmode = 0;
     }else if(!strcmp((char *)aud_params_ptr->audio_nv_arm_mode_info.ucModeName, "Headfree")){
@@ -64,13 +64,14 @@ static int  GetAudio_pga_nv(AUDIO_TOTAL_T *aud_params_ptr, pga_gain_nv_t *pga_ga
         ALOGE("%s aud_params_ptr or pga_gain_nv is NULL",__func__);
         return -1;
     }
-    pga_gain_nv->adc_pga_gain_l = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_CAPTURE_GAIN_INDEX] & 0xff;    //43
+    pga_gain_nv->adc_pga_gain_l = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_CAPTURE_GAIN_INDEX];    //43
     pga_gain_nv->adc_pga_gain_r = pga_gain_nv->adc_pga_gain_l;
     
-    pga_gain_nv->dac_pga_gain_l = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.app_config_info_set.app_config_info[0].arm_volume[vol_level] & 0xff;
+    pga_gain_nv->dac_pga_gain_l = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.app_config_info_set.app_config_info[0].arm_volume[vol_level];
     pga_gain_nv->dac_pga_gain_r = pga_gain_nv->dac_pga_gain_l;
     
-    pga_gain_nv->fm_pga_gain_l  = (aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_FM_GAINL_INDEX] & 0xff);  //18
+    pga_gain_nv->fm_pga_gain_l  = (aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_FM_GAINL_INDEX]
+        | ((aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_FM_DGAIN_INDEX]<<16) & 0xffff0000));  //18,19
     pga_gain_nv->fm_pga_gain_r  = pga_gain_nv->fm_pga_gain_l;
     ALOGW("%s, dac_pga_gain_l:0x%x adc_pga_gain_l:0x%x fm_pga_gain_l:0x%x fm_pga_gain_r:0x%x vol_level:0x%x ",
         __func__,pga_gain_nv->dac_pga_gain_l,pga_gain_nv->adc_pga_gain_l,pga_gain_nv->fm_pga_gain_l,pga_gain_nv->fm_pga_gain_r,vol_level);

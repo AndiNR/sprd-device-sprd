@@ -38,6 +38,7 @@ static int s_vbpipe_fd = -1;
 static int s_is_exit = 0;
 static int s_is_active = 0;
 static int fd_audio_para = -1;
+static int android_sim_num = 0;
 
 
 /* vbc control parameters struct here.*/
@@ -80,13 +81,17 @@ typedef struct Device_ctrl
 	paras_mode_gain_t 	paras_mode;
 }device_ctrl_t;
 
+typedef struct Open_hal
+{
+    unsigned int  sim_card;   /*sim card number*/
+}open_hal_t;
 
 
 typedef struct {
 	unsigned short adc_pga_gain_l;
 	unsigned short adc_pga_gain_r;
-    unsigned short fm_pga_gain_l;
-    unsigned short fm_pga_gain_r;
+    uint32_t fm_pga_gain_l;
+    uint32_t fm_pga_gain_r;
 	uint32_t dac_pga_gain_l;
 	uint32_t dac_pga_gain_r;
 	uint32_t devices;
@@ -172,6 +177,16 @@ static int  WriteParas_Head(int fd_pipe,  parameters_head_t *head_ptr)
     }
     return ret;
 }
+
+static int  ReadParas_OpenHal(int fd_pipe, open_hal_t *hal_open_param)
+{
+    int ret = 0;
+    if (fd_pipe > 0 && hal_open_param != NULL) {
+        ret = read(fd_pipe, hal_open_param, sizeof(open_hal_t));
+    }
+    return ret;
+}
+
 
 static int  ReadParas_DeviceCtrl(int fd_pipe, device_ctrl_t *paras_ptr)
 {
@@ -285,13 +300,14 @@ static int  GetAudio_pga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *aud_p
         ALOGE("%s aud_params_ptr or pga_gain_nv is NULL",__func__);
         return -1;
     }
-    pga_gain_nv->adc_pga_gain_l = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_CAPTURE_GAIN_INDEX] & 0xff;    //43
+    pga_gain_nv->adc_pga_gain_l = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_CAPTURE_GAIN_INDEX];    //43
     pga_gain_nv->adc_pga_gain_r = pga_gain_nv->adc_pga_gain_l;
     
-    pga_gain_nv->dac_pga_gain_l = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.app_config_info_set.app_config_info[0].arm_volume[vol_level] & 0xff;
+    pga_gain_nv->dac_pga_gain_l = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.app_config_info_set.app_config_info[0].arm_volume[vol_level];
     pga_gain_nv->dac_pga_gain_r = pga_gain_nv->dac_pga_gain_l;
     
-    pga_gain_nv->fm_pga_gain_l  = (aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_FM_GAINL_INDEX] & 0xff);  //18
+    pga_gain_nv->fm_pga_gain_l  = (aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_FM_GAINL_INDEX]
+        | ((aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_FM_DGAIN_INDEX]<<16) & 0xffff0000));  //18,19
     pga_gain_nv->fm_pga_gain_r  = pga_gain_nv->fm_pga_gain_l;
 
     pga_gain_nv->devices = adev->devices;
@@ -316,6 +332,8 @@ static int GetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
     //get music gain from nv
     ret = GetAudio_pga_nv(adev,aud_params_ptr,pga_gain_nv,vol_level);
     if(ret < 0){
+        munmap((void *)aud_params_ptr, 4*sizeof(AUDIO_TOTAL_T));
+        close(fd_audio_para);
         return -1;
     }
     //close fd
@@ -445,6 +463,32 @@ static void SetCall_VolumePara(struct tiny_audio_device *adev,paras_mode_gain_t 
     }
 	ALOGW("%s successfully ,dac_pga_gain_l:0x%x ,dac_pga_gain_r:0x%x ,adc_pga_gain_l:0x%x ,adc_pga_gain_r:0x%x ,devices:0x%x ,mode:%d ",
 		__func__,pga_gain_nv.dac_pga_gain_l,pga_gain_nv.dac_pga_gain_r,pga_gain_nv.adc_pga_gain_l,pga_gain_nv.adc_pga_gain_r,pga_gain_nv.devices,adev->mode);
+}
+
+int SetParas_OpenHal_Incall(int fd_pipe)	//Get open hal cmd and sim card
+{
+    int ret = 0;
+    open_hal_t hal_open_param;
+    parameters_head_t read_common_head;
+    memset(&hal_open_param,0,sizeof(open_hal_t));
+    memset(&read_common_head, 0, sizeof(parameters_head_t));
+    MY_TRACE("%s in...",__func__);
+
+    ret = Write_Rsp2cp(fd_pipe,VBC_CMD_HAL_OPEN);
+    if(ret < 0){
+        ALOGE("Error, %s Write_Rsp2cp failed(%d).",__func__,ret);
+    }
+    ret = ReadParas_OpenHal(fd_pipe,&hal_open_param);
+    if (ret <= 0) {
+        ALOGE("Error, read %s failed(%d).",__func__,ret);
+    }
+    ret = Write_Rsp2cp(fd_pipe,VBC_CMD_HAL_OPEN);
+    if(ret < 0){
+        ALOGE("Error, %s Write_Rsp2cp failed(%d).",__func__,ret);
+    }
+    android_sim_num = hal_open_param.sim_card;
+    MY_TRACE("%s successfully,sim card number(%d)",__func__,android_sim_num);
+    return ret;
 }
 
 int GetParas_DeviceCtrl_Incall(int fd_pipe,device_ctrl_t *device_ctrl_param)	//open,close
@@ -632,6 +676,7 @@ int vbc_ctrl_open(struct tiny_audio_device *adev)
     rc = pthread_create(&s_vbc_ctrl_thread, NULL, vbc_ctrl_thread_routine, (void *)adev);
     if (rc) {
         ALOGE("error, pthread_create failed, rc=%d", rc);
+        s_is_active = 0;
         return (-1);
     }
 
@@ -677,13 +722,14 @@ RESTART:
         s_vbpipe_fd = open("/dev/vbpipe6", O_RDWR);
         if (s_vbpipe_fd <= 0) {
             ALOGE("Error: s_vbpipe_fd(%d) open failed.", s_vbpipe_fd);
-            if(adev->in_call){                  //cp crash during call
+            if(adev->call_start){                  //cp crash during call
                 mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);  //switch to arm
                 pthread_mutex_lock(&adev->lock);
                 force_all_standby(adev);
                 pcm_close(adev->pcm_modem_ul);
                 pcm_close(adev->pcm_modem_dl);
-                adev->in_call = 0;
+                adev->call_start = 0;
+                adev->call_connected = 0;
                 pthread_mutex_unlock(&adev->lock);
             }
             usleep(1000*1000);
@@ -702,18 +748,19 @@ RESTART:
         /* read parameters common head of the packet.*/
         ret = ReadParas_Head(s_vbpipe_fd, &read_common_head);
         if (ret <= 0) {
-            ALOGE("Error, %s read head failed(%d).",__func__,ret);
+            ALOGE("Error, %s read head failed(%s).",__func__,strerror(errno));
+	        sleep(1);
             goto RESTART;
         }
-        ALOGW("%s In Call, Get CMD(%d) from cp, paras_size:%d devices:0x%x mode:%d", adev->in_call ? "":"NOT",read_common_head.cmd_type,read_common_head.paras_size,adev->devices,adev->mode);
+        ALOGW("%s call start, Get CMD(%d) from cp, paras_size:%d devices:0x%x mode:%d", adev->call_start ? "":"NOT",read_common_head.cmd_type,read_common_head.paras_size,adev->devices,adev->mode);
         if (!memcmp(&read_common_head.tag[0], VBC_CMD_TAG, 3)) {
             switch (read_common_head.cmd_type)
             {
             case VBC_CMD_HAL_OPEN:
             {
                 MY_TRACE("VBC_CMD_HAL_OPEN IN.");
-                force_all_standby(adev);
                 pthread_mutex_lock(&adev->lock);
+                force_all_standby(adev);    /*should standby because MODE_IN_CALL is later than call_start*/
                 adev->pcm_modem_dl= pcm_open(s_tinycard, PORT_MODEM, PCM_OUT | PCM_MMAP, &pcm_config_vx);
                 if (!pcm_is_ready(adev->pcm_modem_dl)) {
                     ALOGE("cannot open pcm_modem_dl : %s", pcm_get_error(adev->pcm_modem_dl));
@@ -728,10 +775,9 @@ RESTART:
                     s_is_exit = 1;
                 }
                 ALOGW("START CALL,open pcm device...");
-                adev->in_call = 1;
+                adev->call_start = 1;
+                SetParas_OpenHal_Incall(s_vbpipe_fd);   //get sim card number
                 pthread_mutex_unlock(&adev->lock);
-                write_common_head.cmd_type = VBC_CMD_RSP_OPEN;
-                WriteParas_Head(s_vbpipe_fd, &write_common_head);
                 MY_TRACE("VBC_CMD_HAL_OPEN OUT.");
             }
             break;
@@ -743,7 +789,8 @@ RESTART:
                 force_all_standby(adev);
                 pcm_close(adev->pcm_modem_ul);
                 pcm_close(adev->pcm_modem_dl);
-                adev->in_call = 0;
+                adev->call_start = 0;
+                adev->call_connected = 0;
                 ALOGW("END CALL,close pcm device & switch to arm...");
                 pthread_mutex_unlock(&adev->lock);
                 write_common_head.cmd_type = VBC_CMD_RSP_CLOSE;
@@ -781,6 +828,9 @@ RESTART:
                     MY_TRACE("VBC_CMD_SWITCH_CTRL SetParas_Switch_Incall error.s_is_exit:%d ",s_is_exit);
                     s_is_exit = 1;
                 }
+                pthread_mutex_lock(&adev->lock);
+                adev->call_connected = 1;
+                pthread_mutex_unlock(&adev->lock);
                 MY_TRACE("VBC_CMD_SWITCH_CTRL OUT.");
             }
             break;
