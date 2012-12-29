@@ -170,7 +170,7 @@ _mali_osk_errcode_t _ump_ukk_allocate( _ump_uk_allocate_s *user_interaction )
 	/* Now, ask the active memory backend to do the actual memory allocation */
 	if (!device.backend->allocate( device.backend->ctx, new_allocation ) )
 	{
-		DBG_MSG(3, ("OOM: No more UMP memory left. Failed to allocate memory in ump_ioctl_allocate(). Size: %lu, requested size: %lu\n", new_allocation->size_bytes, (unsigned long)user_interaction->size));
+		DBG_MSG(1, ("OOM: No more UMP memory left. Failed to allocate memory in ump_ioctl_allocate(). Size: %lu, requested size: %lu\n", new_allocation->size_bytes, (unsigned long)user_interaction->size));
 		ump_descriptor_mapping_free(device.secure_id_map, map_id);
 		_mali_osk_lock_signal(device.secure_id_map_lock, _MALI_OSK_LOCKMODE_RW);
 		_mali_osk_free(new_allocation);
