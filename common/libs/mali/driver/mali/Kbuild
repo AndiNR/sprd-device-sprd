@@ -277,7 +277,7 @@ VERSION_STRINGS += REPO_URL=$(shell cd $(DRIVER_DIR); (svn info || git svn info 
 VERSION_STRINGS += REVISION=$(SVN_REV)
 VERSION_STRINGS += CHANGED_REVISION=$(shell cd $(DRIVER_DIR); (svn info || git svn info || echo 'Last Changed Rev: $(MALI_RELEASE_NAME)') 2>/dev/null | grep '^Last Changed Rev: ' | cut -d: -f2- | cut -b2-)
 VERSION_STRINGS += CHANGE_DATE=$(shell cd $(DRIVER_DIR); (svn info || git svn info || echo 'Last Changed Date: $(MALI_RELEASE_NAME)') 2>/dev/null | grep '^Last Changed Date: ' | cut -d: -f2- | cut -b2-)
-VERSION_STRINGS += BUILD_DATE=$(shell date)
+#VERSION_STRINGS += BUILD_DATE=$(shell date)
 
 VERSION_STRINGS += BUILD=$(shell echo $(BUILD) | tr a-z A-Z)
 VERSION_STRINGS += CPU=$(CPU)
