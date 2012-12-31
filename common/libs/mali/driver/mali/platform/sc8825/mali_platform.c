@@ -96,7 +96,8 @@ static int g_gpu_clock_div = 1;
 
 void mali_gpu_utilization_handler(u32 utilization)
 {
-	if(utilization >= 250)
+	// if the loading ratio is greater then 90%, switch the clock to the maximum
+	if(utilization >= (256*9/10))
 	{
 		g_gpu_clock_div = 1;
 		sci_glb_write(REG_GLB_GEN2, BITS_CLK_GPU_AXI_DIV(g_gpu_clock_div-1), BITS_CLK_GPU_AXI_DIV(7));
@@ -109,18 +110,9 @@ void mali_gpu_utilization_handler(u32 utilization)
 	}
 
 	// the absolute loading ratio is 1/g_gpu_clock_div * utilization/256
-	// the absolute loading level is 256*g_gpu_clock_div/utilization
-	// so the relative level delta against current loading level is
-	int delta = g_gpu_clock_div*(256/utilization - 1);
-
-	if(delta < 1)
-	{
-		g_gpu_clock_div -= 1;
-	}
-	else if(delta > 1)
-	{
-		g_gpu_clock_div += 1;
-	}
+	// to keep the loading ratio under 70% at a certain level,
+	// the absolute loading level is 1/(1/g_gpu_clock_div * utilization/256 / (7/10))
+	g_gpu_clock_div = (256*7/10)*g_gpu_clock_div/utilization;
 
 	if(g_gpu_clock_div < 1) g_gpu_clock_div = 1;
 	if(g_gpu_clock_div > 8) g_gpu_clock_div = 8;
