@@ -14,7 +14,7 @@
      <!-- DAC->Earpiece -->
      <ctl name="Ear Boost Volume" val="1" />
 
-     <!-- ADC ->(main mic)  -->
+     <!-- ADC->(main mic)  -->
      <ctl name="Capture Volume" val="12" />
      <ctl name="Mic Boost Volume" val="1" />
 
@@ -86,6 +86,10 @@
 </device>
 
 <!-- MUST NOT modify private field directly -->
+<private name="mic bias">
+  <func name="Mic Bias Function" val="0" />
+</private>
+
 <private name="vb control">
   <func name="VBC Switch" val="arm" />
 </private>

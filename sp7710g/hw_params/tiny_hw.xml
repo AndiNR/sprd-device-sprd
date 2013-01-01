@@ -4,17 +4,17 @@
    <!-- We are able to have most of our routing static so do that -->
    <path>
 
-     <!-- DAC1->Headphone -->
+     <!-- DAC->Headphone -->
      <ctl name="HeadPhone Playback Volume" val="12" />
 
-     <!-- DAC1->Speaker -->
+     <!-- DAC->Speaker -->
      <ctl name="Master Playback Volume" val="12" />
      <ctl name="Inter PA Playback Volume" val="12" />
 
-     <!-- DAC1->Earpiece -->
+     <!-- DAC->Earpiece -->
      <ctl name="Ear Boost Volume" val="1" />
 
-     <!-- ADC ->(main mic)  -->
+     <!-- ADC->(main mic)  -->
      <ctl name="Capture Volume" val="12" />
      <ctl name="Mic Boost Volume" val="1" />
 
@@ -85,6 +85,7 @@
   </path>
 </device>
 
+<!-- MUST NOT modify private field directly -->
 <private name="mic bias">
   <func name="Mic Bias Function" val="0" />
 </private>
