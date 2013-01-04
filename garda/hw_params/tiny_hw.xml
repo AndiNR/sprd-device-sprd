@@ -37,13 +37,13 @@
 <device name="headphone">
    <path name="on">
      <ctl name="HeadPhone Function" val="1" />
-     <ctl name="HPL Mixer DACLHPL Switch" val="1" />
-     <ctl name="HPR Mixer DACRHPR Switch" val="1" />
+     <ctl name="HPL Mixer DACRHPL Switch" val="1" />
+     <ctl name="HPR Mixer DACLHPR Switch" val="1" />
    </path>
    <path name="off">
      <ctl name="HeadPhone Function" val="0" />
-     <ctl name="HPL Mixer DACLHPL Switch" val="0" />
-     <ctl name="HPR Mixer DACRHPR Switch" val="0" />
+     <ctl name="HPL Mixer DACRHPL Switch" val="0" />
+     <ctl name="HPR Mixer DACLHPR Switch" val="0" />
    </path>
 </device>
 
@@ -110,12 +110,12 @@
 
 <device name="line-headphone">
   <path name="on">
-     <ctl name="HPL Mixer ADCLHPL Switch" val="1" />
-     <ctl name="HPR Mixer ADCRHPR Switch" val="1" />
+     <ctl name="HPL Mixer ADCRHPL Switch" val="1" />
+     <ctl name="HPR Mixer ADCLHPR Switch" val="1" />
   </path>
   <path name="off">
-     <ctl name="HPL Mixer ADCLHPL Switch" val="0" />
-     <ctl name="HPR Mixer ADCRHPR Switch" val="0" />
+     <ctl name="HPL Mixer ADCRHPL Switch" val="0" />
+     <ctl name="HPR Mixer ADCLHPR Switch" val="0" />
   </path>
 </device>
 
