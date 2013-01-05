@@ -14,4 +14,4 @@
 # limitations under the License.
 #
 
-add_lunch_combo sp8830fpga-userdebug
+add_lunch_combo sp8830fpgabase-userdebug
