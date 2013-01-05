@@ -1,0 +1,9 @@
+<?xml version="1.0"  encoding="utf-8"?>
+<resources
+xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string-array name="colors">
+        <item>ఆరెంజ్</item>
+        <item>ఆకుపచ్చ</item>
+        <item>పర్పుల్</item>
+    </string-array>
+</resources>

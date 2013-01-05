@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+             android:layout_width="fill_parent"
+             android:layout_height="fill_parent"
+             android:background="@drawable/item_bg">
+
+    <ImageView android:id="@+id/status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/playing" 
+            android:visibility="invisible"
+            android:layout_centerVertical="true"
+            />
+
+    <LinearLayout android:id="@+id/item"
+            android:orientation="vertical"
+            android:layout_width="300sp"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@id/status"
+            android:layout_centerVertical="true"
+            >
+
+        <com.thunderst.radio.ScrollTextView
+            android:id="@+id/name"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/black"
+            android:paddingLeft="15sp"
+            android:paddingTop="15sp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:focusableInTouchMode="true"
+            android:marqueeRepeatLimit="marquee_forever"
+            />
+
+        <TextView
+            android:id="@+id/freq"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/gray"
+            android:paddingLeft="15sp"
+            android:paddingBottom="15sp"
+            />
+
+    </LinearLayout>
+
+</RelativeLayout>
