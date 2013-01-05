@@ -67,6 +67,16 @@ enum scle_mode {
 	SCALE_MODE_MAX
 };
 
+enum scale_rotate
+{
+	SCALE_ROTATION_0 = 0,
+	SCALE_ROTATION_90,
+	SCALE_ROTATION_180,
+	SCALE_ROTATION_270,
+	SCALE_ROTATION_MIRROR,
+	SCALE_ROTATION_MAX
+};
+
 struct scale_size {
 	uint32_t               w;
 	uint32_t               h;

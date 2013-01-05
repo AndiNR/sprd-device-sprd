@@ -250,7 +250,7 @@ int cmr_rot_cpy_to_virtual(struct img_frm  *src_img,
 	rot_cfg.dst_addr.v_addr = 0;
 
 	//done
-	ret = ioctl(rot_fd, ROT_IO_DATA_COPY_VIRTUAL, &rot_cfg);
+	ret = ioctl(rot_fd, ROT_IO_DATA_COPY_TO_VIRTUAL, &rot_cfg);
 	CMR_LOGV("Copy to virtual done");
 
 	return ret;
