@@ -142,6 +142,31 @@ on property:persist.msms.phone_count=2
 service sdcard /system/bin/sdcard /data/media 1023 1023
     class late_start
 
+
+service hfag /system/bin/sdptool add --channel=10 HFAG
+    user bluetooth
+    group bluetooth net_bt_admin
+    disabled
+    oneshot
+
+service hsag /system/bin/sdptool add --channel=11 HSAG
+    user bluetooth
+    group bluetooth net_bt_admin
+    disabled
+    oneshot
+
+service opush /system/bin/sdptool add --channel=12 OPUSH
+    user bluetooth
+    group bluetooth net_bt_admin
+    disabled
+    oneshot
+
+service pbap /system/bin/sdptool add --channel=19 PBAP
+    user bluetooth
+    group bluetooth net_bt_admin
+    disabled
+    oneshot
+
 service akmd /system/bin/akmd8975 -m 3
     class main
     oneshot
@@ -210,6 +235,11 @@ service iprenew_p2p /system/bin/dhcpcd -n
     group system dhcp
     disabled
     oneshot
+
+service FmPower /system/bin/FmDaemon
+   class main
+   user root
+   group vpn net_admin net_raw
 
 service slog /system/bin/slog
     class main
