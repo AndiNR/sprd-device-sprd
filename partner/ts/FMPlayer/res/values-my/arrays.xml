@@ -1,9 +1,0 @@
-<?xml version="1.0"  encoding="utf-8"?>
-<resources
-xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string-array name="colors">
-        <item>လိေမၼာ္ေရာင္</item>
-        <item>အစိမ်း</item>
-        <item>ခရမ္းေရာင္</item>
-    </string-array>
-</resources>
