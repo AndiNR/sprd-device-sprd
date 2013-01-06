@@ -154,6 +154,7 @@ LOCAL_SRC_FILES:= \
 	sc8825/src/dc_product_cfg.c \
 	sc8825/src/sensor_cfg.c \
 	sc8825/src/sensor_drv_u.c \
+	sc8825/src/cmr_arith.c \
 	sensor/sensor_ov5640_raw.c  \
 	sensor/sensor_ov5640.c  \
 	sensor/sensor_ov2640.c  \

@@ -675,7 +675,7 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	//bypass
 	sensor_ptr->blc_bypass=0x00;
 	sensor_ptr->nlc_bypass=0x01;
-	sensor_ptr->lnc_bypass=0x01;
+	sensor_ptr->lnc_bypass=0x00;
 	sensor_ptr->ae_bypass=0x00;
 	sensor_ptr->awb_bypass=0x00;
 	sensor_ptr->bpc_bypass=0x01;
@@ -1072,32 +1072,32 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->gamma.axis[24][0]=960;
 	sensor_ptr->gamma.axis[25][0]=1023;
 
-	sensor_ptr->gamma.axis[0][1]=0;
-	sensor_ptr->gamma.axis[1][1]=5;
-	sensor_ptr->gamma.axis[2][1]=9;
-	sensor_ptr->gamma.axis[3][1]=14;
-	sensor_ptr->gamma.axis[4][1]=19;
-	sensor_ptr->gamma.axis[5][1]=28;
-	sensor_ptr->gamma.axis[6][1]=37;
-	sensor_ptr->gamma.axis[7][1]=46;
-	sensor_ptr->gamma.axis[8][1]=54;
-	sensor_ptr->gamma.axis[9][1]=71;
-	sensor_ptr->gamma.axis[10][1]=85;
-	sensor_ptr->gamma.axis[11][1]=99;
-	sensor_ptr->gamma.axis[12][1]=111;
-	sensor_ptr->gamma.axis[13][1]=121;
-	sensor_ptr->gamma.axis[14][1]=131;
-	sensor_ptr->gamma.axis[15][1]=140;
-	sensor_ptr->gamma.axis[16][1]=155;
-	sensor_ptr->gamma.axis[17][1]=169;
-	sensor_ptr->gamma.axis[18][1]=180;
-	sensor_ptr->gamma.axis[19][1]=191;
-	sensor_ptr->gamma.axis[20][1]=201;
-	sensor_ptr->gamma.axis[21][1]=219;
-	sensor_ptr->gamma.axis[22][1]=228;
-	sensor_ptr->gamma.axis[23][1]=237;
-	sensor_ptr->gamma.axis[24][1]=246;
-	sensor_ptr->gamma.axis[25][1]=255;
+	sensor_ptr->gamma.axis[0][1]=0x00;
+	sensor_ptr->gamma.axis[1][1]=0x05;
+	sensor_ptr->gamma.axis[2][1]=0x09;
+	sensor_ptr->gamma.axis[3][1]=0x0e;
+	sensor_ptr->gamma.axis[4][1]=0x13;
+	sensor_ptr->gamma.axis[5][1]=0x1f;
+	sensor_ptr->gamma.axis[6][1]=0x2a;
+	sensor_ptr->gamma.axis[7][1]=0x36;
+	sensor_ptr->gamma.axis[8][1]=0x40;
+	sensor_ptr->gamma.axis[9][1]=0x58;
+	sensor_ptr->gamma.axis[10][1]=0x68;
+	sensor_ptr->gamma.axis[11][1]=0x76;
+	sensor_ptr->gamma.axis[12][1]=0x84;
+	sensor_ptr->gamma.axis[13][1]=0x8f;
+	sensor_ptr->gamma.axis[14][1]=0x98;
+	sensor_ptr->gamma.axis[15][1]=0xa0;
+	sensor_ptr->gamma.axis[16][1]=0xb0;
+	sensor_ptr->gamma.axis[17][1]=0xbd;
+	sensor_ptr->gamma.axis[18][1]=0xc6;
+	sensor_ptr->gamma.axis[19][1]=0xcf;
+	sensor_ptr->gamma.axis[20][1]=0xd8;
+	sensor_ptr->gamma.axis[21][1]=0xe4;
+	sensor_ptr->gamma.axis[22][1]=0xea;
+	sensor_ptr->gamma.axis[23][1]=0xf0;
+	sensor_ptr->gamma.axis[24][1]=0xf6;
+	sensor_ptr->gamma.axis[25][1]=0xff;
 
 	//uv div
 	sensor_ptr->uv_div.thrd[0]=252;
