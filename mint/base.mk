@@ -31,6 +31,7 @@ PRODUCT_PACKAGES := \
 	SystemUI \
 	CalendarProvider \
 	bluetooth-health \
+	audio.a2dp.default \
 	hostapd \
 	wpa_supplicant.conf \
 	calibration_init \
