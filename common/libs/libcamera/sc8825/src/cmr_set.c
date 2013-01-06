@@ -444,6 +444,8 @@ int camera_flash_process(uint32_t on_off)
 	if ((FLASH_OPEN_ON_RECORDING == cxt->cmr_set.flash)
 		&& (CAMERA_PREVIEW_MODE_MOVIE == cxt->cmr_set.video_mode)){
 		Sensor_Ioctl(SENSOR_IOCTL_FLASH, status);
+	} else if (FLASH_TORCH == cxt->cmr_set.flash) {
+		Sensor_Ioctl(SENSOR_IOCTL_FLASH, status);
 	}
 	
 	return CAMERA_SUCCESS;
@@ -570,7 +572,9 @@ int camera_snapshot_start_set(void)
 	} else {
 	
 	}
-
+	if (HDR_CAP_NUM == cxt->total_cap_num) {
+		ret = camera_set_hdr_ev(SENSOR_HDR_EV_LEVE_0);
+	}
 	return ret;
 }
 
@@ -578,6 +582,10 @@ int camera_snapshot_stop_set(void)
 {
 	int                      ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
+
+	if (HDR_CAP_NUM == cxt->total_cap_num) {
+		camera_set_hdr_ev(SENSOR_HDR_EV_LEVE_1);
+	}
 
 	ret = Sensor_Ioctl(SENSOR_IOCTL_AFTER_SNAPSHOT, cxt->sn_cxt.preview_mode);
 	if (ret) {
@@ -637,13 +645,13 @@ void camera_set_rot_angle(uint32_t *angle)
 				*angle = IMG_ROT_90;
 				break;
 		case 90:
-				*angle = 0;
+				*angle = IMG_ROT_180;
 				break;
 		case 180:
 				*angle = IMG_ROT_270;
 				break;
 		case 270:
-				*angle = IMG_ROT_180;
+				*angle = 0;
 				break;
 		default:
 				break;
@@ -839,7 +847,7 @@ int camera_set_ctrl(camera_parm_type id,
 					CMR_RTN_IF_ERR(ret);
 				}
 				skip_mode = IMG_SKIP_HW;
-				skip_number = cxt->skip_num;
+				skip_number = 0;
 				CMR_RTN_IF_ERR(ret);
 				if (after_set) {
 					ret = (*after_set)(RESTART_MIDDLE, skip_mode, skip_number);
@@ -946,6 +954,18 @@ exit:
 	return ret;
 }
 
+int camera_set_hdr_ev(int ev_level)
+{
+	int                      ret = CAMERA_SUCCESS;
+	SENSOR_EXT_FUN_PARAM_T   ev_param;
+
+	ev_param.cmd = SENSOR_EXT_EV;
+	ev_param.param = ev_level;
+	CMR_LOGI("level %d.",ev_param.param);
+	ret = Sensor_Ioctl(SENSOR_IOCTL_FOCUS, (uint32_t) & ev_param);
+	CMR_LOGI("done %d.",ret);
+	return ret;
+}
 int camera_autofocus_start(void)
 {
 	int                      ret = CAMERA_SUCCESS;

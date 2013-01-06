@@ -31,6 +31,7 @@ extern "C"
 #include "cmr_cvt.h"
 #include "jpeg_codec.h"
 #include "jpeg_exif_header.h"
+#include "cmr_arith.h"
 
 
 #define CMR_EVT_INIT                                (CMR_EVT_OEM_BASE)
@@ -49,10 +50,10 @@ extern "C"
 #define CAMERA_CAP1_ID_BASE                          0x4000
 #define CAMERA_PREV_FRM_CNT                          V4L2_BUF_MAX
 #define CAMERA_PREV_ROT_FRM_CNT                      4
-#define CAMERA_CAP_FRM_CNT                           2
+#define CAMERA_CAP_FRM_CNT                           CMR_IMG_CNT_MAX
 #define CAMERA_ZOOM_LEVEL_MAX                        8
 #define ZOOM_STEP(x)                                 ((x - x / CMR_ZOOM_FACTOR) / CAMERA_ZOOM_LEVEL_MAX)
-#define CAMERA_PIXEL_ALIGNED                         4 
+#define CAMERA_PIXEL_ALIGNED                         4
 #define CAMERA_WIDTH(w)                              ((w)& ~(CAMERA_PIXEL_ALIGNED - 1))
 #define CAMERA_HEIGHT(h)                             ((h)& ~(CAMERA_PIXEL_ALIGNED - 1))
 #define CAMERA_FOCUS_RECT_PARAM_LEN                  200
@@ -108,7 +109,7 @@ enum {
 	IMG_CVT_SCALING
 };
 
-	
+
 struct process_status {
 	uint32_t                 slice_height_in;
 	uint32_t                 slice_height_out;
@@ -123,6 +124,7 @@ struct camera_ctrl {
 	uint32_t                 jpeg_inited;
 	uint32_t                 scaler_inited;
 	uint32_t                 rot_inited;
+	uint32_t                 arithmetic_inited;
 };
 
 
@@ -177,6 +179,11 @@ struct rotation_context {
 	sem_t                    cmr_rot_sem;
 };
 
+struct arithmetic_context {
+	uint32_t                 fd_inited;
+	uint32_t                 fd_flag;
+};
+
 struct camera_settings {
 	uint32_t                 focal_len;
 	uint32_t                 brightness;
@@ -212,6 +219,7 @@ struct camera_context {
 	struct jpeg_context      jpeg_cxt;
 	struct scaler_context    scaler_cxt;
 	struct rotation_context  rot_cxt;
+	struct arithmetic_context arithmetic_cxt;
 
 	/*for the workflow management*/
 	pthread_t                camera_main_thr;
@@ -252,7 +260,8 @@ struct camera_context {
 	uint32_t                 prev_phys_addr;
 	uint32_t                 *prev_virt_addr;
 	uint32_t                 prev_mem_szie;
-	uint32_t                 is_waiting;
+	uint32_t                 wait_for_start;
+	uint32_t                 wait_for_stop;
 
 	/*for capture*/
 	struct img_size          picture_size;
@@ -274,10 +283,11 @@ struct camera_context {
 	struct img_size          thum_size;
 	struct cmr_cap_mem       cap_mem[CAMERA_CAP_FRM_CNT];
 	struct cmr_cap_2_frm     cap_2_mems;
+	pthread_mutex_t          cancel_mutex;
+	uint32_t                 cap_canceled;
 	/*for setting*/
 	struct camera_settings   cmr_set;
-	uint32_t 				 orientation;
-	
+	uint32_t                 orientation;
 };
 
 uint32_t camera_get_rot_angle(uint32_t degree);

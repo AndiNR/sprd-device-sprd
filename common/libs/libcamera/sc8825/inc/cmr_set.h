@@ -46,6 +46,7 @@ int camera_set_ctrl(camera_parm_type id,
 			cmr_after_set_cb  after_set);
 int camera_isp_ctrl_done(uint32_t cmd, void* data);
 int camera_isp_af_done(void *data);
+int camera_set_hdr_ev(int ev_level);
 
 
 

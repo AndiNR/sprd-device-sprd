@@ -32,6 +32,12 @@
 #define CMD_PARAM3 0x3027
 #define CMD_PARAM4 0x3028
 static uint32_t g_flash_mode_en = 0;
+static uint32_t ae_low = 0, ae_high = 0, ae_target = 0;
+static uint32_t preview_sysclk;
+static int s_ov5640_gain = 0;
+static int s_capture_shutter = 0;
+static int s_capture_VTS = 0;
+static uint32_t preview_hts;
 LOCAL uint32_t _ov5640_InitExifInfo(void);
 LOCAL uint32_t _ov5640_GetResolutionTrimTab(uint32_t param);
 LOCAL uint32_t _ov5640_PowerOn(uint32_t power_on);
@@ -56,6 +62,7 @@ LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param);
 LOCAL uint32_t _ov5640_StreamOn(uint32_t param);
 LOCAL uint32_t _ov5640_StreamOff(uint32_t param);
 LOCAL uint32_t _ov5640_set_iso(uint32_t mode);
+LOCAL uint32_t _ov5640_ReadGain(uint32_t param);
 
 LOCAL const SENSOR_REG_T ov5640_common_init[] = {
 	{0x3103, 0x11},		/* sysclk from pad*/
@@ -1048,10 +1055,10 @@ LOCAL SENSOR_TRIM_T s_ov5640_Resolution_Trim_Tab[] = {
 	{0, 0, 640, 480, 0, 0},
 	{0, 0, 1024, 768, 68, 56},
 	{0, 0, 1280, 720, 68, 56},
-	{0, 0, 1280, 960, 122, 42},
-	{0, 0, 1600, 1200, 122, 42},
-	{0, 0, 2048, 1536, 122, 42},
-	{0, 0, 2592, 1944, 122, 42},
+	{0, 0, 1280, 960, 68, 42},
+	{0, 0, 1600, 1200, 68, 42},//88,78
+	{0, 0, 2048, 1536, 68, 42},
+	{0, 0, 2592, 1944, 68, 42},
 	{0, 0, 0, 0, 0, 0},
 	{0, 0, 0, 0, 0, 0},
 	{0, 0, 0, 0, 0, 0}
@@ -1168,7 +1175,7 @@ SENSOR_INFO_T g_ov5640_mipi_yuv_info = {
 	SENSOR_AVDD_1800MV,	// iovdd
 	SENSOR_AVDD_1500MV,	// dvdd
 	0,			// skip frame num before preview
-	1,			// skip frame num before capture
+	3,			// skip frame num before capture
 	0,			// deci frame num during preview
 	0,			// deci frame num during video preview
 
@@ -1720,9 +1727,9 @@ LOCAL const SENSOR_REG_BITS_T ov5640_awb_tab[][8] = {
 	 },
 	//incandescent
 	{
-	 {0x3406, 0x01, 0x01}, {0x3400, 0x04, 0xff}, {0x3401, 0x88, 0xff},
-	 {0x3402, 0x04, 0xff}, {0x3403, 0x00, 0xff}, {0x3404, 0x08, 0xff},
-	 {0x3405, 0xb6, 0xff}, {0xffff, 0xff, 0}
+	 {0x3406, 0x01, 0x01}, {0x3400, 0x05, 0xff}, {0x3401, 0x20, 0xff},
+	 {0x3402, 0x04, 0xff}, {0x3403, 0x00, 0xff}, {0x3404, 0x05, 0xff},
+	 {0x3405, 0x80, 0xff}, {0xffff, 0xff, 0}
 	 },
 	//dont' use
 	{
@@ -1736,19 +1743,19 @@ LOCAL const SENSOR_REG_BITS_T ov5640_awb_tab[][8] = {
 	 },
 	// tungsten
 	{
-	 {0x3406, 0x01, 0x01}, {0x3400, 0x04, 0xff}, {0x3401, 0x58, 0xff},
-	 {0x3402, 0x04, 0xff}, {0x3403, 0x00, 0xff}, {0x3404, 0x08, 0xff},
-	 {0x3405, 0x40, 0xff}, {0xffff, 0xff, 0}
+	 {0x3406, 0x01, 0x01}, {0x3400, 0x04, 0xff}, {0x3401, 0x40, 0xff},
+	 {0x3402, 0x04, 0xff}, {0x3403, 0x00, 0xff}, {0x3404, 0x07, 0xff},
+	 {0x3405, 0x00, 0xff}, {0xffff, 0xff, 0}
 	 },
 	//sun
 	{
-	 {0x3406, 0x01, 0x01}, {0x3400, 0x07, 0xff}, {0x3401, 0x02, 0xff},
-	 {0x3402, 0x04, 0xff}, {0x3403, 0x00, 0xff}, {0x3404, 0x05, 0xff},
-	 {0x3405, 0x15, 0xff}, {0xffff, 0xff, 0}
+	 {0x3406, 0x01, 0x01}, {0x3400, 0x05, 0xff}, {0x3401, 0xe0, 0xff},
+	 {0x3402, 0x04, 0xff}, {0x3403, 0x00, 0xff}, {0x3404, 0x04, 0xff},
+	 {0x3405, 0x60, 0xff}, {0xffff, 0xff, 0}
 	 },
 	//cloudy
 	{
-	 {0x3406, 0x01, 0x01}, {0x3400, 0x07, 0xff}, {0x3401, 0x88, 0xff},
+	 {0x3406, 0x01, 0x01}, {0x3400, 0x06, 0xff}, {0x3401, 0xc0, 0xff},
 	 {0x3402, 0x04, 0xff}, {0x3403, 0x00, 0xff}, {0x3404, 0x05, 0xff},
 	 {0x3405, 0x00, 0xff}, {0xffff, 0xff, 0}
 	 }
@@ -1974,73 +1981,344 @@ LOCAL uint32_t _ov5640_set_work_mode(uint32_t mode)
 	return 0;
 }
 
+int OV5640_get_sysclk(void)
+{
+	// calculate sysclk
+	int temp1, temp2;
+	int Multiplier, PreDiv, VCO, SysDiv, Pll_rdiv, Bit_div2x = 4, sclk_rdiv, sysclk;
+
+	int sclk_rdiv_map[] = {
+		1, 2, 4, 8};
+
+	temp1 = Sensor_ReadReg(0x3034);
+	temp2 = temp1 & 0x0f;
+	if (temp2 == 8 || temp2 == 10) {
+		Bit_div2x = temp2 / 2;
+	}
+
+	temp1 = Sensor_ReadReg(0x3035);
+	SysDiv = temp1>>4;
+	if(SysDiv == 0) {
+		SysDiv = 16;
+	}
+
+	temp1 = Sensor_ReadReg(0x3036);
+	Multiplier = temp1;
+
+	temp1 = Sensor_ReadReg(0x3037);
+	PreDiv = temp1 & 0x0f;
+	Pll_rdiv = ((temp1 >> 4) & 0x01) + 1;
+
+	temp1 = Sensor_ReadReg(0x3108);
+	temp2 = temp1 & 0x03;
+	sclk_rdiv = sclk_rdiv_map[temp2];
+
+	VCO = 2400 * Multiplier / PreDiv;//if MCLK = 24M, then XVCLK = 2400
+
+	sysclk = VCO / SysDiv / Pll_rdiv * 2 / Bit_div2x / sclk_rdiv;
+
+	return sysclk;
+}
+
+int OV5640_get_HTS(void)
+{
+	// read HTS from register settings
+	int HTS;
+
+	HTS = Sensor_ReadReg(0x380c);
+	HTS = (HTS<<8) + Sensor_ReadReg(0x380d);
+
+	return HTS;
+}
+
+int OV5640_get_VTS(void)
+{
+	// read VTS from register settings
+	int VTS;
+
+	VTS = Sensor_ReadReg(0x380e);//total vertical size[15:8] high byte
+
+	VTS = (VTS<<8) + Sensor_ReadReg(0x380f);
+
+	return VTS;
+}
+
+int OV5640_set_VTS(int VTS)
+{
+	// write VTS to registers
+	int temp;
+
+	temp = VTS & 0xff;
+	Sensor_WriteReg(0x380f, temp);
+
+	temp = VTS>>8;
+	Sensor_WriteReg(0x380e, temp);
+
+	return 0;
+}
+
+int OV5640_get_shutter(void)
+{
+	// read shutter, in number of line period
+	int shutter;
+
+	shutter = (Sensor_ReadReg(0x03500) & 0x0f);
+	shutter = (shutter<<8) + Sensor_ReadReg(0x3501);
+	shutter = (shutter<<4) + (Sensor_ReadReg(0x3502)>>4);
+
+	return shutter;
+}
+
+int OV5640_set_shutter(int shutter)
+{
+	// write shutter, in number of line period
+	int temp;
+
+	shutter = shutter & 0xffff;
+
+	temp = shutter & 0x0f;
+	temp = temp<<4;
+	Sensor_WriteReg(0x3502, temp);
+
+	temp = shutter & 0xfff;
+	temp = temp>>4;
+	Sensor_WriteReg(0x3501, temp);
+
+	temp = shutter>>12;
+	Sensor_WriteReg(0x3500, temp);
+
+	return 0;
+}
+
+int OV5640_get_gain16(void)
+{
+	// read gain, 16 = 1x
+	int gain16;
+
+	gain16 = Sensor_ReadReg(0x350a) & 0x03;
+	gain16 = (gain16<<8) + Sensor_ReadReg(0x350b);
+
+	return gain16;
+}
+
+int OV5640_set_gain16(int gain16)
+{
+	// write gain, 16 = 1x
+	int temp;
+	gain16 = gain16 & 0x3ff;
+
+	temp = gain16 & 0xff;
+	Sensor_WriteReg(0x350b, temp);
+
+	temp = gain16>>8;
+	Sensor_WriteReg(0x350a, temp);
+
+	return 0;
+}
+
+int OV5640_get_light_frequency(void)
+{
+	int temp, temp1, light_frequency;
+
+	temp = Sensor_ReadReg(0x3c01);
+
+	if (temp & 0x80) {
+		// manual
+		temp1 = Sensor_ReadReg(0x3c00);
+		if (temp1 & 0x04) {
+			// 50Hz
+			light_frequency = 50;
+		} else {
+			// 60Hz
+			light_frequency = 60;
+		}
+	} else {
+		// auto
+		temp1 = Sensor_ReadReg(0x3c0c);
+		if (temp1 & 0x01) {
+			// 50Hz
+			light_frequency = 50;
+		} else {
+		// 60Hz
+			light_frequency = 50;
+		}
+	}
+	return light_frequency;
+}
+
+void OV5640_set_bandingfilter(void)
+{
+	int preview_VTS;
+	int band_step60, max_band60, band_step50, max_band50;
+
+	// read preview PCLK
+	preview_sysclk = OV5640_get_sysclk();
+
+	// read preview HTS
+	preview_hts = OV5640_get_HTS();
+
+	SENSOR_PRINT("preview_sysclk %d, preview_hts %d",
+		preview_sysclk,
+		preview_hts);
+	// read preview VTS
+	preview_VTS = OV5640_get_VTS();
+
+	// calculate banding filter
+	// 60Hz
+	band_step60 = preview_sysclk * 100 / preview_hts * 100 / 120;
+	Sensor_WriteReg(0x3a0a, (band_step60 >> 8));
+	Sensor_WriteReg(0x3a0b, (band_step60 & 0xff));
+
+	max_band60 = (int)((preview_VTS-4)/band_step60);
+	Sensor_WriteReg(0x3a0d, max_band60);
+
+	// 50Hz
+	band_step50 = preview_sysclk * 100/preview_hts;
+	Sensor_WriteReg(0x3a08, (band_step50 >> 8));
+	Sensor_WriteReg(0x3a09, (band_step50 & 0xff));
+
+	max_band50 = (int)((preview_VTS-4)/band_step50);
+	Sensor_WriteReg(0x3a0e, max_band50);
+}
+
+int OV5640_set_AE_target(int target)
+{
+	int fast_high, fast_low;
+
+	ae_target = target;
+	ae_low    = target * 23 / 25;	// 0.92
+	ae_high   = target * 27 / 25;	// 1.08
+
+	fast_high = ae_high << 1;
+	if(fast_high>255)
+		fast_high = 255;
+
+	fast_low = ae_low >> 1;
+
+	Sensor_WriteReg(0x3a0f, ae_high);
+	Sensor_WriteReg(0x3a10, ae_low);
+	Sensor_WriteReg(0x3a1b, ae_high);
+	Sensor_WriteReg(0x3a1e, ae_low);
+	Sensor_WriteReg(0x3a11, fast_high);
+	Sensor_WriteReg(0x3a1f, fast_low);
+
+	SENSOR_PRINT("Target ae %d, AE high %d, AE low %d", ae_target, ae_high, ae_low);
+	return 0;
+}
+
+
+int OV5640_capture(uint32_t param)
+{
+	int ae_ag_ctrl;
+	int preview_shutter, preview_gain16, average;
+	int capture_shutter, capture_gain16;
+	int capture_sysclk, capture_HTS, capture_VTS;
+	int light_frequency, capture_bandingfilter, capture_max_band;
+	long capture_gain16_shutter;
+
+	//turn off AE/AG
+	ae_ag_ctrl = Sensor_ReadReg(0x3503);
+	SENSOR_PRINT("before, ae_ag_ctrl 0x%x", ae_ag_ctrl);
+	ae_ag_ctrl = ae_ag_ctrl | 0x03;
+	Sensor_WriteReg(0x3503, ae_ag_ctrl);
+	SENSOR_PRINT("after, ae_ag_ctrl 0x%x", ae_ag_ctrl);
+
+	// read preview shutter
+	preview_shutter = OV5640_get_shutter();
+
+	// read preview gain
+	preview_gain16 = OV5640_get_gain16();
+
+	SENSOR_PRINT("preview_shutter %d, preview_gain16 %d",
+		preview_shutter,
+		preview_gain16);
+
+	// get average
+	average = Sensor_ReadReg(0x56a1);
+
+	Sensor_SetMode(param);
+	Sensor_StreamOff();
+
+	// read capture VTS
+	capture_VTS = OV5640_get_VTS();
+	capture_HTS = OV5640_get_HTS();
+	capture_sysclk = OV5640_get_sysclk();
+
+	SENSOR_PRINT("capture_VTS %d, capture_HTS %d, capture_sysclk %d",
+		capture_VTS,
+		capture_HTS,
+		capture_sysclk);
+
+	// calculate capture banding filter
+	light_frequency = OV5640_get_light_frequency();
+	if (light_frequency == 60) {
+		// 60Hz
+		capture_bandingfilter = capture_sysclk * 100 / capture_HTS * 100 / 120;
+	} else {
+		// 50Hz
+		capture_bandingfilter = capture_sysclk * 100 / capture_HTS;
+	}
+	capture_max_band = (int)((capture_VTS - 4)/capture_bandingfilter);
+
+	SENSOR_PRINT("light_frequency %d, capture_bandingfilter %d, capture_max_band %d",
+		light_frequency,
+		capture_bandingfilter,
+		capture_max_band);
+	// calculate capture shutter/gain16
+	if (average > (int)ae_low && average < (int)ae_high) {
+		// in stable range
+		capture_gain16_shutter = preview_gain16 * preview_shutter * capture_sysclk/preview_sysclk * preview_hts / capture_HTS * ae_target / average;
+	} else {
+		capture_gain16_shutter = preview_gain16 * preview_shutter * capture_sysclk/preview_sysclk * preview_hts / capture_HTS;
+	}
+	SENSOR_PRINT("capture_gain16_shutter %d", (int)capture_gain16_shutter);
+	// gain to shutter
+	if (capture_gain16_shutter < (capture_bandingfilter * 16)) {
+		// shutter < 1/100
+		capture_shutter = capture_gain16_shutter/16;
+		if(capture_shutter <1)
+			capture_shutter = 1;
+
+		capture_gain16 = capture_gain16_shutter/capture_shutter;
+		if(capture_gain16 < 16)
+			capture_gain16 = 16;
+	} else {
+		if(capture_gain16_shutter > (capture_bandingfilter*capture_max_band*16)) {
+			// exposure reach max
+			capture_shutter = capture_bandingfilter*capture_max_band;
+			capture_gain16 = capture_gain16_shutter / capture_shutter;
+		} else {
+			// 1/100 < capture_shutter =< max, capture_shutter = n/100
+			capture_shutter = ((int)(capture_gain16_shutter/16/capture_bandingfilter)) * capture_bandingfilter;
+			capture_gain16 = capture_gain16_shutter / capture_shutter;
+		}
+	}
+
+	SENSOR_PRINT("capture_shutter %d, capture_gain16 %d",
+		capture_shutter,
+		capture_gain16);
+
+	// write capture gain
+	OV5640_set_gain16(capture_gain16);
+
+	// write capture shutter
+	if (capture_shutter > (capture_VTS - 4)) {
+		capture_VTS = capture_shutter + 4;
+		OV5640_set_VTS(capture_VTS);
+	}
+	OV5640_set_shutter(capture_shutter);
+	s_capture_shutter = capture_shutter;
+	s_capture_VTS = capture_VTS;
+	_ov5640_ReadGain(param);
+	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_EXPOSURETIME,
+				 (uint32_t) capture_shutter);
+	return 0;
+}
+
 LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param)
 {
-#define Capture_Framerate  150
-#define g_Preview_FrameRate 300
+	OV5640_capture(param);
 
-	uint8_t ExposureLow, ExposureMid, ExposureHigh;
-	uint8_t ret_l, ret_m, ret_h, Gain, Lines_10ms;
-	uint16_t ulCapture_Exposure, Preview_Maxlines;
-	uint32_t Capture_MaxLines, g_preview_exposure;
-
-	SENSOR_PRINT_HIGH("g_flash_mode = %d", g_flash_mode_en);
-	if (g_flash_mode_en) {
-		Sensor_SetFlash(1);
-	}
-
-	if (SENSOR_MODE_PREVIEW_ONE >= param) {
-
-		SENSOR_PRINT_HIGH("do not change");
-		return SENSOR_SUCCESS;
-	}
-
-	Sensor_WriteReg(0x3406, 0x01);
-	Sensor_WriteReg(0x3503, 0x07);
-
-	ret_h = ret_m = ret_l = 0;
-	g_preview_exposure = 0;
-	ret_h = (uint8_t) Sensor_ReadReg(0x3500);
-	ret_m = (uint8_t) Sensor_ReadReg(0x3501);
-	ret_l = (uint8_t) Sensor_ReadReg(0x3502);
-	g_preview_exposure = (ret_h << 12) + (ret_m << 4) + (ret_l >> 4);
-
-	ret_h = ret_m = ret_l = 0;
-	//Read back AGC Gain for preview
-	Gain = (uint8_t) Sensor_ReadReg(0x350b);
-	Sensor_SetMode(param);
-
-	ulCapture_Exposure = g_preview_exposure;
-
-//do not change gain
-/*
-	if (Gain > 32) {
-		Gain = Gain / 2;
-		ulCapture_Exposure = 2 * ulCapture_Exposure;
-	}
-	if(0 == ulCapture_Exposure){
-
-		ulCapture_Exposure = 1;
-	}
-	
-	
-	ExposureLow = ((unsigned char)ulCapture_Exposure) << 4;
-	ExposureMid = (unsigned char)(ulCapture_Exposure >> 4) & 0xff;
-	ExposureHigh = (unsigned char)(ulCapture_Exposure >> 12);
-
-	//m_iWrite0x3502=ExposureLow;
-	Sensor_WriteReg(0x3502, ExposureLow);
-	//m_iWrite0x3501=ExposureMid;
-	Sensor_WriteReg(0x3501, ExposureMid);
-	//m_iWrite0x3500=ExposureHigh;
-	Sensor_WriteReg(0x3500, ExposureHigh);
-	//m_iWrite0x350b=Gain;
-	Sensor_WriteReg(0x350b, Gain + 1);
-	usleep(100*1000);
-	Sensor_WriteReg(0x350b, Gain);
-*/
-	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_EXPOSURETIME,
-				 (uint32_t) ulCapture_Exposure);
 	return SENSOR_SUCCESS;
 }
 
@@ -2492,6 +2770,70 @@ LOCAL uint32_t _ov5640_StartExposure(uint32_t param)
 		break;
 	case SENSOR_EXT_EXPOSURE_ZONE:
 		rtn = _ov5640_ExposureZone(ext_ptr);
+		break;
+	default:
+		break;
+	}
+	return rtn;
+}
+
+LOCAL uint32_t _ov5640_ReadGain(uint32_t param)
+{
+	uint32_t rtn = SENSOR_SUCCESS;
+	uint16_t value=0x00;
+	uint32_t gain = 0;
+
+	value = Sensor_ReadReg(0x350b);/*0-7*/
+	gain = value&0xff;
+	value = Sensor_ReadReg(0x350a);/*8*/
+	gain |= (value<<0x08)&0x300;
+
+	s_ov5640_gain=(int)gain;
+
+	SENSOR_PRINT("SENSOR: _ov5640_ReadGain gain: 0x%x", s_ov5640_gain);
+
+	return rtn;
+}
+LOCAL void _calculate_hdr_exposure(int capture_gain16,int capture_VTS, int capture_shutter)
+{
+	// write capture gain
+	OV5640_set_gain16(capture_gain16);
+
+	// write capture shutter
+	if (capture_shutter > (capture_VTS - 4)) {
+		capture_VTS = capture_shutter + 4;
+		OV5640_set_VTS(capture_VTS);
+	}
+	OV5640_set_shutter(capture_shutter);
+}
+
+LOCAL uint32_t _ov5640_SetEV(uint32_t param)
+{
+	uint32_t rtn = SENSOR_SUCCESS;
+	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_T_PTR) param;
+
+	uint16_t value=0x00;
+	uint32_t gain = s_ov5640_gain;
+	uint32_t ev = ext_ptr->param;
+
+	SENSOR_PRINT("SENSOR: _ov5640_SetEV param: 0x%x", ext_ptr->param);
+#if 0
+	gain=(gain*ext_ptr->param)>>0x06;
+
+	value = gain&0xff;
+	Sensor_WriteReg(0x350b, value);/*0-7*/
+	value = (gain>>0x08)&0x03;
+	Sensor_WriteReg(0x350a, value);/*8*/
+#endif
+	switch(ev) {
+	case SENSOR_HDR_EV_LEVE_0:
+		_calculate_hdr_exposure(s_ov5640_gain/4,s_capture_VTS,s_capture_shutter/2);
+		break;
+	case SENSOR_HDR_EV_LEVE_1:
+		_calculate_hdr_exposure(s_ov5640_gain,s_capture_VTS,s_capture_shutter);
+		break;
+	case SENSOR_HDR_EV_LEVE_2:
+		_calculate_hdr_exposure(s_ov5640_gain*3/2,s_capture_VTS,s_capture_shutter);
 		break;
 	default:
 		break;
@@ -6655,6 +6997,8 @@ LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param)
 
 	switch (ext_ptr->cmd) {
 	case SENSOR_EXT_FUNC_INIT:
+		OV5640_set_AE_target(52);
+		OV5640_set_bandingfilter();
 		rtn = _ov5640_init_firmware(ctl_param);
 		break;
 	case SENSOR_EXT_FOCUS_START:
@@ -6662,6 +7006,9 @@ LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param)
 		break;
 	case SENSOR_EXT_EXPOSURE_START:
 		rtn = _ov5640_StartExposure(ctl_param);
+		break;
+	case SENSOR_EXT_EV:
+		rtn = _ov5640_SetEV(ctl_param);
 		break;
 	default:
 		break;

@@ -197,23 +197,23 @@ static uint32_t getDataFromDouble(double d, uint32_t type) //0: dd, 1: mm, 2: ss
 
 int camera_set_pos_type(camera_position_type *position)
 {
-/*	s_position.timestamp = position->timestamp;
+	s_position.timestamp = position->timestamp;
 	s_position.altitude = position->altitude;
 	s_position.latitude = position->latitude;
 	s_position.longitude = position->longitude;
-	s_position.process_method = position->process_method;*/
+	s_position.process_method = position->process_method;
 	/*for test*/
-	s_position.timestamp = 1199145600;
+/*	s_position.timestamp = 1199145600;
 	s_position.altitude = 21;
 	s_position.latitude = 37.736071;
 	s_position.longitude = -122.441983;
-	s_position.process_method = "GPS NETWORK HYBRID ARE ALL FINE.";
+	s_position.process_method = "GPS NETWORK HYBRID ARE ALL FINE.";*/
 
- /*   CMR_LOGI("timestamp %ld, latitude : %f, longitude : %f,altitude: %f. ",
+   CMR_LOGE("timestamp %ld, latitude : %f, longitude : %f,altitude: %f. ",
 			position->timestamp,
 			(double)position->latitude,
 			(double)position->longitude,
-			(double)position->altitude);*/
+			(double)position->altitude);
 	return 0;
 }
 
@@ -324,6 +324,7 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 			/* if no Latitude and Longitude, do not write GPS to EXIF */
 			CMR_LOGI("GPS: Latitude and Longitude is 0, do not write to EXIF: valid=%d \n",
 					*(uint32_t*)&p_exif_info->gps_ptr->valid);
+			memset(&p_exif_info->gps_ptr->valid,0,sizeof(EXIF_GPS_VALID_T));
 		} else {
 			p_exif_info->gps_ptr->valid.GPSLatitudeRef	= 1;
 			p_exif_info->gps_ptr->GPSLatitudeRef[0] 	= (0 == latitude_ref) ? 'N' : 'S';

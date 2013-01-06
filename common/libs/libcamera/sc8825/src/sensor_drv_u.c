@@ -93,8 +93,9 @@ static uint8_t  s_sensor_index[SENSOR_ID_MAX]={0xFF,0xFF,0xFF,0xFF,0xFF};
 LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_default_exif={0x00};
 LOCAL pthread_t                   s_sensor_thread;
 LOCAL uint32_t                    s_queue_handle;
-LOCAL pthread_mutex_t             sensor_sync_mutex;
-LOCAL pthread_cond_t              sensor_sync_cond;
+/*LOCAL pthread_mutex_t             sensor_sync_mutex;
+LOCAL pthread_cond_t              sensor_sync_cond;*/
+LOCAL sem_t                       sensor_sync_sem;
 LOCAL sem_t                       st_on_sem;
 LOCAL sem_t                       st_off_sem;
 LOCAL sem_t                       st_af_sem;
@@ -562,12 +563,13 @@ LOCAL void Sensor_PowerOn(BOOLEAN power_on)
 	SENSOR_AVDD_VAL_E avdd_val;
 	SENSOR_AVDD_VAL_E iovdd_val;
 	SENSOR_IOCTL_FUNC_PTR power_func;
-	uint32_t rst_lvl = s_sensor_info_ptr->reset_pulse_level;
+	uint32_t rst_lvl;
 
 	if (NULL == s_sensor_info_ptr) {
 		SENSOR_PRINT("No sensor info!");
 		return;
 	}
+	rst_lvl = s_sensor_info_ptr->reset_pulse_level;
 	power_down = (BOOLEAN) s_sensor_info_ptr->power_down_level;
 	dvdd_val = s_sensor_info_ptr->dvdd_val;
 	avdd_val = s_sensor_info_ptr->avdd_val;
@@ -1434,6 +1436,11 @@ int Sensor_Init(uint32_t sensor_id, uint32_t *sensor_num_ptr)
 	uint32_t sensor_num = 0;
 
 	SENSOR_PRINT("0");
+
+	if (SENSOR_TRUE == Sensor_IsInit()) {
+		SENSOR_PRINT("sensor close.");
+		Sensor_Close();
+	}
 
 /*	if (Sensor_IsInit()) {
 		SENSOR_PRINT("is done");
@@ -2303,11 +2310,12 @@ LOCAL int   _Sensor_CreateThread(void)
 	pthread_attr_t           attr;
 	CMR_MSG_INIT(message);
 
-	pthread_mutex_init(&sensor_sync_mutex, NULL);
-	pthread_cond_init(&sensor_sync_cond, NULL);
+/*	pthread_mutex_init(&sensor_sync_mutex, NULL);
+	pthread_cond_init(&sensor_sync_cond, NULL);*/
 	sem_init(&st_on_sem, 0, 0);
 	sem_init(&st_off_sem, 0, 0);
 	sem_init(&st_af_sem, 0, 0);
+	sem_init(&sensor_sync_sem, 0, 0);
 	s_exit_flag = 0;
 	ret = cmr_msg_queue_create(SENSOR_MSG_QUEUE_SIZE, &s_queue_handle);
 	if (ret) {
@@ -2358,9 +2366,10 @@ LOCAL int _Sensor_KillThread(void)
 	sem_destroy(&st_on_sem);
 	sem_destroy(&st_off_sem);
 	sem_destroy(&st_af_sem);
+	sem_destroy(&sensor_sync_sem);
 
-	pthread_mutex_destroy(&sensor_sync_mutex);
-	pthread_cond_destroy(&sensor_sync_cond);
+/*	pthread_mutex_destroy(&sensor_sync_mutex);
+	pthread_cond_destroy(&sensor_sync_cond);*/
 
 	cmr_msg_queue_destroy(s_queue_handle);
 	s_queue_handle = 0;
@@ -2440,9 +2449,11 @@ LOCAL int _Sensor_WaitSync(void)
 {
 	int                      ret = 0;
 
-	pthread_mutex_lock(&sensor_sync_mutex);
+/*	pthread_mutex_lock(&sensor_sync_mutex);
 	ret = pthread_cond_wait(&sensor_sync_cond, &sensor_sync_mutex);
-	pthread_mutex_unlock(&sensor_sync_mutex);
+	pthread_mutex_unlock(&sensor_sync_mutex);*/
+	sem_wait(&sensor_sync_sem);
+	CMR_LOGI("wait done.");
 
 	return ret;
 }
@@ -2451,10 +2462,11 @@ LOCAL int _Sensor_SyncDone(void)
 {
 	int                      ret = 0;
 
-	pthread_mutex_lock(&sensor_sync_mutex);
+/*	pthread_mutex_lock(&sensor_sync_mutex);
 	ret = pthread_cond_signal(&sensor_sync_cond);
-	pthread_mutex_unlock(&sensor_sync_mutex);
-
+	pthread_mutex_unlock(&sensor_sync_mutex);*/
+	sem_post(&sensor_sync_sem);
+	CMR_LOGI("post done.");
 	return ret;
 }
 

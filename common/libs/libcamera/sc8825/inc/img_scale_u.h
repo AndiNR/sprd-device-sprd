@@ -66,7 +66,6 @@ enum scle_mode {
 	SCALE_MODE_SLICE,
 	SCALE_MODE_MAX
 };
-
 enum scale_rotate
 {
 	SCALE_ROTATION_0 = 0,

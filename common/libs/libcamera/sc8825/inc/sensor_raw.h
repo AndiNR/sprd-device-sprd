@@ -97,19 +97,23 @@ struct sensor_nlc_param{
 
 struct sensor_lnc_map_addr{
 	uint32_t grid;
-	uint32_t* param_addr;
-	uint32_t max_index;
+	uint16_t* param_addr;
+	uint32_t len;
 };
 
 struct sensor_lnc_map{
-	struct sensor_lnc_map_addr map[SENSOR_MAP_NUM][SENSOR_AWB_NUM];
+	struct sensor_lnc_map_addr map[SENSOR_MAP_NUM][9];
+};
+
+struct sensor_ae_index{
+	uint16_t start;
+	uint16_t max;
 };
 
 struct sensor_ae_tab_info{
 	uint16_t* e_ptr;
 	uint16_t* g_ptr;
-	uint16_t start_index[SENSOR_ISO_NUM];
-	uint16_t max_index[SENSOR_ISO_NUM];
+	struct sensor_ae_index index[SENSOR_ISO_NUM];
 };
 
 struct sensor_ae_param{
@@ -131,9 +135,16 @@ struct sensor_rgb{
 	uint8_t b;
 };
 
+struct sensor_awb_coord{
+	uint8_t x;
+	uint8_t yt;
+	uint8_t yb;
+};
+
 struct sensor_awb_param{
 	struct sensor_pos win_start;
 	struct sensor_size win_size;
+	//struct sensor_rgb win[SENSOR_AWB_NUM];
 	struct sensor_rgb cali[SENSOR_AWB_NUM];
 	uint8_t cali_num;
 	uint8_t reserved3;
@@ -430,7 +441,7 @@ struct sensor_raw_info{
 	struct sensor_version_info* version_info;
 	struct sensor_raw_tune_info* tune_ptr;
 	struct sensor_raw_fix_info* fix_ptr;
-	struct sensor_adjust_info *adj_ptr;
+//	struct sensor_adjust_info *adj_ptr;
 };
 
 

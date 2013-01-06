@@ -84,6 +84,7 @@ LOCAL_SRC_FILES:= \
 	sc8825/src/dc_product_cfg.c \
 	sc8825/src/sensor_cfg.c \
 	sc8825/src/sensor_drv_u.c \
+	sc8825/src/cmr_arith.c \
 	sensor/sensor_ov5640_raw.c  \
 	sensor/sensor_ov5640.c  \
 	sensor/sensor_ov2640.c  \
@@ -237,7 +238,7 @@ endif
 LOCAL_MODULE := camera.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_TAGS := optional
 #ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
-LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp
+LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libmorpho_facesolid libmorpho_easy_hdr
 #else
 #LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware
 #endif
@@ -253,6 +254,18 @@ include $(BUILD_MULTI_PREBUILT)
 
 endif
 
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
+include $(CLEAR_VARS)
+LOCAL_PREBUILT_LIBS := arithmetic/sc8825/libmorpho_facesolid.so
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_MULTI_PREBUILT)
+
+include $(CLEAR_VARS)
+LOCAL_PREBUILT_LIBS := arithmetic/sc8825/libmorpho_easy_hdr.so
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_MULTI_PREBUILT)
+
+endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 

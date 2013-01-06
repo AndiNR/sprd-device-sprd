@@ -115,7 +115,6 @@ private:
 	camera_memory_t* GetPmem(const char *device_name, int buf_size, int num_bufs);
 	void FreePmem(camera_memory_t* camera_memory);
 	void* get_redisplay_mem(uint32_t size, uint32_t count, uint32_t *phy_addr);
-       
     //SprdCameraHardware();
     //virtual ~SprdCameraHardware();
 /*    status_t startPreviewInternal(preview_callback pcb, void *puser,
@@ -150,6 +149,7 @@ private:
 	int mPreviewStartFlag;
 
     void receivePreviewFrame(camera_frame_type *frame);
+    void receivePreviewFDFrame(camera_frame_type *frame);
     void HandleErrorState(void);
 
     static void stop_camera_cb(camera_cb_type cb,
@@ -224,6 +224,8 @@ private:
     camera_memory_t *mMiscHeap;
     sp<AshmemPool> mJpegHeap;
     camera_memory_t *mReDisplayHeap;
+	camera_memory_t *mFDHeap;
+	uint32_t         mFDAddr;
     camera_memory_t *mMetadataHeap;
 
     bool startCameraIfNecessary();

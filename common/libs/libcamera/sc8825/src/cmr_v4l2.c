@@ -254,12 +254,17 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *cfg)
 	}
 
 	if (found) {
+		bzero(&format, sizeof(struct v4l2_format));
 		format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		format.fmt.pix.width = cfg->cfg0.dst_img_size.width;
 		format.fmt.pix.height = cfg->cfg0.dst_img_size.height;
 		format.fmt.pix.pixelformat = pxl_fmt; //fourecc
 		format.fmt.pix.priv = cfg->cfg0.need_isp;
 		ret = ioctl(fd, VIDIOC_TRY_FMT, &format);
+		CMR_LOGV("need binning, %d", format.fmt.pix.sizeimage);
+		if (format.fmt.pix.sizeimage) {
+			cfg->cfg0.need_binning = 1;
+		}
 		CMR_RTN_IF_ERR(ret);
 		ret_channel_num++;
 	}
@@ -288,6 +293,7 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *cfg)
 		}
 
 		if (found) {
+			bzero(&format, sizeof(struct v4l2_format));
 			format.type = V4L2_BUF_TYPE_PRIVATE;
 			format.fmt.pix.width = cfg->cfg1.dst_img_size.width;
 			format.fmt.pix.height = cfg->cfg1.dst_img_size.height;
@@ -349,6 +355,8 @@ int cmr_v4l2_buff_cfg (struct buffer_cfg *buf_cfg)
 	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
 	CMR_RTN_IF_ERR(ret);
 
+/*	CMR_LOGI("wjp:test %d,0x%x.",buf_cfg->count,buf_cfg->addr[0].addr_y);*/
+
 	/* secondly , set the frame address */
 	for (i = 0; i < buf_cfg->count; i++) {
 		v4l2_buf.m.userptr  = buf_cfg->addr[i].addr_y;
@@ -356,9 +364,7 @@ int cmr_v4l2_buff_cfg (struct buffer_cfg *buf_cfg)
 		v4l2_buf.reserved   = buf_cfg->addr[i].addr_v;
 		ret = ioctl(fd, VIDIOC_QBUF, &v4l2_buf);
 		if (ret) {
-			if (EMLINK == ret) {
-				ret = 0;/* too frames */
-			}
+			CMR_LOGE("Failed to QBuf, %d", ret);
 			break;
 		}
 	}
@@ -500,7 +506,7 @@ int cmr_v4l2_scale_capability(uint32_t *width, uint32_t *sc_factor)
 	int                      ret = 0;
 
 	if (NULL == width || NULL == sc_factor) {
-		CMR_LOGE("Wrong param, 0x%x 0x%x", width, sc_factor);
+		CMR_LOGE("Wrong param, 0x%x 0x%x", (uint32_t)width, (uint32_t)sc_factor);
 		return -ENODEV;
 	}
 	CMR_CHECK_FD;

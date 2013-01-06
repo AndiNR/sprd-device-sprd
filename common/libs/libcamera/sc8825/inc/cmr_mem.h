@@ -57,7 +57,9 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 						uint32_t orig_fmt,
 						struct img_size *cap_size,
 						struct img_size *thum_size,
-						struct cmr_cap_mem *capture_mem);
+						struct cmr_cap_mem *capture_mem,
+						uint32_t need_rot,
+						uint32_t image_cnt);
 
 #ifdef __cplusplus
 }

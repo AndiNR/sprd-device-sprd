@@ -22,6 +22,18 @@ extern "C"
 #endif
 
 #include <sys/types.h>
+#include "../../arithmetic/sc8825/inc/FaceSolid.h"
+#include "../../arithmetic/sc8825/inc/HDR2.h"
+
+#define FACE_DETECT_NUM		5
+#define FACE_SMILE_LIMIT	10
+#define HDR_CAP_NUM         3
+
+typedef enum {
+	CAMERA_NORMAL_MODE = 0,
+	CAMERA_HDR_MODE,
+	CAMERA_MODE_MAX
+}takepicture_mode;
 
 typedef enum {
 	QDSP_MODULE_KERNEL,
@@ -196,6 +208,9 @@ typedef struct {
 	uint32_t                 buf_id;
 	int64_t                  timestamp;
 	uint32_t                 buffer_uv_phy_addr;	
+	/*face detect*/
+	uint32_t face_num;
+	morpho_FaceRect *face_ptr;
 } camera_frame_type;
 
 typedef enum
@@ -285,6 +300,7 @@ typedef enum {
 	CAMERA_EXIT_CB_BUFFER,    /* A buffer is returned         */
 	CAMERA_EVT_CB_SNAPSHOT_DONE,/*  Snapshot updated               */
 	CAMERA_EVT_CB_SNAPSHOT_JPEG_DONE,
+	CAMERA_EVT_CB_FD,
 	CAMERA_CB_MAX
 } camera_cb_type;
 
@@ -471,7 +487,7 @@ camera_ret_code_type camera_stop_preview(void);
 camera_ret_code_type camera_stop_capture(void);
 
 camera_ret_code_type camera_take_picture(camera_cb_f_type    callback,
-					void                 *client_data);
+					void                 *client_data,takepicture_mode cap_mode);
 
 uint32_t camera_get_size_align_page(uint32_t size);
 
@@ -514,7 +530,14 @@ int camera_get_data_redisplay(int output_addr,
 uint32_t camera_get_rot_set(void);
 
 int camera_copy_data_virtual(uint32_t width, uint32_t height, uint32_t in_addr, uint32_t out_addr);
-
+void camera_set_start_facedetect(uint32_t param);
+void camera_call_cb(camera_cb_type cb,
+                 const void *client_data,
+                 camera_func_type func,
+                 int32_t parm4);
+void *camera_get_client_data(void);
+int camera_set_fd_mem(uint32_t phy_addr, uint32_t vir_addr, uint32_t mem_size);
+int camera_set_change_size(uint32_t cap_width,uint32_t cap_height,uint32_t preview_width,uint32_t preview_height);
 #ifdef __cplusplus
 }
 #endif

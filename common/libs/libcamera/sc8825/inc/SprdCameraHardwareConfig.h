@@ -313,8 +313,6 @@ struct config_element sprd_front_camera_hardware_config[] = {
         {"max-contrast", "6"},
         {"contrast-values", "0,1,2,3,4,5,6"},
         {"contrast", "3"},
-        {"focus-mode-values", "auto"},
-        {"focus-mode", "auto"},
         {"min-exposure-compensation", "0"},
         {"max-exposure-compensation", "0"},
         {"exposure-compensation","0"},
@@ -325,8 +323,13 @@ struct config_element sprd_front_camera_hardware_config[] = {
         {"flash-mode-values", "off,on,torch"},
         {"flash-mode", "off"},
         {"flash-mode-supported", "false"},
-        {"focus-distances", "2.0,2.5,3.75"},
-	{"max-num-detected-faces-hw", "0"}
+    {"focus-mode-values", "infinity"},
+    {"focus-mode", "infinity"},
+        {"focus-distances", "2.0,2.5,3.75,Infinity"},
+	{"max-num-detected-faces-hw", "0"},
+	{"smile-snap-mode","0"},
+	{"hdr-supported","false"},
+	{"hdr","0"}
 };
 struct config_element sprd_back_camera_hardware_config[] = {
 	{"whitebalance-values",
@@ -364,11 +367,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"jpeg-thumbnail-height", "240"},
 	{"jpeg-thumbnail-quality", "80"},
 	{"effect-values",
-#ifdef CONFIG_CAMERA_788
-		"none,mono,negative,antique"},
-#else
      	"none,mono,negative,sepia,cold,antique"},
-#endif
          {"effect", "none"},
 	{"scene-mode-values",
 	 "auto,night,portrait,landscape,action"},
@@ -392,12 +391,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
         {"max-contrast", "6"},
         {"contrast-values", "0,1,2,3,4,5,6"},
         {"contrast", "3"}  ,
-#ifndef CONFIG_CAMERA_788
-	{"focus-mode-values", "auto"},
 	{"focus-mode-values", "auto,auto-multi,macro"},
-#else
-	{"focus-mode-values", "auto,auto-multi,macro"},
-#endif
         {"focus-mode", "auto"},
         {"min-exposure-compensation", "-3"},
         {"max-exposure-compensation", "3"},
@@ -409,22 +403,19 @@ struct config_element sprd_back_camera_hardware_config[] = {
         {"focal-length", "3.75"},
         {"horizontal-view-angle", "54"},
         {"vertical-view-angle", "54"},
-#ifndef CONFIG_CAMERA_788
 	{"flash-mode-values", "off,on,torch"},
 	{"flash-mode", "off"},
 	{"flash-mode-supported", "true"},
-#endif
         {"focus-distances", "2.0,2.5,3.75"},
 	{"max-num-detected-faces-hw", "0"},
-#ifdef CONFIG_CAMERA_788
-	{"max-num-focus-areas", "0"},
-#else
 	{"max-num-focus-areas", "3"},
-#endif
 	{"iso-supported", "true"},
 	{"max-iso", "5"},
 	{"iso-values", "auto,100,200,400,800,1600"},
-	{"iso", "auto"}
+	{"iso", "auto"},
+	{"smile-snap-mode","0"},
+	{"hdr-supported","true"},
+	{"hdr","0"}
 };
 
 #endif //_SPRD_CAMERA_HARDWARE_CONFIG_H_

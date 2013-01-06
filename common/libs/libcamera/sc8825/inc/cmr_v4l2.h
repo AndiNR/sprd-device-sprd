@@ -48,6 +48,7 @@ struct img_frm_cap {
 	uint32_t                            dst_img_fmt;
 	uint32_t                            notice_slice_height;
 	uint32_t                            need_isp;
+	uint32_t                            need_binning;
 };
 
 struct cap_cfg {

@@ -56,7 +56,7 @@ LOCAL uint32_t set_ov7675_video_mode(uint32_t mode);
 LOCAL uint32_t _ov7675_GetExifInfo(uint32_t param);
 LOCAL uint32_t _ov7675_InitExifInfo(void);
 LOCAL uint32_t s_preview_mode;
-//LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_ov7675_exif = {0};
+LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_ov7675_exif = {0};
 /**---------------------------------------------------------------------------*
  ** 						Local Variables 								 *
  **---------------------------------------------------------------------------*/
@@ -132,7 +132,7 @@ LOCAL uint32_t s_preview_mode;
     {0x0e, 0x61},                                
     {0x0f, 0x4b},                                  
     {0x16, 0x02},                                  
-    {0x1e, 0x37},
+    {0x1e, 0x07},
     {0x21, 0x02},                                  
     {0x22, 0x91},                                  
     {0x29, 0x07},                                  
@@ -311,7 +311,7 @@ LOCAL uint32_t s_preview_mode;
     {0x0e, 0x61},
     {0x0f, 0x4b},
     {0x16, 0x02},
-    {0x1e, 0x37},
+    {0x1e, 0x07},
     {0x21, 0x02},
     {0x22, 0x91},
     {0x29, 0x07},
@@ -684,10 +684,11 @@ LOCAL uint32_t OV7675_Identify(uint32_t param)
 /******************************************************************************/
 LOCAL uint32_t _ov7675_InitExifInfo(void)
 {
-#if 0
+#if 1
     EXIF_SPEC_PIC_TAKING_COND_T* exif_ptr=&s_ov7675_exif;
 
     SENSOR_TRACE("SENSOR: _ov7675_InitExifInfo");
+    memset(&s_ov7675_exif, 0, sizeof(EXIF_SPEC_PIC_TAKING_COND_T));
 
     exif_ptr->valid.FNumber = 1;
     exif_ptr->FNumber.numerator = 14;
@@ -1086,7 +1087,7 @@ LOCAL uint32_t set_ov7675_awb(uint32_t mode)
         for(i = 0; (0xFF != sensor_reg_ptr[i].reg_addr) && (0xFF != sensor_reg_ptr[i].reg_value); i++) {
                 OV7675_WriteReg(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
         }
-        //	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_LIGHTSOURCE, (uint32_t)mode);
+	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_LIGHTSOURCE, (uint32_t)mode);
         SENSOR_Sleep(20);
         SENSOR_TRACE("SENSOR: set_awb_mode: mode = %d", mode);
         return 0;
@@ -1114,7 +1115,7 @@ LOCAL uint32_t set_brightness(uint32_t level)
         uint16_t i;
         SENSOR_REG_T* sensor_reg_ptr = (SENSOR_REG_T*)ov7675_brightness_tab[level];
 
-		SENSOR_PRINT("wjp:0x%x.",OV7675_ReadReg(0x1e));
+		SENSOR_PRINT("0x%x.",OV7675_ReadReg(0x1e));
 
         if(level>6)
                 return 0;
@@ -1152,7 +1153,7 @@ LOCAL uint32_t set_contrast(uint32_t level)
                 OV7675_WriteReg(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
         }
 
-        //   Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_CONTRAST, (uint32_t)level);
+    Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_CONTRAST, (uint32_t)level);
         SENSOR_Sleep(20);
         SENSOR_TRACE("SENSOR: set_contrast: level = %d", level);
         return 0;
@@ -1497,7 +1498,7 @@ LOCAL uint32_t OV7675_set_work_mode(uint32_t mode)
 
 LOCAL uint32_t _ov7675_GetExifInfo(uint32_t param)
 {
-        //return (uint32_t)&s_ov7675_exif;
+    return (uint32_t)&s_ov7675_exif;
         return 0;
 }
 

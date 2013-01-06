@@ -31,9 +31,13 @@ LOCAL uint32_t _ov5640_write_exposure(uint32_t param);
 LOCAL uint32_t _ov5640_write_gain(uint32_t param);
 LOCAL uint32_t _ov5640_write_af(uint32_t param);
 LOCAL uint32_t _ov540_flash(uint32_t param);
+LOCAL uint32_t _ov5640_ReadGain(uint32_t param);
+LOCAL uint32_t _ov5640_SetEV(uint32_t param);
+LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param);
 
 
 static uint32_t g_flash_mode_en = 0;
+static uint32_t s_ov5640_gain = 0;
 
 LOCAL const SENSOR_REG_T ov5640_com_mipi_raw[] = {
 	{0x3103, 0x11},/* sysclk from pad*/
@@ -103,8 +107,8 @@ LOCAL const SENSOR_REG_T ov5640_com_mipi_raw[] = {
 	{0x380b, 0xc0},
 	{0x380c, 0x07},
 	{0x380d, 0x68},
-	{0x380e, 0x03},
-	{0x380f, 0xd8},
+	{0x380e, 0x04},
+	{0x380f, 0x9d},
 	{0x3810, 0x00},
 	{0x3811, 0x10},
 	{0x3812, 0x00},
@@ -142,14 +146,14 @@ LOCAL const SENSOR_REG_T ov5640_com_mipi_raw[] = {
 	{0x4837, 0x0a},
 	{0x3824, 0x04},
 	{0x5000, 0x06},
-	{0x5001, 0x00},// awb 0:disable 1:enable
+	{0x5001, 0x00},
 	{0x3a0f, 0x36},
 	{0x3a10, 0x2e},
 	{0x3a1b, 0x38},
 	{0x3a1e, 0x2c},
 	{0x3a11, 0x70},
 	{0x3a1f, 0x18},
-	{0x3503, 0x03},//bit0 agc  bit1 aec 0:auto 1:maul
+	{0x3503, 0x03},//bit0 agc bit1 aec 0:auto 1:maul
 	{0x3501, 0x37},
 	{0x3502, 0x50},
 	{0x350b, 0x3f},
@@ -160,6 +164,8 @@ LOCAL const SENSOR_REG_T ov5640_com_mipi_raw[] = {
 	{0x3403, 0x00},
 	{0x3404, 0x04},
 	{0x3405, 0x00},
+	{0x3602, 0x00},
+	{0x3603, 0x00},
 	{0x3605, 0x46},
 	{0x3604, 0x05}
 };
@@ -189,8 +195,8 @@ LOCAL const SENSOR_REG_T ov5640_1280X960_mipi_raw[] = {
 	{0x380b, 0xc0},
 	{0x380c, 0x07},
 	{0x380d, 0x68},
-	{0x380e, 0x03},
-	{0x380f, 0xd8},
+	{0x380e, 0x04},
+	{0x380f, 0x9d},
 	{0x3810, 0x00},
 	{0x3811, 0x10},
 	{0x3812, 0x00},
@@ -255,8 +261,8 @@ LOCAL const SENSOR_REG_T ov5640_2592X1944_mipi_raw[] = {
 LOCAL SENSOR_REG_TAB_INFO_T s_ov5640_resolution_Tab_RAW[] = {
 	{ADDR_AND_LEN_OF_ARRAY(ov5640_com_mipi_raw), 0, 0, 12, SENSOR_IMAGE_FORMAT_RAW},
 
-	{ADDR_AND_LEN_OF_ARRAY(ov5640_1280X960_mipi_raw), 1280, 960, 12, SENSOR_IMAGE_FORMAT_RAW},
-	{ADDR_AND_LEN_OF_ARRAY(ov5640_2592X1944_mipi_raw), 2592, 1944, 12, SENSOR_IMAGE_FORMAT_RAW},
+	{ADDR_AND_LEN_OF_ARRAY(ov5640_1280X960_mipi_raw), 1280, 960, 24, SENSOR_IMAGE_FORMAT_RAW},
+	{ADDR_AND_LEN_OF_ARRAY(ov5640_2592X1944_mipi_raw), 2592, 1944, 24, SENSOR_IMAGE_FORMAT_RAW},
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
@@ -267,8 +273,8 @@ LOCAL SENSOR_REG_TAB_INFO_T s_ov5640_resolution_Tab_RAW[] = {
 
 LOCAL SENSOR_TRIM_T s_ov5640_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0},
-	{0, 0, 1280, 960, 564, 56},
-	{0, 0, 2592, 1944, 564, 56},
+	{0, 0, 1280, 960, 282, 56},
+	{0, 0, 2592, 1944, 338, 56},
 	{0, 0, 0, 0, 0, 0},
 	{0, 0, 0, 0, 0, 0},
 	{0, 0, 0, 0, 0, 0},
@@ -277,23 +283,23 @@ LOCAL SENSOR_TRIM_T s_ov5640_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0}
 };
 
-static const uint8_t s_ov5640_lnc_00[]=
+static const uint16_t s_ov5640_lnc_00[]=
+{
+#include "sensor_ov5640_lnc_00.dat"
+};
+static const uint16_t s_ov5640_lnc_01[]=
 {
 	0x00
 };
-static const uint8_t s_ov5640_lnc_01[]=
+static const uint16_t s_ov5640_lnc_02[]=
 {
 	0x00
 };
-static const uint8_t s_ov5640_lnc_02[]=
+static const uint16_t s_ov5640_lnc_03[]=
 {
 	0x00
 };
-static const uint8_t s_ov5640_lnc_03[]=
-{
-	0x00
-};
-static const uint8_t s_ov5640_lnc_04[]=
+static const uint16_t s_ov5640_lnc_04[]=
 {
 	0x00
 };
@@ -301,15 +307,52 @@ static const uint8_t s_ov5640_lnc_05[]=
 {
 	0x00
 };
-static const uint8_t s_ov5640_lnc_06[]=
+static const uint16_t s_ov5640_lnc_06[]=
 {
 	0x00
 };
-static const uint8_t s_ov5640_lnc_07[]=
+static const uint16_t s_ov5640_lnc_07[]=
 {
 	0x00
 };
-static const uint8_t s_ov5640_lnc_08[]=
+static const uint16_t s_ov5640_lnc_08[]=
+{
+	0x00
+};
+
+static const uint16_t s_ov5640_lnc_10[]=
+{
+#include "sensor_ov5640_lnc_10.dat"
+};
+static const uint16_t s_ov5640_lnc_11[]=
+{
+	0x00
+};
+static const uint16_t s_ov5640_lnc_12[]=
+{
+	0x00
+};
+static const uint16_t s_ov5640_lnc_13[]=
+{
+	0x00
+};
+static const uint16_t s_ov5640_lnc_14[]=
+{
+	0x00
+};
+static const uint16_t s_ov5640_lnc_15[]=
+{
+	0x00
+};
+static const uint16_t s_ov5640_lnc_16[]=
+{
+	0x00
+};
+static const uint16_t s_ov5640_lnc_17[]=
+{
+	0x00
+};
+static const uint16_t s_ov5640_lnc_18[]=
 {
 	0x00
 };
@@ -362,14 +405,13 @@ static struct sensor_raw_tune_info s_ov5640_tune_info={
 #endif
 
 static struct sensor_raw_fix_info s_ov5640_fix_info={
-	//ae
 	{
 		(uint8_t*)s_ov5640_ae_weight_customer,
 
 		(uint16_t*)s_ov5640_aes_00,
 		(uint16_t*)s_ov5640_aeg_00,
-		128,
-		250,
+		100,
+		144,
 		128,
 		250,
 		128,
@@ -418,43 +460,63 @@ static struct sensor_raw_fix_info s_ov5640_fix_info={
 		128,
 		250,
 	},
-
-	//lnc
 	{
+		/***********0*************/
+		0x20,
+		(uint16_t*)s_ov5640_lnc_00,
+		sizeof(s_ov5640_lnc_00),
 		0x00,
-		(uint32_t*)s_ov5640_lnc_00,
+		(uint16_t*)s_ov5640_lnc_01,
+		sizeof(s_ov5640_lnc_01),
 		0x00,
-
+		(uint16_t*)s_ov5640_lnc_02,
+		sizeof(s_ov5640_lnc_02),
 		0x00,
-		(uint32_t*)s_ov5640_lnc_01,
+		(uint16_t*)s_ov5640_lnc_03,
+		sizeof(s_ov5640_lnc_03),
 		0x00,
-
+		(uint16_t*)s_ov5640_lnc_04,
+		sizeof(s_ov5640_lnc_04),
 		0x00,
-		(uint32_t*)s_ov5640_lnc_02,
+		(uint16_t*)s_ov5640_lnc_05,
+		sizeof(s_ov5640_lnc_05),
 		0x00,
-
+		(uint16_t*)s_ov5640_lnc_06,
+		sizeof(s_ov5640_lnc_06),
 		0x00,
-		(uint32_t*)s_ov5640_lnc_03,
+		(uint16_t*)s_ov5640_lnc_07,
+		sizeof(s_ov5640_lnc_07),
 		0x00,
-
+		(uint16_t*)s_ov5640_lnc_08,
+		sizeof(s_ov5640_lnc_08),
+		/***********1*************/
+		0x20,
+		(uint16_t*)s_ov5640_lnc_10,
+		sizeof(s_ov5640_lnc_10),
 		0x00,
-		(uint32_t*)s_ov5640_lnc_04,
+		(uint16_t*)s_ov5640_lnc_11,
+		sizeof(s_ov5640_lnc_11),
 		0x00,
-
+		(uint16_t*)s_ov5640_lnc_12,
+		sizeof(s_ov5640_lnc_12),
 		0x00,
-		(uint32_t*)s_ov5640_lnc_05,
+		(uint16_t*)s_ov5640_lnc_13,
+		sizeof(s_ov5640_lnc_13),
 		0x00,
-
+		(uint16_t*)s_ov5640_lnc_14,
+		sizeof(s_ov5640_lnc_14),
 		0x00,
-		(uint32_t*)s_ov5640_lnc_06,
+		(uint16_t*)s_ov5640_lnc_15,
+		sizeof(s_ov5640_lnc_15),
 		0x00,
-
+		(uint16_t*)s_ov5640_lnc_16,
+		sizeof(s_ov5640_lnc_16),
 		0x00,
-		(uint32_t*)s_ov5640_lnc_07,
+		(uint16_t*)s_ov5640_lnc_17,
+		sizeof(s_ov5640_lnc_17),
 		0x00,
-
-		0x00,
-		(uint32_t*)s_ov5640_lnc_08,
+		(uint16_t*)s_ov5640_lnc_18,
+		sizeof(s_ov5640_lnc_18),
 		0x00
 	}
 };
@@ -468,7 +530,7 @@ static struct sensor_version_info s_ov5640_version_info={
 static struct sensor_raw_info s_ov5640_mipi_raw_info={
 	&s_ov5640_version_info,
 	&s_ov5640_tune_info,
-	&s_ov5640_fix_info,
+	&s_ov5640_fix_info
 };
 
 struct sensor_raw_info* s_ov5640_mipi_raw_info_ptr=&s_ov5640_mipi_raw_info;
@@ -506,7 +568,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5640_ioctl_func_tab = {
 	_ov5640_write_gain,
 	PNULL,
 	PNULL,
-	PNULL,
+	_ov5640_write_af,
 	PNULL,
 	PNULL, //_ov5640_set_awb,
 	PNULL,
@@ -516,7 +578,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5640_ioctl_func_tab = {
 	PNULL,
 	PNULL,
 	PNULL, //_ov5640_GetExifInfo,
-	_ov5640_write_af,
+	_ov5640_ExtFunc,
 	PNULL, //_ov5640_set_anti_flicker,
 	PNULL, //_ov5640_set_video_mode,
 	PNULL, //pick_jpeg_stream
@@ -611,7 +673,7 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);
 
 	//bypass
-	sensor_ptr->blc_bypass=0x01;
+	sensor_ptr->blc_bypass=0x00;
 	sensor_ptr->nlc_bypass=0x01;
 	sensor_ptr->lnc_bypass=0x01;
 	sensor_ptr->ae_bypass=0x00;
@@ -619,7 +681,7 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->bpc_bypass=0x01;
 	sensor_ptr->denoise_bypass=0x01;
 	sensor_ptr->grgb_bypass=0x01;
-	sensor_ptr->cmc_bypass=0x01;
+	sensor_ptr->cmc_bypass=0x00;
 	sensor_ptr->gamma_bypass=0x00;
 	sensor_ptr->uvdiv_bypass=0x01;
 	sensor_ptr->pref_bypass=0x01;
@@ -629,7 +691,7 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->auto_contrast_bypass=0x01;
 	sensor_ptr->af_bypass=0x00;
 	sensor_ptr->edge_bypass=0x01;
-	sensor_ptr->fcs_bypass=0x01;
+	sensor_ptr->fcs_bypass=0x00;
 	sensor_ptr->css_bypass=0x01;
 	sensor_ptr->saturation_bypass=0x01;
 	sensor_ptr->hdr_bypass=0x01;
@@ -637,11 +699,11 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->chn_gain_bypass=0x01;
 
 	//blc
-	sensor_ptr->blc.mode=0x00; // 0:software 1:camera interface
-	sensor_ptr->blc.r=0x00;
-	sensor_ptr->blc.gr=0x00;
-	sensor_ptr->blc.gb=0x00;
-	sensor_ptr->blc.b=0x00;
+	sensor_ptr->blc.mode=0x00;
+	sensor_ptr->blc.r=0x0f;
+	sensor_ptr->blc.gr=0x0f;
+	sensor_ptr->blc.gb=0x0f;
+	sensor_ptr->blc.b=0x0f;
 	//nlc
 	sensor_ptr->nlc.r_node[0]=0;
 	sensor_ptr->nlc.r_node[1]=16;
@@ -764,9 +826,9 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->nlc.l_node[28]=1023;
 
 	//ae
-	sensor_ptr->ae.skip_frame=0x00;
+	sensor_ptr->ae.skip_frame=0x01;
 	sensor_ptr->ae.fix_fps=0x00;
-	sensor_ptr->ae.target_lum=70;
+	sensor_ptr->ae.target_lum=60;
 	sensor_ptr->ae.target_zone=8;
 	sensor_ptr->ae.ev[0]=0xe8;
 	sensor_ptr->ae.ev[1]=0xf0;
@@ -821,46 +883,89 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->awb.cal_zone=0x40;
 	sensor_ptr->awb.target_zone=0x40;
 
-	sensor_ptr->awb.cali_num=0x09;
+	sensor_ptr->awb.cali_num=20;
 
-	sensor_ptr->awb.cali[0].r=0x80;
-	sensor_ptr->awb.cali[0].g=0x80;
-	sensor_ptr->awb.cali[0].b=0x80;
+	sensor_ptr->awb.cali[0].r=145;
+	sensor_ptr->awb.cali[0].g=229;
+	sensor_ptr->awb.cali[0].b=212;
 
-	sensor_ptr->awb.cali[1].r=0x80;
-	sensor_ptr->awb.cali[1].g=0x80;
-	sensor_ptr->awb.cali[1].b=0x80;
+	sensor_ptr->awb.cali[1].r=148;
+	sensor_ptr->awb.cali[1].g=233;
+	sensor_ptr->awb.cali[1].b=138;
 
-	sensor_ptr->awb.cali[2].r=0x80;
-	sensor_ptr->awb.cali[2].g=0x80;
-	sensor_ptr->awb.cali[2].b=0x80;
+	sensor_ptr->awb.cali[2].r=152;
+	sensor_ptr->awb.cali[2].g=237;
+	sensor_ptr->awb.cali[2].b=131;
 
-	sensor_ptr->awb.cali[3].r=0x80;
-	sensor_ptr->awb.cali[3].g=0x80;
-	sensor_ptr->awb.cali[3].b=0x80;
+	sensor_ptr->awb.cali[3].r=156;
+	sensor_ptr->awb.cali[3].g=238;
+	sensor_ptr->awb.cali[3].b=126;
 
-	sensor_ptr->awb.cali[4].r=0x80;
-	sensor_ptr->awb.cali[4].g=0x80;
-	sensor_ptr->awb.cali[4].b=0x80;
+	sensor_ptr->awb.cali[4].r=160;
+	sensor_ptr->awb.cali[4].g=234;
+	sensor_ptr->awb.cali[4].b=122;
 
-	sensor_ptr->awb.cali[5].r=0x80;
-	sensor_ptr->awb.cali[5].g=0x80;
-	sensor_ptr->awb.cali[5].b=0x80;
+	sensor_ptr->awb.cali[5].r=170;
+	sensor_ptr->awb.cali[5].g=143;
+	sensor_ptr->awb.cali[5].b=121;
 
-	sensor_ptr->awb.cali[6].r=0x80;
-	sensor_ptr->awb.cali[6].g=0x80;
-	sensor_ptr->awb.cali[6].b=0x80;
+	sensor_ptr->awb.cali[6].r=174;
+	sensor_ptr->awb.cali[6].g=142;
+	sensor_ptr->awb.cali[6].b=125;
 
-	sensor_ptr->awb.cali[7].r=0x80;
-	sensor_ptr->awb.cali[7].g=0x80;
-	sensor_ptr->awb.cali[7].b=0x80;
+	sensor_ptr->awb.cali[7].r=179;
+	sensor_ptr->awb.cali[7].g=146;
+	sensor_ptr->awb.cali[7].b=128;
 
-	sensor_ptr->awb.cali[8].r=0x80;
-	sensor_ptr->awb.cali[8].g=0x80;
-	sensor_ptr->awb.cali[8].b=0x80;
+	sensor_ptr->awb.cali[8].r=186;
+	sensor_ptr->awb.cali[8].g=153;
+	sensor_ptr->awb.cali[8].b=134;
+
+	sensor_ptr->awb.cali[9].r=194;
+	sensor_ptr->awb.cali[9].g=156;
+	sensor_ptr->awb.cali[9].b=141;
+
+	sensor_ptr->awb.cali[10].r=200;
+	sensor_ptr->awb.cali[10].g=151;
+	sensor_ptr->awb.cali[10].b=150;
+
+	sensor_ptr->awb.cali[11].r=237;
+	sensor_ptr->awb.cali[11].g=130;
+	sensor_ptr->awb.cali[11].b=129;
+
+	sensor_ptr->awb.cali[12].r=242;
+	sensor_ptr->awb.cali[12].g=135;
+	sensor_ptr->awb.cali[12].b=119;
+
+	sensor_ptr->awb.cali[13].r=247;
+	sensor_ptr->awb.cali[13].g=133;
+	sensor_ptr->awb.cali[13].b=118;
+
+	sensor_ptr->awb.cali[14].r=252;
+	sensor_ptr->awb.cali[14].g=131;
+	sensor_ptr->awb.cali[14].b=121;
+
+	sensor_ptr->awb.cali[15].r=256;
+	sensor_ptr->awb.cali[15].g=123;
+	sensor_ptr->awb.cali[15].b=122;
+
+	sensor_ptr->awb.cali[16].r=282;
+	sensor_ptr->awb.cali[16].g=112;
+	sensor_ptr->awb.cali[16].b=111;
+
+	sensor_ptr->awb.cali[17].r=286;
+	sensor_ptr->awb.cali[17].g=116;
+	sensor_ptr->awb.cali[17].b=104;
+
+	sensor_ptr->awb.cali[18].r=292;
+	sensor_ptr->awb.cali[18].g=114;
+	sensor_ptr->awb.cali[18].b=100;
+
+	sensor_ptr->awb.cali[19].r=297;
+	sensor_ptr->awb.cali[19].g=110;
+	sensor_ptr->awb.cali[19].b=99;
 
 	//bpc
-	//sensor_ptr->bpc.mode=0x01; // 0:adaptive 1:map
 	sensor_ptr->bpc.flat_thr=80;
 	sensor_ptr->bpc.std_thr=20;
 	sensor_ptr->bpc.texture_thr=2;
@@ -930,15 +1035,15 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->cfa.edge_thr=0x1a;
 	sensor_ptr->cfa.diff_thr=0x00;
 	//cmc
-	sensor_ptr->cmc.matrix[0][0]=0;
-	sensor_ptr->cmc.matrix[0][1]=0;
-	sensor_ptr->cmc.matrix[0][2]=0;
-	sensor_ptr->cmc.matrix[0][3]=0;
-	sensor_ptr->cmc.matrix[0][4]=0;
-	sensor_ptr->cmc.matrix[0][5]=0;
-	sensor_ptr->cmc.matrix[0][6]=0;
-	sensor_ptr->cmc.matrix[0][7]=0;
-	sensor_ptr->cmc.matrix[0][8]=0;
+	sensor_ptr->cmc.matrix[0][0]=0x6f3;
+	sensor_ptr->cmc.matrix[0][1]=0x3e0a;
+	sensor_ptr->cmc.matrix[0][2]=0x3f03;
+	sensor_ptr->cmc.matrix[0][3]=0x3ec0;
+	sensor_ptr->cmc.matrix[0][4]=0x693;
+	sensor_ptr->cmc.matrix[0][5]=0x3eae;
+	sensor_ptr->cmc.matrix[0][6]=0x0d;
+	sensor_ptr->cmc.matrix[0][7]=0x3c03;
+	sensor_ptr->cmc.matrix[0][8]=0x7f0;
 	//Gamma
 	sensor_ptr->gamma.axis[0][0]=0;
 	sensor_ptr->gamma.axis[1][0]=8;
@@ -1187,12 +1292,16 @@ LOCAL uint32_t _ov5640_write_gain(uint32_t param)
 {
 	uint32_t ret_value = SENSOR_SUCCESS;
 	uint16_t value=0x00;
+	uint32_t real_gain = 0;
 
-	SENSOR_PRINT("SENSOR_OV5640: write_gain:0x%x", param);
+	real_gain = ((param&0xf)+16)*(((param>>4)&0x01)+1)*(((param>>5)&0x01)+1);
+	real_gain = real_gain*(((param>>6)&0x01)+1)*(((param>>7)*0x01)+1)*(((param>>8)*0x01)+1);
 
-	value = param&0xff;
+	SENSOR_PRINT("SENSOR_OV5640: real_gain:0x%x, param: 0x%x", real_gain, param);
+
+	value = real_gain&0xff;
 	ret_value = Sensor_WriteReg(0x350b, value);/*0-7*/
-	value = (param>>0x08)&0x01;
+	value = (real_gain>>0x08)&0x03;
 	ret_value = Sensor_WriteReg(0x350a, value);/*8*/
 
 	return ret_value;
@@ -1213,6 +1322,61 @@ LOCAL uint32_t _ov5640_write_af(uint32_t param)
 	return ret_value;
 }
 
+LOCAL uint32_t _ov5640_ReadGain(uint32_t param)
+{
+	uint32_t rtn = SENSOR_SUCCESS;
+	uint16_t value=0x00;
+	uint32_t gain = 0;
+
+	value = Sensor_ReadReg(0x350b);/*0-7*/
+	gain = value&0xff;
+	value = Sensor_ReadReg(0x350a);/*8*/
+	gain |= (value<<0x08)&0x300;
+
+	s_ov5640_gain=gain;
+
+	SENSOR_PRINT("SENSOR: _ov5640_ReadGain gain: 0x%x", s_ov5640_gain);
+
+	return rtn;
+}
+
+LOCAL uint32_t _ov5640_SetEV(uint32_t param)
+{
+	uint32_t rtn = SENSOR_SUCCESS;
+	SENSOR_EXT_FUN_T_PTR ext_ptr = (SENSOR_EXT_FUN_T_PTR) param;
+	uint16_t value=0x00;
+	uint32_t gain = s_ov5640_gain;
+	uint32_t ev = ext_ptr->param;
+
+	SENSOR_PRINT("SENSOR: _ov5640_SetEV param: 0x%x", ev);
+
+	gain=(gain*ext_ptr->param)>>0x06;
+
+	value = gain&0xff;
+	Sensor_WriteReg(0x350b, value);/*0-7*/
+	value = (gain>>0x08)&0x03;
+	Sensor_WriteReg(0x350a, value);/*8*/
+
+	return rtn;
+}
+
+LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param)
+{
+	uint32_t rtn = SENSOR_SUCCESS;
+	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR) ctl_param;
+
+	switch (ext_ptr->cmd) {
+		//case SENSOR_EXT_EV:
+		case 10:
+			rtn = _ov5640_SetEV(ctl_param);
+			break;
+		default:
+			break;
+	}
+
+	return rtn;
+}
+
 LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param)
 {
 	uint8_t ret_l, ret_m, ret_h;
@@ -1229,6 +1393,7 @@ LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param)
 	}
 
 	if (SENSOR_MODE_PREVIEW_ONE >= param){
+		_ov5640_ReadGain(0x00);
 		SENSOR_PRINT("SENSOR_OV5640: prvmode equal to capmode");
 		return SENSOR_SUCCESS;
 	}
@@ -1252,8 +1417,7 @@ LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param)
 	ret_h = (uint8_t) Sensor_ReadReg(0x380e);
 	ret_l = (uint8_t) Sensor_ReadReg(0x380f);
 	capture_maxline = (ret_h << 8) + ret_l;
-
-	capture_exposure = preview_exposure * cap_linetime / prv_linetime;
+	capture_exposure = preview_exposure *prv_linetime / cap_linetime;
 
 	if(0 == capture_exposure){
 		capture_exposure = 1;
@@ -1266,6 +1430,8 @@ LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param)
 	Sensor_WriteReg(0x3502, ret_l);
 	Sensor_WriteReg(0x3501, ret_m);
 	Sensor_WriteReg(0x3500, ret_h);
+
+	_ov5640_ReadGain(0x00);
 
 	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_EXPOSURETIME, capture_exposure);
 
