@@ -5,6 +5,15 @@ MXD_CMMB_PLAYER := mxdcmmbplayer.apk  \
 		   libiwcmmbdev.so libiwcmmb_jni.so  \
 		   libiwmbbms_jni.so libiwmbbms.so libiwmbbms_tel.so \
 		   libiwuam.so  libmxdcmmb.so libplayEngine.so mxdcmmbserver mxdid.id libiwcmmb_jni_demon.so libiwcmmbdev_demon.so mxdcmmbtest.apk
+
+
+SPRD_FM_APP := FMPlayer
+
+BRCM_FM := \
+    fm.$(TARGET_PLATFORM) \
+    FmDaemon \
+    FmTest
+
 PRODUCT_PROPERTY_OVERRIDES :=
 
 # original apps copied from generic_no_telephony.mk
@@ -32,7 +41,6 @@ PRODUCT_PACKAGES := \
 	hcitool \
 	hcidump \
 	audio.a2dp.default \
-	FMPlayer \
 	bttest\
 	hostapd \
 	wpa_supplicant.conf \
@@ -68,15 +76,12 @@ PRODUCT_PACKAGES += \
 	audio_policy.$(TARGET_PLATFORM) \
 	tinymix \
 	sensors.$(TARGET_BOARD)  \
-	fm.$(TARGET_PLATFORM)  \
 	libmbbms_tel_jni.so\
 	$(MALI)
 
-BRCMFM := \
-	FmDaemon \
-	FmTest
-
-PRODUCT_PACKAGES += $(BRCMFM)
+PRODUCT_PACKAGES += \
+            $(BRCM_FM) \
+            $(SPRD_FM_APP)
 
 #We confirm(2012-12-26):we will only use maxscend
 #ifeq ($(BOARD_CMMB_HW), mxd)

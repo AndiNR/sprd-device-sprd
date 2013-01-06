@@ -48,6 +48,8 @@ TARGET_PROVIDES_INIT_RC := true
 
 BOARD_HAVE_BLUETOOTH := true
 BOARD_HAVE_BLUETOOTH_BCM := true
+BOARD_HAVE_FM_BCM := true
+BOARD_USE_SPRD_FMAPP := true
 # board specific modules
 BOARD_USES_TINYALSA_AUDIO := true
 BOARD_USE_VETH := true
@@ -81,12 +83,9 @@ USE_CAMERA_STUB := true
 
 BOARD_USES_GENERIC_AUDIO := false
 
-BOARD_HAVE_BLUETOOTH := true
 
 USE_BOOT_AT_DIAG := true
 
-#fm
-BOARD_HAVE_FM_BCM := true
 
 ####################!!!! DONT'T FOLLOW THIS WAY TO CUSTOMIZE  !!!###############
 #We confirm(2012-12-26):we will only use maxscend

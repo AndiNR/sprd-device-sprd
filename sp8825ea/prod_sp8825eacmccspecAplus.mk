@@ -42,7 +42,6 @@ PRODUCT_PACKAGES := \
     Stk1 \
     framework2
 
-
 # prebuild files
 PRODUCT_PACKAGES += \
     APV_PDF_Viewer.apk \

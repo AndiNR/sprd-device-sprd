@@ -138,6 +138,31 @@ service nvitemd /system/bin/nvitemd
 service sdcard /system/bin/sdcard /data/media 1023 1023
     class late_start
 
+
+service hfag /system/bin/sdptool add --channel=10 HFAG
+    user bluetooth
+    group bluetooth net_bt_admin
+    disabled
+    oneshot
+
+service hsag /system/bin/sdptool add --channel=11 HSAG
+    user bluetooth
+    group bluetooth net_bt_admin
+    disabled
+    oneshot
+
+service opush /system/bin/sdptool add --channel=12 OPUSH
+    user bluetooth
+    group bluetooth net_bt_admin
+    disabled
+    oneshot
+
+service pbap /system/bin/sdptool add --channel=19 PBAP
+    user bluetooth
+    group bluetooth net_bt_admin
+    disabled
+    oneshot
+
 service akmd /system/bin/akmd8975 -m 3
     class main
     oneshot
@@ -157,13 +182,10 @@ service btld  /system/bin/btld -lpm 0 -hb 3000000
     disabled
     oneshot
 
-# start btld if soft_onoff is enabled
-on property:service.brcm.bt.soft_onoff=1
-    start btld
-
-# stop btld if soft_onoff is disabled
-on property:service.brcm.bt.soft_onoff=0
-    stop btld
+service FmPower /system/bin/FmDaemon
+   class main
+   user root
+   group vpn net_admin net_raw
 
 service p2p_supplicant /system/bin/wpa_supplicant \
 	-iwlan0 -Dnl80211 -c/data/misc/wifi/wpa_supplicant.conf -N \

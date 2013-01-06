@@ -52,6 +52,8 @@ TARGET_PROVIDES_INIT_RC := true
 
 BOARD_HAVE_BLUETOOTH := false
 BOARD_HAVE_BLUETOOTH_BCM := false
+BOARD_HAVE_FM_BCM := false
+BOARD_USE_SPRD_FMAPP := false
 # board specific modules
 BOARD_USES_TINYALSA_AUDIO := true
 BOARD_USES_LINE_CALL	:= true
@@ -80,8 +82,6 @@ USE_CAMERA_STUB := true
 BOARD_USES_GENERIC_AUDIO := false
 USE_BOOT_AT_DIAG := true
 
-#fm
-BOARD_HAVE_FM_BCM := true
 
 ####################!!!! DONT'T FOLLOW THIS WAY TO CUSTOMIZE  !!!###############
 BOARD_CMMB_HW ?= siano

@@ -1,6 +1,15 @@
 
 MALI := libUMP libEGL_mali.so libGLESv1_CM_mali.so libGLESv2_mali.so libMali.so ump.ko mali.ko
 
+
+
+SPRD_FM_APP := FMPlayer
+
+BRCM_FM := \
+    fm.$(TARGET_PLATFORM) \
+    FmDaemon \
+    FmTest
+
 PRODUCT_PROPERTY_OVERRIDES :=
 
 PRODUCT_PACKAGES := \
@@ -66,6 +75,9 @@ PRODUCT_PACKAGES += \
 	sensors.$(TARGET_BOARD)  \
 	$(MALI)
 
+PRODUCT_PACKAGES += \
+            $(BRCM_FM) \
+            $(SPRD_FM_APP)
 #We confirm(2012-12-26):we will only use maxscend
 #ifeq ($(BOARD_CMMB_HW), mxd)
 PRODUCT_PACKAGES += $(MXD_CMMB_PLAYER)

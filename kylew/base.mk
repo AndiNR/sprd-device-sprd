@@ -1,12 +1,14 @@
 
 MALI := libUMP libEGL_mali.so libGLESv1_CM_mali.so libGLESv2_mali.so libMali.so ump.ko mali.ko
 
-BRCMFM := \
-	com.broadcom.bt.service \
-	libfmpmservice \
-	libfmservice \
-	BtFmServiceReg \
-	FmRadio
+
+
+SPRD_FM_APP := FMPlayer
+
+BRCM_FM := \
+    fm.$(TARGET_PLATFORM) \
+    FmDaemon \
+    FmTest
 
 PRODUCT_PROPERTY_OVERRIDES :=
 
@@ -33,6 +35,10 @@ PRODUCT_PACKAGES := \
 	bluetooth-health \
 	hostapd \
 	wpa_supplicant.conf \
+	hciconfig \
+	hcitool \
+	hcidump \
+	bttest\
 	audio.a2dp.default
 
 # own copyright packages files
@@ -62,8 +68,9 @@ PRODUCT_PACKAGES += \
         nvitemd   \
     mcom_monitor
 
-PRODUCT_PACKAGES += $(BRCMFM)
-
+PRODUCT_PACKAGES += \
+            $(BRCM_FM) \
+            $(SPRD_FM_APP)
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/init.rc:root/init.rc \
 	$(BOARDDIR)/init.sp8810.rc:root/init.sp8810.rc \
