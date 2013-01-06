@@ -153,7 +153,7 @@ static void reset_modem(void)
         if(modem_power_fd < 0)
 		return;
         write(modem_power_fd,"0",2);
-	sleep(2);
+	sleep(1);
         write(modem_power_fd,"1",2);
         close(modem_power_fd);
 }
@@ -268,7 +268,7 @@ int download_image(int channel_fd,struct image_info *info)
 	image_fd = open(info->image_path, O_RDONLY,0);
 
 	if(image_fd < 0){
-		printf("open file: %s error %s\n", info->image_path, strerror(errno));
+		printf("open file: %s error = %d\n", info->image_path,errno);
 		return DL_SUCCESS;
 	}
 
@@ -337,7 +337,7 @@ void * load_fdl2memory(int *length)
 	info = &download_image_info[0];
 	fdl_fd = open(info->image_path, O_RDONLY,0);
 	if(fdl_fd < 0){
-		printf("open file %s error %s\n", info->image_path, strerror(errno));
+		printf("open file %s error = %d\n", info->image_path, errno);
 		return NULL;
 	}
 	size = info->image_size;

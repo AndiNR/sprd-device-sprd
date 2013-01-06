@@ -373,7 +373,7 @@ int  send_end_message(int fd,int flag)
 			if(retval > 0)
 				translated_size -= retval;
 			else if(retval < 0){
-				printf("write error : %s \n",strerror(errno));
+				printf("write error : error = %d \n",errno);
 			}	
 		}while(translated_size> 0);
 	}
@@ -565,7 +565,7 @@ int  uart_send_change_spi_mode_message(int fd)
 		if(retval > 0)
 			translated_size -= retval;	
 		else if(retval < 0){
-			printf("write error : %s \n",strerror(errno));
+			printf("write error : error = %d \n",errno);
 		}	
 	}while(translated_size> 0);
 
@@ -579,7 +579,7 @@ int  uart_send_change_spi_mode_message(int fd)
 				offset += retval;
 				size -= retval;
 			} else if(retval < 0){
-				printf("read error : %s \n",strerror(errno));
+				printf("read error : error = %d \n",errno);
 				sleep(1);
 			}	
                 }while(size!=0);

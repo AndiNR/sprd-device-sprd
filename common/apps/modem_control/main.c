@@ -12,7 +12,6 @@
 #include "cutils/properties.h" 	      
 #include "packet.h"
 
-#define	LOG_TAG			"MODEMD"
 #define	MODEM_SOCKET_NAME	"modemstate"
 #define	MAX_CLIENT_NUM		10
 #define	MODEM_PATH		"/dev/vbpipe2"
@@ -134,24 +133,24 @@ static void *modemd_listenaccept_thread(void *par)
 	sfd = socket_local_server(MODEM_SOCKET_NAME, 
 		ANDROID_SOCKET_NAMESPACE_RESERVED, SOCK_STREAM);
 	if (sfd < 0) {
-		printf("%s: cannot create local socket server\n", __FUNCTION__);
+		printf("modemd_listenaccept_thread: cannot create local socket server\n");
 		exit(-1);
 	}
 
 	for(; ;){
 
-		printf("%s: Waiting for new connect ...\n", __FUNCTION__);
+		printf("modemd_listenaccept_thread: Waiting for new connect ...\n");
 		if ( (n=accept(sfd,NULL,NULL)) == -1)
 		{			
 			printf("engserver accept error\n");
 			continue;
 		}
 
-		printf("%s: accept client n=%d\n",__FUNCTION__, n);
+		printf("modemd_listenaccept_thread: accept client n=%d\n",n);
 		for(i=0; i<MAX_CLIENT_NUM; i++) {
 			if(client_fd[i]==-1){
 				client_fd[i]=n;
-				printf("%s: fill %d to client[%d]\n",__FUNCTION__, n, i);
+				printf("modemd_listenaccept_thread: fill %d to client[%d]\n", n, i);
 				break;
 			}
 		}
@@ -167,10 +166,9 @@ static int get_modem_assert_information(char *assert_info,int size)
         if((assert_info == NULL) || (size == 0))
                 return 0;
         if(uart_fd < 0){
-               printf("open_uart_device failed in %s \n",__FUNCTION__);
+               printf("open_uart_device failed \n");
                return 0;
         }
-        printf("dump modem assert information...... \n");
         ch = 'P';
         ret = write(uart_fd,&ch,1);
 
@@ -191,8 +189,6 @@ static int get_modem_assert_information(char *assert_info,int size)
         }while(size >0);
         ch = 'O';
         write(uart_fd,&ch,1);
-        if(read_len > 0)
-                printf("assert_info: %s \n",assert_info);
         close(uart_fd);
         return read_len;
 }
@@ -323,7 +319,7 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 	if(modem_state_fd < 0){
-		printf("!!! Open %d failed, modem_reboot exit\n",MODEM_STATE_PATH);
+		printf("!!! Open %s failed, modem_reboot exit\n",MODEM_STATE_PATH);
 		return 0;
 	}
 	close(modem_state_fd);
