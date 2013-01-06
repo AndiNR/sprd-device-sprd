@@ -397,12 +397,15 @@ static void SetAudio_gain_route(struct tiny_audio_device *adev, uint32_t vol_lev
 
 static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *mode_gain_paras)
 {
+    int i = 0;
 	unsigned short switch_earpice = 0;
 	unsigned short switch_headset = 0;
 	unsigned short switch_speaker = 0;
 	unsigned short switch_mic0 = 0;
 	unsigned short switch_mic1 = 0;
 	unsigned short switch_hp_mic = 0;
+    unsigned short switch_table[4] = {0};
+    uint32_t switch_device[] = {AUDIO_DEVICE_OUT_EARPIECE,AUDIO_DEVICE_OUT_SPEAKER,AUDIO_DEVICE_IN_BUILTIN_MIC,AUDIO_DEVICE_IN_WIRED_HEADSET};
 
 	MY_TRACE("%s path_set:0x%x .android_cur_device:0x%x ",__func__,mode_gain_paras->path_set,android_cur_device);
 	switch_earpice = (mode_gain_paras->path_set & 0x0040)>>6;
@@ -412,6 +415,10 @@ static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *m
 	switch_mic1 = (mode_gain_paras->path_set & 0x0800)>>11;
 	switch_hp_mic = (mode_gain_paras->path_set & 0x1000)>>12;
 
+    switch_table[0] = switch_earpice;
+    switch_table[1] = switch_speaker;
+    switch_table[2] = switch_mic0;
+    switch_table[3] = switch_hp_mic;
 //At present, switch of pa cannot handle mulit-device
     android_cur_device = 0;
     if(switch_earpice){
@@ -430,10 +437,18 @@ static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *m
         android_cur_device |= 0x100000;
     }
 
-	set_call_route(adev, AUDIO_DEVICE_OUT_EARPIECE, switch_earpice);
-	set_call_route(adev, AUDIO_DEVICE_OUT_SPEAKER, switch_speaker);
-	set_call_route(adev, AUDIO_DEVICE_IN_BUILTIN_MIC, switch_mic0);
-	set_call_route(adev, AUDIO_DEVICE_IN_WIRED_HEADSET, switch_hp_mic);
+	for(i=0; i<(sizeof(switch_table)/sizeof(unsigned short));i++)
+    {
+        if(switch_table[i]){
+            set_call_route(adev,switch_device[i],1);
+        }
+    }
+    for(i=0; i<(sizeof(switch_table)/sizeof(unsigned short));i++)
+    {
+        if(!switch_table[i]){
+            set_call_route(adev,switch_device[i],0);
+        }
+    }
 
 	ALOGW("%s successfully, device: earpice(%s), headphone(%s), speaker(%s), Mic(%s), hp_mic(%s) devices(0x%x)"
 				,__func__,switch_earpice ? "Open":"Close",switch_headset ? "Open":"Close",switch_speaker ? "Open":"Close",
