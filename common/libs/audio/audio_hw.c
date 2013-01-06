@@ -193,7 +193,6 @@ struct tiny_audio_device {
     struct mixer *mixer;
     audio_mode_t mode;
     int devices;
-    int prev_devices;
     struct pcm *pcm_modem_dl;
     struct pcm *pcm_modem_ul;
     int call_start;
@@ -441,18 +440,21 @@ static int set_route_by_array(struct mixer *mixer, struct route_setting *route,
 static void do_select_devices(struct tiny_audio_device *adev)
 {
     unsigned int i;
+    int cur_devices;
 
-    ALOGI("Changing devices: 0x%08x, prev_devices: 0x%08x", adev->devices, adev->prev_devices);
-    if (adev->prev_devices == adev->devices) return ;
-    adev->prev_devices = adev->devices;
-    if(adev->eq_available) vb_effect_sync_devices(adev->devices);
+    cur_devices = adev->devices;
+    ALOGI("Changing devices: 0x%08x", adev->devices);
+
+    if(adev->eq_available)
+        vb_effect_sync_devices(cur_devices);
+
     /* Turn on new devices first so we don't glitch due to powerdown... */
     for (i = 0; i < adev->num_dev_cfgs; i++)
-	if (adev->devices & adev->dev_cfgs[i].mask) {
+	if (cur_devices & adev->dev_cfgs[i].mask) {
 #ifdef _VOICE_CALL_VIA_LINEIN
 	    if (((AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET | AUDIO_DEVICE_OUT_ALL_FM) ==  adev->dev_cfgs[i].mask)
 	        && adev->call_start == 1) {
-	        ALOGI("call_start now, on devices is (0x%08x)", adev->devices);
+	        ALOGI("call_start now, on devices is (0x%08x)", cur_devices);
 	        continue;
 	    }
 #endif
@@ -462,11 +464,11 @@ static void do_select_devices(struct tiny_audio_device *adev)
 
     /* ...then disable old ones. */
     for (i = 0; i < adev->num_dev_cfgs; i++)
-	if (!(adev->devices & adev->dev_cfgs[i].mask)) {
+	if (!(cur_devices & adev->dev_cfgs[i].mask)) {
 #ifdef _VOICE_CALL_VIA_LINEIN
 	    if (((AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET | AUDIO_DEVICE_OUT_ALL_FM) ==  adev->dev_cfgs[i].mask)
 	        && adev->call_start == 1) {
-	        ALOGI("call_start now, off devices is (0x%08x)", adev->devices);
+	        ALOGI("call_start now, off devices is (0x%08x)", cur_devices);
 	        continue;
 	    }
 #endif
@@ -475,9 +477,10 @@ static void do_select_devices(struct tiny_audio_device *adev)
     }
 
     /* update EQ profile*/
-    if(adev->eq_available) vb_effect_profile_apply();
+    if(adev->eq_available)
+        vb_effect_profile_apply();
 #ifndef _VOICE_CALL_VIA_LINEIN
-	SetAudio_gain_route(adev,1);
+    SetAudio_gain_route(adev,1);
 #endif
 }
 
@@ -619,21 +622,22 @@ static int start_output_stream(struct tiny_stream_out *out)
         }
     }
     else {
-        BLUE_TRACE("start output stream: open s_tinycard in");
+        BLUE_TRACE("open s_tinycard in");
         card = s_tinycard;
         out->config = pcm_config_mm;
         out->write_threshold = PLAYBACK_LONG_PERIOD_COUNT * LONG_PERIOD_SIZE;
         out->low_power = 1;
-	    out->config.start_threshold = SHORT_PERIOD_SIZE * PLAYBACK_SHORT_PERIOD_COUNT / 2;
-	    out->config.avail_min = LONG_PERIOD_SIZE;
-	    out->pcm = pcm_open(card, port, PCM_OUT | PCM_MMAP | PCM_NOIRQ, &out->config);
-
-	    if (!pcm_is_ready(out->pcm)) {
-	        ALOGE("cannot open pcm_out driver: %s", pcm_get_error(out->pcm));
-	        pcm_close(out->pcm);
-	        adev->active_output = NULL;
-	        return -ENOMEM;
-	    }
+        out->config.start_threshold = SHORT_PERIOD_SIZE * PLAYBACK_SHORT_PERIOD_COUNT / 2;
+        out->config.avail_min = LONG_PERIOD_SIZE;
+        out->pcm = pcm_open(card, port, PCM_OUT | PCM_MMAP | PCM_NOIRQ, &out->config);
+    
+        if (!pcm_is_ready(out->pcm)) {
+            ALOGE("cannot open pcm_out driver: %s", pcm_get_error(out->pcm));
+            pcm_close(out->pcm);
+            adev->active_output = NULL;
+            return -ENOMEM;
+        }
+        BLUE_TRACE("open s_tinycard successfully");
     }
 
     if (adev->echo_reference != NULL)
@@ -878,16 +882,13 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         if ((((adev->devices & AUDIO_DEVICE_OUT_ALL) != val) && (val != 0)) || (AUDIO_MODE_IN_CALL == adev->mode)) {
             adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
             adev->devices |= val;
-            ALOGW("out_set_parameters want to set devices:0x%x old_dev:0x%x old_mode:%d new_mode:%d call_start:%d ",adev->devices,adev->prev_devices,cur_mode,adev->mode,adev->call_start);
+            ALOGW("out_set_parameters want to set devices:0x%x old_mode:%d new_mode:%d call_start:%d ",adev->devices,cur_mode,adev->mode,adev->call_start);
             cur_mode = adev->mode;
             #ifndef _VOICE_CALL_VIA_LINEIN
             if(!adev->call_start)
             #endif
                 select_devices_signal(adev);
-            #ifndef _VOICE_CALL_VIA_LINEIN
-            else
-                adev->prev_devices = adev->devices;
-            #endif
+
             if (AUDIO_MODE_IN_CALL == adev->mode) {
                 ret = at_cmd_route(adev);  //send at command to cp
                 if (ret < 0) {
@@ -935,7 +936,7 @@ static bool out_bypass_data(struct tiny_audio_device *adev,uint32_t frame_size, 
     */
        if (( (!adev->call_start) && (adev->mode == AUDIO_MODE_IN_CALL) && (adev->devices & AUDIO_DEVICE_OUT_ALL_SCO) )
         || (adev->call_start && (!adev->call_connected))) {
-//           MY_TRACE("out_write throw away data call_start(%d) mode(%d) devices(0x%x) call_connected(%d)...",adev->call_start,adev->mode,adev->devices,adev->call_connected);
+//           ALOGI("out_write throw away data call_start(%d) mode(%d) devices(0x%x) call_connected(%d)...",adev->call_start,adev->mode,adev->devices,adev->call_connected);
            usleep(bytes * 1000000 / frame_size / sample_rate);
            return true;
        }else{
@@ -962,16 +963,15 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
      * mutex
      */
 
-
     pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&out->lock);
-
-	if(out_bypass_data(adev,audio_stream_frame_size(&stream->common),out_get_sample_rate(&stream->common),bytes)){
+#ifndef _VOICE_CALL_VIA_LINEIN
+    if (out_bypass_data(adev,audio_stream_frame_size(&stream->common),out_get_sample_rate(&stream->common),bytes)) {
         pthread_mutex_unlock(&adev->lock);
         pthread_mutex_unlock(&out->lock);
         return bytes;
-     }
-
+    }
+#endif
     if (out->standby) {
         ret = start_output_stream(out);
         if (ret != 0) {
