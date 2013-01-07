@@ -44,10 +44,7 @@ PRODUCT_PACKAGES := \
 
 # own copyright packages files
 PRODUCT_PACKAGES += \
-    AppBackup \
     AudioProfile \
-    SprdNote \
-    CallFireWall \
     ValidationTools \
     libvalidationtoolsjni
 
