@@ -888,21 +888,25 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             if(!adev->call_start)
             #endif
                 select_devices_signal(adev);
+            #ifndef _VOICE_CALL_VIA_LINEIN
+            else
+                adev->prev_devices = adev->devices;
+            #endif
+            pthread_mutex_unlock(&out->lock);
+            pthread_mutex_unlock(&adev->lock);
 
             if (AUDIO_MODE_IN_CALL == adev->mode) {
                 ret = at_cmd_route(adev);  //send at command to cp
                 if (ret < 0) {
                     ALOGE("out_set_parameters at_cmd_route error(%d) ",ret);
-                    pthread_mutex_unlock(&out->lock);
-                    pthread_mutex_unlock(&adev->lock);
                     return ret;
-            	}
+                }
             }
         }else{
+            pthread_mutex_unlock(&out->lock);
+            pthread_mutex_unlock(&adev->lock);
             ALOGW("the same devices(0x%x) with val(0x%x) val is zero...",adev->devices,val);
         }
-        pthread_mutex_unlock(&out->lock);
-        pthread_mutex_unlock(&adev->lock);
     }
 
     ALOGW("out_set_parameters out...call_start:%d",adev->call_start);
