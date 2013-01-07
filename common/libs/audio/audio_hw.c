@@ -580,7 +580,7 @@ static int start_output_stream(struct tiny_stream_out *out)
 
     adev->active_output = out;
 
-    if (adev->mode != AUDIO_MODE_IN_CALL) {
+    if (!adev->call_start) {
         /* FIXME: only works if only one output can be active at a time */
         select_devices_signal(adev);
     }
@@ -1105,7 +1105,7 @@ static int start_input_stream(struct tiny_stream_in *in)
 
     adev->active_input = in;
     ALOGW("start_input_stream in mode:0x%x devices:0x%x call_start:%d ",adev->mode,adev->devices,adev->call_start);
-    if (adev->mode != AUDIO_MODE_IN_CALL) {
+    if (!adev->call_start) {
         adev->devices &= ~AUDIO_DEVICE_IN_ALL;
         adev->devices |= in->device;
         select_devices_signal(adev);
@@ -1992,9 +1992,11 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->stream.get_input_frames_lost = in_get_input_frames_lost;
 
     in->requested_rate = config->sample_rate;
+#ifndef _VOICE_CALL_VIA_LINEIN
     if (ladev->call_start)
         memcpy(&in->config, &pcm_config_vrec_vx, sizeof(pcm_config_vrec_vx));
     else
+#endif
         memcpy(&in->config, &pcm_config_mm_ul, sizeof(pcm_config_mm_ul));
     in->config.channels = channel_count;
 
@@ -2560,7 +2562,7 @@ static int adev_open(const hw_module_t* module, const char* name,
     /* Set the default route before the PCM stream is opened */
     pthread_mutex_lock(&adev->lock);
     adev->mode = AUDIO_MODE_NORMAL;
-    adev->devices = AUDIO_DEVICE_OUT_SPEAKER;
+    adev->devices = AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_IN_BUILTIN_MIC;
     select_devices_signal(adev);
 
     adev->pcm_modem_dl = NULL;
