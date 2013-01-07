@@ -35,9 +35,12 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 	persist.sys.usb.config=mass_storage
 
 PRODUCT_PACKAGES := \
-	MsmsStk \
-	Stk1 \
-	VoiceDialer
+    VoiceDialer \
+    MsmsPhone \
+    Settings \
+    MsmsStk \
+    Stk1 \
+    framework2
 
 
 # prebuild files
