@@ -96,6 +96,7 @@ static int g_gpu_clock_div = 1;
 
 void mali_gpu_utilization_handler(u32 utilization)
 {
+#if 0
 	// if the loading ratio is greater then 90%, switch the clock to the maximum
 	if(utilization >= (256*9/10))
 	{
@@ -118,6 +119,7 @@ void mali_gpu_utilization_handler(u32 utilization)
 	if(g_gpu_clock_div > 8) g_gpu_clock_div = 8;
 
 	sci_glb_write(REG_GLB_GEN2, BITS_CLK_GPU_AXI_DIV(g_gpu_clock_div-1), BITS_CLK_GPU_AXI_DIV(7));
+#endif
 }
 
 void set_mali_parent_power_domain(void* dev)
