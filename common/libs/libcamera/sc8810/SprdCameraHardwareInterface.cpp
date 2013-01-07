@@ -294,42 +294,64 @@ status_t SprdCameraHardware::dump(int fd) const
         return NO_ERROR;
     }
 
-camera_memory_t* SprdCameraHardware::GetPmem(const char *device_name, int buf_size, int num_bufs)
+sprd_camera_memory_t* SprdCameraHardware::GetPmem(const char *device_name, int buf_size, int num_bufs)
 {
-        camera_memory_t* camera_memory = NULL;
-        int fd = 0;//open(device_name, O_RDWR|O_SYNC );
-        if (fd >= 0){
-                //camera_memory = mGetMemory_cb(fd, buf_size, num_bufs, NULL);
-		  camera_memory = mGetMemory_cb(fd, buf_size, num_bufs, (void*)("/dev/ion"));	
-                if(NULL == camera_memory) {
-                    ALOGE("Fail to mGetMemory_cb().");
-                    goto getpmem_end;
-                }
-                if(0xFFFFFFFF == (uint32_t)camera_memory->data) {
-                        camera_memory = NULL;
-                        ALOGE("Fail to GetPmem().");
-                        goto getpmem_end;
-                }
-                ALOGV("GetPmem: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.", 
-                            camera_memory->phys_addr, (uint32_t)camera_memory->data,
-                            camera_memory->size, camera_memory->phys_size);
+	sprd_camera_memory_t *memory = (sprd_camera_memory_t *)malloc(sizeof(*memory));
+	if(NULL == memory) {
+		ALOGE("wxz: Fail to GetPmem, memory is NULL.");
+		return NULL;
+	}
+	camera_memory_t *camera_memory;
+	int paddr, psize;
+        int order = 0, acc = 1;
+	while(acc < buf_size * num_bufs) {
+		order++;
+		acc = acc*2;
+	}
+	acc = camera_get_size_align_page(acc);
+        MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc , MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+
+	camera_memory = mGetMemory_cb(pHeapIon->getHeapID(), acc/num_bufs, num_bufs, NULL);
+
+        if(NULL == camera_memory) {
+                   goto getpmem_end;
         }
+        if(0xFFFFFFFF == (uint32_t)camera_memory->data) {
+                 camera_memory = NULL;
+                 ALOGE("Fail to GetPmem().");
+                 goto getpmem_end;
+       }
+	pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
+	memory->ion_heap = pHeapIon;
+	memory->camera_memory = camera_memory;
+	memory->phys_addr = paddr;
+	memory->phys_size = psize;
+	memory->handle = camera_memory->handle;
+	//memory->data = camera_memory->data;
+	memory->data = pHeapIon->getBase();
+
+       ALOGV("GetPmem: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
+                            memory->phys_addr, (uint32_t)camera_memory->data,
+                            camera_memory->size, memory->phys_size);
+
 getpmem_end:
-        //close(fd);
-        return camera_memory;
+	return memory;
 }
 
-void SprdCameraHardware::FreePmem(camera_memory_t* camera_memory)
+void SprdCameraHardware::FreePmem(sprd_camera_memory_t* memory)
 {
-        if(camera_memory){
-                ALOGV("FreePmem: phys_addr 0x%x, data: 0x%x, size: 0x%x.", 
-                            camera_memory->phys_addr, (uint32_t)camera_memory->data, camera_memory->size);
-                if(camera_memory->release){
-                        camera_memory->release(camera_memory);
-                        camera_memory = NULL;
+        if(memory){
+                if(memory->camera_memory->release){
+                        memory->camera_memory->release(memory->camera_memory);
+                        memory->camera_memory = NULL;
                 } else {
                         ALOGE("fail to FreePmem: NULL is camera_memory->release.");
                }
+		if(memory->ion_heap) {
+			delete memory->ion_heap;
+			memory->ion_heap = NULL;
+		}
+		memory = NULL;
         } else{
                 ALOGV("FreePmem: NULL");
         }
@@ -801,7 +823,7 @@ status_t SprdCameraHardware::cancelAutoFocus()
 {
         return camera_cancel_autofocus();
 }
-uint32_t get_physical_address(camera_memory_t *mMem,uint32_t *size)
+uint32_t get_physical_address(sprd_camera_memory_t *mMem,uint32_t *size)
 {
         *size = mMem->phys_size;
         return mMem->phys_addr;
@@ -1452,7 +1474,7 @@ callbacks:
                 ALOGV("receivePreviewFrame mMsgEnabled: 0x%x, mRecordingMode: %d.",mMsgEnabled, mRecordingMode);
                 if (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME) {
 #if CAM_OUT_YUV420_UV
-                        camera_memory_t *tempHeap = GetPmem("/dev/pmem_adsp", frame->dx * frame->dy * 3 /2, 1);
+                        sprd_camera_memory_t *tempHeap = GetPmem("/dev/pmem_adsp", frame->dx * frame->dy * 3 /2, 1);
                         if(NULL == tempHeap)
                             return;
                         if(NULL == tempHeap->handle){
@@ -1463,11 +1485,11 @@ callbacks:
                                 ALOGE("fail to camera_rotation_copy_data() in CAMERA_MSG_PREVIEW_FRAME.");
                                 return;
                         }
-                        mData_cb(CAMERA_MSG_PREVIEW_FRAME, tempHeap, 0, NULL, mUser);
+                        mData_cb(CAMERA_MSG_PREVIEW_FRAME, tempHeap->camera_memory, 0, NULL, mUser);
                         FreePmem(tempHeap);
                         tempHeap = NULL;
 #else
-                        mData_cb(CAMERA_MSG_PREVIEW_FRAME, mPreviewHeap, offset, NULL, mUser);
+                        mData_cb(CAMERA_MSG_PREVIEW_FRAME, mPreviewHeap->camera_memory, offset, NULL, mUser);
 #endif
                 }
 
@@ -1483,7 +1505,7 @@ callbacks:
 	                        mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mMetadataHeap,  offset, mUser);
 			}
 			else {
-				mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap, offset, mUser);
+				mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap->camera_memory, offset, mUser);
 			}
                 }
 		else {
@@ -1633,12 +1655,12 @@ callbackraw:
 		        frame_size = frame->dx * frame->dy * 3 / 2;        //for YUV420
 		else
 			frame_size = frame->dx * frame->dy * 2;
-	        if (offset + frame_size <= (ssize_t)mRawHeap->size) {
+	        if (offset + frame_size <= (ssize_t)mRawHeap->phys_size) {
 	                offset /= frame_size;
 			ALOGV("mMsgEnabled: 0x%x, offset: %d.",mMsgEnabled, (uint32_t)offset);
 			if (mMsgEnabled & CAMERA_MSG_RAW_IMAGE) {
 				ALOGV("mMsgEnabled & CAMERA_MSG_RAW_IMAGE");
-				mData_cb(CAMERA_MSG_RAW_IMAGE, mRawHeap, offset, NULL, mUser);
+				mData_cb(CAMERA_MSG_RAW_IMAGE, mRawHeap->camera_memory, offset, NULL, mUser);
 			}
 			ALOGV("mMsgEnabled & CAMERA_MSG_RAW_IMAGE after.");
 			if(mMsgEnabled & CAMERA_MSG_RAW_IMAGE_NOTIFY) {

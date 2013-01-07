@@ -22,7 +22,7 @@
 //#include <camera/CameraParameters.h>
 //#include <binder/MemoryBase.h>
 //#include <binder/MemoryHeapBase.h>
-//#include <binder/MemoryHeapPmem.h>
+#include <binder/MemoryHeapIon.h>
 #include <utils/threads.h>
 extern "C" {
     #include <linux/android_pmem.h>
@@ -47,6 +47,14 @@ typedef void (*shutter_callback)(void *);
 typedef void (*raw_callback)(sp<MemoryBase> , void *);
 typedef void (*jpeg_callback)(sp<MemoryBase>, void *);
 typedef void (*autofocus_callback)(bool, void *);
+
+typedef struct sprd_camera_memory {
+	camera_memory_t *camera_memory;
+	MemoryHeapIon *ion_heap;
+	uint32_t phys_addr, phys_size;
+	void *handle;
+	void *data;
+}sprd_camera_memory_t;
 
 class SprdCameraHardware : public virtual RefBase {
 public:
@@ -112,8 +120,8 @@ public:
     inline  int         getCameraId() const;
 private:
 
-	camera_memory_t* GetPmem(const char *device_name, int buf_size, int num_bufs);
-	void FreePmem(camera_memory_t* camera_memory);
+	sprd_camera_memory_t* GetPmem(const char *device_name, int buf_size, int num_bufs);
+	void FreePmem(sprd_camera_memory_t* camera_memory);
 	void* get_redisplay_mem(uint32_t size, uint32_t count, uint32_t *phy_addr);
     //SprdCameraHardware();
     //virtual ~SprdCameraHardware();
@@ -219,12 +227,12 @@ private:
         struct pmem_region mSize;
     };
 
-    camera_memory_t *mPreviewHeap;	
-    camera_memory_t *mRawHeap;
-    camera_memory_t *mMiscHeap;
+    sprd_camera_memory_t *mPreviewHeap;
+    sprd_camera_memory_t *mRawHeap;
+    sprd_camera_memory_t *mMiscHeap;
     sp<AshmemPool> mJpegHeap;
-    camera_memory_t *mReDisplayHeap;
-	camera_memory_t *mFDHeap;
+    sprd_camera_memory_t *mReDisplayHeap;
+	sprd_camera_memory_t *mFDHeap;
 	uint32_t         mFDAddr;
     camera_memory_t *mMetadataHeap;
 
