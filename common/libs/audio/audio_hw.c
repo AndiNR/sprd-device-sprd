@@ -888,10 +888,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             if(!adev->call_start)
             #endif
                 select_devices_signal(adev);
-            #ifndef _VOICE_CALL_VIA_LINEIN
-            else
-                adev->prev_devices = adev->devices;
-            #endif
             pthread_mutex_unlock(&out->lock);
             pthread_mutex_unlock(&adev->lock);
 
