@@ -96,10 +96,6 @@ service engsetmacaddr /system/bin/engsetmacaddr
     class main
     oneshot
 
-service start_ttyNK /system/bin/open_ttyNK 3
-    class main
-    disabled
-    oneshot
 service phoneserver /system/bin/phoneserver
     class main
     disabled
@@ -179,11 +175,6 @@ service engmodemclient /system/bin/engmodemclient
 
 service engsetmacaddr /system/bin/engsetmacaddr
     class main
-    oneshot
-
-service start_ttyNK /system/bin/open_ttyNK 3
-    class main
-    disabled
     oneshot
 
 service phoneserver /system/bin/phoneserver
