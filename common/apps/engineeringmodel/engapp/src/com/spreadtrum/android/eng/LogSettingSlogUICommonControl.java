@@ -7,7 +7,10 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.os.Bundle;
+import android.os.Message;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -57,7 +60,7 @@ public class LogSettingSlogUICommonControl extends Activity {
 
 		chkAlwaysRun.setChecked(SlogAction.isAlwaysRun(SlogAction.SERVICESLOG));
 		chkSnap.setChecked(SlogAction.isAlwaysRun(SlogAction.SERVICESNAP));
-		
+
 		if (chkAlwaysRun.isChecked()) {
 			startService(intentSvc);
 		}
@@ -117,9 +120,25 @@ public class LogSettingSlogUICommonControl extends Activity {
 			btnClear.setEnabled(true);
 		}
 
-	}
 
-	protected class ClkListenner implements OnClickListener {
+
+	}
+/*Add 20130109 Spreadst of 112929,dialog disappear when change the direction of phone start */
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        // TODO Auto-generated method stub
+        Log.e("test", "LogSettingSlogUICommonControl.onConfigurationChanged");
+        boolean showing = LogSettingSlogUITabHostActivity.mProgressDialog.isShowing();
+        super.onConfigurationChanged(newConfig);
+        if(showing){
+            Message msg = new Message();
+            msg.what = SlogAction.MESSAGE_DUMP_START;
+            LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
+        }
+    }
+/*Add 20130109 Spreadst of 112929,dialog disappear when change the direction of phone end */
+
+    protected class ClkListenner implements OnClickListener {
 
 		public void onClick(View v) {
 
