@@ -57,6 +57,9 @@
 #endif
 #define BLUE_TRACE  ALOGW
 
+//#define AUDIO_DUMP
+#define AUDIO_OUT_FILE_PATH    "data/audio_out.pcm"
+
 #define PRIVATE_NAME_LEN 60
 
 #define CTL_TRACE(exp) ALOGW(#exp" is %s", ((exp) != NULL) ? "success" : "failure")
@@ -231,6 +234,7 @@ struct tiny_stream_out {
     struct tiny_audio_device *dev;
     int write_threshold;
     bool low_power;
+    FILE * out_dump_fd;
 };
 
 #define MAX_PREPROCESSORS 3 /* maximum one AGC + one NS + one AEC per input stream */
@@ -334,12 +338,55 @@ static void *stream_routing_thread_entry(void * adev);
 static int stream_routing_manager_create(struct tiny_audio_device *adev);
 static void stream_routing_manager_close(struct tiny_audio_device *adev);
 
+/*
+ * NOTE: audio stream(playback, capture) dump just for debug.
+*/
+static int out_dump_create(FILE **out_fd, const char *path);
+static int out_dump_doing(FILE *out_fd, const void* buffer, size_t bytes);
+static int out_dump_release(FILE **fd);
+
 #ifndef _VOICE_CALL_VIA_LINEIN
 #include "vb_control_parameters.c"
 #endif
 
 #include "at_commands_generic.c"
 #include "mmi_audio_loop.c"
+
+
+static int out_dump_create(FILE **out_fd, const char *path)
+{
+    if (path == NULL) {
+        ALOGE("path not assigned.");
+        return -1;
+    }
+    *out_fd = (FILE *)fopen(path, "wb");
+    if (*out_fd == NULL ) {
+        ALOGE("cannot create file.");
+        return -1;
+    }
+    ALOGI("path %s created successfully.", path);
+    return 0;
+}
+
+static int out_dump_doing(FILE *out_fd, const void* buffer, size_t bytes)
+{
+    int ret;
+    if (out_fd) {
+        ret = fwrite((uint8_t *)buffer, bytes, 1, out_fd);
+        if (ret < 0) ALOGW("%d, fwrite failed.", bytes);
+    } else {
+       ALOGW("out_fd is NULL, cannot write.");
+    }
+    return 0;
+}
+
+static int out_dump_release(FILE **fd)
+{
+    fclose(*fd);
+    *fd = NULL;
+    return 0;
+}
+
 
 int set_call_route(struct tiny_audio_device *adev, int device, int on)
 {
@@ -630,7 +677,7 @@ static int start_output_stream(struct tiny_stream_out *out)
         out->config.start_threshold = SHORT_PERIOD_SIZE * PLAYBACK_SHORT_PERIOD_COUNT / 2;
         out->config.avail_min = LONG_PERIOD_SIZE;
         out->pcm = pcm_open(card, port, PCM_OUT | PCM_MMAP | PCM_NOIRQ, &out->config);
-    
+
         if (!pcm_is_ready(out->pcm)) {
             ALOGE("cannot open pcm_out driver: %s", pcm_get_error(out->pcm));
             pcm_close(out->pcm);
@@ -644,6 +691,9 @@ static int start_output_stream(struct tiny_stream_out *out)
         out->echo_reference = adev->echo_reference;
 
     out->resampler->reset(out->resampler);
+#ifdef AUDIO_DUMP
+    out_dump_create(&out->out_dump_fd, AUDIO_OUT_FILE_PATH);
+#endif
 
     return 0;
 }
@@ -834,6 +884,9 @@ static int do_output_standby(struct tiny_stream_out *out)
             out->echo_reference->write(out->echo_reference, NULL);
             out->echo_reference = NULL;
         }
+#ifdef AUDIO_DUMP
+        out_dump_release(&out->out_dump_fd);
+#endif
 
         out->standby = 1;
     }
@@ -1065,6 +1118,9 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
 	    } while (kernel_frames > out->write_threshold);
 
 	    ret = pcm_mmap_write(out->pcm, (void *)buf, out_frames * frame_size);
+#ifdef AUDIO_DUMP
+           out_dump_doing(out->out_dump_fd, (void *)buf, out_frames * frame_size);
+#endif
     }
 
 exit:
@@ -2562,7 +2618,7 @@ static int adev_open(const hw_module_t* module, const char* name,
     /* Set the default route before the PCM stream is opened */
     pthread_mutex_lock(&adev->lock);
     adev->mode = AUDIO_MODE_NORMAL;
-    adev->devices = AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_IN_BUILTIN_MIC;
+    adev->devices = AUDIO_DEVICE_OUT_SPEAKER;
     select_devices_signal(adev);
 
     adev->pcm_modem_dl = NULL;
