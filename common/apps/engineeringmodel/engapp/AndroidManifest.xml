@@ -330,8 +330,11 @@
             android:noHistory="true"
             android:taskAffinity="" >
         </activity>
-        <activity android:name=".LogSettingSlogUICommonControl" >
+<!--Add 20130109 Spreadst of 112929,dialog disappear when change the direction of phone start -->
+        <activity android:name=".LogSettingSlogUICommonControl"
+            android:configChanges="orientation|keyboardHidden|screenSize">
         </activity>
+<!--Add 20130109 Spreadst of 112929,dialog disappear when change the direction of phone end -->
         <activity android:name=".LogSettingSlogUIAndroidPage" />
         <activity android:name=".LogSettingSlogUIModemPage" >
         </activity>
@@ -350,6 +353,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.MODIFY_PHONE_STATE" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
+    <!--Add 20130109 Spreadst of 112929,dialog disappear when change the direction of phone start -->
+    <uses-permission android:name="android.permission.CHANGE_CONFIGURATION" />
+    <!--Add 20130109 Spreadst of 112929,dialog disappear when change the direction of phone end   -->
 	<!-- add by wangxiabin 09-15-11 for Wifi test begin -->
 	<uses-permission android:name="android.permission.ACCESS_WIFI_STATE"></uses-permission>
 	<uses-permission android:name="android.permission.CHANGE_WIFI_STATE"></uses-permission>
