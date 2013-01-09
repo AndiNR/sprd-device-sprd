@@ -218,11 +218,13 @@
 	</Preference>
 	<!-- added CMMB Settings end-->
 	<!-- added Phone info start -->
-	<!--  <Preference android:key="Phone_info" android:title="Phone info">
-		<intent android:action="android.intent.action.MAIN"
-			android:targetPackage="com.spreadtrum.android.eng"
-			android:targetClass="com.spreadtrum.android.eng.phoneinfo" />
-	</Preference>-->
+    <!-- Add 20130109 spreadst of 112858 no phoneinfo item start -->
+    <Preference android:key="Phone_info" android:title="Phone info">
+        <intent android:action="android.intent.action.MAIN"
+            android:targetPackage="com.spreadtrum.android.eng"
+            android:targetClass="com.spreadtrum.android.eng.phoneinfo" />
+    </Preference>
+    <!-- Add 20130109 spreadst of 112858 no phoneinfo item end -->
 	<!-- added Phone info end-->
 
 </PreferenceScreen>

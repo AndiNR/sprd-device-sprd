@@ -92,14 +92,14 @@
 	</activity>
     <!-- add by wangxiabin 09-15-11 for Wifi test end -->
 
-
-	<activity android:name="phoneinfo" android:label="@string/verinfo" android:screenOrientation="portrait">
-		<intent-filter>
-		<action android:name="android.intent.action.MAIN" />
-		<category android:name="android.intent.category.DEFAULT" />
-		</intent-filter>
-	</activity>
-
+<!-- Modify 20130109 spreadst of 112858 no phoneinfo item start -->
+    <activity android:name="phoneinfo" android:label="@string/phoneinfo" android:screenOrientation="portrait">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+    </activity>
+<!-- Modify 20130109 spreadst of 112858 no phoneinfo item end -->
 	<activity android:name="lockfreq" android:label="lock freq" android:screenOrientation="portrait">
 		<intent-filter>
 		<action android:name="android.intent.action.MAIN" />
