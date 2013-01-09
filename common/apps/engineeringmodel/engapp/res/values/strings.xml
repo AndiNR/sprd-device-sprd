@@ -14,7 +14,9 @@
 	<string name="imeiinfo">IMEI</string>
 	<string name="swinfo">SW version:</string>
 	<string name="hwinfo">HW version:</string>
-
+    <!-- Modify 20130109 spreadst of 112858 no phoneinfo item start -->
+    <string name="phoneinfo">Phone Info:</string>
+    <!-- Modify 20130109 spreadst of 112858 no phoneinfo item end -->
 	<!-- net info -->
 	<string name="agenttitle">UA Agent</string>
 	<string name="profiletitle">UA Profile</string>
