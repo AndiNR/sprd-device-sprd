@@ -57,7 +57,7 @@ int eng_diag_factorymode(char *buf,int len, char *rsp);
 int get_sub_str(char *buf,char **revdata, char a, char b);
 int get_cmd_index(char *buf);
 
-static const char *at_sadm="AT+SADM";
+static const char *at_sadm="AT+SADM4AP";
 static const char *at_spenha="AT+SPENHA";
 
 //static int at_sadm_cmd_to_handle[] = {7,8,9,10,11,12,-1};
@@ -877,12 +877,12 @@ int is_audio_at_cmd_need_to_handle(char *buf,int len){
 		}
 	}
 	
-	//AT+SADM
+	//AT+SADM4AP
 	ret = strncmp(ptr,at_sadm,strlen(at_sadm));
 	if ( 0==ret ) {
 		at_tok_equel_start(&ptr);
 		at_tok_nextint(&ptr,&cmd_type);
-		ENG_LOG("%s,SADM :value = 0x%02x",__FUNCTION__,cmd_type);
+		ENG_LOG("%s,SADM4AP :value = 0x%02x",__FUNCTION__,cmd_type);
 		for ( i = 0; i < sizeof(at_sadm_cmd_to_handle); i += 1 ) {
 			if(-1==at_sadm_cmd_to_handle[i]){
 				ENG_LOG("end of at_sadm_cmd_to_handle");
@@ -1022,17 +1022,17 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 		goto out;
 	}
 
-	//if ptr points to "AT+SADM"
+	//if ptr points to "AT+SADM4AP"
 	ret = strncmp(ptr,at_sadm,strlen(at_sadm));
 	if ( 0==ret ) {
 		switch ( cmd_type) {
 		    	case GET_ARM_VOLUME_MODE_COUNT:
 				ENG_LOG("%s,GET MODE COUNT\n",__FUNCTION__);
-				sprintf(rsp,"+SADM: 4");
+				sprintf(rsp,"+SADM4AP: 4");
 				break;
 			case GET_ARM_VOLUME_MODE_NAME:	
 				ENG_LOG("ARM VOLUME NAME is %s",audio_total[g_index].audio_nv_arm_mode_info.ucModeName);
-				sprintf(rsp,"+SADM: %d,\"%s\"",g_index,audio_total[g_index].audio_nv_arm_mode_info.ucModeName);
+				sprintf(rsp,"+SADM4AP: %d,\"%s\"",g_index,audio_total[g_index].audio_nv_arm_mode_info.ucModeName);
 				break;
 			case SET_ARM_VOLUME_DATA_TO_RAM:
 				ENG_LOG("%s,set arm nv mode data to memory\n",__FUNCTION__);
@@ -1053,7 +1053,7 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 				//there is no break in this case,'cause it will share the code with the following case
 			case GET_ARM_VOLUME_DATA_FROM_RAM:	
 				ENG_LOG("%s,get arm volume data\n",__FUNCTION__);
-				sprintf(rsp,"+SADM: 0,\"%s\",",audio_total[g_index].audio_nv_arm_mode_info.ucModeName);
+				sprintf(rsp,"+SADM4AP: 0,\"%s\",",audio_total[g_index].audio_nv_arm_mode_info.ucModeName);
 				bin2ascii((unsigned char *)(rsp+strlen(rsp)),(unsigned char *)(&audio_total[g_index].audio_nv_arm_mode_info.tAudioNvArmModeStruct),sizeof(AUDIO_NV_ARM_MODE_STRUCT_T));
 				break;
 
