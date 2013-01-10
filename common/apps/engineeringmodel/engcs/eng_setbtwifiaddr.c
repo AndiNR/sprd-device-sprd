@@ -216,6 +216,24 @@ static int read_btwifimac_from_modem(char *btmac, char *wifimac)
 	return bt_ok & wifi_ok;
 }
 
+// realtek_add_start
+static int get_urandom(unsigned int *buf, size_t len){
+	int fd;
+	size_t rc;
+
+	ALOGD("+%s+",__FUNCTION__);
+	fd = open("/dev/urandom", O_RDONLY);
+	if (fd < 0){
+		ALOGD("%s: Open urandom fail", __FUNCTION__);
+		return -1;
+	}
+	rc = read(fd, buf, len);
+	close(fd);
+	ALOGD("-%s: rc: %d-",__FUNCTION__, rc);
+	return rc;
+}
+// realtek_add_end
+
 static void mac_rand(char *btmac, char *wifimac)
 {
 	int fd,i, j, k;
@@ -223,9 +241,16 @@ static void mac_rand(char *btmac, char *wifimac)
 	char buf[80];
 	char *ptr;
 	unsigned int randseed;
+	// realtek_add_start
+	int rc;
+	struct timeval tt;
+	// realtek_add_end
 
 	memset(buf, 0, sizeof(buf));
 
+	// realtek_add_start
+	ALOGD("+%s+",__FUNCTION__);
+	// realtek_add_end
 	if(access(MAC_RAND_FILE, F_OK) == 0) {
 		ALOGD("%s: %s exists",__FUNCTION__, MAC_RAND_FILE);
 		fd = open(MAC_RAND_FILE, O_RDWR);
@@ -246,9 +271,14 @@ static void mac_rand(char *btmac, char *wifimac)
 				ALOGD("%s: read btmac=%s, wifimac=%s",__FUNCTION__, btmac, wifimac);
 				return;
 			}
+			// realtek_add_start
+			close(fd);
+			// realtek_add_end
 		}
 	}
 
+	// realtek_add_start
+#if 0
 	usleep(counter*1000);
 	memset(buf, 0, sizeof(buf));
 	sprintf(buf, "dmesg>%s",KMSG_LOG);
@@ -260,6 +290,7 @@ static void mac_rand(char *btmac, char *wifimac)
 		memset(buf, 0, sizeof(buf));
 		read(fd, buf, counter);
 		ALOGD("%s: read %s: %s",__FUNCTION__, KMSG_LOG, buf);
+		close(fd);
 	}
 
 	k=0;
@@ -269,6 +300,21 @@ static void mac_rand(char *btmac, char *wifimac)
 	//rand seed
 	randseed = (unsigned int) time(NULL) + k*fd*counter + buf[counter-2];
 	ALOGD("%s: randseed=%d",__FUNCTION__, randseed);
+#endif
+
+	rc = get_urandom(&randseed, sizeof(randseed));
+	if (rc > 0) {
+		ALOGD("urandom:%u", randseed);
+	} else {
+		if (gettimeofday(&tt, (struct timezone *)0) > 0)
+			randseed = (unsigned int) tt.tv_usec;
+		else
+			randseed = (unsigned int) time(NULL);
+
+		ALOGD("urandom fail, using system time for randseed");
+	}
+	// realtek_add_end
+	ALOGD("%s: randseed=%u",__FUNCTION__, randseed);
 	srand(randseed);
 
 	//FOR BT
