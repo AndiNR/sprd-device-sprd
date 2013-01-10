@@ -68,6 +68,16 @@ service rawdatad /bin/rawdatad
     user root
     oneshot
 
+service vcharged /bin/vcharged
+    class core
+    user root
+    oneshot
+
+service charge /bin/charge
+    class charger
+    user root
+    oneshot
+
 #start nvitem daemon.
 service nvm_daemon /system/bin/nvm_daemon
     class main

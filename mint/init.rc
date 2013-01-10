@@ -319,6 +319,11 @@ on charger
     class_start core
     class_start charger
 
+on alarm
+    class_start core
+    start media
+    exec /bin/poweroff_alarm
+
 on property:vold.decrypt=trigger_reset_main
     class_reset main
 
