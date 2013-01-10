@@ -62,13 +62,14 @@
 
 #define PRIVATE_NAME_LEN 60
 
-#define CTL_TRACE(exp) ALOGW(#exp" is %s", ((exp) != NULL) ? "success" : "failure")
+#define CTL_TRACE(exp) ALOGW(#exp" is %s", ((exp) != NULL) ? "successful" : "failure")
 
 #define PRIVATE_MIC_BIAS                  "mic bias"
 #define PRIVATE_VBC_CONTROL              "vb control"
 #define PRIVATE_VBC_EQ_SWITCH            "eq switch"
 #define PRIVATE_VBC_EQ_UPDATE            "eq update"
 #define PRIVATE_VBC_EQ_PROFILE            "eq profile"
+#define PRIVATE_INTERNAL_PA              "internal PA"
 
 /* ALSA cards for sprd */
 #define CARD_SPRDPHONE "sprdphone"
@@ -180,6 +181,7 @@ struct tiny_private_ctl {
     struct mixer_ctl *vbc_eq_switch;
     struct mixer_ctl *vbc_eq_update;
     struct mixer_ctl *vbc_eq_profile_select;
+    struct mixer_ctl *internal_pa;
 };
 
 struct stream_routing_manager {
@@ -2176,6 +2178,34 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
             AUDIO_DEVICE_IN_DEFAULT);
 }
 
+/* parse the private field of xml config file. */
+static void adev_config_parse_private(struct config_parse_state *s, const XML_Char *name)
+{
+    if (s && name) {
+        if (strcmp(s->private_name, PRIVATE_VBC_CONTROL) == 0) {
+            s->adev->private_ctl.vbc_switch =
+                 mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.vbc_switch);
+        } else if (strcmp(s->private_name, PRIVATE_VBC_EQ_SWITCH) == 0) {
+            s->adev->private_ctl.vbc_eq_switch =
+                 mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.vbc_eq_switch);
+        } else if (strcmp(s->private_name, PRIVATE_VBC_EQ_UPDATE) == 0) {
+            s->adev->private_ctl.vbc_eq_update =
+                 mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.vbc_eq_update);
+        } else if (strcmp(s->private_name, PRIVATE_VBC_EQ_PROFILE) == 0) {
+            s->adev->private_ctl.vbc_eq_profile_select =
+                 mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.vbc_eq_profile_select);
+        } else if (strcmp(s->private_name, PRIVATE_INTERNAL_PA) == 0) {
+            s->adev->private_ctl.internal_pa =
+                 mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.internal_pa);
+        }
+    }
+}
+
 static void adev_config_start(void *data, const XML_Char *elem,
 			      const XML_Char **attr)
 {
@@ -2273,27 +2303,7 @@ static void adev_config_start(void *data, const XML_Char *elem,
         memcpy(s->private_name, name, strlen(name));
     }
     else if (strcmp(elem, "func") == 0) {
-        if (strcmp(s->private_name, PRIVATE_VBC_CONTROL) == 0) {
-            s->adev->private_ctl.vbc_switch =
-                 mixer_get_ctl_by_name(s->adev->mixer, name);
-            CTL_TRACE(s->adev->private_ctl.vbc_switch);
-        } else if (strcmp(s->private_name, PRIVATE_VBC_EQ_SWITCH) == 0) {
-            s->adev->private_ctl.vbc_eq_switch =
-                 mixer_get_ctl_by_name(s->adev->mixer, name);
-            CTL_TRACE(s->adev->private_ctl.vbc_eq_switch);
-        } else if (strcmp(s->private_name, PRIVATE_VBC_EQ_UPDATE) == 0) {
-            s->adev->private_ctl.vbc_eq_update =
-                 mixer_get_ctl_by_name(s->adev->mixer, name);
-            CTL_TRACE(s->adev->private_ctl.vbc_eq_update);
-        } else if (strcmp(s->private_name, PRIVATE_MIC_BIAS) == 0) {
-            s->adev->private_ctl.mic_bias_switch =
-                 mixer_get_ctl_by_name(s->adev->mixer, name);
-            CTL_TRACE(s->adev->private_ctl.mic_bias_switch);
-        }else if (strcmp(s->private_name, PRIVATE_VBC_EQ_PROFILE) == 0) {
-            s->adev->private_ctl.vbc_eq_profile_select =
-                 mixer_get_ctl_by_name(s->adev->mixer, name);
-            CTL_TRACE(s->adev->private_ctl.vbc_eq_profile_select);
-        }
+        adev_config_parse_private(s, name);
     }
 }
 

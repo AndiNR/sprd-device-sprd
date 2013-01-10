@@ -134,4 +134,8 @@
   <func name="VBC EQ Profile Select" val="0" />
 </private>
 
+<private name="internal PA">
+  <func name="Inter PA Config" val="304" />
+</private>
+
 </tinyalsa-audio>
