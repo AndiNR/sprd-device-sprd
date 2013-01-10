@@ -162,7 +162,8 @@ LOCAL JPEG_RET_E JPEGENC_Scale_For_Thumbnail(SCALE_PARAM_T *scale_param)
 	static int fd = -1; 	
 	SCALE_CONFIG_T scale_config;	
 	SCALE_MODE_E scale_mode;
-	uint32_t enable = 0, endian_mode;
+	uint32_t enable = 0;
+	ISP_ENDIAN_T endian_mode;
 
 	fd = open("/dev/sprd_scale", O_RDONLY);
 	if (-1 == fd) 
@@ -242,7 +243,10 @@ LOCAL JPEG_RET_E JPEGENC_Scale_For_Thumbnail(SCALE_PARAM_T *scale_param)
 	
 	//set input endian
 	scale_config.id = SCALE_PATH_INPUT_ENDIAN;
-	endian_mode = 1;
+	//endian_mode = 1;
+	endian_mode.endian_y = 1;
+	endian_mode.endian_uv = 1;
+
 	scale_config.param = &endian_mode;	 
 	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
 	{
@@ -251,7 +255,10 @@ LOCAL JPEG_RET_E JPEGENC_Scale_For_Thumbnail(SCALE_PARAM_T *scale_param)
 	}
 	//set output endian
 	scale_config.id = SCALE_PATH_OUTPUT_ENDIAN;
-	endian_mode = 1;
+	//endian_mode = 1;
+	endian_mode.endian_y = 1;
+	endian_mode.endian_uv = 1;
+
 	scale_config.param = &endian_mode;	 
 	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
 	{
@@ -305,12 +312,14 @@ LOCAL JPEG_RET_E JPEGENC_start_encode_thumbnail(JPEGENC_PARAMS_T *jpegenc_params
 	scale_param.out_addr.uaddr = scale_param.out_addr.yaddr + scale_param.out_size.w * scale_param.out_size.h;
 	scale_param.out_addr.vaddr = 0;
 	scale_param.out_fmt = SCALE_DATA_YUV420;//jpegenc_params->format;
+
 	ret_value = JPEGENC_Scale_For_Thumbnail(&scale_param);
 	if(JPEG_SUCCESS != ret_value)
 	{
 		SCI_TRACE_LOW("JPEGENC_Scale_For_Thumbnail = %d", ret_value);
 		return ret_value;
 	}
+
 		#if 0
 			{
 				FILE *fp = NULL;				
