@@ -331,7 +331,7 @@ int main(int argc, char *argv[])
                 print_modem_image_info();
 	}
 
-	pthread_create(&t1, NULL, (void*)modemd_listenaccept_thread, NULL);
+	//pthread_create(&t1, NULL, (void*)modemd_listenaccept_thread, NULL);
 	printf(">>>>>> start modem manager program ......\n");
 	
 	modem_state = MODEM_STA_INIT;
