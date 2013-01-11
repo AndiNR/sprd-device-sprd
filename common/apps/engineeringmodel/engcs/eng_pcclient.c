@@ -384,13 +384,13 @@ static void *eng_modemreset_thread(void *par)
 	}
 	
     soc_fd = socket_local_client( MODEM_SOCKET_NAME,
-                         ANDROID_SOCKET_NAMESPACE_RESERVED, SOCK_STREAM);
+                         0/*ANDROID_SOCKET_NAMESPACE_RESERVED*/, SOCK_STREAM);
 
 	while(soc_fd < 0) {
 		ALOGD("%s: Unable bind server %s, waiting...\n",__func__, MODEM_SOCKET_NAME);
 		usleep(10*1000);
     	soc_fd = socket_local_client( MODEM_SOCKET_NAME,
-                         ANDROID_SOCKET_NAMESPACE_RESERVED, SOCK_STREAM);		
+                         0/*ANDROID_SOCKET_NAMESPACE_RESERVED*/, SOCK_STREAM);		
 	}
 
 	ALOGD("%s, fd=%d, pipe_fd=%d\n",__func__, soc_fd, pipe_fd);

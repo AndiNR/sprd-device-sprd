@@ -38,7 +38,7 @@ static void *modemd_listenaccept_thread(void *par)
 		client_fd[i]=-1;
 
 	sfd = socket_local_server(MODEM_SOCKET_NAME,
-		ANDROID_SOCKET_NAMESPACE_RESERVED, SOCK_STREAM);
+		0/*ANDROID_SOCKET_NAMESPACE_RESERVED*/, SOCK_STREAM);
 	if (sfd < 0) {
 		ALOGE("%s: cannot create local socket server", __FUNCTION__);
 		exit(-1);
