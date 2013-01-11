@@ -37,7 +37,7 @@ TARGET_NO_KERNEL := false
 ifeq ($(TARGET_VLX_ENABLE), true)
 KERNEL_DEFCONFIG := sp7702-vlx_defconfig
 else
-KERNEL_DEFCONFIG := sp7702-native_defconfig
+KERNEL_DEFCONFIG := sp7702-native_4p1_defconfig
 endif
 USES_UNCOMPRESSED_KERNEL := true
 BOARD_KERNEL_BASE := 0x00000000
@@ -50,10 +50,10 @@ BOARD_7702_STINRAY	:= true
 # use default init.rc
 TARGET_PROVIDES_INIT_RC := true
 
-BOARD_HAVE_BLUETOOTH := false
-BOARD_HAVE_BLUETOOTH_BCM := false
-BOARD_HAVE_FM_BCM := false
-BOARD_USE_SPRD_FMAPP := false
+BOARD_HAVE_BLUETOOTH := true
+BOARD_HAVE_BLUETOOTH_BCM := true
+BOARD_HAVE_FM_BCM := true
+BOARD_USE_SPRD_FMAPP := true
 # board specific modules
 BOARD_USES_TINYALSA_AUDIO := true
 BOARD_USES_LINE_CALL	:= true
@@ -62,9 +62,6 @@ BOARD_SPRD_RIL := true
 BOARD_SAMSUNG_RIL := false
 TARGET_RECOVERY_UI_LIB := librecovery_ui_sp8810
 TARGET_RECOVERY_PIXEL_FORMAT := "RGBA_8888"
-
-
-
 
 BOARD_WPA_SUPPLICANT_DRIVER := NL80211
 WPA_SUPPLICANT_VERSION     := VER_0_8_X
@@ -81,13 +78,3 @@ USE_CAMERA_STUB := true
 
 BOARD_USES_GENERIC_AUDIO := false
 USE_BOOT_AT_DIAG := true
-
-
-####################!!!! DONT'T FOLLOW THIS WAY TO CUSTOMIZE  !!!###############
-BOARD_CMMB_HW ?= siano
-
-ifeq ($(BOARD_CMMB_HW), mxd)
-KERNEL_DEFCONFIG := sp8810ea-vlx-mxd_defconfig
-CMMB_MXDID       := 0266
-endif
-################################################################################

@@ -35,7 +35,7 @@ endif
 # config kernel
 TARGET_NO_KERNEL := false
 ifeq ($(TARGET_VLX_ENABLE), true)
-KERNEL_DEFCONFIG := sp8810ea-vlx_4p1_defconfig
+KERNEL_DEFCONFIG := sp8810ea-vlx-mxd_4p1_defconfig
 else
 KERNEL_DEFCONFIG := sp8810ea-native_defconfig
 endif
@@ -92,7 +92,7 @@ USE_BOOT_AT_DIAG := true
 #BOARD_CMMB_HW ?= siano
 
 #ifeq ($(BOARD_CMMB_HW), mxd)
-KERNEL_DEFCONFIG := sp8810ea-vlx-mxd_defconfig
+#KERNEL_DEFCONFIG := sp8810ea-vlx-mxd_defconfig
 CMMB_MXDID       := 0266
 #endif
 ################################################################################
