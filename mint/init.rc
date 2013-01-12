@@ -114,12 +114,9 @@ loglevel 3
     chmod 0644 /dev/xt_qtaguid
 
 on fs
-# mount mtd partitions
-    # Mount /system rw first to give the filesystem a chance to save a checkpoint
-    mount yaffs2 mtd@system /system
-    mount yaffs2 mtd@system /system ro remount
-    mount yaffs2 mtd@userdata /data nosuid nodev
-    mount yaffs2 mtd@cache /cache nosuid nodev
+# ---------------------------- spreadtrum on fs section start
+    mkdir /productinfo 0774 system system
+# ---------------------------- spreadtrum on fs section end
 
 on post-fs
     # once everything is setup, no need to modify /
@@ -128,6 +125,11 @@ on post-fs
     # We chown/chmod /cache again so because mount is run as root + defaults
     chown system cache /cache
     chmod 0770 /cache
+
+# ---------------------------- spreadtrum on post-fs section start
+    chown system system /productinfo
+    chmod 0774 /productinfo
+# ---------------------------- spreadtrum on post-fs section end
 
     # This may have been created by the recovery system with odd permissions
     chown system cache /cache/recovery
@@ -178,12 +180,13 @@ on post-fs-data
     # give system access to wpa_supplicant.conf for backup and restore
     mkdir /data/misc/wifi 0770 wifi wifi
     chmod 0660 /data/misc/wifi/wpa_supplicant.conf
-    mkdir /data/local 0751 root root
+    mkdir /data/local 0771 shell shell
 
     # For security reasons, /data/local/tmp should always be empty.
     # Do not place files or directories in /data/local/tmp
     mkdir /data/local/tmp 0771 shell shell
     mkdir /data/data 0771 system system
+    mkdir /data/anr 0775 system system
     mkdir /data/app-private 0771 system system
     mkdir /data/app-asec 0700 root root
     mkdir /data/app 0771 system system
