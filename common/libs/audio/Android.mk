@@ -29,6 +29,10 @@ ifeq ($(strip $(BOARD_USES_LINE_CALL)), true)
 LOCAL_CFLAGS += -D_VOICE_CALL_VIA_LINEIN
 endif
 
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
+LOCAL_CFLAGS += -D_DSP_CTRL_CODEC
+endif
+
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
 	external/expat/lib \

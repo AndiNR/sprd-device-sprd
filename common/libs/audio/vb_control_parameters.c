@@ -404,8 +404,8 @@ static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *m
 	unsigned short switch_mic0 = 0;
 	unsigned short switch_mic1 = 0;
 	unsigned short switch_hp_mic = 0;
-    unsigned short switch_table[4] = {0};
-    uint32_t switch_device[] = {AUDIO_DEVICE_OUT_EARPIECE,AUDIO_DEVICE_OUT_SPEAKER,AUDIO_DEVICE_IN_BUILTIN_MIC,AUDIO_DEVICE_IN_WIRED_HEADSET};
+    unsigned short switch_table[5] = {0};
+    uint32_t switch_device[] = {AUDIO_DEVICE_OUT_EARPIECE,AUDIO_DEVICE_OUT_SPEAKER,AUDIO_DEVICE_IN_BUILTIN_MIC,AUDIO_DEVICE_IN_WIRED_HEADSET,AUDIO_DEVICE_OUT_WIRED_HEADSET};
 
 	MY_TRACE("%s path_set:0x%x .android_cur_device:0x%x ",__func__,mode_gain_paras->path_set,android_cur_device);
 	switch_earpice = (mode_gain_paras->path_set & 0x0040)>>6;
@@ -419,6 +419,8 @@ static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *m
     switch_table[1] = switch_speaker;
     switch_table[2] = switch_mic0;
     switch_table[3] = switch_hp_mic;
+    switch_table[4] = switch_headset;
+
 //At present, switch of pa cannot handle mulit-device
     android_cur_device = 0;
     if(switch_earpice){
@@ -661,8 +663,11 @@ int SetParas_DeviceCtrl_Incall(int fd_pipe,struct tiny_audio_device *adev)
 	memset(&device_ctrl_paras,0,sizeof(device_ctrl_t));
 	MY_TRACE("%s in.....",__func__);
 
-	//because of codec,we should set headphone on first...
+	//because of codec,we should set headphone on first if codec is controlled by dsp
+#ifdef _DSP_CTRL_CODEC
 	set_call_route(adev, AUDIO_DEVICE_OUT_WIRED_HEADSET, 1);
+#endif
+
 
 	ret =GetParas_DeviceCtrl_Incall(fd_pipe,&device_ctrl_paras);
 	if(ret < 0){
