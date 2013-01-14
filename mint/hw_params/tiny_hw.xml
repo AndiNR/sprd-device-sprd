@@ -4,14 +4,14 @@
    <!-- We are able to have most of our routing static so do that -->
    <path>
 
-     <!-- DAC1->Headphone -->
+     <!-- DAC->Headphone -->
      <ctl name="HeadPhone Playback Volume" val="12" />
 
-     <!-- DAC1->Speaker -->
+     <!-- DAC->Speaker -->
      <ctl name="Master Playback Volume" val="12" />
      <ctl name="Inter PA Playback Volume" val="12" />
 
-     <!-- DAC1->Earpiece -->
+     <!-- DAC->Earpiece -->
      <ctl name="Ear Boost Volume" val="1" />
 
      <!-- ADC ->(main mic)  -->
@@ -85,10 +85,7 @@
   </path>
 </device>
 
-<private name="mic bias">
-  <func name="Mic Bias Function" val="0" />
-</private>
-
+<!-- MUST NOT modify private field directly -->
 <private name="vb control">
   <func name="VBC Switch" val="arm" />
 </private>
@@ -99,6 +96,10 @@
 
 <private name="eq update">
   <func name="VBC EQ Update" val="0" />
+</private>
+
+<private name="eq profile">
+  <func name="VBC EQ Profile Select" val="0" />
 </private>
 
 </tinyalsa-audio>

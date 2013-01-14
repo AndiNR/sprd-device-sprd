@@ -98,4 +98,8 @@
   <func name="VBC EQ Update" val="0" />
 </private>
 
+<private name="eq profile">
+  <func name="VBC EQ Profile Select" val="0" />
+</private>
+
 </tinyalsa-audio>

@@ -2198,6 +2198,10 @@ static void adev_config_parse_private(struct config_parse_state *s, const XML_Ch
             s->adev->private_ctl.vbc_eq_profile_select =
                  mixer_get_ctl_by_name(s->adev->mixer, name);
             CTL_TRACE(s->adev->private_ctl.vbc_eq_profile_select);
+        } else if (strcmp(s->private_name, PRIVATE_MIC_BIAS) == 0) {
+            s->adev->private_ctl.mic_bias_switch =
+                 mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.mic_bias_switch);
         } else if (strcmp(s->private_name, PRIVATE_INTERNAL_PA) == 0) {
             s->adev->private_ctl.internal_pa =
                  mixer_get_ctl_by_name(s->adev->mixer, name);
