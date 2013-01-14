@@ -55,19 +55,14 @@ static int eng_atreq(int fd, char *buf, int length)
 {
 	int ret=0;
 	int index=0;
+	eng_cmd_type cmd_type=CMD_INVALID_TYPE;
 	char cmd[ENG_BUFFER_SIZE];
  
 	ENG_LOG("Call %s\n",__FUNCTION__);
 
 	memset(cmd, 0, ENG_BUFFER_SIZE);
 
-	if((index=eng_at2linux(buf)) >= 0) {
-		ENG_LOG("%s: Handle %s at Linux\n",__FUNCTION__, buf);
-		memcpy(cmd, buf, length);
-		memset(buf, 0, length);
-		eng_linuxcmd_hdlr(index, cmd, buf);
-		ret = ENG_CMD4LINUX;
-	} else {
+	if((index=eng_at2linux(buf)) < 0 || (cmd_type = eng_cmd_get_type(index)) == CMD_TO_APCP) {
 		
 		sprintf(cmd, "%d,%d,%s",ENG_AT_NOHANDLE_CMD, 1, buf);
 
@@ -82,8 +77,25 @@ static int eng_atreq(int fd, char *buf, int length)
 		}
 
 		ret = ENG_CMD4MODEM;
-	}
+
+		if (cmd_type == CMD_TO_APCP) {
+			ENG_LOG("%s: then the command %s will handled  at AP\n",__FUNCTION__, buf);
+			memcpy(cmd, buf, length);
+			memset(buf, 0, length);
+			eng_linuxcmd_hdlr(index, cmd, buf);
+
+			ret = ENG_CMD4LINUX;
+		}
+
+	} else {
+		ENG_LOG("%s: Handle %s at Linux\n",__FUNCTION__, buf);
+		memcpy(cmd, buf, length);
+		memset(buf, 0, length);
+		eng_linuxcmd_hdlr(index, cmd, buf);
 	
+		ret = ENG_CMD4LINUX;
+	}
+
 	return ret;
 }
 

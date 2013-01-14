@@ -35,6 +35,7 @@ extern int eng_atdiag_hdlr(unsigned char *buf,int len, char* rsp);
 extern int eng_atdiag_euthdlr(unsigned char *buf,int len,char* rsp,int module_index);
 extern void eng_check_factorymode_fornand(void);
 extern void eng_check_factorymode_formmc(void);
+extern int turnoff_lcd_backlight(void);
 static unsigned char g_buffer[ENG_BUFFER_SIZE];
 static int eng_linuxcmd_rpoweron(char *req, char *rsp);
 static int eng_linuxcmd_keypad(char *req, char *rsp);
@@ -61,30 +62,31 @@ static int eng_linuxcmd_bteutmode(char *req,char *rsp);
 static int eng_linuxcmd_wifieutmode(char *req,char *rsp);
 static int eng_linuxcmd_gpseutmode(char *req,char *rsp);
 
+
 static struct eng_linuxcmd_str eng_linuxcmd[] = {
-    {CMD_SENDKEY, 		"AT+SENDKEY",		eng_linuxcmd_keypad},
-    {CMD_GETICH, 		"AT+GETICH?",		eng_linuxcmd_getich},
-    {CMD_ETSRESET, 		"AT+ETSRESET",		eng_linuxcmd_factoryreset},
-    {CMD_RPOWERON, 		"AT+RPOWERON",		eng_linuxcmd_rpoweron},
-    {CMD_GETVBAT, 		"AT+GETVBAT",		eng_linuxcmd_vbat},
-    {CMD_STOPCHG, 		"AT+STOPCHG",		eng_linuxcmd_stopchg},
-    {CMD_TESTMMI, 		"AT+TESTMMI",		eng_linuxcmd_mmitest},
-    {CMD_BTTESTMODE,	"AT+BTTESTMODE",	eng_linuxcmd_bttest},
-    {CMD_GETBTADDR, 	"AT+GETBTADDR",		eng_linuxcmd_getbtaddr},
-    {CMD_SETBTADDR, 	"AT+SETBTADDR",		eng_linuxcmd_setbtaddr},
-	{CMD_GSNR, 			"AT+GSNR",			eng_linuxcmd_gsnr},
-	{CMD_GSNW, 			"AT+GSNW",			eng_linuxcmd_gsnw},
-    {CMD_GETWIFIADDR, 	"AT+GETWIFIADDR",	eng_linuxcmd_getwifiaddr},
-    {CMD_SETWIFIADDR, 	"AT+SETWIFIADDR",	eng_linuxcmd_setwifiaddr},
-	{CMD_ETSCHECKRESET,	"AT+ETSCHECKRESET",	eng_linuxcmd_getfactoryreset},
-	{CMD_SIMCHK,		"AT+SIMCHK",		eng_linuxcmd_simchk},
-	{CMD_INFACTORYMODE,	"AT+FACTORYMODE",	eng_linuxcmd_infactorymode},
-	{CMD_FASTDEEPSLEEP,	"AT+FASTDEEPSLEEP",	eng_linuxcmd_fastdeepsleep},
-	{CMD_CHARGERTEST,	"AT+CHARGERTEST",	eng_linuxcmd_chargertest},
-    {CMD_SPBTTEST,		"AT+SPBTTEST",		eng_linuxcmd_bteutmode},
-    {CMD_SPWIFITEST,	"AT+SPWIFITEST",	eng_linuxcmd_wifieutmode},
-    {CMD_SPGPSTEST,		"AT+SPGPSTEST",		eng_linuxcmd_gpseutmode},
-	{CMD_ATDIAG,		"+SPBTWIFICALI",	eng_linuxcmd_atdiag},
+    {CMD_SENDKEY,        CMD_TO_AP,   	"AT+SENDKEY",		eng_linuxcmd_keypad},
+    {CMD_GETICH,         CMD_TO_AP,	    "AT+GETICH?",		eng_linuxcmd_getich},
+    {CMD_ETSRESET,       CMD_TO_AP, 	"AT+ETSRESET",		eng_linuxcmd_factoryreset},
+    {CMD_RPOWERON,       CMD_TO_AP,   	"AT+RPOWERON",		eng_linuxcmd_rpoweron},
+    {CMD_GETVBAT,        CMD_TO_AP, 	"AT+GETVBAT",		eng_linuxcmd_vbat},
+    {CMD_STOPCHG,        CMD_TO_AP, 	"AT+STOPCHG",		eng_linuxcmd_stopchg},
+    {CMD_TESTMMI,        CMD_TO_AP, 	"AT+TESTMMI",		eng_linuxcmd_mmitest},
+    {CMD_BTTESTMODE,     CMD_TO_AP,	    "AT+BTTESTMODE",	eng_linuxcmd_bttest},
+    {CMD_GETBTADDR,      CMD_TO_AP, 	"AT+GETBTADDR",		eng_linuxcmd_getbtaddr},
+    {CMD_SETBTADDR,      CMD_TO_AP, 	"AT+SETBTADDR",		eng_linuxcmd_setbtaddr},
+    {CMD_GSNR,           CMD_TO_AP, 	"AT+GSNR",		    eng_linuxcmd_gsnr},
+    {CMD_GSNW,           CMD_TO_AP, 	"AT+GSNW",	     	eng_linuxcmd_gsnw},
+    {CMD_GETWIFIADDR,    CMD_TO_AP, 	"AT+GETWIFIADDR",	eng_linuxcmd_getwifiaddr},
+    {CMD_SETWIFIADDR,    CMD_TO_AP, 	"AT+SETWIFIADDR",	eng_linuxcmd_setwifiaddr},
+    {CMD_ETSCHECKRESET,  CMD_TO_AP,	    "AT+ETSCHECKRESET",	eng_linuxcmd_getfactoryreset},
+    {CMD_SIMCHK,         CMD_TO_AP,	    "AT+SIMCHK",		eng_linuxcmd_simchk},
+    {CMD_INFACTORYMODE,  CMD_TO_AP,	    "AT+FACTORYMODE",	eng_linuxcmd_infactorymode},
+    {CMD_FASTDEEPSLEEP,  CMD_TO_APCP,	"AT+SYSSLEEP",	eng_linuxcmd_fastdeepsleep},
+    {CMD_CHARGERTEST,    CMD_TO_AP,	    "AT+CHARGERTEST",	eng_linuxcmd_chargertest},
+    {CMD_SPBTTEST,       CMD_TO_AP,	    "AT+SPBTTEST",		eng_linuxcmd_bteutmode},
+    {CMD_SPWIFITEST,     CMD_TO_AP,	    "AT+SPWIFITEST",	eng_linuxcmd_wifieutmode},
+    {CMD_SPGPSTEST,      CMD_TO_AP,	    "AT+SPGPSTEST",		eng_linuxcmd_gpseutmode},
+    {CMD_ATDIAG,         CMD_TO_AP,	    "+SPBTWIFICALI",	eng_linuxcmd_atdiag},
 
 };
 
@@ -105,13 +107,21 @@ int eng_at2linux(char *buf)
 	int i;
 
     for (i = 0 ; i < (int)NUM_ELEMS(eng_linuxcmd) ; i++) {
-        if (strstr(buf, eng_linuxcmd[i].name)!=NULL) {
+        if (strcasestr(buf, eng_linuxcmd[i].name)!=NULL) {
 			ENG_LOG("eng_at2linux %s",eng_linuxcmd[i].name);
             return i;
         }
     }
 
     return ret;
+}
+
+eng_cmd_type eng_cmd_get_type(int cmd)
+{
+	if (cmd <= NUM_ELEMS(eng_linuxcmd))
+		return eng_linuxcmd[cmd].type;
+	else
+		return CMD_INVALID_TYPE;
 }
 
 int eng_linuxcmd_hdlr(int cmd, char *req, char* rsp)
@@ -640,49 +650,13 @@ int eng_linuxcmd_infactorymode(char *req, char *rsp)
 #define DEEP_WAIT_TIME 15
 void *thread_fastsleep(void *para)
 {
-    FILE *tfp;
-    long uptime = 0;
-    int wait_time = 0;
-    char uptime_path[] = "/proc/uptime";
-
+     ALOGE("##: delay 3 seconds to wait AT command has been sent to modem...\n");
     sleep(3);
-    ALOGE("##: Going fastdeep, please unplug USB cable within 3 secconds......\n");
-    ALOGE("##: Going fastdeep, please unplug USB cable within 3 secconds......\n");
-    ALOGE("##: Going fastdeep, please unplug USB cable within 3 secconds......\n");
-    sleep(1);
- 
-    if ((tfp = fopen(uptime_path, "r")) != NULL) {
-        if (fscanf(tfp, "%ld", &uptime) != 1) {
-            ALOGE("##: fscanf() failed!\n");
-            uptime = 0;
-        }
-        fclose(tfp);
-    }
-    else {
-        ALOGE("##: Can't %s for getting uptime!\n", uptime_path);
-    }
-    if (uptime == 0)  {
-        ALOGE("##: Invalid uptime value, sleep 5 seconds....\n");
-        sleep(5);
-    }
-    else {
-        ALOGE("##: uptime = %ld.\n", uptime);
-        wait_time = DEEP_WAIT_TIME - uptime;
-        if (wait_time > 0)  {
-            ALOGE("##: Wait until all modules are ready...\n");
-            sleep(wait_time);
-        }
-    }
-
-    while (1) {
-        //set_screen_state(1);
-        ALOGE("##: Going to sleep mode!\n");
-        sleep(1);
-        backlight_off();
-        //set_screen_state(0);
-        ALOGE("##: Waiting for a while...\n");
-        sleep(6);
-    }
+    ALOGE("##: Going to sleep mode!\n");
+    turnoff_lcd_backlight();
+    set_screen_state(0);
+    ALOGE("##: Waiting for a while...\n");
+	return NULL;
 }
 
 int eng_linuxcmd_fastdeepsleep(char *req, char *rsp)
@@ -690,6 +664,9 @@ int eng_linuxcmd_fastdeepsleep(char *req, char *rsp)
     pthread_t thread_id;
     int ret;
 
+
+
+#if 1
     ret = pthread_create(&thread_id, NULL, thread_fastsleep, NULL);
     if (0 != ret) {
         ALOGE("##: Can't create thread[thread_fastsleep]!\n");
@@ -699,6 +676,7 @@ int eng_linuxcmd_fastdeepsleep(char *req, char *rsp)
         ALOGE("##: Ccreate thread[thread_fastsleep] sucessfully!\n");
         sprintf(rsp, "%s%s", SPRDENG_OK, ENG_STREND);
     }
+#endif
     return 0;
 }
 

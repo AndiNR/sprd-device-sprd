@@ -43,13 +43,21 @@ typedef enum{
 }ENG_CMD;
 
 
+typedef enum{
+	CMD_INVALID_TYPE,
+	CMD_TO_AP, /* handled by AP */
+	CMD_TO_APCP /* handled by AP and CP */
+}eng_cmd_type;
+
 struct eng_linuxcmd_str{
 	int index;
+	eng_cmd_type type;
 	char *name;
 	int (*cmd_hdlr)(char *, char *);
 };
 
 int eng_at2linux(char *buf);
 int eng_linuxcmd_hdlr(int cmd, char *req, char* rsp);
+eng_cmd_type eng_cmd_get_type(int cmd);
 
 #endif

@@ -155,6 +155,7 @@ LOCAL_SRC_FILES     := eng_pcclient.c  \
 			engopt.c \
 			eng_sqlite.c \
 			crc16.c \
+			power.c \
 			eng_attok.c \
 			eng_diag.c \
 			vlog.c \

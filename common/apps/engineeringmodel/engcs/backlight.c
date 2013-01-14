@@ -114,6 +114,11 @@ void backlight_off(void)
     eng_keybacklight_test(0);
 }
 
+int turnoff_lcd_backlight(void)
+{
+     system("echo 0 >/sys/devices/platform/sprd_backlight/backlight/sprd_backlight/brightness");
+     return 0;
+}
 
 
 void backlight_init(void)
