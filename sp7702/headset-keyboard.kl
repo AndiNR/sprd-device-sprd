@@ -3,6 +3,5 @@ key 8     VOLUME_DOWN       WAKE
 key 24    VOLUME_UP         WAKE
 key 9     CAMERA
 key 107   ENDCALL           WAKE
-key 223   CALL              WAKE
-key 226   HEADSETHOOK       WAKE
+key 226   CALL              WAKE
 key 139   MENU              WAKE
