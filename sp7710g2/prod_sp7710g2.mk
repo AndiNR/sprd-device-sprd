@@ -15,7 +15,7 @@
 #
 
 TARGET_PLATFORM := sc8810
-TARGET_BOARD := sp7710g
+TARGET_BOARD := sp7710g2
 BOARDDIR := device/sprd/$(TARGET_BOARD)
 
 DEVICE_PACKAGE_OVERLAYS := $(BOARDDIR)/overlay
@@ -67,9 +67,9 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/telephony.mk)
 
 # Overrides
-PRODUCT_NAME := sp7710g
+PRODUCT_NAME := sp7710g2
 PRODUCT_DEVICE := $(TARGET_BOARD)
-PRODUCT_MODEL := sp7710g
+PRODUCT_MODEL := sp7710g2
 PRODUCT_BRAND := Spreadtrum
 PRODUCT_MANUFACTURER := Spreadtrum
 

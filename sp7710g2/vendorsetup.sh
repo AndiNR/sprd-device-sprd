@@ -14,4 +14,4 @@
 # limitations under the License.
 #
 
-add_lunch_combo sp7710g-userdebug
+add_lunch_combo sp7710g2-userdebug

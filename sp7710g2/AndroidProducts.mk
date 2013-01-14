@@ -14,5 +14,5 @@
 # limitations under the License.
 #
 
-PRODUCT_MAKEFILES := $(LOCAL_DIR)/prod_sp7710g.mk
+PRODUCT_MAKEFILES := $(LOCAL_DIR)/prod_sp7710g2.mk
 
