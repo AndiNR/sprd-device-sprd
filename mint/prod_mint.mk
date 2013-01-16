@@ -37,7 +37,9 @@ PRODUCT_PACKAGES := \
 	VoiceDialer \
 	MsmsPhone \
     	framework2 \
-	Settings
+	Settings \
+        MsmsStk \
+        Stk1
 
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \
