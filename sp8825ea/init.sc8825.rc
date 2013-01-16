@@ -29,6 +29,8 @@ on post-fs-data
 
 on boot
     chown system system /sys/class/backlight/sprd_backlight/brightness
+    insmod /system/lib/modules/ft5306_ts.ko
+    insmod /system/lib/modules/bcmdhd.ko
 
     chown system system /sys/class/compass/akm8975/enable_acc
     chown system system /sys/class/compass/akm8975/enable_mag
