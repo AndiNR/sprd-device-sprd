@@ -18,6 +18,7 @@
 #endif
 #define LOG_TAG 			"BTWIFIMAC"
 
+#define MAC_ERROR_EX			":::::"
 #define MAC_ERROR			"FF:FF:FF:FF:FF:FF"
 #define WIFI_MAC_FILE		"/data/wifimac.txt"
 #define BT_MAC_FILE			"/data/btmac.txt"
@@ -187,7 +188,7 @@ static int read_btwifimac_from_modem(char *btmac, char *wifimac)
 	}
 
 	get_macaddress(btmac, cmdbuf, BT_MAC_ADDR);
-	if(strstr(btmac, MAC_ERROR)!=NULL)
+	if((strstr(btmac, MAC_ERROR)!=NULL)||(strstr(btmac, MAC_ERROR_EX)!= NULL))
 		bt_ok = 0;
 
 	ALOGD("===========WIFI MAC===========");
@@ -209,10 +210,11 @@ static int read_btwifimac_from_modem(char *btmac, char *wifimac)
 	}
 
 	get_macaddress(wifimac, cmdbuf, WIFI_MAC_ADDR);
-	if(strstr(wifimac, MAC_ERROR)!=NULL)
+	if((strstr(wifimac, MAC_ERROR)!=NULL)||(strstr(wifimac, MAC_ERROR_EX)!= NULL))
 		wifi_ok = 0;
 
 	engapi_close(fd);
+	ALOGD("bt_ok:%d wifi_ok:%d \n",bt_ok,wifi_ok);
 	return bt_ok & wifi_ok;
 }
 
