@@ -211,27 +211,27 @@ public class SlogAction {
 	 * keyName){ int maxLength =
 	 * (keyName.equals(GENERALKEY)||keyName.equals(STORAGEKEY
 	 * ))?1:LENGTHOPTIONSTREAM; Options = new String[maxLength];
-	 * 
+	 *
 	 * StringBuilder conf = null; char result[] = new char[20];
-	 * 
+	 *
 	 * try{ FileInputStream freader = new FileInputStream(SLOG_CONF_LOCATION);
 	 * byte[] buffer = new byte[freader.available()]; freader.read(buffer); conf
 	 * = new StringBuilder(EncodingUtils.getString(buffer, "UTF-8"));
 	 * freader.close();
-	 * 
+	 *
 	 * } catch (Exception e) {
 	 * System.err.println("--->   GetState has problems, logs are followed:<---"
 	 * ); System.err.println(e); return ; } int counter = conf.indexOf(keyName);
 	 * int jump = keyName.length();
-	 * 
+	 *
 	 * for(int i=0 ;i<maxLength;){ conf.getChars( counter+jump,
 	 * conf.indexOf(i==maxLength-1?"\n":"\t",counter+jump+1), result, 0);
-	 * 
+	 *
 	 * //
 	 * System.out.println("i="+i+" counter="+counter+"jump="+jump+"result="+String
 	 * .valueOf(result).trim()); Options[i] = String.valueOf(result).trim();
 	 * counter += jump; jump = Options[i++].length()+1;
-	 * 
+	 *
 	 * } } /*<-----------------------New Feature
 	 */
 
@@ -455,7 +455,10 @@ public class SlogAction {
 		byte[] buffer;
 		String conf;
 		try {
-			FileInputStream freader = new FileInputStream(APPFILES + keyName);
+            /*Modify 20130117 Spreadst of 117116 the slog and snap is not checked start*/
+            //FileInputStream freader = new FileInputStream(APPFILES + keyName);
+            FileInputStream freader = contextMainActivity.openFileInput(keyName);
+            /*Modify 20130117 Spreadst of 117116 the slog and snap is not checked start*/
 
 			buffer = new byte[freader.available()];
 			freader.read(buffer);
@@ -506,13 +509,13 @@ public class SlogAction {
 		Message msg = new Message();
 		msg.what = MESSAGE_CLEAR_START;
 		LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
-		
+
 		ClearThread clearCommand = new ClearThread();
 		Thread clearThread = new Thread(null, clearCommand, "clearThread");
 		clearThread.start();
-		
+
 	}
-	
+
 	private static void runClearLog(){
 		Message msg = new Message();
 		msg.what = MESSAGE_CLEAR_END;
@@ -537,14 +540,14 @@ public class SlogAction {
 		}
 		LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
 	}
-	
-	
+
+
 	/** Make logs into package. **/
 	private static void runDump(String filename) {
 		final String NowMethodName = "SlogUIDump";
 		Message msg = new Message();
 		msg.what = MESSAGE_DUMP_STOP;
-		
+
 		if (filename == null) {
 			Log.e(NowMethodName, "Do NOT give me null");
 			LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
@@ -571,7 +574,7 @@ public class SlogAction {
 		}
 		LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
 	}
-	
+
 	public static void Dump(String filename){
 		if(filename==null){
 			Log.e("SlogUIDump()", "Do not give nulll");
@@ -672,7 +675,7 @@ public class SlogAction {
 		}
 
 	}
-	
+
 	private static class DumpThread implements Runnable {
 		String filename;
 		public DumpThread(String fname) {
@@ -687,7 +690,7 @@ public class SlogAction {
 				return;
 			}
 			runDump(filename);
-			
+
 		}
 	}
 	private static class ClearThread implements Runnable{
