@@ -47,6 +47,8 @@ extern "C" {
 #endif
 
 //#define USE_ION_MEM		1
+#define CMCC_POWER_OPT          1
+
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(*x))
 #define PRINT_TIME 0
@@ -116,6 +118,22 @@ namespace android {
     static int reassoc(qdsp_module_type module);
     //static void cb_rex_signal_ready(void);
 
+#ifdef CMCC_POWER_OPT
+#include<fcntl.h>
+static int flag_lower_emc_freq = 0;
+static void lower_emc_freq(char flag)
+{
+	int fp_emc_freq = -1;
+	fp_emc_freq = open("/sys/emc/emc_freq", O_WRONLY);
+	if (fp_emc_freq > 0) {
+		write(fp_emc_freq, &flag, sizeof(flag));
+		close(fp_emc_freq);
+		ALOGV("lower_emc_freq: %c \n", flag);
+	} else {
+		ALOGV("lower_emc_freq: fp_emc_freq open failed \n");
+	}
+}
+#endif
 
 gralloc_module_t const* SprdCameraHardware::mGrallocHal;
 
@@ -595,6 +613,10 @@ status_t SprdCameraHardware::startPreviewInternal()
         if (mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) {
 		SET_PARM(CAMERA_PARM_PREVIEW_MODE, CAMERA_PREVIEW_MODE_MOVIE);
         } else {
+#ifdef CMCC_POWER_OPT
+		flag_lower_emc_freq = 1;
+		lower_emc_freq('1');
+#endif
 		SET_PARM(CAMERA_PARM_PREVIEW_MODE, CAMERA_PREVIEW_MODE_SNAPSHOT);
         }
 
@@ -661,6 +683,13 @@ status_t SprdCameraHardware::startPreviewInternal()
 void SprdCameraHardware::stopPreviewInternal()
 {
         ALOGV("stopPreviewInternal E");
+
+#ifdef CMCC_POWER_OPT
+	if (flag_lower_emc_freq) {
+		lower_emc_freq('0');
+		flag_lower_emc_freq = 0;
+	}
+#endif
 
         if (mCameraState != QCS_PREVIEW_IN_PROGRESS) {
                 ALOGE("Preview not in progress!");
