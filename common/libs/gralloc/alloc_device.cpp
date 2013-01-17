@@ -415,6 +415,11 @@ static int alloc_device_alloc(alloc_device_t* dev, int w, int h, int format, int
 	{
 		return -EINVAL;
 	}
+    
+	if(w < 1 || h < 1)
+	{
+		return -EINVAL;
+	}
 
 	size_t size;
 	size_t stride;
