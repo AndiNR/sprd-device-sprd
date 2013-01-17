@@ -262,12 +262,12 @@ static void mac_rand(char *btmac, char *wifimac)
 			ptr = strchr(buf, ';');
 			if(ptr != NULL) {
 
-				if((strstr(wifimac, MAC_ERROR)!=NULL)||strlen(wifimac)==0)
+				if((strstr(wifimac, MAC_ERROR)!=NULL)||(strstr(wifimac, MAC_ERROR_EX)!=NULL)||(strlen(wifimac)==0))
 					strcpy(wifimac, ptr+1);
 
 				*ptr = '\0';
 
-				if((strstr(btmac, MAC_ERROR)!=NULL)||strlen(btmac)==0)
+				if((strstr(btmac, MAC_ERROR)!=NULL)||(strstr(btmac, MAC_ERROR_EX)!=NULL)||(strlen(btmac)==0))
 					strcpy(btmac, buf);
 
 				ALOGD("%s: read btmac=%s, wifimac=%s",__FUNCTION__, btmac, wifimac);
