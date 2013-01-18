@@ -1,5 +1,11 @@
 LOCAL_PATH := $(call my-dir)
 
+$(call add-radio-file,modem_bins/modem.bin)
+$(call add-radio-file,modem_bins/nvitem.bin)
+$(call add-radio-file,modem_bins/dsp.bin)
+$(call add-radio-file,modem_bins/vmjaluna.bin)
+
+
 # Compile U-Boot
 ifneq ($(strip $(TARGET_NO_BOOTLOADER)),true)
 
