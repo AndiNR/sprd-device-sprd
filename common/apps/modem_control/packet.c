@@ -471,7 +471,7 @@ int  send_data_message(int fd,char *buffer,int data_size,int flag)
 			data = (char *)raw_buffer;			
 		}
                	head.type = (data[0]<<8)|data[1];
-                if(head.type == BSL_REP_ACK)
+                if((head.type == BSL_REP_ACK)||(head.type == 0))
 		{
 			//printf(">>>>>>>ACK DATA\n");
                         return 0;
