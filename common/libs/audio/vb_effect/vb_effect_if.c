@@ -141,7 +141,7 @@ static int s_cur_devices = 0;
 
 extern int get_snd_card_number(const char *card_name);
 //get audio nv struct
-static AUDIO_TOTAL_T *get_aud_paras(uint32_t aud_dev_mode);
+static AUDIO_TOTAL_T *get_aud_paras();
 static int do_parse(AUDIO_TOTAL_T *aud_ptr, unsigned int size);
 
 static int do_parse(AUDIO_TOTAL_T *audio_params_ptr, unsigned int params_size)
@@ -223,11 +223,11 @@ int create_vb_effect_params(void)
     ALOGI("create_vb_effect_params...start");
 
     //read audio params from source file.
-    aud_params_ptr = get_aud_paras(0);
+    aud_params_ptr = get_aud_paras();
 
-    ret = do_parse(aud_params_ptr, 4*sizeof(AUDIO_TOTAL_T));
     //close fd
     if (aud_params_ptr) {
+        ret = do_parse(aud_params_ptr, 4*sizeof(AUDIO_TOTAL_T));
         munmap((void *)aud_params_ptr, 4*sizeof(AUDIO_TOTAL_T));
         close(fd_src_paras);
     }
@@ -236,15 +236,9 @@ int create_vb_effect_params(void)
     return ret;
 }
 
-static AUDIO_TOTAL_T *get_aud_paras(uint32_t aud_dev_mode)
+static AUDIO_TOTAL_T *get_aud_paras()
 {
     AUDIO_TOTAL_T * aud_params_ptr = NULL;
-
-    ALOGI("aud_dev_mode=%d", aud_dev_mode);
-    if (aud_dev_mode > VBC_EFFECT_PROFILE_CNT) {
-        ALOGE("aud_dev_mode(%d) overflow.", aud_dev_mode);
-        return NULL;
-    }
 
     fd_src_paras = open(ENG_AUDIO_PARA_DEBUG, O_RDONLY);
     if (-1 == fd_src_paras) {
@@ -263,7 +257,7 @@ static AUDIO_TOTAL_T *get_aud_paras(uint32_t aud_dev_mode)
         return NULL;
     }
 
-    return (aud_params_ptr + aud_dev_mode);
+    return aud_params_ptr;
 }
 
 void vb_effect_config_mixer_ctl(struct mixer_ctl *eq_update, struct mixer_ctl *profile_select)

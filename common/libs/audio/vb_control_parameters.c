@@ -267,15 +267,9 @@ static int32_t GetAudio_mode_number_from_device(struct tiny_audio_device *adev)
     return lmode;
 }
 
-static AUDIO_TOTAL_T *GetAudio_total_para_from_nv(int32_t aud_dev_mode)
+static AUDIO_TOTAL_T *GetAudio_total_para_from_nv()
 {
     AUDIO_TOTAL_T * aud_params_ptr = NULL;
-
-    ALOGW("%s, cp mode:%d", __func__,aud_dev_mode);
-    if (aud_dev_mode > 4) {
-        ALOGE("%s, cp mode(%d) overflow.", __func__,aud_dev_mode);
-        return NULL;
-    }
 
     fd_audio_para = open(ENG_AUDIO_PARA_DEBUG, O_RDONLY);
     if (-1 == fd_audio_para) {
@@ -291,7 +285,7 @@ static AUDIO_TOTAL_T *GetAudio_total_para_from_nv(int32_t aud_dev_mode)
         ALOGE("%s, mmap failed %s",__func__,strerror(errno));
         return NULL;
     }
-    return (aud_params_ptr + aud_dev_mode);
+    return aud_params_ptr;
 }
 
 static int  GetAudio_pga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *aud_params_ptr, pga_gain_nv_t *pga_gain_nv, uint32_t vol_level)
@@ -324,13 +318,13 @@ static int GetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
     AUDIO_TOTAL_T * aud_params_ptr = NULL;
     char * dev_name = NULL;
     lmode = GetAudio_mode_number_from_device(adev);
-    aud_params_ptr = GetAudio_total_para_from_nv(lmode);
+    aud_params_ptr = GetAudio_total_para_from_nv();
     if(NULL == aud_params_ptr){
         close(fd_audio_para);
         return -1;
     }
     //get music gain from nv
-    ret = GetAudio_pga_nv(adev,aud_params_ptr,pga_gain_nv,vol_level);
+    ret = GetAudio_pga_nv(adev, &aud_params_ptr[lmode], pga_gain_nv, vol_level);
     if(ret < 0){
         munmap((void *)aud_params_ptr, 4*sizeof(AUDIO_TOTAL_T));
         close(fd_audio_para);
