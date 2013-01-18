@@ -2744,8 +2744,13 @@ ALOGV("start to getCameraStateStr.");
                     case CAMERA_EXIT_CB_FAILED: {
                         ALOGE("camera cb: autofocus failed");
                         Mutex::Autolock lock(&obj->mStateLock);
-                        if (obj->mMsgEnabled & CAMERA_MSG_FOCUS)
+						ALOGV("camera cb: autofocus failed get locked");
+                        if (obj->mMsgEnabled & CAMERA_MSG_FOCUS){
+							ALOGV("camera cb: autofocus failed mNotify_cb start");
                         	obj->mNotify_cb(CAMERA_MSG_FOCUS, 0, 0, obj->mUser);
+							ALOGV("camera cb: autofocus failed mNotify_cb end");
+                        }
+						ALOGV("camera cb: autofocus failed done");
                     }
                         break;
                     default:
