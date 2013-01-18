@@ -1,7 +1,5 @@
-
 MALI := libUMP libEGL_mali.so libGLESv1_CM_mali.so libGLESv2_mali.so libMali.so ump.ko mali.ko
-
-
+INVENSENSE := libmllite.so libmplmpu.so libinvensense_hal
 
 SPRD_FM_APP := FMPlayer
 
@@ -72,7 +70,8 @@ PRODUCT_PACKAGES += \
 	audio_policy.$(TARGET_PLATFORM) \
 	tinymix \
 	libvbeffect \
-	sensors.$(TARGET_BOARD)  \
+        sensors.$(TARGET_PLATFORM) \
+        $(INVENSENSE) \
 	$(MALI)
 
 PRODUCT_PACKAGES += \
