@@ -277,8 +277,8 @@ int at_cmd_audio_loop(int enable, int mode, int volume,int loopbacktype,int voic
     char r_buf[60];
     char buf[89];
     char *at_cmd = buf;
-	if(volume >15) {
-		volume = 15;
+	if(volume >9) {
+		volume = 9;
 	}
     ALOGW("audio at_cmd_audio_loop enable:%d,mode:%d,voluem:%d,loopbacktype:%d,voiceformat:%d,delaytime:%d",enable,mode,volume,loopbacktype,voiceformat,delaytime);
 
