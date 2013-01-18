@@ -32,6 +32,11 @@ else
 UBOOT_DEFCONFIG := sp8810ea_native
 endif
 
+# Enable the optimized DEX
+ifneq ($(filter user, $(TARGET_BUILD_VARIANT)),)
+WITH_DEXPREOPT=true
+endif
+
 # config kernel
 TARGET_NO_KERNEL := false
 ifeq ($(TARGET_VLX_ENABLE), true)
