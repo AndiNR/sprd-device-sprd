@@ -340,7 +340,7 @@ int  send_start_message(int fd,int size,unsigned long addr,int flag)
 			data = (char *)raw_buffer;			
 		}
                	head.type = (data[0]<<8)|data[1];
-                if(head.type == BSL_REP_ACK)
+		if((head.type == BSL_REP_ACK)||(head.type == 0))
     		{
 			printf(">>>>>>>ACK DATA_START\n");
                         return 0;
@@ -405,7 +405,7 @@ int  send_end_message(int fd,int flag)
 			data = (char *)raw_buffer;			
 		}
                	head.type = (data[0]<<8)|data[1];
-                if(head.type == BSL_REP_ACK)
+		if((head.type == BSL_REP_ACK)||(head.type == 0))
 		{
 			printf(">>>>>>>ACK DATA_END\n");
                         return 0;
@@ -533,7 +533,7 @@ int  send_exec_message(int fd,unsigned long addr,int flag)
 			data = (char *)raw_buffer;			
 		}
                	head.type = (data[0]<<8)|data[1];
-                if(head.type == BSL_REP_ACK)
+		if((head.type == BSL_REP_ACK)||(head.type == 0))
 		{
 			printf(">>>>>>>ACK EXEC\n");
                         return 0;
