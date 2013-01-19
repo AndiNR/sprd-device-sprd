@@ -19,10 +19,47 @@ LOCAL_PATH := $(call my-dir)
 # hw/<OVERLAY_HARDWARE_MODULE_ID>.<ro.product.board>.so
 include $(CLEAR_VARS)
 
+ifeq ($(strip $(USE_SPRD_HWCOMPOSER)),true)
+
+LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
+LOCAL_SHARED_LIBRARIES := liblog libEGL libbinder libutils
+LOCAL_SRC_FILES := hwcomposer.cpp
+LOCAL_C_INCLUDES := \
+	$(LOCAL_PATH)/../gralloc \
+	$(LOCAL_PATH)/../mali/src/ump/include \
+	$(TARGET_OUT_INTERMEDIATES)/KERNEL/usr/include/video
+LOCAL_MODULE := hwcomposer.$(TARGET_BOARD_PLATFORM)
+LOCAL_CFLAGS:= -DLOG_TAG=\"SPRDhwcomposer\"
+
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
+	LOCAL_CFLAGS += -DSCAL_ROT_TMP_BUF
+
+	LOCAL_C_INCLUDES += $(LOCAL_PATH)/../libcamera/sc8825/inc
+
+	LOCAL_SRC_FILES += sc8825/scale_rotate.c
+
+	LOCAL_CFLAGS += -D_PROC_OSD_WITH_THREAD
+
+	LOCAL_CFLAGS += -D_DMA_COPY_OSD_LAYER
+
+	LOCAL_CFLAGS += -D_ALLOC_OSD_BUF
+endif
+
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
+	LOCAL_SRC_FILES += sc8810/scale_rotate.c
+
+	LOCAL_CFLAGS += -D_SUPPORT_SYNC_DISP
+endif
+
+else #android hwcomposer
+
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 LOCAL_SHARED_LIBRARIES := liblog libEGL
-LOCAL_SRC_FILES := hwcomposer.cpp
+LOCAL_SRC_FILES := android/hwcomposer.cpp
 LOCAL_MODULE := hwcomposer.$(TARGET_BOARD_PLATFORM)
 LOCAL_CFLAGS:= -DLOG_TAG=\"hwcomposer\"
+
+endif
+
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_SHARED_LIBRARY)

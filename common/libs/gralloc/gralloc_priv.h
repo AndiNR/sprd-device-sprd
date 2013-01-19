@@ -86,6 +86,7 @@ struct private_handle_t
 		PRIV_FLAGS_USES_UMP    = 0x00000002,
 		PRIV_FLAGS_USES_ION    = 0x00000004,
 		PRIV_FLAGS_USES_PHY	 = 0x00000008,
+		PRIV_FLAGS_NOT_OVERLAY	 = 0x00000010,
 	};
 
 	enum
@@ -232,7 +233,7 @@ struct private_handle_t
 
 	bool usesPhysicallyContiguousMemory()
 	{
-		return (flags & (PRIV_FLAGS_FRAMEBUFFER)) ? true : false;
+		return (flags & (PRIV_FLAGS_FRAMEBUFFER|PRIV_FLAGS_USES_PHY)) ? true : false;
 	}
 
 	static int validate(const native_handle* h)
