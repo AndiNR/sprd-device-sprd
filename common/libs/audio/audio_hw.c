@@ -880,6 +880,14 @@ static int do_output_standby(struct tiny_stream_out *out)
         if(out->pcm_vplayback) {
             pcm_close(out->pcm_vplayback);
             out->pcm_vplayback = NULL;
+            if(out->buffer_vplayback) {
+                free(out->buffer_vplayback);
+                out->buffer_vplayback = 0;
+            }
+            if(out->resampler_vplayback) {
+                release_resampler(out->resampler_vplayback);
+                out->resampler_vplayback = 0;
+            }
         }
         /* stop writing to echo reference */
         if (out->echo_reference != NULL) {
@@ -2058,16 +2066,16 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         memcpy(&in->config, &pcm_config_mm_ul, sizeof(pcm_config_mm_ul));
     in->config.channels = channel_count;
 
-    in->buffer = malloc(in->config.period_size *
-                        audio_stream_frame_size(&in->stream.common));
-    if (!in->buffer) {
-        ret = -ENOMEM;
-        goto err;
-    }
-
     if (in->requested_rate != in->config.rate) {
         in->buf_provider.get_next_buffer = get_next_buffer;
         in->buf_provider.release_buffer = release_buffer;
+
+        in->buffer = malloc(in->config.period_size *
+                audio_stream_frame_size(&in->stream.common));
+        if (!in->buffer) {
+            ret = -ENOMEM;
+            goto err;
+        }
 
         ret = create_resampler(in->config.rate,
                                in->requested_rate,
@@ -2091,6 +2099,8 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
 err:
     BLUE_TRACE("Failed(%d), adev_open_input_stream.", ret);
+    if (in->buffer)
+        free(in->buffer);
     if (in->resampler)
         release_resampler(in->resampler);
 
@@ -2466,6 +2476,7 @@ static int init_rec_process(int rec_mode, int sample_rate)
     }
     aud_params_ptr = (AUDIO_TOTAL_T *)mmap(0, 4*sizeof(AUDIO_TOTAL_T),PROT_READ,MAP_SHARED,audio_fd,0);
     if ( NULL == aud_params_ptr ) {
+        close(audio_fd);
         ALOGE("mmap failed %s",strerror(errno));
         return 0;
     }
