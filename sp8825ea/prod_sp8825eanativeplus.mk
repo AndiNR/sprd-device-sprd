@@ -57,7 +57,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
 	ro.operator.version=specA
 	
 PRODUCT_COPY_FILES := \
-	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \
+	$(BOARDDIR)/sprd-keypad_kernel3.4.5.kl:system/usr/keylayout/sprd-keypad.kl \
 	$(BOARDDIR)/sec_touchscreen.idc:system/usr/idc/sec_touchscreen.idc \
 	$(BOARDDIR)/ft5x0x_ts.idc:system/usr/idc/ft5x0x_ts.idc
 
