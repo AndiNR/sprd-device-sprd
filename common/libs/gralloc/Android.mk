@@ -54,6 +54,10 @@ LOCAL_CFLAGS:= -DLOG_TAG=\"gralloc.$(TARGET_BOARD_PLATFORM)\"
 # -DGRALLOC_32_BITS -DSTANDARD_LINUX_SCREEN
 endif
 
+ifeq ($(strip $(USE_UI_OVERLAY)),true)
+        LOCAL_CFLAGS += -DUSE_UI_OVERLAY
+endif
+
 LOCAL_SRC_FILES := \
 	gralloc_module.cpp \
 	alloc_device.cpp \
