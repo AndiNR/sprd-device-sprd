@@ -674,6 +674,7 @@ LOCAL void Sensor_SetExportInfo(SENSOR_EXP_INFO_T * exp_info_ptr)
 	SENSOR_PRINT("SENSOR: Sensor_SetExportInfo.\n");
 
 	SENSOR_MEMSET(exp_info_ptr, 0x00, sizeof(SENSOR_EXP_INFO_T));
+	exp_info_ptr->name= sensor_info_ptr->name;
 	exp_info_ptr->image_format = sensor_info_ptr->image_format;
 	exp_info_ptr->image_pattern = sensor_info_ptr->image_pattern;
 

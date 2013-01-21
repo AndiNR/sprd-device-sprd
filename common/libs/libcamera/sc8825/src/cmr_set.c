@@ -700,7 +700,8 @@ int camera_set_ctrl(camera_parm_type id,
 		&& (CAMERA_PARM_FOCAL_LENGTH != id)
 		&& (CAMERA_PARM_ISO != id)
 		&& (CAMERA_PARM_SENSOR_ROTATION != id)
-		&& (CAMERA_PARM_ORIENTATION != id)) {
+		&& (CAMERA_PARM_ORIENTATION != id)
+		&& (CAMERA_PARM_THUMBCOMP != id)) {
 		return ret;
 	}
 
@@ -847,7 +848,11 @@ int camera_set_ctrl(camera_parm_type id,
 					CMR_RTN_IF_ERR(ret);
 				}
 				skip_mode = IMG_SKIP_HW;
-				skip_number = 0;
+				if(SCENE_MODE_NIGHT == cxt->cmr_set.scene_mode){
+					skip_number = 3;
+				} else {
+					skip_number = 0;
+				}
 				CMR_RTN_IF_ERR(ret);
 				if (after_set) {
 					ret = (*after_set)(RESTART_MIDDLE, skip_mode, skip_number);
@@ -859,6 +864,10 @@ int camera_set_ctrl(camera_parm_type id,
 
 	case CAMERA_PARM_JPEGCOMP:
 		cxt->jpeg_cxt.quality = parm;
+		break;
+
+	case CAMERA_PARM_THUMBCOMP:
+		cxt->jpeg_cxt.thumb_quality = parm;
 		break;
 
 	case CAMERA_PARM_ORIENTATION:

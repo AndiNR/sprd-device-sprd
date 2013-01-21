@@ -38,6 +38,7 @@ static int s_ov5640_gain = 0;
 static int s_capture_shutter = 0;
 static int s_capture_VTS = 0;
 static uint32_t preview_hts;
+LOCAL uint32_t s_is_streamoff = 0;
 LOCAL uint32_t _ov5640_InitExifInfo(void);
 LOCAL uint32_t _ov5640_GetResolutionTrimTab(uint32_t param);
 LOCAL uint32_t _ov5640_PowerOn(uint32_t power_on);
@@ -2526,7 +2527,7 @@ LOCAL uint32_t _ov5640_AutoFocusTrig(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 		usleep(10*1000);
 		reg_value = Sensor_ReadReg(CMD_ACK);
 		i--;
-	} while (0x00 != reg_value);
+	} while ((0x00 != reg_value) && (0 == s_is_streamoff));
 
 	if (SENSOR_SUCCESS == rtn) {
 		reg_value = Sensor_ReadReg(CMD_PARAM4);
@@ -2540,7 +2541,7 @@ LOCAL uint32_t _ov5640_AutoFocusTrig(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 
 LOCAL uint32_t _ov5640_AutoFocusZone(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 {
-	uint32_t i = 200;	// 10 * 100 = 3 seconds
+	uint32_t i = 20;	// 10 * 100 = 3 seconds
 	uint16_t reg_value = 0x00;
 	uint32_t rtn = SENSOR_SUCCESS;
 	SENSOR_EXT_FUN_T ext_param;
@@ -2580,11 +2581,11 @@ LOCAL uint32_t _ov5640_AutoFocusZone(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 				rtn = SENSOR_FAIL;
 				break;
 			}
-			usleep(10*1000);
+			usleep(100*1000);
 			reg_value = Sensor_ReadReg(CMD_ACK);
 			SENSOR_PRINT_HIGH("cycles %d, reg %d", i, reg_value);
 			i--;
-		} while (0x00 != reg_value);
+		} while ((0x00 != reg_value)&&(0 == s_is_streamoff));
 
 		if(SENSOR_SUCCESS == rtn) {
 			reg_value=Sensor_ReadReg(CMD_PARAM4);
@@ -2643,7 +2644,7 @@ LOCAL uint32_t _ov5640_AutoFocusMultiZone(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 		Sensor_WriteReg(CMD_MAIN, zone_num);
 		zone_num++;
 	}
-	i = 200;
+	i = 20;
 	usleep(10*1000);
 
 	Sensor_WriteReg(CMD_ACK, 0x01);
@@ -2656,10 +2657,10 @@ LOCAL uint32_t _ov5640_AutoFocusMultiZone(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 			rtn = SENSOR_FAIL;
 			break;
 		}
-		usleep(10*1000);
+		usleep(100*1000);
 		reg_value = Sensor_ReadReg(CMD_ACK);
 		i--;
-	} while (0x00 != reg_value);
+	} while ((0x00 != reg_value) && (0 == s_is_streamoff));
 
 	if(SENSOR_SUCCESS==rtn)
 	{
@@ -2680,7 +2681,7 @@ LOCAL uint32_t _ov5640_AutoFocusMacro(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 	uint16_t reg_value = 0x00;
 
 	SENSOR_PRINT_HIGH("In");
-
+#if 0
 	Sensor_WriteReg(0x3027, 0x00);
 	Sensor_WriteReg(0x3028, 0xff);
 	Sensor_WriteReg(0x3023, 0x01);
@@ -2707,6 +2708,9 @@ LOCAL uint32_t _ov5640_AutoFocusMacro(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 			rtn=SENSOR_FAIL;
 		}
 	}
+#else
+	Sensor_WriteReg(0x3603,0x3f);
+#endif
 	SENSOR_PRINT_HIGH("Done! rtn = %d", rtn);
 	return rtn;
 }
@@ -7078,6 +7082,7 @@ LOCAL uint32_t _ov5640_StreamOn(uint32_t param)
 	SENSOR_PRINT("Start");
 
 	Sensor_WriteReg(0x3008, 0x02);
+	s_is_streamoff = 0;
 
 	return 0;
 }
@@ -7087,6 +7092,7 @@ LOCAL uint32_t _ov5640_StreamOff(uint32_t param)
 	SENSOR_PRINT("Stop");
 
 	Sensor_WriteReg(0x3008, 0x42);
+	s_is_streamoff = 1;
 
 	return 0;
 }

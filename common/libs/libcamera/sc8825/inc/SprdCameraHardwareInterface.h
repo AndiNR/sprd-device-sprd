@@ -122,6 +122,7 @@ private:
 
 	sprd_camera_memory_t* GetPmem(const char *device_name, int buf_size, int num_bufs);
 	void FreePmem(sprd_camera_memory_t* camera_memory);
+        void FreeFdmem(void);
 	void* get_redisplay_mem(uint32_t size, uint32_t count, uint32_t *phy_addr);
     //SprdCameraHardware();
     //virtual ~SprdCameraHardware();

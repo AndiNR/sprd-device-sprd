@@ -2868,18 +2868,7 @@ LOCAL JPEG_RET_E JPEG_AddExifToMemory(JINF_WEXIF_IN_PARAM_T *in_param_ptr,
     uint32  free_buf_size   = 0;
     JPEG_RET_E  ret         = JPEG_SUCCESS;
 	uint32_t i = 0;
-/*	uint8 *test_1_ptr = NULL;
-	uint8 *test_2_ptr = NULL;
 
-	test_1_ptr = malloc(1736);
-	test_2_ptr = malloc(1736);
-
-	if((test_1_ptr != NULL) && (test_2_ptr != NULL)) {
-		JPEG_PRINT_LOW("test memcpy! before.");
-		memcpy(test_1_ptr,test_2_ptr,1736);
-		JPEG_PRINT_LOW("test memcpy! after.");		
-	}
-*/
     app1_buf_ptr = in_param_ptr->temp_buf_ptr;
     app1_buf_size = in_param_ptr->temp_buf_size;
 

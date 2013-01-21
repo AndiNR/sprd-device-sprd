@@ -424,6 +424,7 @@ typedef enum {
 	CAMERA_PARM_SCENE_MODE,          /* normal, night, snow, action */
 	CAMERA_PARM_CAMERA_ID,
 	CAMERA_PARM_JPEGCOMP,
+	CAMERA_PARM_THUMBCOMP,
 	CAMERA_PARM_ORIENTATION,//wxz20110815: for the phone orientation: landscape and portrait
 	CAMERA_PARM_FOCAL_LENGTH,
 	CAMERA_PARM_SENSOR_ROTATION, /* 0, 90, 180, 270 degrees */
@@ -538,6 +539,8 @@ void camera_call_cb(camera_cb_type cb,
 void *camera_get_client_data(void);
 int camera_set_fd_mem(uint32_t phy_addr, uint32_t vir_addr, uint32_t mem_size);
 int camera_set_change_size(uint32_t cap_width,uint32_t cap_height,uint32_t preview_width,uint32_t preview_height);
+int camera_get_preview_rect(int *rect_x, int *rect_y, int *rect_width, int *rect_height);
+
 #ifdef __cplusplus
 }
 #endif

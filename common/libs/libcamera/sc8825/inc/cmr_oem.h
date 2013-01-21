@@ -160,6 +160,7 @@ struct jpeg_context {
 	uint32_t                 jpeg_state;
 	struct process_status    proc_status;
 	uint32_t                 quality;
+	uint32_t                 thumb_quality;
 	uint32_t                 index;
 	uint32_t                 handle;
 	uint32_t                 set_encode_rotation;
@@ -252,6 +253,7 @@ struct camera_context {
 	/*for preview*/
 	struct img_size          display_size;
 	struct img_size          preview_size;
+	struct img_rect          preview_rect;
 	uint32_t                 preview_fmt;
 	uint32_t                 prev_rot;
 	uint32_t                 prev_rot_index;
@@ -285,6 +287,7 @@ struct camera_context {
 	struct cmr_cap_2_frm     cap_2_mems;
 	pthread_mutex_t          cancel_mutex;
 	uint32_t                 cap_canceled;
+	takepicture_mode         cap_mode;
 	/*for setting*/
 	struct camera_settings   cmr_set;
 	uint32_t                 orientation;

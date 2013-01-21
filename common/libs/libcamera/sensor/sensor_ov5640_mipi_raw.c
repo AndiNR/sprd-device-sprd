@@ -851,7 +851,7 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->awb.win_start.x=0x00;
 	sensor_ptr->awb.win_start.y=0x00;
 	sensor_ptr->awb.win_size.w=40;
-	sensor_ptr->awb.win_size.h=32;
+	sensor_ptr->awb.win_size.h=30;
 	sensor_ptr->awb.r_gain[0]=0xff;
 	sensor_ptr->awb.g_gain[0]=0xff;
 	sensor_ptr->awb.b_gain[0]=0xff;
@@ -879,91 +879,111 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->awb.r_gain[8]=0xff;
 	sensor_ptr->awb.g_gain[8]=0xff;
 	sensor_ptr->awb.b_gain[8]=0xff;
-	sensor_ptr->awb.matrix_zone=0x40;
-	sensor_ptr->awb.cal_zone=0x40;
+	sensor_ptr->awb.cali_zone=0x40;
 	sensor_ptr->awb.target_zone=0x40;
 
+	/*awb cali*/
 	sensor_ptr->awb.cali_num=20;
 
-	sensor_ptr->awb.cali[0].r=145;
-	sensor_ptr->awb.cali[0].g=229;
-	sensor_ptr->awb.cali[0].b=212;
+	sensor_ptr->awb.cali[0].x=140;
+	sensor_ptr->awb.cali[0].yt=241;
+	sensor_ptr->awb.cali[0].yb=212;
 
-	sensor_ptr->awb.cali[1].r=148;
-	sensor_ptr->awb.cali[1].g=233;
-	sensor_ptr->awb.cali[1].b=138;
+	sensor_ptr->awb.cali[1].x=145;
+	sensor_ptr->awb.cali[1].yt=250;
+	sensor_ptr->awb.cali[1].yb=149;
 
-	sensor_ptr->awb.cali[2].r=152;
-	sensor_ptr->awb.cali[2].g=237;
-	sensor_ptr->awb.cali[2].b=131;
+	sensor_ptr->awb.cali[2].x=152;
+	sensor_ptr->awb.cali[2].yt=254;
+	sensor_ptr->awb.cali[2].yb=136;
 
-	sensor_ptr->awb.cali[3].r=156;
-	sensor_ptr->awb.cali[3].g=238;
-	sensor_ptr->awb.cali[3].b=126;
+	sensor_ptr->awb.cali[3].x=157;
+	sensor_ptr->awb.cali[3].yt=254;
+	sensor_ptr->awb.cali[3].yb=130;
 
-	sensor_ptr->awb.cali[4].r=160;
-	sensor_ptr->awb.cali[4].g=234;
-	sensor_ptr->awb.cali[4].b=122;
+	sensor_ptr->awb.cali[4].x=163;
+	sensor_ptr->awb.cali[4].yt=245;
+	sensor_ptr->awb.cali[4].yb=126;
 
-	sensor_ptr->awb.cali[5].r=170;
-	sensor_ptr->awb.cali[5].g=143;
-	sensor_ptr->awb.cali[5].b=121;
+	sensor_ptr->awb.cali[5].x=170;
+	sensor_ptr->awb.cali[5].yt=156;
+	sensor_ptr->awb.cali[5].yb=127;
 
-	sensor_ptr->awb.cali[6].r=174;
-	sensor_ptr->awb.cali[6].g=142;
-	sensor_ptr->awb.cali[6].b=125;
+	sensor_ptr->awb.cali[6].x=175;
+	sensor_ptr->awb.cali[6].yt=157;
+	sensor_ptr->awb.cali[6].yb=130;
 
-	sensor_ptr->awb.cali[7].r=179;
-	sensor_ptr->awb.cali[7].g=146;
-	sensor_ptr->awb.cali[7].b=128;
+	sensor_ptr->awb.cali[7].x=179;
+	sensor_ptr->awb.cali[7].yt=161;
+	sensor_ptr->awb.cali[7].yb=133;
 
-	sensor_ptr->awb.cali[8].r=186;
-	sensor_ptr->awb.cali[8].g=153;
-	sensor_ptr->awb.cali[8].b=134;
+	sensor_ptr->awb.cali[8].x=184;
+	sensor_ptr->awb.cali[8].yt=166;
+	sensor_ptr->awb.cali[8].yb=135;
 
-	sensor_ptr->awb.cali[9].r=194;
-	sensor_ptr->awb.cali[9].g=156;
-	sensor_ptr->awb.cali[9].b=141;
+	/*awb win*/
+	sensor_ptr->awb.win[0].x=130;
+	sensor_ptr->awb.win[1].x=136;
+	sensor_ptr->awb.win[2].x=142;
+	sensor_ptr->awb.win[3].x=152;
+	sensor_ptr->awb.win[4].x=163;
+	sensor_ptr->awb.win[5].x=170;
+	sensor_ptr->awb.win[6].x=175;
+	sensor_ptr->awb.win[7].x=179;
+	sensor_ptr->awb.win[8].x=184;
+	sensor_ptr->awb.win[9].x=189;
+	sensor_ptr->awb.win[10].x=197;
+	sensor_ptr->awb.win[11].x=220;
+	sensor_ptr->awb.win[12].x=227;
+	sensor_ptr->awb.win[13].x=233;
+	sensor_ptr->awb.win[14].x=237;
+	sensor_ptr->awb.win[15].x=246;
+	sensor_ptr->awb.win[16].x=256;
+	sensor_ptr->awb.win[17].x=265;
+	sensor_ptr->awb.win[18].x=272;
+	sensor_ptr->awb.win[19].x=279;
 
-	sensor_ptr->awb.cali[10].r=200;
-	sensor_ptr->awb.cali[10].g=151;
-	sensor_ptr->awb.cali[10].b=150;
+	sensor_ptr->awb.win[0].yt=241;
+	sensor_ptr->awb.win[1].yt=250;
+	sensor_ptr->awb.win[2].yt=254;
+	sensor_ptr->awb.win[3].yt=254;
+	sensor_ptr->awb.win[4].yt=245;
+	sensor_ptr->awb.win[5].yt=156;
+	sensor_ptr->awb.win[6].yt=157;
+	sensor_ptr->awb.win[7].yt=161;
+	sensor_ptr->awb.win[8].yt=166;
+	sensor_ptr->awb.win[9].yt=166;
+	sensor_ptr->awb.win[10].yt=153;
+	sensor_ptr->awb.win[11].yt=135;
+	sensor_ptr->awb.win[12].yt=140;
+	sensor_ptr->awb.win[13].yt=139;
+	sensor_ptr->awb.win[14].yt=134;
+	sensor_ptr->awb.win[15].yt=128;
+	sensor_ptr->awb.win[16].yt=123;
+	sensor_ptr->awb.win[17].yt=119;
+	sensor_ptr->awb.win[18].yt=116;
+	sensor_ptr->awb.win[19].yt=114;
 
-	sensor_ptr->awb.cali[11].r=237;
-	sensor_ptr->awb.cali[11].g=130;
-	sensor_ptr->awb.cali[11].b=129;
-
-	sensor_ptr->awb.cali[12].r=242;
-	sensor_ptr->awb.cali[12].g=135;
-	sensor_ptr->awb.cali[12].b=119;
-
-	sensor_ptr->awb.cali[13].r=247;
-	sensor_ptr->awb.cali[13].g=133;
-	sensor_ptr->awb.cali[13].b=118;
-
-	sensor_ptr->awb.cali[14].r=252;
-	sensor_ptr->awb.cali[14].g=131;
-	sensor_ptr->awb.cali[14].b=121;
-
-	sensor_ptr->awb.cali[15].r=256;
-	sensor_ptr->awb.cali[15].g=123;
-	sensor_ptr->awb.cali[15].b=122;
-
-	sensor_ptr->awb.cali[16].r=282;
-	sensor_ptr->awb.cali[16].g=112;
-	sensor_ptr->awb.cali[16].b=111;
-
-	sensor_ptr->awb.cali[17].r=286;
-	sensor_ptr->awb.cali[17].g=116;
-	sensor_ptr->awb.cali[17].b=104;
-
-	sensor_ptr->awb.cali[18].r=292;
-	sensor_ptr->awb.cali[18].g=114;
-	sensor_ptr->awb.cali[18].b=100;
-
-	sensor_ptr->awb.cali[19].r=297;
-	sensor_ptr->awb.cali[19].g=110;
-	sensor_ptr->awb.cali[19].b=99;
+	sensor_ptr->awb.win[0].yb=214;
+	sensor_ptr->awb.win[1].yb=150;
+	sensor_ptr->awb.win[2].yb=139;
+	sensor_ptr->awb.win[3].yb=130;
+	sensor_ptr->awb.win[4].yb=126;
+	sensor_ptr->awb.win[5].yb=127;
+	sensor_ptr->awb.win[6].yb=130;
+	sensor_ptr->awb.win[7].yb=133;
+	sensor_ptr->awb.win[8].yb=135;
+	sensor_ptr->awb.win[9].yb=139;
+	sensor_ptr->awb.win[10].yb=152;
+	sensor_ptr->awb.win[11].yb=134;
+	sensor_ptr->awb.win[12].yb=117;
+	sensor_ptr->awb.win[13].yb=115;
+	sensor_ptr->awb.win[14].yb=110;
+	sensor_ptr->awb.win[15].yb=105;
+	sensor_ptr->awb.win[16].yb=101;
+	sensor_ptr->awb.win[17].yb=96;
+	sensor_ptr->awb.win[18].yb=95;
+	sensor_ptr->awb.win[19].yb=95;
 
 	//bpc
 	sensor_ptr->bpc.flat_thr=80;
@@ -1046,58 +1066,58 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->cmc.matrix[0][8]=0x7f0;
 	//Gamma
 	sensor_ptr->gamma.axis[0][0]=0;
-	sensor_ptr->gamma.axis[1][0]=8;
-	sensor_ptr->gamma.axis[2][0]=16;
-	sensor_ptr->gamma.axis[3][0]=24;
-	sensor_ptr->gamma.axis[4][0]=32;
-	sensor_ptr->gamma.axis[5][0]=48;
-	sensor_ptr->gamma.axis[6][0]=64;
-	sensor_ptr->gamma.axis[7][0]=80;
-	sensor_ptr->gamma.axis[8][0]=96;
-	sensor_ptr->gamma.axis[9][0]=128;
-	sensor_ptr->gamma.axis[10][0]=160;
-	sensor_ptr->gamma.axis[11][0]=192;
-	sensor_ptr->gamma.axis[12][0]=224;
-	sensor_ptr->gamma.axis[13][0]=256;
-	sensor_ptr->gamma.axis[14][0]=288;
-	sensor_ptr->gamma.axis[15][0]=320;
-	sensor_ptr->gamma.axis[16][0]=384;
-	sensor_ptr->gamma.axis[17][0]=448;
-	sensor_ptr->gamma.axis[18][0]=512;
-	sensor_ptr->gamma.axis[19][0]=576;
-	sensor_ptr->gamma.axis[20][0]=640;
-	sensor_ptr->gamma.axis[21][0]=768;
-	sensor_ptr->gamma.axis[22][0]=832;
-	sensor_ptr->gamma.axis[23][0]=896;
-	sensor_ptr->gamma.axis[24][0]=960;
-	sensor_ptr->gamma.axis[25][0]=1023;
+	sensor_ptr->gamma.axis[0][1]=8;
+	sensor_ptr->gamma.axis[0][2]=16;
+	sensor_ptr->gamma.axis[0][3]=24;
+	sensor_ptr->gamma.axis[0][4]=32;
+	sensor_ptr->gamma.axis[0][5]=48;
+	sensor_ptr->gamma.axis[0][6]=64;
+	sensor_ptr->gamma.axis[0][7]=80;
+	sensor_ptr->gamma.axis[0][8]=96;
+	sensor_ptr->gamma.axis[0][9]=128;
+	sensor_ptr->gamma.axis[0][10]=160;
+	sensor_ptr->gamma.axis[0][11]=192;
+	sensor_ptr->gamma.axis[0][12]=224;
+	sensor_ptr->gamma.axis[0][13]=256;
+	sensor_ptr->gamma.axis[0][14]=288;
+	sensor_ptr->gamma.axis[0][15]=320;
+	sensor_ptr->gamma.axis[0][16]=384;
+	sensor_ptr->gamma.axis[0][17]=448;
+	sensor_ptr->gamma.axis[0][18]=512;
+	sensor_ptr->gamma.axis[0][19]=576;
+	sensor_ptr->gamma.axis[0][20]=640;
+	sensor_ptr->gamma.axis[0][21]=768;
+	sensor_ptr->gamma.axis[0][22]=832;
+	sensor_ptr->gamma.axis[0][23]=896;
+	sensor_ptr->gamma.axis[0][24]=960;
+	sensor_ptr->gamma.axis[0][25]=1023;
 
-	sensor_ptr->gamma.axis[0][1]=0x00;
+	sensor_ptr->gamma.axis[1][0]=0x00;
 	sensor_ptr->gamma.axis[1][1]=0x05;
-	sensor_ptr->gamma.axis[2][1]=0x09;
-	sensor_ptr->gamma.axis[3][1]=0x0e;
-	sensor_ptr->gamma.axis[4][1]=0x13;
-	sensor_ptr->gamma.axis[5][1]=0x1f;
-	sensor_ptr->gamma.axis[6][1]=0x2a;
-	sensor_ptr->gamma.axis[7][1]=0x36;
-	sensor_ptr->gamma.axis[8][1]=0x40;
-	sensor_ptr->gamma.axis[9][1]=0x58;
-	sensor_ptr->gamma.axis[10][1]=0x68;
-	sensor_ptr->gamma.axis[11][1]=0x76;
-	sensor_ptr->gamma.axis[12][1]=0x84;
-	sensor_ptr->gamma.axis[13][1]=0x8f;
-	sensor_ptr->gamma.axis[14][1]=0x98;
-	sensor_ptr->gamma.axis[15][1]=0xa0;
-	sensor_ptr->gamma.axis[16][1]=0xb0;
-	sensor_ptr->gamma.axis[17][1]=0xbd;
-	sensor_ptr->gamma.axis[18][1]=0xc6;
-	sensor_ptr->gamma.axis[19][1]=0xcf;
-	sensor_ptr->gamma.axis[20][1]=0xd8;
-	sensor_ptr->gamma.axis[21][1]=0xe4;
-	sensor_ptr->gamma.axis[22][1]=0xea;
-	sensor_ptr->gamma.axis[23][1]=0xf0;
-	sensor_ptr->gamma.axis[24][1]=0xf6;
-	sensor_ptr->gamma.axis[25][1]=0xff;
+	sensor_ptr->gamma.axis[1][2]=0x09;
+	sensor_ptr->gamma.axis[1][3]=0x0e;
+	sensor_ptr->gamma.axis[1][4]=0x13;
+	sensor_ptr->gamma.axis[1][5]=0x1f;
+	sensor_ptr->gamma.axis[1][6]=0x2a;
+	sensor_ptr->gamma.axis[1][7]=0x36;
+	sensor_ptr->gamma.axis[1][8]=0x40;
+	sensor_ptr->gamma.axis[1][9]=0x58;
+	sensor_ptr->gamma.axis[1][10]=0x68;
+	sensor_ptr->gamma.axis[1][11]=0x76;
+	sensor_ptr->gamma.axis[1][12]=0x84;
+	sensor_ptr->gamma.axis[1][13]=0x8f;
+	sensor_ptr->gamma.axis[1][14]=0x98;
+	sensor_ptr->gamma.axis[1][15]=0xa0;
+	sensor_ptr->gamma.axis[1][16]=0xb0;
+	sensor_ptr->gamma.axis[1][17]=0xbd;
+	sensor_ptr->gamma.axis[1][18]=0xc6;
+	sensor_ptr->gamma.axis[1][19]=0xcf;
+	sensor_ptr->gamma.axis[1][20]=0xd8;
+	sensor_ptr->gamma.axis[1][21]=0xe4;
+	sensor_ptr->gamma.axis[1][22]=0xea;
+	sensor_ptr->gamma.axis[1][23]=0xf0;
+	sensor_ptr->gamma.axis[1][24]=0xf6;
+	sensor_ptr->gamma.axis[1][25]=0xff;
 
 	//uv div
 	sensor_ptr->uv_div.thrd[0]=252;

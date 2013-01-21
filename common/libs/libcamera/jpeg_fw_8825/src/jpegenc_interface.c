@@ -141,11 +141,11 @@ PUBLIC JPEG_RET_E JPEG_HWEncStart(uint32 raw_width, uint32 raw_height, JPEG_ENC_
 //	}
 
 	//if(VSP_READ_REG_POLL(VSP_AHBM_REG_BASE+AHBM_STS_OFFSET, V_BIT_0, 0, TIME_OUT_CLK, "polling AHB idle status"))
-    if(VSP_READ_REG_POLL(DCAM_INT_STS_OFF+VSP_DCAM_REG_BASE,V_BIT_8,1,TIME_OUT_CLK, "polling VSP_VLC_DONE"))
-	{
-		JPEG_TRACE("TIME OUT!\n");
-		return FALSE;
-	}
+//    if(VSP_READ_REG_POLL(DCAM_INT_STS_OFF+VSP_DCAM_REG_BASE,V_BIT_8,1,TIME_OUT_CLK, "polling VSP_VLC_DONE"))
+//	{
+//		JPEG_TRACE("TIME OUT!\n");
+//		return FALSE;
+//	}
 
 	return JPEG_SUCCESS;
 }

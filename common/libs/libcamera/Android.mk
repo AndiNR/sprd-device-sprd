@@ -120,7 +120,9 @@ LOCAL_SRC_FILES:= \
 	jpeg_fw_8825/src/jpegdec_api.c  \
 	jpeg_fw_8825/src/exif_writer.c  \
 	jpeg_fw_8825/src/jpeg_stream.c \
-	ispvideo/isp_video.c
+	ispvideo/isp_video.c \
+	sc8825/src/isp_param_tune_com.c \
+	sc8825/src/isp_param_tune_v0000.c
 endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
@@ -190,7 +192,10 @@ LOCAL_SRC_FILES:= \
 	jpeg_fw_8825/src/jpegdec_api.c  \
 	jpeg_fw_8825/src/exif_writer.c  \
 	jpeg_fw_8825/src/jpeg_stream.c \
-	ispvideo/isp_video.c
+	ispvideo/isp_video.c \
+	sc8825/src/isp_param_tune_com.c \
+	sc8825/src/isp_param_tune_v0000.c
+
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw

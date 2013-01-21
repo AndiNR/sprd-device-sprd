@@ -394,7 +394,6 @@ static void* cmr_rot_thread_proc(void* data)
 			break;
 		} else {
 			CMR_LOGV("rot done OK. 0x%x", rot_evt_cb);
-			sem_post(&rot_sem);
 			frame.reserved = rot_user_data;
 			evt_id = CMR_IMG_CVT_ROT_DONE;
 			pthread_mutex_lock(&rot_cb_mutex);
@@ -405,6 +404,7 @@ static void* cmr_rot_thread_proc(void* data)
 			pthread_mutex_lock(&rot_status_mutex);
 			rot_running = 0;
 			pthread_mutex_unlock(&rot_status_mutex);
+			sem_post(&rot_sem);
 		}
 	}
 

@@ -701,7 +701,7 @@ uint32_t JPEGENC_Poll_MEA_BSM_OneSlice(uint32_t time, uint32_t slice_num)
 		vsp_time_out_cnt++;
 		usleep(1000);
 	}	
-#else
+//#else
 	ret = ioctl(vsp_fd,VSP_ACQUAIRE_MEA_DONE,time);
 	SCI_TRACE_LOW("after ioctl VSP_ACQUAIRE_MEA_DONE");
 	value = VSP_READ_REG(VSP_DCAM_REG_BASE + DCAM_INT_RAW_OFF, "read the interrupt register.");
@@ -725,6 +725,15 @@ uint32_t JPEGENC_Poll_MEA_BSM_OneSlice(uint32_t time, uint32_t slice_num)
 				ret = 0;
 			 }
 	}
+#else
+	ret = ioctl(vsp_fd,VSP_ACQUAIRE_MEA_DONE,time);
+	SCI_TRACE_LOW("after ioctl VSP_ACQUAIRE_MEA_DONE ret %d",ret);
+//	if(0 == ret)
+//	{
+//		slice_num--;
+//		if(slice_num>0) 
+//				JPEG_HWUpdateMEABufInfo();
+//	}
 #endif
 	SCI_TRACE_LOW("slice_num=%d.\n",jpeg_fw_codec->slice_num);
 
@@ -805,7 +814,7 @@ static uint32_t _Encode_NextSlice(uint32_t time,JPEGENC_SLICE_NEXT_T *update_par
 		vsp_time_out_cnt++;
 		usleep(1000);
 	}	
-#else
+//#else
 	ret = ioctl(vsp_fd,VSP_ACQUAIRE_MEA_DONE,time);
 	SCI_TRACE_LOW("after ioctl VSP_ACQUAIRE_MEA_DONE ret %d",ret);
 	if(2 == ret) {
@@ -826,6 +835,14 @@ static uint32_t _Encode_NextSlice(uint32_t time,JPEGENC_SLICE_NEXT_T *update_par
 			ret = 0;
 		 }
 	}
+#else
+	ret = ioctl(vsp_fd,VSP_ACQUAIRE_MEA_DONE,time);
+	SCI_TRACE_LOW("after ioctl VSP_ACQUAIRE_MEA_DONE ret %d",ret);
+//	if(0 == ret)
+//	{
+//		if(slice_num>0) 
+//				JPEG_HWUpdateMEABufInfo();
+//	}	
 #endif
 	//match with start, update buf_id and slice_num
 	jpeg_fw_codec->buf_id = !jpeg_fw_codec->buf_id;
@@ -868,7 +885,7 @@ uint32_t JPEGENC_Poll_VLC_BSM_Slice(uint32_t time)
 		vsp_time_out_cnt++;
 		usleep(1000);
 	}	
-#else
+//#else
 while(1)
 	{
 		ret = ioctl(vsp_fd,VSP_ACQUAIRE_MEA_DONE,time);
@@ -893,6 +910,12 @@ while(1)
 			JPGEENC_Clear_INT(0x4000);
 		}
 	}
+#else
+	do
+	{
+		ret =  ioctl(vsp_fd,VSP_ACQUAIRE_MEA_DONE,time);
+		SCI_TRACE_LOW("after ioctl VSP_ACQUAIRE_MEA_DONE ret %d",ret);
+	}while(!ret ); 
 #endif
 	return ret;
 }
@@ -1053,7 +1076,8 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 	}
 	ioctl(vsp_fd,VSP_ENABLE,NULL);
 	ioctl(vsp_fd,VSP_RESET,NULL);
-	
+
+	ioctl(vsp_fd,VSP_REG_IRQ,NULL);
 	VSP_SetVirtualBaseAddr((uint32)vsp_addr);
 	VSP_reg_reset_callback(VSP_reset_cb,vsp_fd);
 
@@ -1065,15 +1089,19 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 	jpeg_fw_codec->slice_num = slice_num;
 	jpeg_fw_codec->total_slice_num = slice_num;
     jpeg_fw_codec->fd = vsp_fd;
-	JPEGENC_Poll_MEA_BSM_OneSlice(0xFFF,slice_num);
+	ret = JPEGENC_Poll_MEA_BSM_OneSlice(0xFFF,slice_num);
 
 	jpeg_fw_codec->addr = (uint32)vsp_addr;
 
 	SCI_TRACE_LOW("JPEGENC_Slice_Start: slice num%d.\n", jpeg_fw_codec->slice_num);   
 	if(0 == (slice_num-1)) {
 		SCI_TRACE_LOW("hansen: final.");
-		JPEGENC_Poll_VLC_BSM_Slice(0xFFF);
-
+		if(ret != 4) 
+		{
+			ret = JPEGENC_Poll_VLC_BSM_Slice(0xFFF);
+		}
+		ret = (ret == 4) ? 0 : ret;
+		
 		if(JPEG_SUCCESS != JPEGENC_stop_encode_ext(&stream_size)) {
 			SCI_TRACE_LOW("JPEGENC fail to JPEGENC_stop_encode.");
 			ret = -1;
@@ -1082,6 +1110,7 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 		munmap(vsp_addr,SPRD_VSP_MAP_SIZE);
 		ioctl(vsp_fd,VSP_DISABLE,NULL);
 		ioctl(vsp_fd,VSP_RELEASE,NULL);
+		ioctl(vsp_fd,VSP_UNREG_IRQ,NULL);
 		if(vsp_fd >= 0){
 			close(vsp_fd);
 		}
@@ -1097,6 +1126,7 @@ error:
 		munmap(vsp_addr,SPRD_VSP_MAP_SIZE);    
 		ioctl(vsp_fd,VSP_DISABLE,NULL);
 	   	ioctl(vsp_fd,VSP_RELEASE,NULL);	
+		ioctl(vsp_fd,VSP_UNREG_IRQ,NULL);
 		if(vsp_fd >= 0){
 			close(vsp_fd);
 		}
@@ -1127,8 +1157,13 @@ uint32_t JPEGENC_Slice_Next(JPEGENC_SLICE_NEXT_T *update_parm_ptr, JPEGENC_SLICE
 	slice_num = jpeg_fw_codec->slice_num;
 	if(0 == (slice_num) || (0 != ret&& 1 != ret) ) {
 		SCI_TRACE_LOW("hansen: final.");
-		JPEGENC_Poll_VLC_BSM_Slice(0xFFF);
-		
+		if(ret != 4) 
+		{
+			ret = JPEGENC_Poll_VLC_BSM_Slice(0xFFF);
+		}
+
+		ret = (ret == 4) ? 0 : ret;
+				
 		if(JPEG_SUCCESS != JPEGENC_stop_encode_ext(&stream_size)) {
 			SCI_TRACE_LOW("JPEGENC fail to JPEGENC_stop_encode.");
 			ret = 1;
@@ -1136,6 +1171,7 @@ uint32_t JPEGENC_Slice_Next(JPEGENC_SLICE_NEXT_T *update_parm_ptr, JPEGENC_SLICE
 		munmap(vsp_addr,SPRD_VSP_MAP_SIZE);
 		ioctl(vsp_fd,VSP_DISABLE,NULL);
 		ioctl(vsp_fd,VSP_RELEASE,NULL);
+		ioctl(vsp_fd,VSP_UNREG_IRQ,NULL);
 		if(vsp_fd >= 0){
 			close(vsp_fd);
 		}

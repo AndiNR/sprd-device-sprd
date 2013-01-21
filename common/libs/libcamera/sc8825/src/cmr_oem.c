@@ -482,7 +482,7 @@ int camera_init_done(struct camera_context *p_cxt)
 	int                      ret = CAMERA_SUCCESS;
 
 	sem_post(&p_cxt->init_sem);
-
+	ret = p_cxt->err_code;
 	return ret;
 }
 

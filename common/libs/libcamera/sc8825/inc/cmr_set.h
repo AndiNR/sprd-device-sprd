@@ -27,6 +27,7 @@ extern "C"
 
 #define INVALID_SET_BYTE                              0xFF
 #define INVALID_SET_WORD                              0xFFFFFFFF
+#define SCENE_MODE_NIGHT                              1
 
 int camera_setting_init(void);
 int camera_setting_deinit(void);

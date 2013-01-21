@@ -118,6 +118,10 @@ namespace android {
     static int reassoc(qdsp_module_type module);
     //static void cb_rex_signal_ready(void);
 
+
+gralloc_module_t const* SprdCameraHardware::mGrallocHal;
+
+
 #ifdef CMCC_POWER_OPT
 #include<fcntl.h>
 static int flag_lower_emc_freq = 0;
@@ -134,9 +138,6 @@ static void lower_emc_freq(char flag)
 	}
 }
 #endif
-
-gralloc_module_t const* SprdCameraHardware::mGrallocHal;
-
     SprdCameraHardware::SprdCameraHardware(int cameraId)
         : mParameters(),
         mPreviewHeight(-1),
@@ -377,6 +378,14 @@ void SprdCameraHardware::FreePmem(sprd_camera_memory_t* memory)
         }
 }
 
+void SprdCameraHardware::FreeFdmem(void)
+{
+        if (mFDAddr) {
+            camera_set_fd_mem(0,0,0);
+            free((void*)mFDAddr);
+            mFDAddr = 0;
+        }
+}
 bool SprdCameraHardware::initPreview()
 {
         uint32_t page_size, buffer_size;
@@ -424,14 +433,11 @@ bool SprdCameraHardware::initPreview()
 
 void SprdCameraHardware::deinitPreview()
 {
+        FreeFdmem();
         FreePmem(mPreviewHeap);
         mPreviewHeap = NULL;
         FreePmem(mFDHeap);
         mFDHeap = NULL;
-        if (mFDAddr) {
-            free((void*)mFDAddr);
-            mFDAddr = 0;
-        }
 }
 
     // Called with mStateLock held!
@@ -693,6 +699,11 @@ void SprdCameraHardware::stopPreviewInternal()
 
         if (mCameraState != QCS_PREVIEW_IN_PROGRESS) {
                 ALOGE("Preview not in progress!");
+                FreeFdmem();
+                FreePmem(mPreviewHeap);
+                mPreviewHeap = NULL;
+                FreePmem(mFDHeap);
+                mFDHeap = NULL;
                 return;
         }
 
@@ -711,14 +722,11 @@ void SprdCameraHardware::stopPreviewInternal()
 
         if(CAMERA_SUCCESS != camera_stop_preview()){
                 mCameraState = QCS_ERROR;
+                FreeFdmem();
                 FreePmem(mPreviewHeap);
                 mPreviewHeap = NULL;
                 FreePmem(mFDHeap);
                 mFDHeap = NULL;
-                if (mFDAddr) {
-                    free((void*)mFDAddr);
-                    mFDAddr = 0;
-                }
                 ALOGE("stopPreviewInternal: fail to camera_stop_preview().");
                 return;
         }
@@ -729,14 +737,11 @@ void SprdCameraHardware::stopPreviewInternal()
         }
 
         ALOGV("stopPreviewInternal: Freeing preview heap.");
+        FreeFdmem();
         FreePmem(mPreviewHeap);
         mPreviewHeap = NULL;
         FreePmem(mFDHeap);
         mFDHeap = NULL;
-        if (mFDAddr) {
-            free((void*)mFDAddr);
-            mFDAddr = 0;
-        }
         ALOGV("stopPreviewInternal: X Preview has stopped.");
 }
 
@@ -794,12 +799,9 @@ status_t SprdCameraHardware::startRecording()
                 mCameraState = QCS_INTERNAL_PREVIEW_STOPPING;
                 if(CAMERA_SUCCESS != camera_stop_preview()){
                         mCameraState = QCS_ERROR;
+                        FreeFdmem();
                         mPreviewHeap = NULL;
                         mFDHeap = NULL;
-                        if (mFDAddr) {
-                            free((void*)mFDAddr);
-                            mFDAddr = 0;
-                        }
                         ALOGE("startRecording: fail to camera_stop_preview().");
                         return INVALID_OPERATION;
                 }
@@ -810,14 +812,11 @@ status_t SprdCameraHardware::startRecording()
                 }
 
 	        ALOGV("startRecording: Freeing preview heap.");
+            FreeFdmem();
 		FreePmem(mPreviewHeap);
 	        mPreviewHeap = NULL;
             FreePmem(mFDHeap);
             mFDHeap = NULL;
-            if (mFDAddr) {
-                free((void*)mFDAddr);
-                mFDAddr = 0;
-            }
         }
         mRecordingMode = 1;
         ALOGV("startRecording,mRecordingMode=%d.",mRecordingMode);
@@ -1389,7 +1388,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 #endif
 callbacks:
 #ifdef CONFIG_CAMERA_ISP
-			send_img_data((char *)frame->buf_Virt_Addr, frame->dx * frame->dy * 3 /2);
+			send_img_data(2, mPreviewWidth, mPreviewHeight, (char *)frame->buf_Virt_Addr, frame->dx * frame->dy * 3 /2);
 #endif
         if(mData_cb != NULL)
         {
@@ -1504,7 +1503,6 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
     width  = mPreviewWidth;
     height = mPreviewHeight;
 
-
     if (mPreviewWindow && mGrallocHal) {
         buffer_handle_t *buf_handle;
         int stride;
@@ -1578,7 +1576,7 @@ callbackraw:
 	        offset -= (uint32_t)mRawHeap->data;
 	        ssize_t frame_size = 0;
 #ifdef CONFIG_CAMERA_ISP
-		send_img_data((char *)frame->buf_Virt_Addr, frame->dx * frame->dy * 3 /2);
+		send_img_data(8, frame->dx, frame->dy, (char *)frame->buf_Virt_Addr, frame->dx * frame->dy * 3 /2);
 #endif
 	        if(CAMERA_RGB565 == frame->format)
 		        frame_size = frame->dx * frame->dy * 2;        // for RGB565
@@ -2051,11 +2049,19 @@ static void coordinate_struct_convert(int *rect_arr,int arr_size)
         ALOGV("CAMERA HAL test:zone:%d,%d,%d,%d.\n",rect_arr_copy[i*4],rect_arr_copy[i*4+1],rect_arr_copy[i*4+2],rect_arr_copy[i*4+3]);
     }
 }
-static void coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror)
+static int coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror, int width, int height)
 {
 	int i;
 	int x1,x2,y1,y2;
 	int temp;
+	int recHalfWidth;
+	int recHalfHeight;
+	int centre_x;
+	int centre_y;
+	int ret = 0;
+
+	ALOGV("coordinate_convert: mPreviewWidth=%d, mPreviewHeight=%d, arr_size=%d, angle=%d, is_mirror=%d \n", 
+		width, height, arr_size, angle, is_mirror);
 
 	for(i=0;i<arr_size*2;i++)
 	{
@@ -2068,23 +2074,23 @@ static void coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirro
             switch(angle)
             {
                 case 0:
-                    rect_arr[i*2]         = (1000 + x1) * 480 / 2000;
-                    rect_arr[i*2 + 1]   = (1000 + y1) * 640 / 2000;
+                    rect_arr[i*2]         = (1000 + x1) * height / 2000; // 480
+                    rect_arr[i*2 + 1]   = (1000 + y1) * width / 2000;	// 640
                     break;
 
                 case 90:
-                    rect_arr[i*2]         = (1000 - y1) * 480 / 2000;
-                    rect_arr[i*2 + 1]   = (1000 + x1) * 640 / 2000;
+                    rect_arr[i*2]         = (1000 - y1) * height / 2000;
+                    rect_arr[i*2 + 1]   = (1000 + x1) * width / 2000;
                     break;
 
                 case 180:
-                    rect_arr[i*2]         = (1000 - x1) * 480 / 2000;
-                    rect_arr[i*2 + 1]   = (1000 - y1) * 640 / 2000;
+                    rect_arr[i*2]         = (1000 - x1) * height / 2000;
+                    rect_arr[i*2 + 1]   = (1000 - y1) * width / 2000;
                     break;
 
                 case 270:
-                    rect_arr[i*2]         = (1000 + y1) * 480 / 2000;
-                    rect_arr[i*2 + 1]   = (1000 - y1) * 640 / 2000;
+                    rect_arr[i*2]         = (1000 + y1) * height / 2000;
+                    rect_arr[i*2 + 1]   = (1000 - y1) * width / 2000;
                     break;
 
             }
@@ -2109,9 +2115,68 @@ static void coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirro
             rect_arr[i*4+3]     = temp;
 
         }
-
         ALOGV("CAMERA HAL:coordinate_convert: %d: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
     }
+
+	// make sure the coordinate within [width, height]
+	// for 90 degree only
+	for(i=0; i<arr_size*4; i+=2){
+		if(rect_arr[i] < 0){
+			rect_arr[i]= 0;
+		}
+		if(rect_arr[i] > height){
+			rect_arr[i] = height;
+		}
+
+		if(rect_arr[i+1] < 0){
+			rect_arr[i+1]= 0;
+		}
+		if(rect_arr[i+1] > width){
+			rect_arr[i+1] = width;
+		}
+	}
+
+	for(i=0;i<arr_size;i++)
+	{
+		int preview_x, preview_y, preview_w, preview_h;
+		int point_x, point_y;
+		
+		ALOGV("CAMERA HAL:coordinate_convert %d: org: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
+
+		// only for angle 90/270
+		// calculate the centre point
+		recHalfHeight  	= (rect_arr[i*4+2] - rect_arr[i])/2;
+		recHalfWidth   	= (rect_arr[i*4+3] - rect_arr[i+1])/2;
+		centre_y  		= rect_arr[i*4+2] - recHalfHeight;
+		centre_x 		= rect_arr[i*4+3] - recHalfWidth;
+		ALOGV("CAMERA HAL:coordinate_convert %d: center point: x=%d, y=%d\n", i, centre_x, centre_y);
+
+		// map to sensor coordinate
+		centre_y		= height - centre_y;
+		ALOGV("CAMERA HAL:coordinate_convert %d: sensor centre pointer: x=%d, y=%d, half_w=%d, half_h=%d.\n",
+				i, centre_x, centre_y, recHalfWidth, recHalfHeight);
+		
+		ret = camera_get_preview_rect(&preview_x, &preview_y, &preview_w, &preview_h);
+		if(ret){
+			ALOGV("coordinate_convert: camera_get_preview_rect failed, return \n");
+			return -1;
+		}
+		ALOGV("CAMERA HAL:coordinate_convert %d: preview rect: x=%d, y=%d, preview_w=%d, preview_h=%d.\n",
+				i, preview_x, preview_y, preview_w, preview_h);
+		
+		point_x = preview_x + centre_x*preview_w/width;
+		point_y = preview_y + centre_y*preview_h/height;
+		ALOGV("CAMERA HAL:coordinate_convert %d: out point: x=%d, y=%d\n", i, point_x, point_y);
+		
+		rect_arr[i] 	= point_x - recHalfWidth;
+		rect_arr[i+1] 	= point_y - recHalfHeight;
+		rect_arr[i+2] 	= point_x + recHalfWidth;
+		rect_arr[i+3] 	= point_y + recHalfHeight;
+
+		ALOGV("CAMERA HAL:coordinate_convert %d: final: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
+	}
+
+	return ret;
 }
 
 status_t strToFPS(const char *str, int &min, int &max) {
@@ -2215,12 +2280,13 @@ static uint32_t s_focus_zone[25];
 	{
             discard_zone_weight(&s_save_zone_info[1],size_cnt);
             is_mirror = (g_camera_id == 1) ? 1 : 0;
-            coordinate_convert(&s_save_zone_info[1],size_cnt,sCameraInfo[g_camera_id].orientation,is_mirror);
+            coordinate_convert(&s_save_zone_info[1],size_cnt,sCameraInfo[g_camera_id].orientation,is_mirror, mPreviewWidth, mPreviewHeight);
             coordinate_struct_convert(&s_save_zone_info[1],size_cnt*4);
 	}
 #else
 	uint32_t size_cnt = 0;
         int is_mirror=0;
+		int convert_ret = 0;
 
         is_mirror = (g_camera_id == 1) ? 1 : 0;
 
@@ -2232,19 +2298,25 @@ static uint32_t s_focus_zone[25];
             int i;
             discard_zone_weight(&s_save_zone_info[1], size_cnt);
 
-            coordinate_convert(&s_save_zone_info[1],size_cnt,sCameraInfo[g_camera_id].orientation,is_mirror);
-            coordinate_struct_convert(&s_save_zone_info[1],size_cnt*4);
+            convert_ret = coordinate_convert(&s_save_zone_info[1],size_cnt,sCameraInfo[g_camera_id].orientation,is_mirror, mPreviewWidth, mPreviewHeight);
+			if(convert_ret)
+			{
+                size_cnt = 0;
+                ALOGV("error: coordinate_convert error, ignore focus \n");
+			}
+			else
+			{
+	            coordinate_struct_convert(&s_save_zone_info[1],size_cnt*4);
 
-#if 1
-            for (i=0; i<size_cnt*4; i++)
-            {
-                if(s_save_zone_info[i+1] < 0)
-                {
-                    size_cnt = 0;
-                    ALOGV("error: focus area %d < 0, ignore focus \n", s_save_zone_info[i+1]);
-                }
-            }
-#endif
+	            for (i=0; i<size_cnt*4; i++)
+	            {
+	                if(s_save_zone_info[i+1] < 0)
+	                {
+	                    size_cnt = 0;
+	                    ALOGV("error: focus area %d < 0, ignore focus \n", s_save_zone_info[i+1]);
+	                }
+	            }
+			}
 	}
 #endif
 	s_focus_zone[0] = size_cnt;
@@ -2271,6 +2343,7 @@ static uint32_t s_focus_zone[25];
                         mParameters.get("cameraid"),
                         CAMERA_CAMERA_ID_BACK));
         SET_PARM(CAMERA_PARM_JPEGCOMP,  atoi(mParameters.get("jpeg-quality")));
+        SET_PARM(CAMERA_PARM_THUMBCOMP, atoi(mParameters.get("jpeg-thumbnail-quality")));
         SET_PARM(CAMERA_PARM_EFFECT,
                  lookup(effect_map,
                         mParameters.get("effect"),
@@ -2856,30 +2929,16 @@ status_t SprdCameraHardware::sendCommand(int32_t cmd, int32_t arg1, int32_t arg2
     uint32_t addr = 0;
     ALOGE("sendCommand: facedetect mem size 0x%x.",buffer_size);
 	if(CAMERA_CMD_START_FACE_DETECTION == cmd){
-#if 0
-        buffer_size = camera_get_size_align_page((mPreviewWidth * mPreviewHeight * 3 / 2));
-        ALOGE("sendCommand: facedetect mem size 0x%x.",buffer_size);
-
-        mFDHeap = GetPmem("/dev/pmem_adsp", buffer_size, 1);
-        if(NULL == mFDHeap)
-            return false;
-        camera_set_fd_mem((uint32_t)mFDHeap->phys_addr,
-				        (uint32_t)mFDHeap->data,
-				        (uint32_t)mFDHeap->phys_size);
-#else
         addr = (uint32_t)malloc(buffer_size);
+        mFDAddr = addr;
         camera_set_fd_mem(0,addr,buffer_size);
-#endif
         camera_set_start_facedetect(1);
 	} else if(CAMERA_CMD_STOP_FACE_DETECTION == cmd) {
 	    ALOGE("sendCommand: not support the CAMERA_CMD_STOP_FACE_DETECTION.");
         camera_set_start_facedetect(0);
         FreePmem(mFDHeap);
         mFDHeap = NULL;
-        if (mFDAddr) {
-            free((void*)mFDAddr);
-            mFDAddr = 0;
-        }
+        FreeFdmem();
 	}
 
 	return NO_ERROR;
@@ -3028,6 +3087,13 @@ static int HAL_camera_device_close(struct hw_device_t* device)
         free(cam_device);
         g_cam_device = 0;
     }
+#ifdef CONFIG_CAMERA_ISP
+	//startispserver();
+	ispvideo_RegCameraFunc(1, NULL);
+	ispvideo_RegCameraFunc(2, NULL);
+	ispvideo_RegCameraFunc(3, NULL);
+	ispvideo_RegCameraFunc(4, NULL);
+#endif
     return 0;
 }
 
@@ -3376,14 +3442,56 @@ static camera_device_ops_t camera_device_ops = {
 
 #undef SET_METHOD
 
+static int HAL_IspVideoStartPreview()
+{
+	int rtn=0x00;
+	SprdCameraHardware * fun_ptr = dynamic_cast<SprdCameraHardware *>((SprdCameraHardware *)g_cam_device->priv);
+	if (NULL != fun_ptr)
+	{
+		rtn=fun_ptr->startPreview();
+	}
+	return rtn;
+}
+
+static int HAL_IspVideoStopPreview()
+{
+	int rtn=0x00;
+	SprdCameraHardware * fun_ptr = dynamic_cast<SprdCameraHardware *>((SprdCameraHardware *)g_cam_device->priv);
+	if (NULL != fun_ptr)
+	{
+		fun_ptr->stopPreview();
+	}
+	return rtn;
+}
+
+static int HAL_IspVideoSetParam()
+{
+	int rtn=0x00;
+	SprdCameraHardware * fun_ptr = dynamic_cast<SprdCameraHardware *>((SprdCameraHardware *)g_cam_device->priv);
+	if (NULL != fun_ptr)
+	{
+		//rtn=fun_ptr->takePicture();
+	}
+	return rtn;
+}
+
+static int HAL_IspVideoTakePicture()
+{
+	int rtn=0x00;
+	SprdCameraHardware * fun_ptr = dynamic_cast<SprdCameraHardware *>((SprdCameraHardware *)g_cam_device->priv);
+	if (NULL != fun_ptr)
+	{
+		rtn=fun_ptr->takePicture();
+	}
+	return rtn;
+}
+
 static int HAL_camera_device_open(const struct hw_module_t* module,
                                   const char *id,
                                   struct hw_device_t** device)
 {
     ALOGV("%s", __func__);
-#ifdef CONFIG_CAMERA_ISP
-	 startispserver();
-#endif
+
     int cameraId = atoi(id);
     if (cameraId < 0 || cameraId >= HAL_getNumberOfCameras()) {
         ALOGE("Invalid camera ID %s", id);
@@ -3416,6 +3524,16 @@ static int HAL_camera_device_open(const struct hw_module_t* module,
 
     //g_cam_device->priv = new SprdCameraHardware(cameraId, g_cam_device);
     g_cam_device->priv = new SprdCameraHardware(cameraId);
+
+
+#ifdef CONFIG_CAMERA_ISP
+	startispserver();
+	ispvideo_RegCameraFunc(1, HAL_IspVideoStartPreview);
+	ispvideo_RegCameraFunc(2, HAL_IspVideoStopPreview);
+	ispvideo_RegCameraFunc(3, HAL_IspVideoTakePicture);
+	ispvideo_RegCameraFunc(4, HAL_IspVideoSetParam);
+#endif
+
 
 done:
     *device = (hw_device_t *)g_cam_device;

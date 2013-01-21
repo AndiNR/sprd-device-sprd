@@ -102,11 +102,12 @@ enum isp_ae_frame_mode{
 	ISP_AE_FRAME_MODE_MAX
 };
 
-enum isp_ae_alg_mode{
-	ISP_AE_NORMAL=0x00,
-	ISP_AE_FAST,
+enum isp_alg_mode{
+	ISP_ALG_NORMAL=0x00,
+	ISP_ALG_FAST,
 	ISP_AE_BYPASS,
-	ISP_AE_ALG_MAX
+	ISP_AWB_BYPASS,
+	ISP_ALG_MAX
 };
 
 enum isp_ae_wditht{
@@ -151,7 +152,6 @@ enum isp_awb_mode{
 	ISP_AWB_INDEX7,
 	ISP_AWB_INDEX8,
 	ISP_AWB_AUTO,
-	ISP_AWB_BYPASS,
 	ISP_AWB_MAX
 };
 

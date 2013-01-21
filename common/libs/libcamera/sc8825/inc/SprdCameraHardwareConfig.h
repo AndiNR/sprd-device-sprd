@@ -260,10 +260,10 @@ struct config_element sprd_front_camera_hardware_config[] = {
         {"whitebalance-values",
          "auto,incandescent,fluorescent,daylight,cloudy-daylight"},
         {"whitebalance", "auto"},
-#ifdef CONFIG_CAMERA_SUPPORT_2M
-		{"picture-size-values", "1600x1200,1280x960,640x480"},
+#if defined(CONFIG_CAMERA_SUPPORT_5M) || defined(CONFIG_CAMERA_SUPPORT_8M)
+	{"picture-size-values", "2048x1536,1600x1200,1280x960,640x480"},
 #else
-        {"picture-size-values", "2048x1536,1600x1200,1280x960,640x480"},
+	{"picture-size-values", "1600x1200,1280x960,640x480"},
 #endif
          {"picture-size", "640x480"},
 	{"preview-size-values",
@@ -279,10 +279,10 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"picture-format-values", "jpeg"},
 	{"picture-format", "jpeg"},
         {"jpeg-quality", "100"},
-	{"preview-frame-rate-values", "10,12,15"},
-	{"preview-frame-rate", "12"},
-	{"preview-fps-range-values", "(10000,15000)"},
-	{"preview-fps-range", "10000,15000"},
+	{"preview-frame-rate-values", "10,12,15,20,25,30"},
+	{"preview-frame-rate", "25"},
+	{"preview-fps-range-values", "(10000,30000)"},
+	{"preview-fps-range", "10000,30000"},
 	{"jpeg-thumbnail-size-values", "320x240,0x0"},
 	{"jpeg-thumbnail-width","320"},
 	{"jpeg-thumbnail-height", "240"},
@@ -320,9 +320,11 @@ struct config_element sprd_front_camera_hardware_config[] = {
         {"focal-length", "3.75"},
         {"horizontal-view-angle", "54"},
         {"vertical-view-angle", "54"},
-        {"flash-mode-values", "off,on,torch"},
-        {"flash-mode", "off"},
-        {"flash-mode-supported", "false"},
+#if 0
+    {"flash-mode-values", "off,on,torch,auto"},
+    {"flash-mode", "off"},
+    {"flash-mode-supported", "false"},
+#endif
     {"focus-mode-values", "infinity"},
     {"focus-mode", "infinity"},
         {"focus-distances", "2.0,2.5,3.75,Infinity"},

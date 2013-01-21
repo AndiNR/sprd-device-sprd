@@ -70,7 +70,7 @@ LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_ov7675_exif = {0};
     //Input clock 24Mhz, 25fps                     
     //SCCB_salve_Address = 0x42;                   
     {0x12, 0x80},                                  
-    {SENSOR_WRITE_DELAY, 0x20},//delay 100ms     
+    {SENSOR_WRITE_DELAY, 0x0A},//delay 100ms     
     {0x11, 0x80}, 
        
     {0x3a, 0x04},                                  
@@ -245,9 +245,6 @@ LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_ov7675_exif = {0};
     {0x79, 0x26},                                  
     {0x2d, 0x00},                                  
     {0x2e, 0x00}, 
-    //wxz20110527: config the driver capabitlity to 1x.
-    {0x09, 0x00},
-    {SENSOR_WRITE_DELAY, 100},//delay 100ms
 };
 
  LOCAL const SENSOR_REG_T ov7675_YUV_MOTION_320X240[]=
@@ -552,7 +549,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
         OV7675_I2C_ADDR_W,				// salve i2c write address
         OV7675_I2C_ADDR_R, 				// salve i2c read address
 
-        0,								// bit0: 0: i2c register value is 8 bit, 1: i2c register value is 16 bit
+        SENSOR_I2C_FREQ_400,	// bit0: 0: i2c register value is 8 bit, 1: i2c register value is 16 bit
         							// bit2: 0: i2c register addr  is 8 bit, 1: i2c register addr  is 16 bit
         							// other bit: reseved
         SENSOR_HW_SIGNAL_PCLK_N|\
@@ -609,10 +606,10 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
         PNULL,							// extend information about sensor	
         SENSOR_AVDD_1800MV,                     // iovdd
         SENSOR_AVDD_1800MV,                      // dvdd
-        1,                     // skip frame num before preview 
+        3,                     // skip frame num before preview 
         1,                      // skip frame num before capture
-        0,                      // deci frame num during preview	
-        2,                      // deci frame num during video preview
+        1,                      // deci frame num during preview	
+        1,                      // deci frame num during video preview
         0,                     // threshold enable(only analog TV)	
         0,                     // atv output mode 0 fix mode 1 auto mode	
         0,                    // atv output start postion	
@@ -627,7 +624,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
  LOCAL void OV7675_WriteReg( uint8_t  subaddr, uint8_t data )
 {
         Sensor_WriteReg_8bits( subaddr, data);
-        SENSOR_TRACE("SENSOR: OV7675_WriteReg reg/value(%x,%x) !!\n", subaddr, data);
+   /*     SENSOR_TRACE("SENSOR: OV7675_WriteReg reg/value(%x,%x) !!\n", subaddr, data);*/
 }
 LOCAL uint8_t OV7675_ReadReg( uint8_t  subaddr)
 {
@@ -664,7 +661,7 @@ LOCAL uint32_t OV7675_Identify(uint32_t param)
                                 //Masked by frank.yang,SENSOR_Sleep() will cause a  Assert when called in boot precedure
                                 //SENSOR_Sleep(10);
                                 //while(nLoop--)
-                                SENSOR_Sleep(10);
+                         /*       SENSOR_Sleep(10);*/
                                 continue;
                         }
                 }
@@ -915,7 +912,6 @@ LOCAL uint32_t set_ov7675_anti_flicker(uint32_t mode)
         default:
                 break;
         }
-        SENSOR_Sleep(20);
         SENSOR_TRACE("SENSOR: set_banding_mode: mode = %d", mode);
         return 0;
 }
@@ -1087,8 +1083,7 @@ LOCAL uint32_t set_ov7675_awb(uint32_t mode)
         for(i = 0; (0xFF != sensor_reg_ptr[i].reg_addr) && (0xFF != sensor_reg_ptr[i].reg_value); i++) {
                 OV7675_WriteReg(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
         }
-	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_LIGHTSOURCE, (uint32_t)mode);
-        SENSOR_Sleep(20);
+		Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_LIGHTSOURCE, (uint32_t)mode);
         SENSOR_TRACE("SENSOR: set_awb_mode: mode = %d", mode);
         return 0;
 }
@@ -1123,8 +1118,6 @@ LOCAL uint32_t set_brightness(uint32_t level)
         for(i = 0; (0xFF != sensor_reg_ptr[i].reg_addr) && (0xFF != sensor_reg_ptr[i].reg_value); i++) {
                 OV7675_WriteReg(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
         }
-        SENSOR_Sleep(20);
-        SENSOR_TRACE("SENSOR: set_brightness: level = %d", level);
         return 0;
 }
 
@@ -1153,9 +1146,8 @@ LOCAL uint32_t set_contrast(uint32_t level)
                 OV7675_WriteReg(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
         }
 
-    Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_CONTRAST, (uint32_t)level);
-        SENSOR_Sleep(20);
-        SENSOR_TRACE("SENSOR: set_contrast: level = %d", level);
+    	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_CONTRAST, (uint32_t)level);
+
         return 0;
 }
 LOCAL uint32_t set_sharpness(uint32_t level)
@@ -1192,7 +1184,6 @@ LOCAL uint32_t set_preview_mode(uint32_t preview_mode)
         default:
                 break;
         }
-        SENSOR_Sleep(100);
         return 0;
 }
 /******************************************************************************/
@@ -1248,176 +1239,6 @@ LOCAL uint32_t set_image_effect(uint32_t effect_type)
         SENSOR_TRACE("SENSOR: set_image_effect: effect_type = %d", effect_type);
         return 0;
 }
-#if 0
-LOCAL uint32_t OV7675_After_Snapshot(uint32_t param)
-{// Tim.zhu@20080520 for cr116612 modify the switch preview to capture
-
-    SENSOR_TRACE("SENSOR: OV7675_After_Snapshot ");  
-
-    set_ov7675_ae_awb_enable(0x01, 0x01);
-
-    OV7675_WriteReg(PLL_ADDR, 0x81); 
-
-    if(DCAMERA_ENVIRONMENT_NIGHT == s_preview_mode)
-    {
-          OV7675_WriteReg(OV7675_COM11,(OV7675_ReadReg(OV7675_COM11)&0x0f)|0xc0);  
-    } 
-    else
-    {
-        OV7675_WriteReg(OV7675_COM11,(OV7675_ReadReg(OV7675_COM11)&0x0f)|0xa0);  
-    }
-    
-    OV7675_WriteReg(0x92, 0);//0xfb);  
-    OV7675_WriteReg(0x93, 0);//0x01);    
-
-    SENSOR_Sleep(200); // wait 2 frame the sensor working normal if no delay the lum is incorrect
- 
-    return 0;
-    
-}
-
-LOCAL uint32_t OV7675_BeforeSnapshot(uint32_t param)
-{// Tim.zhu@20080514 for crcr115898 modify the switch preview to capture
-
-#define GAIN_ADDR   0x00
-#define EXPOSAL_ADDR0   0x04
-#define EXPOSAL_ADDR2   0x07
-#define EXPOSAL_ADDR1    0x10
-#define DUMMY_LINE0     0x2d
-#define DUMMY_LINE1     0x2e
-
-#define OV7675_LINE_LENGTH (784*2)
-#define OV7675_C2P_RATIO 2 //preview 12M PCLK, capture 6M PCLK
-#define OV7675_NIGHT_MAX_EXPLINE 1530 //Including dummline
-
-#define  OV7675_NORMAL_MAX_EXPLINE 508 
-
-    uint8_t temp=0x00;
-    uint8_t gain=0x00;
-    uint16_t exposal=0x00;
-    uint16_t dummy_line=0x00;
-    uint16_t max_line = OV7675_NORMAL_MAX_EXPLINE;
-    
-    SENSOR_TRACE("SENSOR: OV7675_BeforeSnapshot: OV7675_BeforeSnapshot ");  
-
-    if(DCAMERA_ENVIRONMENT_NORMAL == s_preview_mode)
-    {
-    	    max_line = OV7675_NORMAL_MAX_EXPLINE;
-    }
-    else if(DCAMERA_ENVIRONMENT_NIGHT == s_preview_mode)
-    {
-    	   max_line = OV7675_NIGHT_MAX_EXPLINE;
-    }
-    else
-    {
-         SENSOR_TRACE("unknown Camera mode!");
-    }
-	
-    SENSOR_TRACE("OV7675_BeforeSnapshot max_line= %d", max_line );
-    set_ov7675_ae_awb_enable(0x00, 0x00);
-
-    gain=OV7675_ReadReg(GAIN_ADDR);
-
-    temp=OV7675_ReadReg(EXPOSAL_ADDR0);
-    exposal|=(temp&0X03);
-    temp=OV7675_ReadReg(EXPOSAL_ADDR1);
-    exposal|=(temp<<0x02);
-    temp=OV7675_ReadReg(EXPOSAL_ADDR2); 
-    exposal|=((temp&0x3f)<<0x0a);
-
-    temp=OV7675_ReadReg(DUMMY_LINE0);
-    dummy_line|=temp;
-    temp=OV7675_ReadReg(DUMMY_LINE1); 
-    dummy_line|=(temp<<0x08); 
-
-    OV7675_WriteReg(PLL_ADDR, 0x83);
-
-    OV7675_WriteReg(OV7675_COM11,OV7675_ReadReg(OV7675_COM11)&0x0f);  //0x3b->0x0a
-   
-    set_ov7675_ae_awb_enable(0x00, 0x00);
-
-    exposal=exposal + dummy_line;
-
-    exposal = exposal/OV7675_C2P_RATIO;
-    
-    if(0x80==(gain&0x80) &&( (exposal *2) < max_line ))
-    {
-        gain&=0x7f;
-        exposal*=0x02;
-    }
-
-    if(0x40==(gain&0x40)&&( (exposal *2) < max_line ))
-    {
-        gain&=0xbf;
-        exposal*=0x02;
-    }
-        
-     if(0x20==(gain&0x20)&&( (exposal *2) < max_line ))
-    {
-        gain&=0xdf;
-        exposal*=0x02;
-    }
-
-    if(0x10==(gain&0x10)&&( (exposal *2) < max_line ))
-    {
-        gain&=0xef;
-        exposal*=0x02;
-    } 
-
-    SENSOR_TRACE("OV7675_BeforeSnapshot exposal= %d", exposal );
-    if(exposal>498)
-    {
-        dummy_line=(exposal-498);
-    }
- 
-    OV7675_WriteReg(0x2d, 0);      
-    OV7675_WriteReg(0x2e, 0); 
-  	
-    OV7675_WriteReg(GAIN_ADDR, gain);
-
-    temp=OV7675_ReadReg(EXPOSAL_ADDR0);
-    temp&=0xfc;
-    temp|=(exposal&0X03);
-    OV7675_WriteReg(EXPOSAL_ADDR0, temp);
-
-     temp=((exposal>>0x02)&0xff);
-    OV7675_WriteReg(EXPOSAL_ADDR1, temp);
-
-    temp=OV7675_ReadReg(EXPOSAL_ADDR2);
-    temp&=0xc0;
-    temp|=(exposal>>0x0a)&0x3f;
-    OV7675_WriteReg(EXPOSAL_ADDR2, temp);  
-    
-    temp=(uint8_t)(dummy_line&0xff);
-
-    OV7675_WriteReg(0x92, temp);  
-
-    
-    temp=(uint8_t)(dummy_line>>0x08)&0xff;
-    OV7675_WriteReg(0x93, temp);      
-
-
-   // Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_EXPOSURETIME, (uint32_t)exposal);
-
-    if(DCAMERA_ENVIRONMENT_NORMAL == s_preview_mode)
-    {
-    	     SENSOR_Sleep(200); // wait 2 frame the sensor working normal if no delay the lum is incorrect
-    }
-    else if(DCAMERA_ENVIRONMENT_NIGHT == s_preview_mode)
-    {
-    	    SENSOR_Sleep(800); // wait 2 frame the sensor working normal if no delay the lum is incorrect
-    }
-    else
-    {
-          SENSOR_Sleep(800); // wait 2 frame the sensor working normal if no delay the lum is incorrect
-
-    }
- 
-    return 0;
-    
-}
-
-#endif
 
 LOCAL uint32_t read_ev_value(uint32_t value)
 {

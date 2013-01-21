@@ -130,32 +130,28 @@ struct sensor_ae_tab{
 };
 
 struct sensor_rgb{
-	uint8_t r;
-	uint8_t g;
-	uint8_t b;
+	uint16_t r;
+	uint16_t g;
+	uint16_t b;
 };
 
 struct sensor_awb_coord{
-	uint8_t x;
-	uint8_t yt;
-	uint8_t yb;
+	uint16_t x;
+	uint16_t yb;
+	uint16_t yt;
 };
 
 struct sensor_awb_param{
 	struct sensor_pos win_start;
 	struct sensor_size win_size;
-	//struct sensor_rgb win[SENSOR_AWB_NUM];
-	struct sensor_rgb cali[SENSOR_AWB_NUM];
-	uint8_t cali_num;
-	uint8_t reserved3;
-	uint8_t reserved2;
-	uint8_t reserved1;
+	struct sensor_awb_coord win[SENSOR_AWB_NUM];
+	struct sensor_awb_coord cali[SENSOR_CMC_NUM];
+	uint32_t cali_num;
 	uint16_t r_gain[SENSOR_AWB_NUM];
 	uint16_t g_gain[SENSOR_AWB_NUM];
 	uint16_t b_gain[SENSOR_AWB_NUM];
 	uint16_t reserved0;
-	uint32_t matrix_zone;
-	uint32_t cal_zone;
+	uint32_t cali_zone;
 	uint32_t target_zone;
 };
 
@@ -204,7 +200,7 @@ struct sensor_cce_parm{
 };
 
 struct sensor_gamma_param{
-	uint16_t axis[26][2];
+	uint16_t axis[2][26];
 };
 
 struct sensor_cce_uvdiv{
@@ -350,98 +346,10 @@ struct sensor_raw_fix_info{
 	struct sensor_lnc_map lnc;
 };
 
-struct sensor_raw_ev_param{
-
-	uint32_t max_level;
-	int8_t *value_ptr; // =  ev*32. 0.5ev = 16; -0.5ev = -16
-
-};
-
-struct sensor_raw_sharpness_param{
-
-	uint32_t max_level;
-	int8_t *value_ptr; 
-
-};
-
-struct sensor_raw_saturation_param{
-
-	uint32_t max_level;
-	uint8_t *value_ptr; 
-};
-
-struct sensor_raw_hue_param{
-
-	uint32_t max_level;
-	uint8_t *value_ptr;  //degree 
-
-};
-
-struct sensor_raw_brightness_param{
-
-	uint32_t max_level;
-	uint8_t *value_ptr;  //degree 
-
-};
-
-//
-struct sensor_raw_contrast_param{
-
-	uint32_t max_level;
-	uint8_t *value_ptr;  //degree 
-
-};
-
-struct sensor_raw_sub_se_param{
-
-	uint32_t  type;/*SENSOR_IMAGE_EFFECT Macro*/
-	struct sensor_cce_parm* cce;
-	struct sensor_gamma_param *gamma_ptr;
-	struct sensor_emboss_param *emboss;
-};
-
-
-struct sensor_raw_special_effect_param{
-
-	
-	uint32_t  se_num;
-	struct sensor_raw_sub_se_param *param_ptr;
-};
-
-
-/* Incandescent/U30/CWF/Fluorescent/Sun/Cloudy*/
-struct sensor_raw_sub_awb_param
-{
-	uint32_t type; /*SENSOR_WB_MODE*/
-	struct sensor_rgb_gain  *gain_ptr;
-};
-
-struct sensor_raw_awb_param
-{
-	uint32_t awb_num;
-	struct sensor_raw_sub_awb_param  *gain_ptr;
-};
-
-
-
-
-struct sensor_adjust_info{
-
-	struct sensor_raw_ev_param *ev_ptr;
-	struct sensor_raw_sharpness_param *sharpness_ptr;
-	struct sensor_raw_brightness_param *brightness_ptr;
-	struct sensor_raw_contrast_param *contrast_ptr;
-	struct sensor_raw_saturation_param *saturation_ptr;
-	struct sensor_raw_hue_param *hue_ptr;
-	struct sensor_raw_special_effect_param *se_ptr;
-	struct sensor_raw_awb_param *awb_ptr;
-};
-
 struct sensor_raw_info{
 	struct sensor_version_info* version_info;
 	struct sensor_raw_tune_info* tune_ptr;
 	struct sensor_raw_fix_info* fix_ptr;
-//	struct sensor_adjust_info *adj_ptr;
 };
 
 

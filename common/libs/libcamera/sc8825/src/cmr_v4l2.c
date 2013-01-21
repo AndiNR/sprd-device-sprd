@@ -39,6 +39,7 @@ enum
 	V4L2_FLAG_NO_MEM   = 0x01,
 	V4L2_FLAG_TX_ERR   = 0x02,
 	V4L2_FLAG_CSI2_ERR = 0x03,
+	V4L2_FLAG_SYS_BUSY = 0x04,
 	V4L2_FLAG_TX_STOP  = 0xFF
 };
 
@@ -600,6 +601,10 @@ static void* cmr_v4l2_thread_proc(void* data)
 				// stopped , to do release resource
 				CMR_LOGV("TX Stopped, exit thread");
 				break;
+			} else if (V4L2_FLAG_SYS_BUSY == buf.flags) {
+				usleep(10000);
+				CMR_LOGV("continue.");
+				continue;
 			} else {
 				// normal irq
 				evt_id = cmr_v4l2_evt_id(buf.flags);
