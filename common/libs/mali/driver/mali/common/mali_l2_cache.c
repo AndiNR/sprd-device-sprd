@@ -14,7 +14,7 @@
 #include "mali_hw_core.h"
 #include "mali_pm.h"
 
-#include "arch/base.h"
+#include "base.h"
 
 /**
  * Size of the Mali L2 cache registers in bytes

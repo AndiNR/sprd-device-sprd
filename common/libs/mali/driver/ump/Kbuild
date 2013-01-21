@@ -18,9 +18,9 @@ $(warning Current directory is $(src))
 $(error No configuration found for config $(CONFIG). Check that arch-$(CONFIG)/config.h exists)
 else
 # Link arch to the selected arch-config directory
-$(shell [ -L $(src)/arch ] && rm $(src)/arch)
-$(shell ln -sf arch-$(CONFIG) $(src)/arch)
-$(shell touch $(src)/arch/config.h)
+#$(shell [ -L $(src)/arch ] && rm $(src)/arch)
+#$(shell ln -sf arch-$(CONFIG) $(src)/arch)
+$(shell touch $(src)/arch-$(CONFIG)/config.h)
 endif
 
 UDD_FILE_PREFIX = ../mali/
@@ -32,7 +32,7 @@ SVN_REV=r3p1
 ccflags-y += -DSVN_REV=$(SVN_REV)
 ccflags-y += -DSVN_REV_STRING=\"$(SVN_REV)\"
 
-ccflags-y += -I$(src) -I$(src)/common -I$(src)/linux -I$(src)/../mali/common -I$(src)/../mali/linux -I$(src)/include/ump
+ccflags-y += -I$(src) -I$(src)/common -I$(src)/linux -I$(src)/../mali/common -I$(src)/../mali/linux -I$(src)/include/ump -I$(src)/arch-$(CONFIG)
 ccflags-y += -DMALI_STATE_TRACKING=0
 ccflags-$(CONFIG_UMP_DEBUG) += -DDEBUG
 

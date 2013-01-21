@@ -12,7 +12,8 @@
 #define __MALI_MMU_PAGE_DIRECTORY_H__
 
 #include "mali_osk.h"
-#include "arch/base.h"
+
+#include "base.h"
 
 /**
  * Size of an MMU page in bytes
