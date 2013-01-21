@@ -41,12 +41,12 @@
 
 <profile name="linein-spk-l">
 	<pga name="Line Playback Volume" bit="0" />
-	<pga name="Inter PA Playback Volume" bit="4" />
+	<pga name="Inter PA Playback Volume" bit="5" />
 </profile>
 
 <profile name="linein-spk-r">
 	<pga name="Line Playback Volume" bit="0" />
-	<pga name="Inter PA Playback Volume" bit="4" />
+	<pga name="Inter PA Playback Volume" bit="5" />
 </profile>
 
 <profile name="linein-hp-l">
