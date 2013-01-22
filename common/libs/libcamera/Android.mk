@@ -47,8 +47,7 @@ LOCAL_SRC_FILES:= \
 	jpeg_fw_8810/src/jpegdec_vld.c \
 	jpeg_fw_8810/src/jpegdec_api.c \
 	jpeg_fw_8810/src/exif_writer.c \
-	jpeg_fw_8810/src/jpeg_stream.c \
-	ispvideo/isp_video.c
+	jpeg_fw_8810/src/jpeg_stream.c
 
 
 endif
