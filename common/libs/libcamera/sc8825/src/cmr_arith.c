@@ -149,6 +149,7 @@ int arithmetic_fd_init(void)
 	struct camera_context  *cxt = camera_get_cxt();
 	unsigned char          *p_format = (unsigned char*)IMAGE_FORMAT;
 	int                    ret = ARITH_SUCCESS;
+	pthread_attr_t          attr;
 
 	CMR_LOGV("inited, %d", cxt->arithmetic_cxt.fd_inited);
 
@@ -174,7 +175,9 @@ int arithmetic_fd_init(void)
 		} else {
 			sem_init(&s_arith_cxt->fd_sync_sem, 0, 0);
 			pthread_mutex_init(&s_arith_cxt->fd_lock, NULL);
-			ret = pthread_create(&s_arith_cxt->fd_thread, NULL, arithmetic_fd_thread_proc, NULL);
+			pthread_attr_init(&attr);
+			pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+			ret = pthread_create(&s_arith_cxt->fd_thread,  &attr, arithmetic_fd_thread_proc, NULL);
 			cxt->arithmetic_cxt.fd_inited = 1;
 		}
 	}

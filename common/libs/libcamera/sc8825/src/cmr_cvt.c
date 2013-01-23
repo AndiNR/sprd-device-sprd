@@ -191,6 +191,7 @@ int cmr_rot(enum img_rot_angle  angle,
 	rot_cfg.format          = cmr_rot_fmt_cvt(src_img->fmt);
 	if (rot_cfg.format >= ROT_FMT_MAX) {
 		CMR_LOGE("Unsupported format %d, %d", src_img->fmt, rot_cfg.format);
+		sem_post(&rot_sem);
 		return -EINVAL;
 	}
 
@@ -209,6 +210,7 @@ int cmr_rot(enum img_rot_angle  angle,
 	ret = ioctl(rot_fd, ROT_IO_CFG, &rot_cfg);
 	if (ret) {
 		CMR_LOGE("Unsupported format %d, %d", src_img->fmt, rot_cfg.format);
+		sem_post(&rot_sem);
 		return -EINVAL;
 	}
 

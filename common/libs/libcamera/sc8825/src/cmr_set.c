@@ -566,6 +566,10 @@ int camera_snapshot_start_set(void)
 	int                      ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
 
+	if (cxt->cmr_set.flash) {
+		Sensor_Ioctl(SENSOR_IOCTL_FLASH, FLASH_OPEN);/*open flash*/
+	}
+
 	ret = Sensor_Ioctl(SENSOR_IOCTL_BEFORE_SNAPSHOT, cxt->sn_cxt.capture_mode);
 	if (ret) {
 		CMR_LOGE("Sensor can't work at this mode %d", cxt->sn_cxt.capture_mode);
@@ -586,7 +590,9 @@ int camera_snapshot_stop_set(void)
 	if (HDR_CAP_NUM == cxt->total_cap_num) {
 		camera_set_hdr_ev(SENSOR_HDR_EV_LEVE_1);
 	}
-
+	if (cxt->cmr_set.flash) {
+		Sensor_Ioctl(SENSOR_IOCTL_FLASH, FLASH_CLOSE_AFTER_OPEN);/*open flash*/
+	}
 	ret = Sensor_Ioctl(SENSOR_IOCTL_AFTER_SNAPSHOT, cxt->sn_cxt.preview_mode);
 	if (ret) {
 		CMR_LOGE("Sensor can't work at this mode %d", cxt->sn_cxt.preview_mode);
