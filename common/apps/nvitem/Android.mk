@@ -18,6 +18,10 @@ LOCAL_SHARED_LIBRARIES := \
     libutils \
     libengclient
 
+#ifeq ($(strip $(TARGET_USERIMAGES_USE_EXT4)),true)
+#LOCAL_CFLAGS := -DCONFIG_EMMC
+#endif
+
 LOCAL_MODULE := nvitemd
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
