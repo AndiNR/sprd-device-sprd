@@ -31,6 +31,7 @@
 #include <cutils/properties.h>
 
 #include "gralloc_priv.h"
+#include "ion_sprd.h"
 
 #include <camera/Camera.h>
 

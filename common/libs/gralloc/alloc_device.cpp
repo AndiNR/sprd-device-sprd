@@ -45,7 +45,9 @@
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
-#include <linux/ion.h>
+//#include <linux/ion.h>
+#include "usr/include/linux/ion.h"
+#include "ion_sprd.h"
 #define ION_DEVICE "/dev/ion"
 
 #ifdef USE_UI_OVERLAY
@@ -156,11 +158,20 @@ static int gralloc_alloc_ionbuffer_locked(alloc_device_t* dev, size_t size, int 
        struct ion_allocation_data ionAllocData;
        ionAllocData.len = round_up_to_page_size(size);
        ionAllocData.align = PAGE_SIZE;
+#if (ION_DRIVER_VERSION == 1)
+       if (is_overlay) {
+	   	ionAllocData.heap_mask = (1 <<( ION_HEAP_TYPE_CARVEOUT+1));
+       } else {
+       		ionAllocData.heap_mask = ION_HEAP_CARVEOUT_MASK;
+       }
+	ionAllocData.flags = 0;
+#else
        if (is_overlay) {
 	   	ionAllocData.flags = (1 <<( ION_HEAP_TYPE_CARVEOUT+1));
        } else {
        		ionAllocData.flags = ION_HEAP_CARVEOUT_MASK;
-       }
+       }	
+#endif
     	err = ioctl(ion_fd, ION_IOC_ALLOC, &ionAllocData);
     	if(err)
 	{
@@ -172,10 +183,10 @@ static int gralloc_alloc_ionbuffer_locked(alloc_device_t* dev, size_t size, int 
     	fd_data.handle = ionAllocData.handle;
        handle_data.handle = ionAllocData.handle;
 
-       err = ioctl(ion_fd, ION_IOC_MAP, &fd_data);
+       err = ioctl(ion_fd, ION_IOC_SHARE, &fd_data);
        if(err)
 	{
-		ALOGE("ION_IOC_MAP fail");
+		ALOGE("ION_IOC_SHARE fail");
 		if(is_cached) close(ion_fd);
 		return -ENOMEM;
        }
