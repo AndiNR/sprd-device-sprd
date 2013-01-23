@@ -28,6 +28,7 @@ implements Preference.OnPreferenceChangeListener{
     private static final String KEY_NETW = "preferred_network_mode_key";
     static final int preferredNetworkMode = Phone.PREFERRED_NT_MODE;
     private int valueofsms = 0;
+    private int mModemType = 0;
 //    private Phone mPhone;
     private Phone mPhone[];
     private MyHandler mHandler;
@@ -37,16 +38,19 @@ implements Preference.OnPreferenceChangeListener{
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 //    addPreferencesFromResource(R.layout.networkselect);
-        if (TelephonyManager.getDefault().getModemType() == TelephonyManager.MODEM_TYPE_TDSCDMA) {
+        mModemType = TelephonyManager.getDefault().getModemType();
+        log("modem type: " + mModemType);
+        if ((mModemType == TelephonyManager.MODEM_TYPE_TDSCDMA)
+            || (mModemType == TelephonyManager.MODEM_TYPE_WCDMA)) {
             addPreferencesFromResource(R.layout.networkselect);
         } else {
             addPreferencesFromResource(R.layout.networkselect_gsm_only);
         }
-        if (DBG) { log (" 11 "); }
-            mButtonPreferredNetworkMode = (ListPreference) findPreference(KEY_NETW);
-        if (DBG) { log (" 12 "); }
-            mButtonPreferredNetworkMode.setOnPreferenceChangeListener(this);
-        if (DBG) { log (" 13 "); }
+        mButtonPreferredNetworkMode = (ListPreference) findPreference(KEY_NETW);
+        mButtonPreferredNetworkMode.setOnPreferenceChangeListener(this);
+        if (mModemType == TelephonyManager.MODEM_TYPE_WCDMA) {
+            mButtonPreferredNetworkMode.setEntries(R.array.preferred_network_mode_choices_wcdma);
+        }
 
         Looper looper;
         looper = Looper.myLooper();
@@ -237,7 +241,11 @@ implements Preference.OnPreferenceChangeListener{
                 mButtonPreferredNetworkMode.setSummary("Preferred network mode: GSM only");
                 break;
             case Phone.NT_MODE_WCDMA_ONLY:
-                mButtonPreferredNetworkMode.setSummary("Preferred network mode: TD-SCDMA only");
+                if (mModemType == TelephonyManager.MODEM_TYPE_TDSCDMA) {
+                    mButtonPreferredNetworkMode.setSummary("Preferred network mode: TD-SCDMA only");
+                } else if (mModemType == TelephonyManager.MODEM_TYPE_WCDMA) {
+                    mButtonPreferredNetworkMode.setSummary("Preferred network mode: WCDMA only");
+                }
                 break;
             default:
                 mButtonPreferredNetworkMode.setSummary("Preferred network mode: Auto");

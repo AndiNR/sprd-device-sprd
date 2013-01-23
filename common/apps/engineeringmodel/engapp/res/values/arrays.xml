@@ -39,8 +39,13 @@
 		<item>004</item>
 	</string-array>	
 
-	<string-array name="preferred_network_mode_choices">
+    <string-array name="preferred_network_mode_choices">
         <item>TD-SCDMA only</item>
+        <item>GSM only</item>
+        <item>Auto</item>
+    </string-array>
+    <string-array name="preferred_network_mode_choices_wcdma">
+        <item>WCDMA only</item>
         <item>GSM only</item>
         <item>Auto</item>
     </string-array>
