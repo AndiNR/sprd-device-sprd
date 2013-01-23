@@ -38,6 +38,7 @@
 #include "scale_rotate.h"
 
 #include <binder/MemoryHeapIon.h>
+#include "ion_sprd.h"
 
 #define SPRD_ION_DEV "/dev/ion"
 
@@ -852,7 +853,7 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
 
 	if (0 == status) {
 		dev->overlay_buf_size = round_up_to_page_size(dev->fb_width*dev->fb_height*3/2);
-		dev->ion_heap = new MemoryHeapIon(SPRD_ION_DEV, dev->overlay_buf_size*OVERLAY_BUF_NUM, MemoryHeapBase::NO_CACHING, (1 << (ION_HEAP_TYPE_CARVEOUT + 1)));
+		dev->ion_heap = new MemoryHeapIon(SPRD_ION_DEV, dev->overlay_buf_size*OVERLAY_BUF_NUM, MemoryHeapBase::NO_CACHING, (1 << ION_HEAP_CARVEOUT_ID1));
      		int fd = dev->ion_heap->getHeapID();
 		if (fd >= 0) {
 	 		int ret,phy_addr, buffer_size;
@@ -871,7 +872,7 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
 		}
 #ifdef _ALLOC_OSD_BUF
 		dev->overlay_buf_size2 = round_up_to_page_size(dev->fb_width*dev->fb_height*4);
-		dev->ion_heap2 = new MemoryHeapIon(SPRD_ION_DEV, dev->overlay_buf_size2*OVERLAY_BUF_NUM, MemoryHeapBase::NO_CACHING, (1 << (ION_HEAP_TYPE_CARVEOUT + 1)));
+		dev->ion_heap2 = new MemoryHeapIon(SPRD_ION_DEV, dev->overlay_buf_size2*OVERLAY_BUF_NUM, MemoryHeapBase::NO_CACHING, (1 << ION_HEAP_CARVEOUT_ID1));
      		int fd2 = dev->ion_heap2->getHeapID();
 		if (fd2 >= 0) {
 	 		int ret,phy_addr, buffer_size;
@@ -892,7 +893,7 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
 
 #ifdef SCAL_ROT_TMP_BUF
 		dev->overlay_buf_size_tmp = round_up_to_page_size(dev->fb_width*dev->fb_height*3/2);
-		dev->ion_heap_tmp = new MemoryHeapIon(SPRD_ION_DEV, dev->overlay_buf_size_tmp, MemoryHeapBase::NO_CACHING, (1 << (ION_HEAP_TYPE_CARVEOUT + 1)));
+		dev->ion_heap_tmp = new MemoryHeapIon(SPRD_ION_DEV, dev->overlay_buf_size_tmp, MemoryHeapBase::NO_CACHING, (1 << ION_HEAP_CARVEOUT_ID1));
      		int fd_tmp = dev->ion_heap_tmp->getHeapID();
 		if (fd_tmp >= 0) {
 	 		int ret,phy_addr, buffer_size;
