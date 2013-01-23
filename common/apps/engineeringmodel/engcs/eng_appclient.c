@@ -55,39 +55,29 @@ static int eng_at_handshake( int fd, int type)
 	if ( strncmp((const char*)data.buf,ENG_WELCOME,strlen(ENG_WELCOME)) == 0){
 		return 0;
 	}
-	ALOGD("%s: handshake error", __FUNCTION__);
+	ALOGE("%s: handshake error", __FUNCTION__);
 	return -1;
 }
 
 int eng_at_open(int type)
 {
 	int counter=0;
-	int err=0;
-    int soc_fd=-1;
-	
+	int err=-1;
+	int soc_fd=-1;
+
 	//connect to server
 	soc_fd = eng_client(ENG_SOCKET_PORT, SOCK_STREAM);
-		
 	if (soc_fd < 0) {
-	    ALOGD ("%s: opening engmode server socket failed", __FUNCTION__);
-	    err=-1;
-		goto error;
+		ALOGE ("%s: opening engmode server socket failed", __FUNCTION__);
+		return err;
 	}
 
-	//confirm the connection
-	while(eng_at_handshake(soc_fd, type)!=0) {
-		counter++;
-		if(counter>=3) {
-			ALOGD("%s: handshake with server failed, retry %d times",__FUNCTION__, counter);
-			err=-1;
-			eng_close(soc_fd);
-			goto error;
-		}
+	if(eng_at_handshake(soc_fd, type)!=0) {
+		eng_close(soc_fd);
+		return err;
 	}
+
 	return soc_fd;
-	
-error:
-	return err;
 }
 
 int eng_at_write(int fd, char *buf, int buflen)

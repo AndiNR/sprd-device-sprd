@@ -208,6 +208,7 @@ static int eng_event_unreg(int fd)
 			break;
 		}
 	}
+	close(fd);
 
 	if(i>=ENG_MAX_CONNECT_NUM)
 		return -1;
@@ -244,6 +245,7 @@ static int eng_event_reg(int fd)
 		memset(eng_write_buf, 0, ENG_MAX_RW_SIZE);
 		memcpy(eng_write_buf, ENG_DESTERROR, ENG_MAX_RW_SIZE);
 		eng_write(fd, eng_write_buf, strlen(eng_write_buf));
+		close(fd);
 		return -1;
 	}
 
