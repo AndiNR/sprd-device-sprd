@@ -244,7 +244,7 @@ static int isAtNoHandleEnd(const char *data)
             ret2=0;
             ENG_LOG("%s: check %s",__func__, s_AllResponse[i]);
             //check start \r\n
-            ENG_LOG("%s: ptr=0x%x, data=0x%x",__func__, ptr, data);
+            /*ENG_LOG("%s: ptr=0x%x, data=0x%x",__func__, ptr, data);*/
             if((ptr-2) >= data) {
                 ENG_LOG("%s: start two bytes[%x][%x]",__func__, *(ptr-2),*(ptr-1));
                 if(((*(ptr-2)==0x0a)&&(*(ptr-1)==0x0d))||
@@ -299,7 +299,7 @@ static int eng_isLargeInfoAt(int cmd) {
 *******************************************************************************/
 static char *eng_readline(int modemfd)
 {
-    ssize_t count;
+    int count;
 
     char *p_read = NULL;
     char *p_eol = NULL;
@@ -1988,112 +1988,39 @@ void * eng_parsecmd(int* cmd, char *data, int len)
 	
 }
 
-static int get_send_fd(char *inbuf, char *outbuf, eng_fdtype_t *fdtype)
+static int get_send_fd(char *inbuf, int *len, char *outbuf, eng_fdtype_t *fdtype)
 {
-	int length;
 	char strtmp[8];
-	char *ptr, *ptr1;
+	char *ptr, *ptr1,*ptr2;
 	ENG_LOG("%s: inbuf=%s",__func__, inbuf);
 
 	ptr = strchr(inbuf, ';');
 
 	memset(strtmp, 0, sizeof(strtmp));
-	length = ptr-inbuf;
 	*ptr='\0';
 	sprintf(strtmp, "%s", inbuf);	
-	fdtype->fd = atoi(strtmp);
+	*len = atoi(strtmp);
 	ptr++;
+
 	ptr1 = strchr(ptr, ';');
 	memset(strtmp, 0, sizeof(strtmp));
-	*ptr1='\0';
-	sprintf(strtmp, "%s", ptr);
+	*ptr1 = '\0';
+	sprintf(strtmp, "%s",ptr);
+	fdtype->fd = atoi(strtmp);
+	ptr1++;
+
+	ptr2 = strchr(ptr1, ';');
+	memset(strtmp, 0, sizeof(strtmp));
+	*ptr2='\0';
+	sprintf(strtmp, "%s", ptr1);
 	fdtype->type = atoi(strtmp);
-	sprintf(outbuf, "%s",ptr1+1);
-	
-	ENG_LOG("%s: outbuf=%s; fd=%d, type=%d",__func__, outbuf, fdtype->fd, fdtype->type);
+	//sprintf(outbuf, "%s",ptr2+1);
+	memcpy(outbuf,ptr2+1,*len - (ptr2-inbuf-1));
+
+	ENG_LOG("%s: outbuf=%s; len =%d,fd=%d, type=%d",__func__, outbuf, *len,fdtype->fd, fdtype->type);
 
 	return 0;
 	
-}
-
-/*
- *Write at command from server to modem
- */
-static int eng_server2modem(eng_fdtype_t *fdtype)
-{
-	int n,data_len,cmd_len,length, modemfd;
-	char tmp[ENG_BUF_LEN];
-	fd_set readfds;
-	char *cmd;
-	char *data_ptr;
-	void *param;
-	struct eng_buf_struct data;
-	
-	/* Server-> Client */
-	FD_ZERO(&readfds);
-	FD_SET(soc_fd, &readfds);
-	ENG_LOG("%s: Waiting command from Server ...... soc_fd=0x%x\n", __FUNCTION__, soc_fd);
-
-	n = select(soc_fd+1, &readfds, NULL, NULL, NULL);
-	ENG_LOG("%s: Get Command n=0x%x", __FUNCTION__, n);
-    if (n<= 0){
-        ALOGD("eng_thread_server2modem exit n=0x%x",n);
-        /* Mod for Bug99799 Start */
-        //return -1;
-        return -2;
-        /* Mod for Bug99799 End   */
-    }
-
-	//read data from socket
-	memset(data.buf, 0, ENG_BUF_LEN);
-	memset(tmp, 0, ENG_BUF_LEN);
-	 
-	length= eng_read(soc_fd, tmp, ENG_BUF_LEN);
-	
-    if(length<=0) {
-        ALOGD("%s: no data receive read from server\n", __FUNCTION__);
-        /* Mod for Bug99799 Start */
-        //return -1;
-        return -2;
-        /* Mod for Bug99799 End   */
-    }
-	
-	ENG_LOG("%s: tmp=%s, length=%d\n", __FUNCTION__, tmp, length);
-
-	get_send_fd(tmp, data.buf, fdtype);
-
-	/* Client -> Modem*/
-	data_ptr = data.buf;
-	data.buf_len = strlen(data.buf);
-
-	ENG_LOG("%s: data.buf=%s, data.buf_len=%d\n", __FUNCTION__, data.buf, data.buf_len);
-	
-	param = eng_parsecmd(&cmd_type, data_ptr, data.buf_len);
-	cmd=eng_atCommandRequest(cmd_type, param);
-	ENG_LOG("%s: write data[%s] from server to modem \n",__FUNCTION__, cmd);
-
-	//write at command
-	if(fdtype->type==1) { //SIM2
-		ENG_AT_LOG("%s: use SIM2 %s\n",__func__,ENG_MODEM_DEV2);
-		modemfd = modem_fd2;
-	} else {	//SIM1
-		ENG_AT_LOG("%s: use SIM1 %s\n",__func__,ENG_MODEM_DEV);
-		modemfd = modem_fd1;
-	}
-	ENG_AT_LOG("AT > %s",cmd);
-	cmd_len = strlen(cmd);
-	if(cmd_len>0){
-		n=write(modemfd, cmd, cmd_len);
-		n=write(modemfd, "\r", 1);
-		ENG_LOG("%s: Write Request to Modem Success", __func__);
-	} else {
-		ALOGD("%s: No cmd to write",__func__);
-		return -1;
-	}
-
-
-	return 0;
-
 }
 
 static int eng_modem2server(int status, eng_fdtype_t *fdtype)
@@ -2228,6 +2155,104 @@ static int eng_modem2server(int status, eng_fdtype_t *fdtype)
 	return ret;
 }
 
+/*
+ *communication between server and modem
+ */
+static int eng_servermodem_comm(eng_fdtype_t *fdtype)
+{
+	int n,data_len,cmd_len,length, modemfd;
+	char tmp[ENG_BUF_LEN];
+	fd_set readfds;
+	char *cmd;
+	char *data_ptr;
+	void *param;
+	char* words;
+	int words_len;
+	int ret = 0;
+	struct eng_buf_struct data;
+
+	/* Server-> Client */
+	FD_ZERO(&readfds);
+	FD_SET(soc_fd, &readfds);
+	ENG_LOG("%s: Waiting command from Server ...... soc_fd=0x%x\n", __FUNCTION__, soc_fd);
+
+	n = select(soc_fd+1, &readfds, NULL, NULL, NULL);
+	ENG_LOG("%s: Get Command n=0x%x", __FUNCTION__, n);
+	if (n<= 0){
+		ALOGE("eng_thread_server2modem exit n=0x%x",n);
+		/* Mod for Bug99799 Start */
+		//return -1;
+		return -2;
+		/* Mod for Bug99799 End   */
+	}
+
+	//read data from socket
+	memset(data.buf, 0, ENG_BUF_LEN);
+	memset(tmp, 0, ENG_BUF_LEN);
+
+	length= eng_read(soc_fd, tmp, ENG_BUF_LEN);
+
+	if(length<=0) {
+		ALOGE("%s: no data receive read from server\n", __FUNCTION__);
+		/* Mod for Bug99799 Start */
+		//return -1;
+		return -2;
+		/* Mod for Bug99799 End   */
+	}
+
+	ENG_LOG("%s: tmp=%s, length=%d\n", __FUNCTION__, tmp, length);
+
+	length = 0;
+	words = tmp;
+
+	do {
+		get_send_fd(words,&words_len, data.buf, fdtype);
+
+		/* Client -> Modem*/
+		data_ptr = data.buf;
+		data.buf_len = strlen(data.buf);
+
+		ENG_LOG("%s: data.buf=%s, data.buf_len=%d\n", __FUNCTION__, data.buf, data.buf_len);
+
+		param = eng_parsecmd(&cmd_type, data_ptr, data.buf_len);
+		cmd=eng_atCommandRequest(cmd_type, param);
+		ENG_LOG("%s: write data[%s] from server to modem \n",__FUNCTION__, cmd);
+
+		//write at command
+		if(fdtype->type==1) { //SIM2
+			ENG_AT_LOG("%s: use SIM2 %s\n",__func__,ENG_MODEM_DEV2);
+			modemfd = modem_fd2;
+		} else {	//SIM1
+			ENG_AT_LOG("%s: use SIM1 %s\n",__func__,ENG_MODEM_DEV);
+			modemfd = modem_fd1;
+		}
+		ENG_AT_LOG("AT > %s",cmd);
+		cmd_len = strlen(cmd);
+		if(cmd_len>0){
+			n=write(modemfd, cmd, cmd_len);
+			n=write(modemfd, "\r", 1);
+			ENG_LOG("%s: Write Request to Modem Success", __func__);
+		} else {
+			ALOGE("%s: No cmd to write",__func__);
+			ret = -1;
+		}
+
+		eng_modem2server(ret, fdtype);
+
+		length += words_len;
+		if ( length >=  ENG_BUF_LEN )
+		{
+			break;
+		}
+		words += length;
+
+	}while(words[0]!='\0');
+
+	return 0;
+
+}
+
+
 static void *eng_servermodem_exchange(void *_param)
 {
 	int ret;
@@ -2236,10 +2261,8 @@ static void *eng_servermodem_exchange(void *_param)
 	ENG_LOG("%s: Run",__FUNCTION__);
 	for( ; ; ){
 
-		//write cmd from server to modem
-		ret = eng_server2modem(&fdtype);
-		//write response from modem to server
-		eng_modem2server(ret, &fdtype);
+		// data transfer between  server and  modem
+		eng_servermodem_comm(&fdtype);
 
 	}
 

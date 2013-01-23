@@ -16,7 +16,7 @@
 #include "cutils/sockets.h"
 #include "cutils/properties.h"
 
-#define ENG_MAX_RW_SIZE            2048
+#define ENG_MAX_RW_SIZE            (2048-20)
 
 #define ENG_MAX_CONNECT_NUM       60
 #define ENG_MAX_CLIENT_NAME_LEN   20
@@ -122,7 +122,7 @@ static void client_info_update(fdevent* fe,char* name, int type)
 			client_info[i].fe = fe;
 			client_info[i].type = type;
 			memcpy(client_info[i].name, name, strlen(name));
-			ENG_LOG("%s: name[%d] %s, fd=%s\n",__func__, i, client_info[i].name,client_info[i].fe);
+			ENG_LOG("%s: name[%d] %s,\n",__func__, i, client_info[i].name);
 			break;
 		}
 	}
@@ -131,7 +131,7 @@ static int client_info_gettype(int fd)
 {
 	int i;
 	for (i=0; i<ENG_MAX_CONNECT_NUM; i++) {
-		ENG_LOG("%s:[%d] fd=%d; client_info[i].fe=%x\n",__func__, i, fd, client_info[i].fe);
+		ENG_LOG("%s:[%d] fd=%d;\n",__func__, i, fd);
 		if (client_info[i].fe != NULL){
 			if (fd == client_info[i].fe->fd) {
 				ENG_LOG("%s: [%d].name=%s; .type=%d\n",__func__, i, client_info[i].name, client_info[i].type);
@@ -265,7 +265,8 @@ static int eng_event_reg(int fd)
 
 static void setup_send_data(int fd, int type, char *inbuf, char *outbuf)
 {
-	sprintf(outbuf, "%d;%d;%s", fd, type, inbuf);
+	/*fd max=43892 /proc/sys/fs/file-max */
+	sprintf(outbuf, "%5d;%5d;%d;%s",6+6+2+strlen(inbuf), fd, type, inbuf);
 	ENG_LOG("%s:fd=%d; type=%d; inbuf=%s; outbuf=%s", __func__, fd, type, inbuf, outbuf);
 }
 

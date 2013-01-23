@@ -23,7 +23,6 @@ extern "C" {
 //#define  ENG_LOG(format, ...)
 #endif
 
-
 #define ENG_SOCKET_PORT  65000
 
 #define ENG_APPCLIENT     "appclient"
