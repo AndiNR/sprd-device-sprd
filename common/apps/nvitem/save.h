@@ -13,8 +13,13 @@ extern "C" {
 #define RUNNINGNV_FILENAME "/runtimenv/runtimenv.bin"
 #endif
 
-#define BACKUP_FIXNV_FILENAME	"/system/bin/fixnv.bin"
-#define BACKUP_RUNNINGNV_FILENAME "/system/bin/runtimenv.bin"
+#ifdef CONFIG_EMMC
+#define BACKUP_FIXNV_FILENAME	"/dev/block/mmcblk0p5"
+#define BACKUP_RUNNINGNV_FILENAME "/dev/block/mmcblk0p7"
+#else
+#define BACKUP_FIXNV_FILENAME	"/backupfixnv/fixnv.bin"
+#define BACKUP_RUNNINGNV_FILENAME "/runtimenv/runtimenvbkup.bin"
+#endif
 
 extern int fixnv_fd;
 extern int runningnv_fd;
