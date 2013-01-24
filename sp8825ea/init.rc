@@ -328,6 +328,7 @@ on charger
     class_start charger
 
 on alarm
+    insmod /system/lib/modules/ft5306_ts.ko
     class_start core
     start media
     exec /bin/poweroff_alarm
