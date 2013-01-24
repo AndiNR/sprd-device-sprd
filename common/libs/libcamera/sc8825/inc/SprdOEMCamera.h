@@ -428,7 +428,7 @@ typedef enum {
 	CAMERA_PARM_ORIENTATION,//wxz20110815: for the phone orientation: landscape and portrait
 	CAMERA_PARM_FOCAL_LENGTH,
 	CAMERA_PARM_SENSOR_ROTATION, /* 0, 90, 180, 270 degrees */
-	CAMERA_PARM_FOCUS_MODE, 
+	CAMERA_PARM_FOCUS_MODE,
 	CAMERA_PARM_MAX
 } camera_parm_type;
 

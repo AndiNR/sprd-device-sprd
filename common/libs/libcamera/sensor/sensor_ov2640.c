@@ -518,7 +518,10 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV2640_ioctl_func_tab = {
 	set_ov2640_video_mode,
 
 	PNULL,			//OV2640_pick_out_jpeg_stream,
-	//  PNULL
+	PNULL,
+	PNULL,
+	PNULL,
+	PNULL
 };
 
 LOCAL SENSOR_EXTEND_INFO_T ov2640_ext_info = {
@@ -593,7 +596,8 @@ SENSOR_INFO_T g_OV2640_yuv_info = {
 	0,			// threshold mode
 	0,			// threshold start postion
 	0,			// threshold end postion
-	0
+	0,
+	{0, 2, 8, 1}
 };
 
 LOCAL uint32_t OV2640_set_ae_enable(uint32_t enable)

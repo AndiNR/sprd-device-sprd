@@ -350,7 +350,7 @@ int camera_set_scene(uint32_t scene_mode, uint32_t *skip_mode, uint32_t *skip_nu
 
 int camera_set_night(uint32_t night_mode, uint32_t *skip_mode, uint32_t *skip_num)
 {
-	struct camera_context    *cxt = camera_get_cxt();
+/*	struct camera_context    *cxt = camera_get_cxt();*/
 	int                      ret = CAMERA_SUCCESS;
 
 	return ret;
@@ -1122,7 +1122,7 @@ int camera_autofocus_need_exit(void)
 
 int camera_isp_ctrl_done(uint32_t cmd, void* data)
 {
-	struct camera_context    *cxt = camera_get_cxt();
+/*	struct camera_context    *cxt = camera_get_cxt();*/
 	int                      ret = 0;
 
 	if (cmd >= ISP_CTRL_MAX) {

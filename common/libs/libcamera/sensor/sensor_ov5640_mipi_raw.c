@@ -399,9 +399,7 @@ static const uint8_t s_ov5640_tune_info[sizeof(struct sensor_raw_tune_info)]={
 #include "sensor_ov5640_tune_info.dat"
 };
 #else
-static struct sensor_raw_tune_info s_ov5640_tune_info={
-	0x00
-};
+static struct sensor_raw_tune_info s_ov5640_tune_info;
 #endif
 
 static struct sensor_raw_fix_info s_ov5640_fix_info={
@@ -641,7 +639,7 @@ SENSOR_INFO_T g_ov5640_mipi_raw_info = {
 
 	s_ov5640_resolution_Tab_RAW,	// point to resolution table information structure
 	&s_ov5640_ioctl_func_tab,	// point to ioctl function table
-	&s_ov5640_mipi_raw_info,		// information and table about Rawrgb sensor
+	(uint32_t *)&s_ov5640_mipi_raw_info,		// information and table about Rawrgb sensor
 	NULL,			//&g_ov5640_ext_info,                // extend information about sensor
 	SENSOR_AVDD_1800MV,	// iovdd
 	SENSOR_AVDD_1500MV,	// dvdd
@@ -1217,7 +1215,7 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 
 LOCAL uint32_t _ov5640_GetResolutionTrimTab(uint32_t param)
 {
-	SENSOR_PRINT("0x%x", s_ov5640_Resolution_Trim_Tab);
+	SENSOR_PRINT("0x%x", (uint32_t)s_ov5640_Resolution_Trim_Tab);
 	return (uint32_t) s_ov5640_Resolution_Trim_Tab;
 }
 LOCAL uint32_t _ov5640_PowerOn(uint32_t power_on)

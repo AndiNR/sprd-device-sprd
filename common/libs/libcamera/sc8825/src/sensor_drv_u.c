@@ -71,7 +71,7 @@ LOCAL SENSOR_TYPE_E s_sensor_type = SENSOR_TYPE_NONE;
 LOCAL SENSOR_MODE_E s_sensor_mode[SENSOR_ID_MAX] =
     { SENSOR_MODE_MAX, SENSOR_MODE_MAX, SENSOR_MODE_MAX };
 //LOCAL SENSOR_MUTEX_PTR s_imgsensor_mutex_ptr = PNULL;
-LOCAL SENSOR_REGISTER_INFO_T s_sensor_register_info = { 0x00};
+LOCAL SENSOR_REGISTER_INFO_T s_sensor_register_info;
 
 LOCAL SENSOR_REGISTER_INFO_T_PTR s_sensor_register_info_ptr =
     &s_sensor_register_info;
@@ -90,7 +90,7 @@ static BOOLEAN s_sensor_identified = SCI_FALSE;
 static BOOLEAN s_sensor_param_saved = SCI_FALSE;
 static uint8_t  s_sensor_index[SENSOR_ID_MAX]={0xFF,0xFF,0xFF,0xFF,0xFF};
 
-LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_default_exif={0x00};
+LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_default_exif;
 LOCAL pthread_t                   s_sensor_thread;
 LOCAL uint32_t                    s_queue_handle;
 /*LOCAL pthread_mutex_t             sensor_sync_mutex;
@@ -395,7 +395,7 @@ int _Sensor_Device_WriteRegTab(SENSOR_REG_TAB_PTR reg_tab)
 	if (0 != ret)
 	{
 		SENSOR_PRINT_ERR("_Sensor_Device_SetRegTab failed,  ptr=%x, count=%d, bits=%d, burst=%d \n",
-			reg_tab->sensor_reg_tab_ptr, reg_tab->reg_count, reg_tab->reg_bits, reg_tab->burst_mode);
+			(uint32_t)reg_tab->sensor_reg_tab_ptr, reg_tab->reg_count, reg_tab->reg_bits, reg_tab->burst_mode);
 		
 		ret = -1;
 	}
@@ -674,7 +674,6 @@ LOCAL void Sensor_SetExportInfo(SENSOR_EXP_INFO_T * exp_info_ptr)
 	SENSOR_PRINT("SENSOR: Sensor_SetExportInfo.\n");
 
 	SENSOR_MEMSET(exp_info_ptr, 0x00, sizeof(SENSOR_EXP_INFO_T));
-	exp_info_ptr->name= sensor_info_ptr->name;
 	exp_info_ptr->image_format = sensor_info_ptr->image_format;
 	exp_info_ptr->image_pattern = sensor_info_ptr->image_pattern;
 
@@ -685,7 +684,7 @@ LOCAL void Sensor_SetExportInfo(SENSOR_EXP_INFO_T * exp_info_ptr)
 	    ((sensor_info_ptr->hw_signal_polarity >> 4) & 0x1);
 	exp_info_ptr->pclk_delay =
 	    ((sensor_info_ptr->hw_signal_polarity >> 5) & 0x07);
-	exp_info_ptr->raw_info_ptr = sensor_info_ptr->raw_info_ptr;
+	exp_info_ptr->raw_info_ptr = (struct sensor_raw_info*)sensor_info_ptr->raw_info_ptr;
 
 	exp_info_ptr->source_width_max = sensor_info_ptr->source_width_max;
 	exp_info_ptr->source_height_max = sensor_info_ptr->source_height_max;
@@ -1740,7 +1739,7 @@ SENSOR_EXP_INFO_T *Sensor_GetInfo(void)
 		return PNULL;
 	}
 
-	SENSOR_PRINT("Sensor_GetInfo: info=%x \n", &s_sensor_exp_info);
+	SENSOR_PRINT("Sensor_GetInfo: info=%x \n", (uint32_t)&s_sensor_exp_info);
 	return &s_sensor_exp_info;
 }
 

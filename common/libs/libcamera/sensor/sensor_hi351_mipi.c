@@ -7043,7 +7043,7 @@ LOCAL uint32_t HI351_InitExt(uint32_t param)	//wujinyou, 2012.11.14
 	     			//sensor_reg_tab_info_ptr->reg_count, g_is_main_sensor);
 
 	timestamp_new = systemTime(CLOCK_MONOTONIC);
-	SENSOR_PRINT("SENSOR: HI351_InitExt end, ret=%d, time=%d us\n", ret, (timestamp_new-timestamp_old)/1000);
+	SENSOR_PRINT("SENSOR: HI351_InitExt end, ret=%d, time=%d us\n", ret, (uint32_t)(timestamp_new-timestamp_old)/1000);
 
 	return SENSOR_SUCCESS;
 }

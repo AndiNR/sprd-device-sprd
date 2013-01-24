@@ -56,7 +56,7 @@ LOCAL uint32_t set_ov7675_video_mode(uint32_t mode);
 LOCAL uint32_t _ov7675_GetExifInfo(uint32_t param);
 LOCAL uint32_t _ov7675_InitExifInfo(void);
 LOCAL uint32_t s_preview_mode;
-LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_ov7675_exif = {0};
+LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_ov7675_exif;
 /**---------------------------------------------------------------------------*
  ** 						Local Variables 								 *
  **---------------------------------------------------------------------------*/

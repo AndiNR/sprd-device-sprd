@@ -2097,9 +2097,9 @@ LOCAL JPEG_RET_E Jpeg_WriteExifIFD(JPEG_WRITE_STREAM_CONTEXT_T *context_ptr,
     uint32      thumbnail_ifd_offset= 0;
     JPEG_RET_E  ret                 = JPEG_SUCCESS;
 
-    EXIF_PRI_DATA_STRUCT_T  *data_struct_ptr    = primary_ptr->data_struct_ptr;
-    EXIF_PRI_DATA_CHAR_T    *data_char_ptr      = primary_ptr->data_char_ptr;
-    EXIF_PRI_DESC_T         *img_desc_ptr       = primary_ptr->img_desc_ptr;
+    EXIF_PRI_DATA_STRUCT_T  *data_struct_ptr;
+    EXIF_PRI_DATA_CHAR_T    *data_char_ptr;
+    EXIF_PRI_DESC_T         *img_desc_ptr;
     EXIF_LONG_T thumbnail_offset = 0;
     EXIF_LONG_T thumbnail_size = 0;
     EXIF_LONG_T offset = 0;
@@ -2108,6 +2108,10 @@ LOCAL JPEG_RET_E Jpeg_WriteExifIFD(JPEG_WRITE_STREAM_CONTEXT_T *context_ptr,
     {
         return JPEG_FAILED;
     }
+
+	data_struct_ptr    = primary_ptr->data_struct_ptr;
+    data_char_ptr      = primary_ptr->data_char_ptr;
+    img_desc_ptr       = primary_ptr->img_desc_ptr;
 
     memset(&ifd_info, 0, sizeof(IFD_INFO_T));
 
@@ -2558,7 +2562,7 @@ LOCAL JPEG_RET_E Jpeg_WriteExifIFD(JPEG_WRITE_STREAM_CONTEXT_T *context_ptr,
 
         entries++;
     }
-    JPEG_PRINT_LOW("thumbnail_ptr=0x%x.",thumbnail_ptr);
+    JPEG_PRINT_LOW("thumbnail_ptr=0x%x.",(uint32_t)thumbnail_ptr);
     /*write thumbnail image*/
     if (PNULL != thumbnail_ptr && PNULL != thumbnail_ptr->stream_buf_ptr
         && thumbnail_ptr->stream_buf_size > 0)
@@ -2908,7 +2912,7 @@ LOCAL JPEG_RET_E JPEG_AddExifToMemory(JINF_WEXIF_IN_PARAM_T *in_param_ptr,
     *target_buf_ptr++ = M_MARKER;
     *target_buf_ptr++ = M_SOI;
     JPEG_PRINT_LOW("target buf:0x%x,app1_buf_ptr 0x%x ,app1_size %d.",
-		target_buf_ptr,app1_buf_ptr,app1_size);
+		(uint32_t)target_buf_ptr,(uint32_t)app1_buf_ptr,app1_size);
    // memcpy(target_buf_ptr, app1_buf_ptr, app1_size);
    for(i=0;i<app1_size;i++) {
 		*target_buf_ptr++ = *app1_buf_ptr++;
@@ -3019,12 +3023,15 @@ JINF_RET_E IMGJPEG_WriteExif(JINF_WEXIF_IN_PARAM_T *in_param_ptr,
     JPEG_RET_E ret = JPEG_SUCCESS;
 
 
-	if((NULL == in_param_ptr) && (NULL == in_param_ptr->exif_info_ptr)
+	if (NULL == in_param_ptr) {
+		JPEG_PRINT_LOW("input parameter pointer is NULL!");
+		return JPEGE_INVALID_ARGUMENT;
+	}
+	if ((NULL == in_param_ptr->exif_info_ptr)
 		&&(NULL == in_param_ptr->src_jpeg_buf_ptr)&&(NULL ==in_param_ptr->temp_buf_ptr )) {
 		JPEG_PRINT_LOW("input parameter error!");
 		return JPEGE_INVALID_ARGUMENT;
 	}
-
 	JPEG_PRINT_LOW("[EXIFW_AddExif] src buf = 0x%x, size = %d, thumb  buf = 0x%x, size = %d,\
 						temp buf = 0x%x, size = %d, write file = 0x%x",
 						(uint32_t)in_param_ptr->src_jpeg_buf_ptr, in_param_ptr->src_jpeg_size,

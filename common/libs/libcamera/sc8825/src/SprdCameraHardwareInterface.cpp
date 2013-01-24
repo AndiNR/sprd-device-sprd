@@ -2192,6 +2192,10 @@ status_t strToFPS(const char *str, int &min, int &max) {
 	   memcpy(strTmp, str, strlen(str) - strlen(pDest));
 	    min = atoi(strTmp);
 	    pDest = strrchr((const char *)str, (int)',');
+        if (pDest == NULL) {
+            ALOGV("pDest is NULL.");
+            return UNKNOWN_ERROR;
+        }
 	    pDest++;
 	    strcpy(strTmp, pDest);
 	    max = atoi(strTmp);
@@ -2325,7 +2329,7 @@ static uint32_t s_focus_zone[25];
 	//SET_PARM(CAMERA_PARM_FOCUS_RECT,(int32_t)s_focus_zone);
 	SET_PARM(CAMERA_PARM_FOCUS_RECT,(int32_t)s_save_zone_info);
 
-	if(0xFFFFFFFF == lookupvalue(focus_mode_map,
+	if(0xFFFFFFFF == (unsigned int)lookupvalue(focus_mode_map,
                         mParameters.get("focus-mode"))){
 		mParameters.set("focus-mode", "auto");
 		return UNKNOWN_ERROR;
@@ -2381,7 +2385,7 @@ static uint32_t s_focus_zone[25];
                         CAMERA_ISO_AUTO));
 
 #ifndef CONFIG_CAMERA_788
-	if(0xFFFFFFFF == lookupvalue(flash_mode_map,
+	if(0xFFFFFFFF == (unsigned int)lookupvalue(flash_mode_map,
                         mParameters.get("flash-mode"))){
 		mParameters.set("flash-mode", "off");
 		return UNKNOWN_ERROR;

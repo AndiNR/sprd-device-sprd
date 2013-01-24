@@ -265,7 +265,7 @@ typedef struct jpeg_codec_tag
 
 	uint32                    total_slice_num;
 	uint32                    slice_num;
-	uint32			fd ;
+	int			fd ;
 	uint32			addr;
 	uint32                      stream_switch_num;
 	

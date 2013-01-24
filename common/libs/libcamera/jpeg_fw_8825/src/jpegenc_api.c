@@ -1056,7 +1056,7 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 
 	SCI_TRACE_LOW("JPEGENC_Slice_Start: slice num%d, slice_height: %d.\n", slice_num, slice_height);   
 
-	if(0 >= (vsp_fd = open(SPRD_VSP_DRIVER,O_RDWR))) {
+	if(0 > (vsp_fd = open(SPRD_VSP_DRIVER,O_RDWR))) {
 		SCI_TRACE_LOW("JPEGENC open vsp error, vsp_fd: %d.\n", vsp_fd);
 		return -1;
 	} else {
@@ -1113,6 +1113,7 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 		ioctl(vsp_fd,VSP_UNREG_IRQ,NULL);
 		if(vsp_fd >= 0){
 			close(vsp_fd);
+			vsp_fd = -1;
 		}
 
 		out_ptr->is_over = 1;

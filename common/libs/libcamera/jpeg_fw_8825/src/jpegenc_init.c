@@ -222,10 +222,10 @@ PUBLIC void JpegEnc_VspTopUpdateYUVAddr(uint32 y_phy_addr,uint32_t u_phy_addr)
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGEncCodec();
 	uint32 pTableAddr = (uint32)VSP_MEMO10_ADDR;
 
-	jpeg_fw_codec->YUV_Info_0.y_data_ptr = y_phy_addr;
-	jpeg_fw_codec->YUV_Info_1.y_data_ptr = y_phy_addr;
-	jpeg_fw_codec->YUV_Info_0.u_data_ptr = u_phy_addr;
-	jpeg_fw_codec->YUV_Info_1.u_data_ptr = u_phy_addr;
+	jpeg_fw_codec->YUV_Info_0.y_data_ptr = (unsigned char*)y_phy_addr;
+	jpeg_fw_codec->YUV_Info_1.y_data_ptr = (unsigned char*)y_phy_addr;
+	jpeg_fw_codec->YUV_Info_0.u_data_ptr = (unsigned char*)u_phy_addr;
+	jpeg_fw_codec->YUV_Info_1.u_data_ptr = (unsigned char*)u_phy_addr;
 
 	open_vsp_iram();
 

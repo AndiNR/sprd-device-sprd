@@ -598,10 +598,16 @@ static  int  _dec_next(uint32_t handle, struct jpeg_dec_next_param *param_ptr)
 
 	CMR_LOGI("handle :0x%x.",handle);
 
+	if (0 == handle) {
+		CMR_LOGE("handle is NULL.");
+		return JPEG_CODEC_PARAM_ERR;
+	}
+
+	dec_cxt_ptr = (JPEG_DEC_T * )handle;
+
 	memset(&slice_out,0,sizeof(JPEGDEC_SLICE_OUT_T));
 	if(0 == param_ptr->dst_addr_phy.addr_y) {
 		CMR_LOGI("one buffer.");
-		dec_cxt_ptr = (JPEG_DEC_T * )handle;
 		slice_param.slice_height = dec_cxt_ptr->slice_height;
 		slice_param.yuv_phy_buf = dec_cxt_ptr->dst_addr_phy.addr_y + dec_cxt_ptr->cur_line_num*dec_cxt_ptr->size.width;
 		dec_cxt_ptr->dst_addr_phy.addr_u += dec_cxt_ptr->handle_line_num*dec_cxt_ptr->size.width>>1;
@@ -808,11 +814,14 @@ static void* _thread_proc(void* data)
 			CMR_LOGI("jpeg:receive JPEG_EVT_DEC_START message");
 			break;
 		case  JPEG_EVT_DEC_NEXT:
-			dec_param_ptr = (struct jpeg_dec_next_param*)message.data;
-			handle_ptr = (JPEG_HANDLE_T*)dec_param_ptr->handle;
-			handle = handle_ptr->handle;
 			if(0 != message.data) {
+				dec_param_ptr = (struct jpeg_dec_next_param*)message.data;
+				handle_ptr = (JPEG_HANDLE_T*)dec_param_ptr->handle;
+				handle = handle_ptr->handle;
 				ret = _dec_next( handle, (struct jpeg_dec_next_param *)message.data);
+			} else {
+				ret = JPEG_CODEC_PARAM_ERR;
+				CMR_LOGE("para error.");
 			}
 
 			if(JPEG_CODEC_SUCCESS == ret){

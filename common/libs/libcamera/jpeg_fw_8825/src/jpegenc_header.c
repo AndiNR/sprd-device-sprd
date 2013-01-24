@@ -152,7 +152,7 @@ LOCAL void WriteThumbnailData(APP1_T *app1_t)
 {
 	uint32 *buf32 = NULL;
 	uint8 *buf8 = NULL;
-	int32 i, j;
+	uint32 i, j;
 	
 	buf32 = (uint32 *)app1_t->thumbnail_virt_addr;	
 	for(i = 0; i < (app1_t->thumbnail_len / 4); i++){

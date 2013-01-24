@@ -174,7 +174,7 @@ int camera_capture_buf_size(uint32_t     camera_id,
 					uint32_t        *size_major,
 					uint32_t        *size_minor)
 {
-	uint32_t               size_pixel = (uint32_t)(image_size->width * image_size->height);
+	uint32_t               size_pixel;
 	int                    i;
 	struct cap_size_to_mem *mem_tab_ptr = NULL;
 
@@ -187,6 +187,8 @@ int camera_capture_buf_size(uint32_t     camera_id,
 			(uint32_t)size_minor);
 		return -1;
 	}
+
+	size_pixel = (uint32_t)(image_size->width * image_size->height);
 
 	if (SENSOR_IMAGE_FORMAT_RAW == sn_fmt) {
 		if (BACK_CAMERA_ID == camera_id) {
@@ -238,10 +240,10 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 						uint32_t need_rot,
 						uint32_t image_cnt)
 {
-	uint32_t       channel_size = (uint32_t)(image_size->width * image_size->height);
-	uint32_t       size_pixel = channel_size;
-	uint32_t       major_res = cap_2_frm->major_frm.buf_size;
-	uint32_t       minor_res = cap_2_frm->minor_frm.buf_size;
+	uint32_t       channel_size;
+	uint32_t       size_pixel;
+	uint32_t       major_res;
+	uint32_t       minor_res;
 	uint32_t       major_end = 0, minor_end = 0;
 	uint32_t       i, yuv_raw_size = 0, img_cnt = 0;
 	uint32_t       offset = 0, offset_1;
@@ -265,6 +267,10 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 			(uint32_t)sn_trim);
 		return -1;
 	}
+	channel_size = (uint32_t)(image_size->width * image_size->height);
+	size_pixel = channel_size;
+	major_res = cap_2_frm->major_frm.buf_size;
+	minor_res = cap_2_frm->minor_frm.buf_size;
 
 	CMR_LOGV("Major frame, 0x%x 0x%x, 0x%x",
 		cap_2_frm->major_frm.addr_phy.addr_y,

@@ -2867,7 +2867,7 @@ LOCAL void _calculate_hdr_exposure(int capture_gain16,int capture_VTS, int captu
 LOCAL uint32_t _ov5640_SetEV(uint32_t param)
 {
 	uint32_t rtn = SENSOR_SUCCESS;
-	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_T_PTR) param;
+	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR) param;
 
 	uint16_t value=0x00;
 	uint32_t gain = s_ov5640_gain;

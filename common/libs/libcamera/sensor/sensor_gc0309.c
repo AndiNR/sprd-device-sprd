@@ -439,6 +439,9 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_GC0309_ioctl_func_tab =
         set_gc0309_anti_flicker,
         set_gc0309_video_mode,
         PNULL,
+        PNULL,
+        PNULL,
+        PNULL,
         PNULL
 };
 
@@ -510,7 +513,13 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_GC0309_ioctl_func_tab =
         2,
         0,
         0,
-        2
+        2,        
+		0,			// threshold enable
+		0,			// threshold mode
+		0,			// threshold start postion
+		0,			// threshold end postion
+		0,
+		{0, 2, 8, 1}
 };
 /**---------------------------------------------------------------------------*
  ** 							Function  Definitions

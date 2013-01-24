@@ -24,6 +24,8 @@
 #include "cmr_oem.h"
 #include "sprd_rot_k.h"
 
+static int camera_capture_need_exit(void);
+
 struct camera_context        cmr_cxt;
 struct camera_context        *g_cxt = &cmr_cxt;
 #define IS_PREVIEW           (CMR_PREVIEW == g_cxt->camera_status)
@@ -39,6 +41,13 @@ struct camera_context        *g_cxt = &cmr_cxt;
 				0 == g_cxt->zoom_level && \
 				(g_cxt->cap_orig_size.width == g_cxt->picture_size.width) && \
 				(g_cxt->cap_orig_size.height == g_cxt->picture_size.height))
+#define TAKE_PIC_CANCEL       do {                                                  \
+									if (camera_capture_need_exit()) {               \
+										CMR_LOGE("exit.");                          \
+										return CAMERA_SUCCESS;                      \
+									}                                               \
+								} while (0)
+
 #define NO_SCALING           (YUV_NO_SCALING || RAW_NO_SCALING)
 #define IMAGE_FORMAT		 "YVU420_SEMIPLANAR"
 
@@ -116,6 +125,7 @@ static int camera_isp_proc_handle(struct ips_out_param *isp_out);
 static int camera_af_init(void);
 static int camera_af_deinit(void);
 static int camera_uv422_to_uv420(uint32_t dst, uint32_t src, uint32_t width, uint32_t height);
+static int camera_cancel_capture(void);
 
 camera_ret_code_type camera_encode_picture(camera_frame_type *frame,
 					camera_handle_type *handle,
@@ -1146,6 +1156,7 @@ int camera_stop_preview_internal(void)
 	}
 
 	cmr_rot_wait_done();
+	g_cxt->rot_cxt.rot_state = IMG_CVT_ROT_DONE;
 	return ret;
 }
 
@@ -1202,11 +1213,8 @@ int camera_take_picture_done(struct frm_info *data)
 	camera_frame_type        frame_type;
 	int                      ret = CAMERA_SUCCESS;
 
-	if (camera_capture_need_exit()) {
-		ret = CAMERA_INVALID_STATE;
-		CMR_LOGE("exit.");
-		return ret;
-	}
+	TAKE_PIC_CANCEL;
+
 	ret = camera_set_frame_type(&frame_type, data);
 	if (CAMERA_SUCCESS == ret) {
 		camera_call_cb(CAMERA_EVT_CB_SNAPSHOT_DONE,
@@ -1238,6 +1246,9 @@ int camera_take_picture_internal(takepicture_mode cap_mode)
 	int                      ret = CAMERA_SUCCESS;
 
 	g_cxt->cap_mode = cap_mode;
+	pthread_mutex_lock(&g_cxt->cancel_mutex);
+	g_cxt->cap_canceled = 0;
+	pthread_mutex_unlock(&g_cxt->cancel_mutex);
 	ret = camera_capture_init(g_cxt->preview_fmt,cap_mode);
 	if (ret) {
 		CMR_LOGE("Failed to init capture mode.");
@@ -1428,6 +1439,7 @@ int camera_af_init(void)
 {
 	CMR_MSG_INIT(message);
 	int                      ret = CAMERA_SUCCESS;
+	pthread_attr_t           attr;
 
 	CMR_LOGV("inited, %d", g_cxt->af_inited);
 
@@ -1438,7 +1450,9 @@ int camera_af_init(void)
 			CMR_LOGE("NO Memory, Frailed to create message queue");
 		}
 		sem_init(&g_cxt->af_sync_sem, 0, 0);
-		ret = pthread_create(&g_cxt->af_thread, NULL, camera_af_thread_proc, NULL);
+		pthread_attr_init(&attr);
+		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+		ret = pthread_create(&g_cxt->af_thread, &attr, camera_af_thread_proc, NULL);
 		sem_wait(&g_cxt->af_sync_sem);
 		g_cxt->af_inited = 1;
 		message.msg_type = CMR_EVT_AF_INIT;
@@ -2064,13 +2078,6 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 	int                      thumb_exist = 1;
 	int                      ret = CAMERA_SUCCESS;
 
-	CMR_LOGV("slice height %d index %d, stream size %d addr 0x%x total height %d",
-		data->slice_height,
-		g_cxt->jpeg_cxt.index,
-		data->stream_size,
-		data->stream_buf_vir,
-		data->total_height);
-
 	CMR_LOGV("stream buf 0x%x size 0x%x",
 		g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg.addr_vir.addr_y,
 		data->stream_size);
@@ -2079,6 +2086,12 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 	if (NULL == data || 0 == data->slice_height) {
 		return CAMERA_INVALID_PARM;
 	}
+	CMR_LOGV("slice height %d index %d, stream size %d addr 0x%x total height %d",
+		data->slice_height,
+		g_cxt->jpeg_cxt.index,
+		data->stream_size,
+		data->stream_buf_vir,
+		data->total_height);
 
 	if( (((0 != g_cxt->zoom_level) && (ZOOM_POST_PROCESS == g_cxt->cap_zoom_mode))
 		|| ((0 != g_cxt->cap_rot)&&(g_cxt->picture_size.width>=1280)))
@@ -2097,11 +2110,12 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 			g_cxt->picture_size.height,
 			&g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg.addr_vir);
 #endif
+		TAKE_PIC_CANCEL;
 		ret = jpeg_stop(g_cxt->jpeg_cxt.handle);
 		if (ret) {
 			CMR_LOGE("Failed to stop jpeg, %d", ret);
 		}
-
+		TAKE_PIC_CANCEL;
 		if (THUM_FROM_CAP != g_cxt->thum_from) {
 			if ((0 != g_cxt->thum_size.width) && (0 != g_cxt->thum_size.height)) {
 				ret = camera_convert_to_thumb();
@@ -2115,7 +2129,7 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 			}
 		}
 		CMR_PRINT_TIME;
-
+		TAKE_PIC_CANCEL;
 		if (thumb_exist) {
 			ret = camera_jpeg_encode_thumb(&thumb_size);
 			if (ret) {
@@ -2139,11 +2153,9 @@ int camera_jpeg_decode_handle(JPEG_DEC_CB_PARAM_T *data)
 {
 	int                      ret = CAMERA_SUCCESS;
 	struct frm_info          capture_data;
-	if (camera_capture_need_exit()) {
-		ret = CAMERA_INVALID_STATE;
-		CMR_LOGE("exit.");
-		return ret;
-	}
+
+	TAKE_PIC_CANCEL;
+
 	CMR_LOGI("dec total height %d.",data->total_height);
 	g_cxt->jpeg_cxt.proc_status.slice_height_out += data->slice_height;
 	if (data->total_height >= g_cxt->cap_orig_size.height) {
@@ -2167,11 +2179,7 @@ int camera_jpeg_codec_handle(uint32_t evt_type, uint32_t sub_type, void *data)
 
 	(void)sub_type;
 
-	if (camera_capture_need_exit()) {
-		ret = CAMERA_INVALID_STATE;
-		CMR_LOGE("exit.");
-		return ret;
-	}
+	TAKE_PIC_CANCEL;
 
 	switch (evt_type) {
 	case CMR_JPEG_ENC_DONE:
@@ -2412,7 +2420,7 @@ void *camera_af_thread_proc(void *data)
 			break;
 		}
 
-		CMR_LOGE("message.msg_type 0x%x, data 0x%x", message.msg_type, message.data);
+		CMR_LOGE("message.msg_type 0x%x, data 0x%x", message.msg_type, (uint32_t)message.data);
 
 		switch (message.msg_type) {
 		case CMR_EVT_AF_INIT:
@@ -2741,8 +2749,8 @@ exit:
 int camera_get_sensor_capture_mode(struct img_size* target_size, uint32_t *work_mode)
 {
 	uint32_t                 width = 0, theight = 0, i;
-	uint32_t                 search_width = target_size->width;
-	uint32_t                 search_height = target_size->height;
+	uint32_t                 search_width;
+	uint32_t                 search_height;
 	uint32_t                 target_mode = SENSOR_MODE_MAX;
 	SENSOR_EXP_INFO_T        *sn_info = g_cxt->sn_cxt.sensor_info;
 	uint32_t                 last_mode = SENSOR_MODE_PREVIEW_ONE;
@@ -2750,6 +2758,8 @@ int camera_get_sensor_capture_mode(struct img_size* target_size, uint32_t *work_
 
 	if (NULL == target_size || NULL == g_cxt->sn_cxt.sensor_info)
 		return ret;
+	search_width = target_size->width;
+	search_height = target_size->height;
 
 	CMR_LOGV("search_width = %d", search_width);
 	for (i = SENSOR_MODE_PREVIEW_ONE; i < SENSOR_MODE_MAX; i++) {
@@ -2785,13 +2795,14 @@ int camera_get_sensor_capture_mode(struct img_size* target_size, uint32_t *work_
 int camera_get_sensor_preview_mode(struct img_size* target_size, uint32_t *work_mode)
 {
 	uint32_t                 width = 0, height = 0, i, last_one = 0;
-	uint32_t                 search_height = target_size->height;
+	uint32_t                 search_height;
 	uint32_t                 target_mode = SENSOR_MODE_MAX;
 	SENSOR_EXP_INFO_T        *sn_info = g_cxt->sn_cxt.sensor_info;
 	int                      ret = -CAMERA_FAILED;
 
 	if (NULL == target_size || NULL == g_cxt->sn_cxt.sensor_info || NULL == work_mode)
 		return ret;
+	search_height = target_size->height;
 
 	CMR_LOGV("search_height = %d", search_height);
 	for (i = SENSOR_MODE_PREVIEW_ONE; i < SENSOR_MODE_MAX; i++) {
@@ -3383,11 +3394,7 @@ int camera_capture_yuv_process(struct frm_info *data)
 {
 	int                      ret = CAMERA_SUCCESS;
 
-	if (camera_capture_need_exit()) {
-		ret = CAMERA_INVALID_STATE;
-		CMR_LOGE("exit.");
-		return ret;
-	}
+	TAKE_PIC_CANCEL;
 	CMR_PRINT_TIME;
 	if (IMG_ROT_0 == g_cxt->cap_rot) {
 		if (NO_SCALING) {
@@ -3491,11 +3498,8 @@ int camera_v4l2_capture_handle(struct frm_info *data)
 			}
 		}
 	}
-	if (camera_capture_need_exit()) {
-		ret = CAMERA_INVALID_STATE;
-		CMR_LOGE("exit.");
-		return ret;
-	}
+	TAKE_PIC_CANCEL;
+
 	CMR_PRINT_TIME;
 	if (HDR_CAP_NUM == g_cxt->cap_cnt) {
 		if(0 != arithmetic_hdr((unsigned char*)g_cxt->cap_mem[0].cap_yuv.addr_vir.addr_y,
@@ -3563,11 +3567,7 @@ int camera_start_isp_process(struct frm_info *data)
 	int                      ret = CAMERA_SUCCESS;
 	struct ips_out_param     ips_out;
 
-	if (camera_capture_need_exit()) {
-		ret = CAMERA_INVALID_STATE;
-		CMR_LOGE("exit.");
-		return ret;
-	}
+	TAKE_PIC_CANCEL;
 
 	if (NULL == data) {
 		return -CAMERA_INVALID_PARM;
@@ -3635,11 +3635,7 @@ int camera_start_jpeg_decode(struct frm_info *data)
 	struct img_frm           *frm;
 	int                      ret = CAMERA_SUCCESS;
 
-	if (camera_capture_need_exit()) {
-		ret = CAMERA_INVALID_STATE;
-		CMR_LOGE("exit.");
-		return ret;
-	}
+	TAKE_PIC_CANCEL;
 	if (NULL == data || !IS_CAP_FRM(data->frame_id)) {
 		CMR_LOGE("Parameter error, data 0x%x, frame id 0x%x",
 			(uint32_t)data, data->frame_id);
@@ -3647,7 +3643,7 @@ int camera_start_jpeg_decode(struct frm_info *data)
 	}
 
 	frm_id = data->frame_id - CAMERA_CAP0_ID_BASE;
-	if (frm_id > CAMERA_CAP_FRM_CNT) {
+	if (frm_id >= CAMERA_CAP_FRM_CNT) {
 		CMR_LOGE("Wrong Frame id, 0x%x", data->frame_id);
 		return -CAMERA_INVALID_PARM;
 	}
@@ -3751,7 +3747,7 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 	}
 
 	ret = jpeg_enc_add_eixf(&wexif_param,&wexif_output);
-
+	TAKE_PIC_CANCEL;
 	if (0 == ret) {
 		encoder_type.buffer = (uint8_t *)wexif_output.output_buf_virt_addr;
 		encoder_param.size  = wexif_output.output_buf_size;
@@ -3773,11 +3769,7 @@ int camera_start_jpeg_encode(struct frm_info *data)
 	struct jpeg_enc_in_param  in_parm;
 	struct jpeg_enc_out_param    out_parm;
 
-	if (camera_capture_need_exit()) {
-		ret = CAMERA_INVALID_STATE;
-		CMR_LOGE("exit.");
-		return ret;
-	}
+	TAKE_PIC_CANCEL;
 
 	if (NULL == data || JPEG_ENCODE == g_cxt->jpeg_cxt.jpeg_state) {
 		CMR_LOGV("wrong parameter 0x%x or status %d",
@@ -3790,7 +3782,7 @@ int camera_start_jpeg_encode(struct frm_info *data)
 
 	if (0 == data->channel_id) {
 		frm_id = data->frame_id - CAMERA_CAP0_ID_BASE;
-		if (frm_id > CAMERA_CAP_FRM_CNT) {
+		if (frm_id >= CAMERA_CAP_FRM_CNT) {
 			CMR_LOGE("Wrong Frame id, 0x%x", data->frame_id);
 			return -CAMERA_INVALID_PARM;
 		}
@@ -3798,7 +3790,7 @@ int camera_start_jpeg_encode(struct frm_info *data)
 		target_frm = &g_cxt->cap_mem[frm_id].target_jpeg;
 	} else {
 		frm_id = data->frame_id - CAMERA_CAP1_ID_BASE;
-		if (frm_id > CAMERA_CAP_FRM_CNT) {
+		if (frm_id >= CAMERA_CAP_FRM_CNT) {
 			CMR_LOGE("Wrong Frame id, 0x%x", data->frame_id);
 			return -CAMERA_INVALID_PARM;
 		}
@@ -3881,11 +3873,8 @@ int camera_start_scale(struct frm_info *data)
 	int                      ret = CAMERA_SUCCESS;
 	struct scaler_context    *cxt = &g_cxt->scaler_cxt;
 
-	if (camera_capture_need_exit()) {
-		ret = CAMERA_INVALID_STATE;
-		CMR_LOGE("exit.");
-		return ret;
-	}
+	TAKE_PIC_CANCEL;
+
 	ret = camera_scaler_init();
 	if (ret) {
 		CMR_LOGE("Failed to init scaler, %d", ret);
@@ -3919,22 +3908,31 @@ int camera_start_scale(struct frm_info *data)
 				CMR_LOGE("Failed to calculate scaling window, %d", ret);
 				return ret;
 			}
-			g_cxt->isp_cxt.drop_slice_cnt ++;
-			CMR_LOGV("drop slice cnt %d, drop total num %d, rect.start_y %d",
-				g_cxt->isp_cxt.drop_slice_cnt,
-				g_cxt->isp_cxt.drop_slice_num,
-				rect.start_y);
-			if (g_cxt->isp_cxt.drop_slice_cnt > g_cxt->isp_cxt.drop_slice_num) {
-				rect.start_y -= (uint32_t)(g_cxt->isp_cxt.drop_slice_num * CMR_SLICE_HEIGHT);
-				offset = (uint32_t)(g_cxt->isp_cxt.drop_slice_num *
-						CMR_SLICE_HEIGHT * g_cxt->cap_orig_size.width);
+			if (IMG_DATA_TYPE_RAW == g_cxt->cap_original_fmt) {
+				g_cxt->isp_cxt.drop_slice_cnt ++;
+				CMR_LOGV("drop slice cnt %d, drop total num %d, rect.start_y %d",
+					g_cxt->isp_cxt.drop_slice_cnt,
+					g_cxt->isp_cxt.drop_slice_num,
+					rect.start_y);
+				if (g_cxt->isp_cxt.drop_slice_cnt > g_cxt->isp_cxt.drop_slice_num) {
+					rect.start_y -= (uint32_t)(g_cxt->isp_cxt.drop_slice_num * CMR_SLICE_HEIGHT);
+					offset = (uint32_t)(g_cxt->isp_cxt.drop_slice_num *
+							CMR_SLICE_HEIGHT * g_cxt->cap_orig_size.width);
+					CMR_LOGV("New start_y %d, width %d, offset 0x%x",
+						rect.start_y,
+						g_cxt->cap_orig_size.width,
+						offset);
+				} else {
+					CMR_LOGV("drop this slice");
+					return ret;
+				}
+			} else {
+				offset = (uint32_t)(rect.start_y * g_cxt->cap_orig_size.width);
+				rect.start_y = 0;
 				CMR_LOGV("New start_y %d, width %d, offset 0x%x",
 					rect.start_y,
 					g_cxt->cap_orig_size.width,
 					offset);
-			} else {
-				CMR_LOGV("drop this slice");
-				return ret;
 			}
 		}
 
@@ -4029,11 +4027,8 @@ int camera_scale_next(struct frm_info *data)
 	struct scaler_context    *cxt = &g_cxt->scaler_cxt;
 	int                      ret = CAMERA_SUCCESS;
 
-	if (camera_capture_need_exit()) {
-		ret = CAMERA_INVALID_STATE;
-		CMR_LOGE("exit.");
-		return ret;
-	}
+	TAKE_PIC_CANCEL;
+
 	if (IMG_DATA_TYPE_YUV422 == cxt->out_fmt) {
 
 	}
@@ -4094,11 +4089,6 @@ int camera_start_rotate(struct frm_info *data)
 	struct img_rect          rect;
 	int                      ret = CAMERA_SUCCESS;
 
-	if (camera_capture_need_exit()) {
-		ret = CAMERA_INVALID_STATE;
-		CMR_LOGE("exit.");
-		return ret;
-	}
 	if (IS_PREVIEW) {
 		CMR_LOGE("Call Rotation in preview");
 		if (IMG_CVT_ROTATING == g_cxt->rot_cxt.rot_state) {
@@ -4126,6 +4116,7 @@ int camera_start_rotate(struct frm_info *data)
 		}
 
 	} else {
+		TAKE_PIC_CANCEL;
 		CMR_LOGE("Call Rotation after capture for channel %d, orig size %d %d",
 			data->channel_id,
 			g_cxt->cap_orig_size.width,

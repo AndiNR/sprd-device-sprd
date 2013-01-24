@@ -555,7 +555,8 @@ SENSOR_INFO_T g_OV2655_yuv_info = {
 	0,			// threshold mode
 	0,			// threshold start postion
 	0,			// threshold end postion
-	-1			// i2c_dev_handler
+	0,			// i2c_dev_handler
+	{0, 2, 8, 1}
 };
 
 /**---------------------------------------------------------------------------*

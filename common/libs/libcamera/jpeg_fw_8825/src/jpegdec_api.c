@@ -32,8 +32,6 @@
 		
 //#if defined(JPEG_DEC)
 
-#define LOG_NDEBUG 0
-
 #include "sprd_vsp.h"
 
 #define SPRD_VSP_DRIVER "/dev/sprd_vsp"
@@ -155,7 +153,7 @@ LOCAL JPEG_RET_E 	JPEG_Mem_Copy(   JPEGDEC_PARAMS_T *jpegdec_params  , int mem_d
 	if ( 0 == mem_direct)
 	{
 		SCI_MEMCPY( jpegdec_params->temp_buf_addr ,  (uint8_t *)jpegdec_params->stream_virt_buf[0] , jpegdec_params->stream_size  );
-		SCI_MEMCPY( (void *)jpegdec_params->stream_virt_buf[0] ,  jpegdec_params->temp_buf_addr +jpegdec_params->header_len  ,data_len);
+		SCI_MEMCPY( (void *)jpegdec_params->stream_virt_buf[0] ,(void*)((uint32_t)jpegdec_params->temp_buf_addr +jpegdec_params->header_len) ,data_len);
 	}
 	else
 	{
@@ -349,7 +347,7 @@ uint32_t JPEGDEC_Poll_DBK_BSM(uint32_t time, uint32_t buf_len,  jpegdec_callback
 	uint32_t value;
 	uint32_t vsp_time_out_cnt = 0;
 	uint32_t buf_id = 1;
-	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGDecCodec();
+/*	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGDecCodec();*/
 
 	SCI_TRACE_LOW("JPEGDEC_Poll_DBK_BSM S, slice_num=%d.\n",slice_num);
 			
@@ -406,7 +404,7 @@ uint32_t JPEGDEC_Poll_DBK_BSM_FOR_SLICE(uint32_t time, uint32_t *buf_id_ptr,  ui
 	uint32_t value;
 	uint32_t vsp_time_out_cnt = 0;
 	uint32_t buf_id = *buf_id_ptr;
-	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGDecCodec();
+/*	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGDecCodec();*/
 	uint32_t slice_num = *slice_num_ptr;
 	uint32_t ret = 0;
 
@@ -602,7 +600,7 @@ error:
 
 int JPEGDEC_Slice_Start(JPEGDEC_PARAMS_T *jpegdec_params,  JPEGDEC_SLICE_OUT_T *out_ptr)
 {
-	uint32_t vsp_fd = -1;
+	int vsp_fd = -1;
 	void *vsp_addr = NULL;
 	uint32_t ret = 0;
 	uint32 value = 0, int_val = 0, temp = 0;
@@ -697,7 +695,7 @@ int JPEGDEC_Slice_Next(JPEGDEC_SLICE_NEXT_T *update_params,  JPEGDEC_SLICE_OUT_T
 	if((JPEG_SUCCESS != ret) || (0 == jpeg_fw_codec->slice_num)) {
 		out_ptr->is_over = 1;
 		SCI_TRACE_LOW("dec finish.");
-		munmap(jpeg_fw_codec->addr,SPRD_VSP_MAP_SIZE);
+		munmap((void*)jpeg_fw_codec->addr,SPRD_VSP_MAP_SIZE);
 		ioctl(jpeg_fw_codec->fd,VSP_DISABLE,NULL);
 		ioctl(jpeg_fw_codec->fd,VSP_RELEASE,NULL);
 		if(jpeg_fw_codec->fd >= 0){
