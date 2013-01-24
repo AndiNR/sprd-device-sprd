@@ -122,60 +122,54 @@ static int restart_gser(void)
 	return 0;
 }
 
-static int eng_pc2client(int fd, char* databuf)
+static int eng_pc2clientbuf(char* databuf, char* readbuf,  int input_len, int* length_read_ptr)
 {
-	char engbuf[ENG_BUFFER_SIZE];
-	int i, length, ret;
+	char * engbuf = readbuf;
+	int i, length, ret = 0;
 	int is_continue = 1;
 	int buf_len = 0;
+	int ret_val = 0;
 
-	ENG_LOG("%s: Waitting cmd from PC fd=%d\n", __FUNCTION__, fd);
-	if(fd < 0) {
-		ENG_LOG("%s: Bad fd",__FUNCTION__);
-		return -1;
-	}
+	ENG_LOG("%s: Waitting cmd from PC, input_len %d \n", __func__,input_len);
 
-	do{
-		memset(engbuf, 0, ENG_BUFFER_SIZE);
-		length = read(fd, engbuf, ENG_BUFFER_SIZE);
-		if (length <= 0) {
-                        ENG_LOG("%s: read length error\n",__FUNCTION__);
-			return -1;
+	for(i=0; i < input_len; i++){
+		if ( engbuf[i] == 0xd ){ //\r
+			continue;
+		}
+		else if (engbuf[i]==0x1a){ // ^z
+			databuf[buf_len]=engbuf[i];
+			buf_len ++;
+			break;
+		}
+		else if ( engbuf[i] == 0xa || buf_len >= ENG_BUFFER_SIZE){ //\n
+			break;
 		}
 		else{
-                        ENG_LOG("%s: length = %d\n",__FUNCTION__, length);
-			for(i=0;i<length;i++){
-				ENG_LOG("%s: %x %c\n",__FUNCTION__, engbuf[i],engbuf[i]);
-				if ( engbuf[i] == 0xd ){ //\r
-					continue;
-				}
-                                else if (engbuf[i] == 0xa && length ==1) { // only \n
-                                        ENG_LOG("%s: only \\n,do nothing\n",__FUNCTION__);
-					continue;
-				}
-				else if ( engbuf[i] == 0xa || engbuf[i]==0x1a ||buf_len >= ENG_BUFFER_SIZE){ //\n ^z
-					is_continue = 0;
-					break;
-				}
-				else{
-					databuf[buf_len]=engbuf[i];
-					buf_len ++;
-				}
-			}
+			databuf[buf_len]=engbuf[i];
+			buf_len ++;
 		}
-	}while(is_continue);
+	}
 
-#if 1
-	ENG_LOG("%s: buf[%d]=%s\n",__FUNCTION__, length, databuf);
-	for(i=0; i<length; i++) {
+	if (i >= input_len) { //there isn't end character
+		*length_read_ptr = input_len;
+	}
+	else {
+		*length_read_ptr = i+1;
+	}
+
+	if (*length_read_ptr < 2)
+	{
+		ret =-1;
+	}
+
+#if 0
+	for(i=0; i<buf_len; i++) {
 		ENG_LOG("0x%x, ",databuf[i]);
 	}
-	ENG_LOG("\n");
-#endif	
+#endif
 
-	return 0;
+	return ret;
 }
-
 
 static int eng_modem2client(int fd, char * databuf, int length)
 {
@@ -237,36 +231,68 @@ static void set_vlog_priority(void)
 	return;
 }
 
-
-
-
 static void *eng_pcclient_hdlr(void *_param)
 {
 	char databuf[ENG_BUFFER_SIZE];
+	char readbuf[ENG_BUFFER_SIZE];
+	int  length = 0;
+	int  length_read = 0;
+	int  offset_read  = 0;
 	int fd, ret;
 	int status;
-	
-	ENG_LOG("%s: Run",__FUNCTION__);
-	for( ; ; ){
-		memset(databuf, 0, ENG_BUFFER_SIZE);
 
-		//read cmd from pc to client
-		if(eng_pc2client(pc_client_fd, databuf)==-1) {
+	ENG_LOG("%s: Run",__FUNCTION__);
+
+	memset(databuf, 0, ENG_BUFFER_SIZE);
+
+	for( ; ; ){
+
+		ENG_LOG("%s: loop", __FUNCTION__);
+
+		memset(readbuf, 0, ENG_BUFFER_SIZE);
+
+		if (pc_client_fd<0)
+		{
 			restart_gser();
 			continue;
+
 		}
 
-		//write cmd from client to modem
-		status = eng_atreq(client_server_fd, databuf, ENG_BUFFER_SIZE);
- 
-		//write response from client to pc
-		switch(status) {
-			case ENG_CMD4LINUX:
-				eng_linux2pc(pc_client_fd, databuf);
-				break;
-			case ENG_CMD4MODEM:
-				eng_modem2pc(client_server_fd, pc_client_fd, databuf, ENG_BUFFER_SIZE);
-				break;
+		length = read(pc_client_fd, readbuf, ENG_BUFFER_SIZE);
+		if (length<=0)
+		{
+			restart_gser();
+			continue;
+
+		}
+
+		ENG_LOG("%s ### data read length %d %s###", __FUNCTION__, length,readbuf);
+
+		offset_read  = 0;
+
+		for(;(offset_read< length)&&(0 < length);)
+		{
+			length_read = 0;
+			if(eng_pc2clientbuf(&databuf[offset_read], &readbuf[offset_read], 
+						length - offset_read, &length_read) == -1) {
+				offset_read += length_read;
+				continue;
+			}
+			offset_read += length_read;
+
+			ENG_LOG("%s ### data parse %d %d###", __FUNCTION__, offset_read,length_read);
+			//write cmd from client to modem
+			status = eng_atreq(client_server_fd, databuf, ENG_BUFFER_SIZE);
+			//write response from client to pc
+			switch(status) {
+				case ENG_CMD4LINUX:
+					eng_linux2pc(pc_client_fd, databuf);
+					break;
+				case ENG_CMD4MODEM:
+					eng_modem2pc(client_server_fd, pc_client_fd, databuf, ENG_BUFFER_SIZE);
+					break;
+			}
+			memset(databuf, 0, ENG_BUFFER_SIZE);
 		}
 	}
 
@@ -482,12 +508,12 @@ void eng_check_factorymode_formmc(void)
 		memset(status_buf, 0, sizeof(status_buf));
 		property_get(RAWDATA_PROPERTY, status_buf, "");
 		ret = atoi(status_buf);
-		LOGD("%s: %s is %s, n=%d\n",__FUNCTION__, RAWDATA_PROPERTY, status_buf,ret);
+		ALOGD("%s: %s is %s, n=%d\n",__FUNCTION__, RAWDATA_PROPERTY, status_buf,ret);
 	}while(ret!=1);
 	
 	fd=open(ENG_FACOTRYMODE_FILE, O_RDWR|O_CREAT|O_TRUNC);
 
-	LOGD("%s: fd=%d, status=%x\n",__FUNCTION__, fd, status);
+	ALOGD("%s: fd=%d, status=%x\n",__FUNCTION__, fd, status);
 
 	if(fd >= 0) {
 		if((status==1)||(status == ENG_SQLSTR2INT_ERR)) {
@@ -500,7 +526,7 @@ void eng_check_factorymode_formmc(void)
 
 		ret = write(fd, status_buf, strlen(status_buf)+1);
 
-		LOGD("%s: write %d bytes to %s",__FUNCTION__, ret, ENG_FACOTRYMODE_FILE);
+		ALOGD("%s: write %d bytes to %s",__FUNCTION__, ret, ENG_FACOTRYMODE_FILE);
 
 		close(fd);
 	}
@@ -512,7 +538,8 @@ void eng_check_factorymode_formmc(void)
 
 void eng_ctpcali(void)
 {
-	int fd, ret;
+	int fd;
+	size_t ret;
 	char cali_cmd[]="1";
 	char cali_note[]="/sys/devices/platform/sc8810-i2c.2/i2c-2/2-005c/calibrate";
 
@@ -536,7 +563,7 @@ int main(void)
 	int fd, rc, califlag=0;
 	int engtest=0;
 	char cmdline[ENG_CMDLINE_LEN];
-    eng_thread_t t1,t2, t3,t4, t5;
+	eng_thread_t t1,t2, t3,t4, t5;
 
 #if 0
 	int index;
