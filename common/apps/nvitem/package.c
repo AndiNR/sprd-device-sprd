@@ -10,6 +10,7 @@
 #include <utils/Log.h>
 
 #include "log.h"
+#include "save.h"
 #include "package.h"
 
 unsigned char fixnv_buf[FIXNV_BLOCK_SIZE*BLOCK_SIZE];
@@ -42,12 +43,16 @@ void parser_header(nvrequest_header_t *nv_header)
 		;	//writer
 		if( nv_header->offset < FIXNV_REALSIZE*BLOCK_SIZE)	//fixnv
 		{
-			// save directly		
-			//lseek(fixnv_fd,nv_header->offset,SEEK_SET);
-			//write(fixnv_fd,data+sizeof(nvrequest_header_t),nv_header->size);
-			
+			// save directly
+			lseek(fixnv_fd,nv_header->offset,SEEK_SET);
+			write(fixnv_fd,data+sizeof(nvrequest_header_t),nv_header->size);
+			//fflush(fixnv_fd);
+			//close(fixnv_fd);
+			NVITEM_DEBUG("[Nvitemd] save fixnv to disk addr: %x , len:%d !!!\n",nv_header->offset,nv_header->size);
+			LOG2CARD("[Nvitemd] save fixnv to disk addr: %x , len:%d !!!\n",nv_header->offset,nv_header->size);
 			//save to ram then wrire to file
 			
+/*
 			if(cursor_fixnv >= FIXNV_REALSIZE-1)
 			{
 
@@ -63,16 +68,19 @@ void parser_header(nvrequest_header_t *nv_header)
 				memcpy(&fixnv_buf[cursor_fixnv*BLOCK_SIZE],data+sizeof(nvrequest_header_t),nv_header->size);
 				cursor_fixnv++;
 			}
-			
+*/			
 		}		
 		else	//running nv
 		{
 			// save directly
-			//lseek(runningnv_fd,(nv_header->offset-128*1024),SEEK_SET);
-			//write(runningnv_fd,data+sizeof(nvrequest_header_t),nv_header->size);
-
+			lseek(runningnv_fd,(nv_header->offset-128*1024),SEEK_SET);
+			write(runningnv_fd,data+sizeof(nvrequest_header_t),nv_header->size);
+			//fflush(fixnv_fd);
+			//close(runningnv_fd);
+			NVITEM_DEBUG("[Nvitemd] save runtimenv to disk addr: %x , len:%d !!!\n",nv_header->offset,nv_header->size);
+			LOG2CARD("[Nvitemd] save runtimenv to disk addr: %x , len:%d !!!\n",nv_header->offset,nv_header->size);
 			//save to ram then wrire to file
-			
+/*			
 			if(cursor_runnv >= RUNNV_REALSIZE-1)
 			{
 				NVITEM_DEBUG("[Nvitemd] cursor_runnv >= RUNNV_REALSIZE-1 !!!\n");
@@ -86,7 +94,7 @@ void parser_header(nvrequest_header_t *nv_header)
 				memcpy(&runnv_buf[cursor_runnv*BLOCK_SIZE],data+sizeof(nvrequest_header_t),nv_header->size);
 				cursor_runnv++;
 			}
-			
+*/			
 		}
 	}	
 	else

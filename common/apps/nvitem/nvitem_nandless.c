@@ -20,6 +20,7 @@
 
 #include "log.h"
 #include "package.h"
+#include "save.h"
 
 #define MUX0_NVITEMD_PATH	"/dev/ts0710mux0"
 #define CMUX_NVITEMD_PATH	"/dev/ts0710mux20"
@@ -72,14 +73,16 @@ int main(int argc, char *argv[])
 			//}
 		} else { break;}
 	}
-	NVITEM_DEBUG("[Nvitemd] Service Start OK!!!\n");
-	NVITEM_DEBUG("[Nvitemd] sizeof(nvrequest_header_t) is %d !!!\n",sizeof(nvrequest_header_t));	
+	NVITEM_DEBUG("[Nvitemd] Service Start OK!!!\n");	
+	NVITEM_DEBUG("[Nvitemd] sizeof(nvrequest_header_t) is %d !!!\n",sizeof(nvrequest_header_t));
 
 	init_save();
 
 	extern int nandless();
 	nandless();
-
+	
+	fixnv_fd = open(BACKUP_FIXNV_FILENAME, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
+	runningnv_fd = open(BACKUP_RUNNINGNV_FILENAME, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
 	for(;;)
 	{
 		r_cnt = read(nvitem_receive_fd,data,DATA_BUF_LEN);
@@ -90,17 +93,21 @@ int main(int argc, char *argv[])
 		}
 		memcpy(&header,data,sizeof(nvrequest_header_t));
 		
-		//NVITEM_DEBUG("[Nvitemd] Data lens : %d \n Data : %s \n",r_cnt,data);
+		NVITEM_DEBUG("[Nvitemd] Data lens : %d \n Data : %s \n",r_cnt,data);
 		//NVITEM_DEBUG("[Nvitemd] Parsing !\n");
 		parser_header(&header);
-		gen_ret_header(&header,1,&ret_data_size);
-		//NVITEM_DEBUG("[Nvitemd] ret_data_size is %d !!!\n",ret_data_size);
-		write(nvitem_receive_fd,ret_data,ret_data_size);
-
+		
+// async save
+/*		
 		if(fixnv_dirty == 1 || runnv_dirty == 1)
 			run_save();
+*/
 		//sleep(10);
 
+		gen_ret_header(&header,1,&ret_data_size);
+		write(nvitem_receive_fd,ret_data,ret_data_size);
+		NVITEM_DEBUG("[Nvitemd] ret_data_size is %d !!!\n",ret_data_size);
+		LOG2CARD("[Nvitemd] ret_data_size is %d !!!\n",ret_data_size);
 	}
 	
 	close(nvitem_receive_fd);

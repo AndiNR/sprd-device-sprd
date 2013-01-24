@@ -1,4 +1,4 @@
-//#define LOG_TAG "NANDLESS"
+#define LOG_TAG "NANDLESS"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -23,7 +23,7 @@
 
 #define NANDLESS_DBG(fmt, arg...) ALOGD("NANDLESS:%s "fmt, __FUNCTION__ , ## arg)
 #define NANDLESS_LOG(fmt, arg...) ALOGD(fmt, ## arg)
-#define NVSYN_CMD		"AT+NVSYNLINK=21,1000,10000,512"
+#define NVSYN_CMD		"AT+NVSYNLINK=21,1000,5000,512"
 
 int nandless()
 {

@@ -1,9 +1,7 @@
 #include <cutils/log.h>
 #include <fcntl.h>
 #include <time.h>
-
-
-#define BUFFER_LEN		(128)
+#include "log.h"
 
 char gch;
 FILE *gfp;
