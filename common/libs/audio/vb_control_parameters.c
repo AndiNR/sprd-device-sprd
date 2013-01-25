@@ -21,7 +21,7 @@
 #ifdef MY_DEBUG
 #define MY_TRACE    ALOGW
 #else
-#define MY_TRACE
+#define MY_TRACE(...)
 #endif
 
 #define VBC_CMD_TAG   "VBC"

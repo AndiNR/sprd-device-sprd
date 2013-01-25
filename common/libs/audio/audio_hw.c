@@ -1012,7 +1012,7 @@ static bool out_bypass_data(struct tiny_audio_device *adev,uint32_t frame_size, 
 static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
                          size_t bytes)
 {
-    int ret;
+    int ret = 0;
     struct tiny_stream_out *out = (struct tiny_stream_out *)stream;
     struct tiny_audio_device *adev = out->dev;
     size_t frame_size = 0;
@@ -2239,12 +2239,12 @@ static void adev_config_start(void *data, const XML_Char *elem,
 	    val = attr[i + 1];
     }
 
-    if (strcmp(elem, "device") == 0) {
-	if (!name) {
-	    ALOGE("Unnamed device\n");
-	    return;
-	}
+    if (!name) {
+        ALOGE("unnamed entry %s, %d", elem, i);
+        return;
+    }
 
+    if (strcmp(elem, "device") == 0) {
 	for (i = 0; i < sizeof(dev_names) / sizeof(dev_names[0]); i++) {
 	    if (strcmp(dev_names[i].name, name) == 0) {
 		ALOGI("Allocating device %s\n", name);
