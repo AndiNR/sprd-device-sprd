@@ -18,17 +18,18 @@
 #include "cutils/sockets.h"
 #include "cutils/properties.h"
 
+#define MAX_CS_SIMS 2
+#define ENG_RIL_SIM    "ril.sim1.absent"
 
-
-static int client_server_fd =-1;
 static int pc_client_fd = -1;
 static char eng_rspbuf[ENG_BUFFER_SIZE];
 static char eng_atautobuf[ENG_BUFFER_SIZE];
 static void *eng_atauto_thread(void *par);
-
+static int cs_sim_fds[MAX_CS_SIMS];
 
 static int eng_pcclient_init(void)
 {
+	int i;
 	struct termios ser_settings;
 
 	pc_client_fd = open(PC_GSER_DEV, O_RDWR); 
@@ -43,10 +44,13 @@ static int eng_pcclient_init(void)
 
 	//tcsetattr(pc_client_fd, TCSANOW, &ser_settings);
 	
-	while((client_server_fd = eng_at_open(0)) < 0){
-		ENG_LOG("%s: open server socket failed!, error[%d][%s]\n",\
-			__FUNCTION__, errno, strerror(errno));
-		usleep(500*1000);
+	for ( i=0;i<MAX_CS_SIMS;i++ ){
+		cs_sim_fds[i] = -1;
+		while((cs_sim_fds[i] = eng_at_open(i)) < 0){
+			ENG_LOG("%s: open server socket failed!, error[%d][%s]\n",\
+					__FUNCTION__, errno, strerror(errno));
+			usleep(500*1000);
+		}
 	}
 	return 0;
 }
@@ -181,7 +185,7 @@ static int eng_modem2client(int fd, char * databuf, int length)
 	return counter;
 }
 
-static int eng_modem2pc(int client_server_fd, int pc_client_fd, char *databuf, int length)
+static int eng_modem2pc(int cs_fd, int pc_client_fd, char *databuf, int length)
 {
 	int len;
 	
@@ -189,7 +193,7 @@ static int eng_modem2pc(int client_server_fd, int pc_client_fd, char *databuf, i
 	memset(databuf, 0, length);
 	ENG_LOG("%s: Waitting AT response from Server\n", __FUNCTION__);
 
-	len = eng_modem2client(client_server_fd, databuf, length);
+	len = eng_modem2client(cs_fd, databuf, length);
 
 	ENG_LOG("%s: eng_rspbuf[%d]=%s\n",__FUNCTION__, \
 		len, \
@@ -231,15 +235,54 @@ static void set_vlog_priority(void)
 	return;
 }
 
+static int eng_dispatch_simfd_counts(char* databuf)
+{
+	int count;
+	if (strcasestr(databuf,"AT+CFUN") != NULL
+			|| strcasestr(databuf,"AT+SFUN") != NULL )
+	{
+		count = MAX_CS_SIMS;
+	} else {
+		count = 1;
+	}
+
+	ENG_LOG("%s:count=%d",__func__,count);
+
+	return count;
+}
+
+static int eng_cur_sim_fd(int index,int total)
+{
+	int fd;
+	int n;
+	char ril_sim[20];
+
+	if ( total>1 ){
+		fd = cs_sim_fds[index];
+	}
+	else{
+		memset(ril_sim, 0, sizeof(ril_sim));
+		property_get(ENG_RIL_SIM, ril_sim, "");
+		n = atoi(ril_sim);
+		if ( 1==n ){
+			fd = cs_sim_fds[1]; // send simcard 2
+		} else {
+			fd = cs_sim_fds[0];
+		}
+	}
+	return fd;
+}
+
 static void *eng_pcclient_hdlr(void *_param)
 {
 	char databuf[ENG_BUFFER_SIZE];
 	char readbuf[ENG_BUFFER_SIZE];
-	int  length = 0;
-	int  length_read = 0;
-	int  offset_read  = 0;
+	int length = 0;
+	int length_read = 0;
+	int offset_read  = 0;
 	int fd, ret;
 	int status;
+	int i,total;
 
 	ENG_LOG("%s: Run",__FUNCTION__);
 
@@ -255,7 +298,6 @@ static void *eng_pcclient_hdlr(void *_param)
 		{
 			restart_gser();
 			continue;
-
 		}
 
 		length = read(pc_client_fd, readbuf, ENG_BUFFER_SIZE);
@@ -263,46 +305,51 @@ static void *eng_pcclient_hdlr(void *_param)
 		{
 			restart_gser();
 			continue;
-
 		}
 
 		ENG_LOG("%s ### data read length %d %s###", __FUNCTION__, length,readbuf);
 
-		offset_read  = 0;
-
-		for(;(offset_read< length)&&(0 < length);)
+		total = eng_dispatch_simfd_counts(readbuf);
+		for ( i=0;i<total;i ++ )
 		{
-			length_read = 0;
-			if(eng_pc2clientbuf(&databuf[offset_read], &readbuf[offset_read], 
-						length - offset_read, &length_read) == -1) {
-				offset_read += length_read;
-				continue;
-			}
-			offset_read += length_read;
+			offset_read  = 0;
 
-			ENG_LOG("%s ### data parse %d %d###", __FUNCTION__, offset_read,length_read);
-			//write cmd from client to modem
-			status = eng_atreq(client_server_fd, databuf, ENG_BUFFER_SIZE);
-			//write response from client to pc
-			switch(status) {
-				case ENG_CMD4LINUX:
-					eng_linux2pc(pc_client_fd, databuf);
-					break;
-				case ENG_CMD4MODEM:
-					eng_modem2pc(client_server_fd, pc_client_fd, databuf, ENG_BUFFER_SIZE);
-					break;
+			for(;(offset_read< length)&&(0 < length);)
+			{
+				length_read = 0;
+				if(eng_pc2clientbuf(&databuf[offset_read], &readbuf[offset_read],
+							length - offset_read, &length_read) == -1) {
+					offset_read += length_read;
+					continue;
+				}
+				offset_read += length_read;
+
+				ENG_LOG("%s ### data parse %d %d###", __FUNCTION__, offset_read,length_read);
+				//write cmd from client to modem
+				status = eng_atreq(eng_cur_sim_fd(i,total), databuf, ENG_BUFFER_SIZE);
+				//write response from client to pc
+				switch(status) {
+					case ENG_CMD4LINUX:
+						eng_linux2pc(pc_client_fd, databuf);
+						break;
+					case ENG_CMD4MODEM:
+						eng_modem2pc(eng_cur_sim_fd(i,total), pc_client_fd, databuf, ENG_BUFFER_SIZE);
+						break;
+				}
+				memset(databuf, 0, ENG_BUFFER_SIZE);
 			}
-			memset(databuf, 0, ENG_BUFFER_SIZE);
 		}
 	}
 
 	return NULL;
 }
 
+static int cs_sim1_fd;
 int eng_get_csclient_fd(void)
 {
-	return client_server_fd;
+	return cs_sim1_fd;
 }
+
 int eng_atcali_hdlr(char* buf)
 {
 	int index;
@@ -322,7 +369,7 @@ static void eng_atcali_thread(void)
 
 	ENG_LOG("%s",__FUNCTION__);
 
-	while((client_server_fd = eng_at_open(0)) < 0){
+	while((cs_sim1_fd = eng_at_open(0)) < 0){
 		ENG_LOG("%s: open server socket failed!, error[%d][%s]\n",\
 			__FUNCTION__, errno, strerror(errno));
 		usleep(500*1000);

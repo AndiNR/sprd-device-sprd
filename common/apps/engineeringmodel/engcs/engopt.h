@@ -19,8 +19,8 @@ extern "C" {
 #ifdef ENG_TRACING
 #define ENG_LOG  ALOGD
 #else
-#define ENG_LOG  ALOGD
-//#define  ENG_LOG(format, ...)
+//#define ENG_LOG  ALOGD
+#define  ENG_LOG(format, ...)
 #endif
 
 #define ENG_SOCKET_PORT  65000
