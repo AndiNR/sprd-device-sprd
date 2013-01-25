@@ -618,6 +618,10 @@ status_t SprdCameraHardware::startPreviewInternal()
         ALOGV("startPreview E");
 
         if (mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) {
+#ifdef CMCC_POWER_OPT
+			flag_lower_emc_freq = 1;
+			lower_emc_freq('2');
+#endif
 		SET_PARM(CAMERA_PARM_PREVIEW_MODE, CAMERA_PREVIEW_MODE_MOVIE);
         } else {
 #ifdef CMCC_POWER_OPT
