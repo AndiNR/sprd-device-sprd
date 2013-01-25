@@ -198,6 +198,7 @@ struct tiny_audio_device {
     struct mixer *mixer;
     audio_mode_t mode;
     int devices;
+    volatile int device_switch;  /*changing device flag*/
     struct pcm *pcm_modem_dl;
     struct pcm *pcm_modem_ul;
     int call_start;
@@ -537,6 +538,7 @@ static void select_devices_signal(struct tiny_audio_device *adev)
 {
     ALOGI("select_devices_signal starting...");
     pthread_mutex_lock(&adev->routing_mgr.device_switch_mutex);
+    adev->device_switch = 1;
     pthread_cond_signal(&adev->routing_mgr.device_switch_cv);
     pthread_mutex_unlock(&adev->routing_mgr.device_switch_mutex);
     ALOGI("select_devices_signal finished.");
@@ -2521,18 +2523,22 @@ static int aud_rec_do_process(void * buffer, size_t bytes)
     return 0;
 }
 
-static void *stream_routing_thread_entry(void * adev)
+static void *stream_routing_thread_entry(void * param)
 {
-    struct tiny_audio_device *cur_adev = (struct tiny_audio_device *)adev;
-    while(!cur_adev->routing_mgr.is_exit) {
+    struct tiny_audio_device *adev = (struct tiny_audio_device *)param;
+    while(!adev->routing_mgr.is_exit) {
         ALOGI("stream_routing_thread looping now...");
-        pthread_mutex_lock(&cur_adev->routing_mgr.device_switch_mutex);
-        pthread_cond_wait(&cur_adev->routing_mgr.device_switch_cv,
-                            &cur_adev->routing_mgr.device_switch_mutex);
-        /* switch device routing here.*/
-        do_select_devices(cur_adev);
-        pthread_mutex_unlock(&cur_adev->routing_mgr.device_switch_mutex);
-        ALOGI("stream_routing_thread looping done.");
+        pthread_mutex_lock(&adev->routing_mgr.device_switch_mutex);
+        if (adev->device_switch) {
+            /* switch device routing here.*/
+            do_select_devices(adev);
+            adev->device_switch = 0;
+        } else {
+            pthread_cond_wait(&adev->routing_mgr.device_switch_cv,
+                            &adev->routing_mgr.device_switch_mutex);
+            ALOGI("stream_routing_thread looping done.");
+        }
+        pthread_mutex_unlock(&adev->routing_mgr.device_switch_mutex);
     }
     ALOGW("stream_routing_thread_entry exit!!!");
     return 0;
@@ -2644,6 +2650,7 @@ static int adev_open(const hw_module_t* module, const char* name,
     pthread_mutex_lock(&adev->lock);
     adev->mode = AUDIO_MODE_NORMAL;
     adev->devices = AUDIO_DEVICE_OUT_SPEAKER;
+    adev->device_switch = 0;
     select_devices_signal(adev);
 
     adev->pcm_modem_dl = NULL;
