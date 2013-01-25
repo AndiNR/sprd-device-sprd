@@ -60,7 +60,7 @@ int mmi_audio_mode_map(int ap_mode)
             cp_mode = 1;
     }
     else if (ap_mode ==4) {
-            cp_mode=3;
+            cp_mode=2;
     }
     return cp_mode;
 }
