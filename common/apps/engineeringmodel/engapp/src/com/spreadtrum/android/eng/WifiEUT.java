@@ -13,6 +13,7 @@ import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.SystemProperties;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
@@ -90,7 +91,7 @@ public class WifiEUT extends Activity implements OnClickListener,
 			e.printStackTrace();
 		}
 		//startcmd("WIFI");
-		
+		SystemProperties.set("ctl.start", "enghardwaretest");
 	}
 
 	private void initui() {
@@ -382,6 +383,7 @@ public class WifiEUT extends Activity implements OnClickListener,
 	protected void onDestroy() {
 		deinitTestNoUi();
 		//startcmd("STOP");
+		SystemProperties.set("ctl.stop", "enghardwaretest");
 		super.onDestroy();
 	}
 

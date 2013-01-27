@@ -89,6 +89,11 @@ service engsetmacaddr /system/bin/engsetmacaddr
     class main
     oneshot
 
+service enghardwaretest /system/bin/enghardwaretest
+    class main
+    user root
+    disabled
+
 service phoneserver /system/bin/phoneserver
     class main
     disabled

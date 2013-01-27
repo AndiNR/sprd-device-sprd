@@ -64,9 +64,7 @@ LOCAL_SHARED_LIBRARIES := libcutils
 
 LOCAL_C_INCLUDES  += eng_wifi_ptest.h
 
-LOCAL_SRC_FILES     :=   eng_wifi_ptest.c \
-			wifi_eut.c \
-			bt_eut.c \
+LOCAL_SRC_FILES     :=   eng_wifi_ptest.c
 
 LOCAL_MODULE:= libeng_wifi_ptest
 LOCAL_MODULE_TAGS := optional
@@ -207,3 +205,25 @@ include $(BUILD_EXECUTABLE)
 #LOCAL_MODULE_TAGS := optional
 #include $(BUILD_EXECUTABLE)
 
+
+#ENGHARDWARETEST
+CAL_PATH:= $(call my-dir)
+include $(CLEAR_VARS)
+LOCAL_PRELINK_MODULE := false
+LOCAL_LDLIBS        += -Idl
+#LOCAL_CFLAGS += -DENG_API_LOG
+
+LOCAL_SHARED_LIBRARIES := libcutils
+
+LOCAL_C_INCLUDES  += eng_hardware_test.h \
+		                        engopt.h
+
+LOCAL_SRC_FILES     :=   eng_hardware_test.c \
+			wifi_eut.c \
+			bt_eut.c \
+		    engopt.c
+
+LOCAL_MODULE:= enghardwaretest
+LOCAL_MODULE_TAGS := optional
+
+include $(BUILD_EXECUTABLE)
