@@ -120,7 +120,8 @@ PRODUCT_COPY_FILES := \
 	frameworks/native/data/etc/android.hardware.camera.autofocus.xml:system/etc/permissions/android.hardware.camera.autofocus.xml \
 	frameworks/native/data/etc/android.hardware.camera.flash-autofocus.xml:system/etc/permissions/android.hardware.camera.flash-autofocus.xml \
 	frameworks/native/data/etc/android.hardware.telephony.gsm.xml:system/etc/permissions/android.hardware.telephony.gsm.xml \
-	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml
+	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml \
+	frameworks/native/data/etc/android.hardware.touchscreen.multitouch.xml:system/etc/permissions/android.hardware.touchscreen.multitouch.xml
 
 BOARD_WLAN_DEVICE_REV       := bcm4330_b2
 $(call inherit-product, $(BOARDDIR)/../common/apps/engineeringmodel/module.mk)
