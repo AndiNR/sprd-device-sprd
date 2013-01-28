@@ -18,14 +18,27 @@
 #include "cutils/sockets.h"
 #include "cutils/properties.h"
 
+//only support 2 sims now!!!!
 #define MAX_CS_SIMS 2
 #define ENG_RIL_SIM    "ril.sim1.absent"
+
+#define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
 
 static int pc_client_fd = -1;
 static char eng_rspbuf[ENG_BUFFER_SIZE];
 static char eng_atautobuf[ENG_BUFFER_SIZE];
 static void *eng_atauto_thread(void *par);
 static int cs_sim_fds[MAX_CS_SIMS];
+
+static const char* TO_MULTI_SIM_CMDS[] = {
+	"AT+CFUN=0",
+	"AT+CFUN=1",
+	"AT+CFUN=1，1",
+	"AT+SFUN=2",
+	"AT+SFUN=3",
+	"AT+SFUN=4",
+	"AT+SFUN=5"
+};
 
 static int eng_pcclient_init(void)
 {
@@ -179,28 +192,16 @@ static int eng_modem2client(int fd, char * databuf, int length)
 {
 	int counter=0;
 
-	ENG_LOG("%s",__FUNCTION__);
+	ENG_LOG("%s: Waitting AT response from Server\n", __FUNCTION__);
+	memset(databuf, 0, length);
 	counter=eng_at_read(fd, databuf, length);
 	ENG_LOG("%s[%d]:%s",__FUNCTION__, counter, databuf);
 	return counter;
 }
 
-static int eng_modem2pc(int cs_fd, int pc_client_fd, char *databuf, int length)
+static int eng_modem2pc(int pc_client_fd, char *databuf, int length)
 {
-	int len;
-	
-
-	memset(databuf, 0, length);
-	ENG_LOG("%s: Waitting AT response from Server\n", __FUNCTION__);
-
-	len = eng_modem2client(cs_fd, databuf, length);
-
-	ENG_LOG("%s: eng_rspbuf[%d]=%s\n",__FUNCTION__, \
-		len, \
-		databuf);
-
-	write(pc_client_fd, databuf, len);
-
+	write(pc_client_fd, databuf, length);
 	return 0;
 }
 
@@ -238,9 +239,18 @@ static void set_vlog_priority(void)
 static int eng_dispatch_simfd_counts(char* databuf)
 {
 	int count;
-	if (strcasestr(databuf,"AT+CFUN") != NULL
-			|| strcasestr(databuf,"AT+SFUN") != NULL )
+	unsigned int i;
+	int is_multi=0;
+
+	for (i=0;i<NUM_ELEMS(TO_MULTI_SIM_CMDS);i++)
 	{
+		if (strcasestr(databuf,TO_MULTI_SIM_CMDS[i]) != NULL ){
+			is_multi = 1;
+			break;
+		}
+	}
+
+	if (is_multi){
 		count = MAX_CS_SIMS;
 	} else {
 		count = 1;
@@ -273,16 +283,31 @@ static int eng_cur_sim_fd(int index,int total)
 	return fd;
 }
 
+static void eng_multicmds_modem2pc(int pc_client_fd,char*prev_buf,int plen,char *databuf, int dlen)
+{
+	//ENG_LOG("%s:prev=%s,databuf=%s",__func__,prev_buf,databuf);
+	if (strcasestr(prev_buf,"OK") == NULL){
+		write(pc_client_fd, prev_buf, plen);
+	} else if (strcasestr(databuf,"OK") == NULL){
+		eng_modem2pc(pc_client_fd, databuf, dlen);
+	} else {
+		eng_modem2pc(pc_client_fd, databuf, dlen);
+	}
+}
+
 static void *eng_pcclient_hdlr(void *_param)
 {
 	char databuf[ENG_BUFFER_SIZE];
 	char readbuf[ENG_BUFFER_SIZE];
+	int resp_len;
 	int length = 0;
 	int length_read = 0;
 	int offset_read  = 0;
 	int fd, ret;
 	int status;
 	int i,total;
+	char* prev_resp_buf=NULL;
+	int prev_len = 0;
 
 	ENG_LOG("%s: Run",__FUNCTION__);
 
@@ -333,7 +358,27 @@ static void *eng_pcclient_hdlr(void *_param)
 						eng_linux2pc(pc_client_fd, databuf);
 						break;
 					case ENG_CMD4MODEM:
-						eng_modem2pc(eng_cur_sim_fd(i,total), pc_client_fd, databuf, ENG_BUFFER_SIZE);
+						resp_len = eng_modem2client(eng_cur_sim_fd(i,total),databuf,ENG_BUFFER_SIZE);
+						if (total>1){
+							//ENG_LOG("total=%d,i=%d,prev=%s,databuf=%s",total,i,
+							//		prev_resp_buf,databuf);
+							if (i==0){
+								prev_len = resp_len;
+								prev_resp_buf = (char*)malloc(prev_len+1);
+								memset(prev_resp_buf,0,prev_len+1);
+								memcpy(prev_resp_buf,databuf,prev_len);
+							}
+							else{
+								eng_multicmds_modem2pc(pc_client_fd,
+										prev_resp_buf, prev_len, databuf, resp_len);
+								if (prev_resp_buf){
+									free(prev_resp_buf);
+									prev_resp_buf=NULL;
+								}
+							}
+						}else{
+							eng_modem2pc(pc_client_fd, databuf, resp_len);
+						}
 						break;
 				}
 				memset(databuf, 0, ENG_BUFFER_SIZE);
