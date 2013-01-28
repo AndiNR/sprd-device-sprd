@@ -24,7 +24,7 @@ TARGET_BOOTLOADER_BOARD_NAME := sp7710g2
 
 # config u-boot
 TARGET_NO_BOOTLOADER := false
-UBOOT_DEFCONFIG := kylew_native
+UBOOT_DEFCONFIG := sp7710g2
 
 # config kernel
 KERNEL_DEFCONFIG := sp7710g2-native_defconfig
