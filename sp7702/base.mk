@@ -56,7 +56,6 @@ PRODUCT_PACKAGES += \
 	modem_control\
 	nvitemd \
 	charge \
-	vcharged \
 	modemd \
 	calibration_init \
 	gralloc.$(TARGET_PLATFORM) \
