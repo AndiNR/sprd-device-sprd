@@ -13,7 +13,7 @@
 
 #define BSL_UART_PACKET 0
 #define BSL_SPI_PACKET	1
-static unsigned long send_buffer[9000]={0};
+static unsigned long send_buffer[1000]={0};
 
 /******************************************************************************
 **  Description:    This function scan the data in src buffer ,add 0x7e as begin
@@ -443,9 +443,9 @@ int  send_data_message(int fd,char *buffer,int data_size,int flag)
 	}
 	else
 	{
-		memcpy(&send_buffer[2],buffer,data_size);
-		size = setup_packet(BSL_CMD_MIDST_DATA,(char *)send_buffer,8,data_size,flag);
-		retval = write(fd,send_buffer,size);
+	//	memcpy(&send_buffer[2],buffer,data_size);
+		size = setup_packet(BSL_CMD_MIDST_DATA,(char *)buffer,8,data_size,flag);
+		retval = write(fd,buffer,size);
 	}
 	if(retval >0)
 	{

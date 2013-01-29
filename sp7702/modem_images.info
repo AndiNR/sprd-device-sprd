@@ -5,10 +5,10 @@
 #file length download address are 0x00
 
 /dev/mtd/mtd3			0x3000		0x40000000
-/fixnv/fixnv.bin		0x1E000		0x400
-/fixnv/fixnv.bin		0x1E000		0x2100000
 /dev/mtd/mtd7			0x200000	0x20000
 /dev/mtd/mtd19			0x9f8000	0x400000
+/fixnv/fixnv.bin		0x1E000		0x400
+/fixnv/fixnv.bin		0x1E000		0x2100000
 /runtimenv/runtimenv.bin	0x20000		0x2120000
 
 /dev/ttyS1			0x00		0x00

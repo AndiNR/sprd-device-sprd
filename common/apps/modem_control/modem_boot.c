@@ -24,13 +24,14 @@ struct image_info {
 
 #define FDL_OFFSET		0
 #define	FDL_PACKET_SIZE 	256
-#define HS_PACKET_SIZE		0x8000
+#define HS_PACKET_SIZE		(60*1024)
 
 #define	DL_FAILURE		(-1)
 #define DL_SUCCESS		(0)
-char test_buffer[HS_PACKET_SIZE]={0};
+char test_buffer[HS_PACKET_SIZE+128]={0};
 static int modem_images_count=6;
 static char *uart_dev = UART_DEVICE_NAME;
+static int need_shutdown = 0;
 struct image_info download_image_info[]={
         { //fixvn
                 "/dev/mtd/mtd3",
@@ -90,7 +91,7 @@ int get_modem_images_info(void)
     if(max_item == 0)
         return 0;
 
-    if (!(fp = fopen("/etc/modem_images.info", "r"))) {
+    if (!(fp = fopen("/modem_images.info", "r"))) {
         return 0;
     }
     printf("start parse modem images file\n");
@@ -152,8 +153,11 @@ static void reset_modem(void)
 	modem_power_fd = open(MODEM_POWER_PATH, O_RDWR);
         if(modem_power_fd < 0)
 		return;
-        write(modem_power_fd,"0",2);
-	sleep(1);
+        if(need_shutdown == 1){
+        	write(modem_power_fd,"0",2);
+		usleep(500*1000);
+	}
+	need_shutdown = 1;
         write(modem_power_fd,"1",2);
         close(modem_power_fd);
 }
@@ -282,7 +286,7 @@ int download_image(int channel_fd,struct image_info *info)
 	}
         for(i=0;i<count;i++){
 		packet_size = HS_PACKET_SIZE;
-		buffer = (char *)test_buffer;
+		buffer = (char *)&test_buffer[8];
 		do{
 			read_len = read(image_fd,buffer,packet_size);
 			if(read_len > 0){
@@ -292,7 +296,7 @@ int download_image(int channel_fd,struct image_info *info)
 		}while(packet_size > 0);
 		if(image_size < HS_PACKET_SIZE){
 			for(i=image_size;i<HS_PACKET_SIZE;i++)
-				test_buffer[i] = 0xFF;
+				test_buffer[i+8] = 0xFF;
 			image_size = 0;
 		}else { image_size -= HS_PACKET_SIZE;}
 		//memset(test_buffer,i,HS_PACKET_SIZE);

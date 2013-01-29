@@ -58,7 +58,6 @@ PRODUCT_PACKAGES += \
 	charge \
 	poweroff_alarm \
 	mplayer \
-	modemd \
 	calibration_init \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \
@@ -88,7 +87,7 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/ueventd.sp8810.rc:root/ueventd.sp8810.rc \
 	$(BOARDDIR)/fstab.sp8810:root/fstab.sp8810 \
 	$(BOARDDIR)/vold.fstab:system/etc/vold.fstab \
-	$(BOARDDIR)/modem_images.info:system/etc/modem_images.info \
+	$(BOARDDIR)/modem_images.info:root/modem_images.info \
 	device/sprd/common/res/CDROM/adb.iso:system/etc/adb.iso \
 	device/sprd/common/libs/audio/apm/devicevolume.xml:system/etc/devicevolume.xml \
 	device/sprd/common/libs/audio/apm/formatvolume.xml:system/etc/formatvolume.xml \
