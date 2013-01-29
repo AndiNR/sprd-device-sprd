@@ -55,6 +55,9 @@ PRODUCT_PACKAGES += \
     ES_File_Explorer.apk
 
 PRODUCT_PACKAGES += \
+	charge \
+	poweroff_alarm \
+	mplayer \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \
 	camera.$(TARGET_PLATFORM) \

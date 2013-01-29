@@ -62,6 +62,12 @@ service modem_control /system/bin/logwrapper /system/bin/modem_control
     user root
     oneshot
 
+#start rawdata daemon.
+service rawdatad /bin/rawdatad
+    class core
+    user root
+    oneshot
+    
 #telephony service
 service sprd_monitor /system/bin/sprd_monitor
     class main
@@ -99,6 +105,15 @@ service phoneserver /system/bin/phoneserver
 service phoneserver_2sim /system/bin/phoneserver_2sim
     class main
     disabled
+    oneshot
+service vcharged /bin/vcharged
+    class core
+    user root
+    oneshot
+
+service charge /bin/charge
+    class charger
+    user root
     oneshot
 
 #mcom monitor

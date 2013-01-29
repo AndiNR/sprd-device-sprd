@@ -56,6 +56,8 @@ PRODUCT_PACKAGES += \
 	modem_control\
 	nvitemd \
 	charge \
+	poweroff_alarm \
+	mplayer \
 	modemd \
 	calibration_init \
 	gralloc.$(TARGET_PLATFORM) \
