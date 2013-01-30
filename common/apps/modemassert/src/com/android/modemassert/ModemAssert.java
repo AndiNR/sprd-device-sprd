@@ -43,7 +43,7 @@ public class ModemAssert extends Service {
         try {
             s = new LocalSocket();
             l = new LocalSocketAddress(MODEM_SOCKET_NAME,
-                    LocalSocketAddress.Namespace.RESERVED);
+                    LocalSocketAddress.Namespace.ABSTRACT);
             // add by lg for bug 20109 for 8810_2.3.5
             // l = new LocalSocketAddress(MODEM_SOCKET_NAME,
             // LocalSocketAddress.Namespace.ABSTRACT);
@@ -109,44 +109,48 @@ public class ModemAssert extends Service {
                             Log.w(MTAG, "StringIndexOutOfBoundsException\n");
                         }
                         AssertInfo = tempStr;
-                        // Log.d(MTAG, ""+ tempStr);
-                        showNotefication();
-                        Log.v(MTAG, "exit modemassert app\n");
-                        SystemClock.sleep(50000);
+                        Log.d(MTAG, "read something: "+ tempStr);
+                        if (0 ==  tempStr.compareTo("Modem Alive")) {
+                            hideNotification();
+                        } else if (tempStr.length() > 0) {
+                            showNotification();
+                        }
+                        continue;
                     }
-                    break;
                 }
-                ModemAssert.this.stopSelf();
             }
         }
     };
 
-    private void showNotefication() {
+    private void showNotification() {
+        Log.v(MTAG, "showNotefication");
         int icon = R.drawable.modem_assert;
-        CharSequence thicktext = "modem assert";
-        mNm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        mNm = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
         long when = System.currentTimeMillis();
-        Notification notification = new Notification(icon, thicktext, when);
+        Notification notification = new Notification(icon, AssertInfo, when);
 
         Context context = getApplicationContext();
         CharSequence contentTitle = "modem assert";
         CharSequence contentText = AssertInfo;
         Intent notificationIntent = new Intent(this, ModemAssert.class);
-        PendingIntent contentIntent = PendingIntent.getService(context, 0,
-                notificationIntent, 0);
+        PendingIntent contentIntent =  PendingIntent.getService(context, 0, notificationIntent, 0);
 
         Log.e(MTAG, "Modem Assert!!!!\n");
-        if (contentText != null)
-            Log.e(MTAG, "" + contentText.toString());
-        // notification.defaults |= Notification.DEFAULT_VIBRATE;
-        long[] vibrate = { 0, 10000 };
+        Log.e(MTAG, "" + contentText.toString());
+        //notification.defaults |= Notification.DEFAULT_VIBRATE;
+        long[] vibrate = {0, 10000};
         notification.vibrate = vibrate;
 
         notification.defaults |= Notification.DEFAULT_SOUND;
-        // notification.sound = Uri.parse("file:///sdcard/assert.mp3");
+        //notification.sound = Uri.parse("file:///sdcard/assert.mp3");
 
-        notification.setLatestEventInfo(context, contentTitle, contentText,
-                contentIntent);
+        notification.setLatestEventInfo(context, contentTitle, contentText, contentIntent);
         mNm.notify(MODEM_ASSERT_ID, notification);
+    }
+
+    private void hideNotification() {
+        Log.v(MTAG, "hideNotification");
+        mNm = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+        mNm.cancel(MODEM_ASSERT_ID);
     }
 }
