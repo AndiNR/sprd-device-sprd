@@ -3,7 +3,9 @@ import init.sc8825.usb.rc
 on early-init
     export EXTERNAL_STORAGE /storage/sdcard0
     export SECONDARY_STORAGE /storage/sdcard1
-    mkdir /storage 0050 system sdcard_r
+    # 0 for nand,1 for emmc,2 for sdcard
+    export SECOND_STORAGE_TYPE 2
+    mkdir /storage 0777 system sdcard_rw
     mkdir /storage/sdcard0 0000 system system
     mkdir /storage/sdcard1 0000 system system
     # for backwards compatibility
@@ -12,7 +14,7 @@ on early-init
 
 on fs
     mount_all /fstab.sc8825
-    setprop ro.crypto.fuse_sdcard true
+    #setprop ro.crypto.fuse_sdcard true
 
 on post-fs
     insmod /system/lib/modules/ump.ko
@@ -20,8 +22,8 @@ on post-fs
 
 on post-fs-data
     # we will remap this as /storage/sdcard0 with the sdcard fuse tool
-    mkdir /data/media 0770 media_rw media_rw
-    chown media_rw media_rw /data/media
+    #mkdir /data/media 0770 media_rw media_rw
+    #chown media_rw media_rw /data/media
     mkdir /data/misc/sensors 0777 system system
 
     # Set indication (checked by vold) that we have finished this action
@@ -227,8 +229,8 @@ service startupsound /system/bin/mplayer /system/media/startupsound
 # create virtual SD card at /storage/sdcard0, based on the /data/media directory
 # daemon will drop to user/group system/media_rw after initializing
 # underlying files in /data/media will be created with user and group media_rw (1023)
-service sdcard /system/bin/sdcard /data/media 1023 1023
-    class late_start
+#service sdcard /system/bin/sdcard /data/media 1023 1023
+#    class late_start
 
 
 service hfag /system/bin/sdptool add --channel=10 HFAG
