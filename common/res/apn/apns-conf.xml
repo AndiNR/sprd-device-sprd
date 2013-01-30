@@ -24,7 +24,7 @@
 <!-- use empty string to specify no proxy or port -->
 <!-- This version must agree with that in apps/common/res/apns.xml -->
 <apns version="7">
-     <apn carrier="CMCCWAP"
+     <apn carrier="CMWAP"
         mcc="460"
         mnc="00"
         apn="cmwap"
@@ -38,7 +38,7 @@
         mmsc="http://mmsc.monternet.com"
         type="default,mms,hipri,wap"
     />
-    <apn carrier="CMCCWAP"
+    <apn carrier="CMWAP"
         mcc="460"
         mnc="02"
         apn="cmwap"
@@ -52,7 +52,7 @@
         mmsc="http://mmsc.monternet.com"
         type="default,mms,hipri,wap"
     />
-    <apn carrier="CMCCWAP"
+    <apn carrier="CMWAP"
         mcc="460"
         mnc="07"
         apn="cmwap"
@@ -66,7 +66,7 @@
         mmsc="http://mmsc.monternet.com"
         type="default,mms,hipri,wap"
     />
-    <apn carrier="CMCCNET"
+    <apn carrier="CMNET"
         mcc="460"
         mnc="00"
         apn="cmnet"
@@ -84,7 +84,7 @@
         password=""
         type="supl"
     />
-    <apn carrier="CMCCNET"
+    <apn carrier="CMNET"
         mcc="460"
         mnc="02"
         apn="cmnet"
@@ -102,7 +102,7 @@
         password=""
         type="supl"
     />
-     <apn carrier="CMCCNET"
+     <apn carrier="CMNET"
         mcc="460"
         mnc="07"
         apn="cmnet"
