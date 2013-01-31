@@ -943,7 +943,6 @@ void *camera_encoder_thread(void *client_data)
 	ALOGV("camera_encoder_thread ,jpg tmp 0x%x 0x%x",g_jpegenc_params.yuv_virt_buf,g_jpegenc_params.yuv_phy_buf);
 
 	g_jpegenc_params.set_slice_height = s_camera_info.jpeg_codec_slice_height;
-
 	jpeg_enc_buf_len = JPEG_ENC_HW_PMEM;
 	jpeg_enc_buf_len = camera_get_size_align_page(jpeg_enc_buf_len);
 	jpeg_enc_buf_virt_addr = (uint32_t *)g_dcam_obj->get_jpeg_encoder_mem_by_HW(&jpeg_enc_buf_phys_addr);
@@ -2868,8 +2867,7 @@ void *camera_preview_thread(void *client_data)
 				return NULL;
 			}
 			ALOGE("Fail to VIDIOC_DQBUF.");
-			g_callback(CAMERA_EXIT_CB_FAILED, client_data, CAMERA_FUNC_START_PREVIEW, NULL);
-			return NULL;
+			continue;
 		}
 		else
 		{
@@ -2932,7 +2930,6 @@ void *camera_preview_thread(void *client_data)
 				if(0 != ret)
 				{
 					ALOGE("SPRD OEM:Fail to preview because camera_rotation");
-					g_callback(CAMERA_EXIT_CB_FAILED, client_data, CAMERA_FUNC_START_PREVIEW, NULL);
 					camera_release_frame(g_releasebuff_index);
 					if(1 == check_stop())
 						return NULL;

@@ -141,7 +141,6 @@ private:
                                   recording_callback rcb, void *ruser);*/
     status_t startPreviewInternal();                              
     void stopPreviewInternal();
-
     static wp<SprdCameraHardware> singleton;
 
     /* These constants reflect the number of buffers that libqcamera requires

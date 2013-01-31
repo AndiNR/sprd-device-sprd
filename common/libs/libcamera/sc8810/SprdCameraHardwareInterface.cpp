@@ -947,7 +947,6 @@ status_t SprdCameraHardware::takePicture()
                 // of an internal error.
                 FreePmem(mRawHeap);
                 mRawHeap = NULL;
-                //           mJpegHeap = NULL;
                 return last_state == QCS_PREVIEW_IN_PROGRESS ?
                 UNKNOWN_ERROR :
                 INVALID_OPERATION;
@@ -972,7 +971,6 @@ status_t SprdCameraHardware::takePicture()
                 ALOGV("mLock:takePictureE.\n");
                 FreePmem(mRawHeap);
                 mRawHeap = NULL;
-                //          mJpegHeap = NULL;
                 FreePmem(mJpegencHWHeap);
                 mJpegencHWHeap = NULL;
                 FreePmem(mTempHWHeap);
@@ -1333,7 +1331,6 @@ void SprdCameraHardware::FreeCameraMem(void)
         Mutex::Autolock cbLock(&mCallbackLock);
         FreePmem(mRawHeap);
         mRawHeap = NULL;
-        //     mJpegHeap = NULL;
         FreePmem(mJpegencHWHeap);
         mJpegencHWHeap = NULL;
         FreePmem(mTempHWHeap);
@@ -1368,7 +1365,6 @@ void SprdCameraHardware::HandleErrorState(void)
         }
         ALOGE("HandleErrorState:don't enable error msg!");
 }
-        
 void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 {
         Mutex::Autolock cbLock(&mCallbackLock);
@@ -1899,7 +1895,6 @@ void   SprdCameraHardware::receiveJpegPosPicture(void)//(camera_frame_type *fram
         ALOGV("receiveJpegPicture: free the Raw and Jpeg mem.");
         FreePmem(mRawHeap);
         mRawHeap = NULL;
-//        mJpegHeap = NULL;
         FreePmem(mJpegencHWHeap);
         mJpegencHWHeap = NULL;
         FreePmem(mTempHWHeap);
@@ -1910,7 +1905,6 @@ void   SprdCameraHardware::receiveJpegPosPicture(void)//(camera_frame_type *fram
         mJpegencZoomHeap=NULL;
         FreePmem(mJpegencSwapHeap);
         mJpegencSwapHeap=NULL;
-
         print_time();
         ALOGV("receiveJpegPicture: X callback done.");
     }
@@ -2553,11 +2547,11 @@ ALOGV("start to getCameraStateStr.");
 #endif
         if (cb == CAMERA_EXIT_CB_ABORT ||     // Function aborted
             cb == CAMERA_EXIT_CB_DSP_ABORT || // Abort due to DSP failure
-            cb == CAMERA_EXIT_CB_ERROR ||     // Failed due to resource
-            cb == CAMERA_EXIT_CB_FAILED)      // Execution failed or rejected
+            cb == CAMERA_EXIT_CB_ERROR)      // Execution failed or rejected
         {
             // Autofocus failures occur relatively often and are not fatal, so
             // we do not transition to QCS_ERROR for them.
+            //for taking picture we must callback some null data to App, so it may process by take picture logic
             if (func != CAMERA_FUNC_START_FOCUS) {
                 ALOGE("SprdCameraHardware::camera_cb: @CAMERA_EXIT_CB_FAILURE(%d) in state %s.",
                      parm4,
@@ -2593,6 +2587,14 @@ ALOGV("start to getCameraStateStr.");
                         break;
                     }
                     break;
+		   case CAMERA_EXIT_CB_FAILED:
+                     //free memory
+                     ALOGE("camera cb: invalid state %s for taking a picture!",
+                                obj->getCameraStateStr(obj->mCameraState));
+                     obj->FreeCameraMem();
+                    TRANSITION_ALWAYS(QCS_ERROR);
+                    obj->HandleErrorState();
+		    break;
                 default:
                     // transition to QCS_ERROR
                     ALOGE("unexpected cb %d for CAMERA_FUNC_START_PREVIEW.",
@@ -2640,19 +2642,31 @@ ALOGV("start to getCameraStateStr.");
                     // receiveRawPicture on a dead object.
                     ALOGV("Receiving post LPM raw picture.");
                     obj->receivePostLpmRawPicture((camera_frame_type *)parm4);
-                } else {  // transition to QCS_ERROR
-                    if (obj->mCameraState == QCS_ERROR) {
-                        Mutex::Autolock l(&obj->mLock);
+                } else if (cb == CAMERA_EXIT_CB_FAILED){
+                       //callback fake picture to app and free camera memory allocated before
+                        obj->FreeCameraMem();
+                        int32_t iMsgEnabled;
+                        {
+                            Mutex::Autolock l(&obj->mLock);
+                            iMsgEnabled = obj->mMsgEnabled;
+                        }
                         Mutex::Autolock stateLock(&obj->mStateLock);
-                        ALOGE("camera cb: invalid state %s for taking a picture!",
-                             obj->getCameraStateStr(obj->mCameraState));
-                             obj->FreeCameraMem();
-                        if (obj->mMsgEnabled & CAMERA_MSG_RAW_IMAGE)
-                       		 obj->mData_cb(CAMERA_MSG_RAW_IMAGE, NULL, 0 , NULL, obj->mUser);
-                        if (obj->mMsgEnabled & CAMERA_MSG_COMPRESSED_IMAGE)
-                        	obj->mData_cb(CAMERA_MSG_COMPRESSED_IMAGE, NULL, 0, NULL, obj->mUser);
-                        TRANSITION_ALWAYS(QCS_IDLE);
-                    }
+                        Mutex::Autolock callbackLock(&obj->mCallbackLock);
+                        ALOGE("camera cb: take picture failed , camera state %s!",
+                                obj->getCameraStateStr(obj->mCameraState));
+                        if (iMsgEnabled & CAMERA_MSG_RAW_IMAGE)
+                        {
+                            camera_memory_t *mem = obj->mGetMemory_cb(-1, 0, 1, 0);
+                            obj->mData_cb(CAMERA_MSG_RAW_IMAGE, mem, 0 , NULL, obj->mUser);
+                            mem->release(mem);
+                        }
+                        if (iMsgEnabled & CAMERA_MSG_COMPRESSED_IMAGE)
+                        {
+                            camera_memory_t *mem = obj->mGetMemory_cb(-1, 0, 1, 0);
+                            obj->mData_cb(CAMERA_MSG_COMPRESSED_IMAGE, mem, 0, NULL, obj->mUser);
+                            mem->release(mem);
+                        }
+			TRANSITION_ALWAYS(QCS_IDLE);
                 }
                 break;
             CAMERA_STATE(CAMERA_FUNC_ENCODE_PICTURE)
@@ -2691,11 +2705,40 @@ ALOGV("start to getCameraStateStr.");
                         TRANSITION(QCS_WAITING_JPEG, QCS_IDLE);
                     }
                     // transition to QCS_ERROR
-                    else ALOGE("camera cb: invalid state %s for "
+                    else
+                        ALOGE("camera cb: invalid state %s for "
                               "receiving JPEG!",
                               obj->getCameraStateStr(obj->mCameraState));
-                    break;
-	       case CAMERA_EVT_CB_SNAPSHOT_JPEG_DONE:
+                     break;
+		case CAMERA_EXIT_CB_FAILED:
+		{
+		     //callback fake picture to app and free camera memory allocated before
+		    obj->FreeCameraMem();
+                  int32_t iMsgEnabled;
+                  {
+                      Mutex::Autolock l(&obj->mLock);
+                      iMsgEnabled = obj->mMsgEnabled;
+                  }
+                  Mutex::Autolock stateLock(&obj->mStateLock);
+                  Mutex::Autolock callbackLock(&obj->mCallbackLock);
+                  ALOGE("camera cb: exit encode picture failed , camera state %s!",
+                                obj->getCameraStateStr(obj->mCameraState));
+                  if (iMsgEnabled & CAMERA_MSG_RAW_IMAGE)
+                  {
+                      camera_memory_t *mem = obj->mGetMemory_cb(-1, 0, 1, 0);
+                      obj->mData_cb(CAMERA_MSG_RAW_IMAGE, mem, 0 , NULL, obj->mUser);
+                      mem->release(mem);
+                  }
+                  if (iMsgEnabled & CAMERA_MSG_COMPRESSED_IMAGE)
+                  {
+                      camera_memory_t *mem = obj->mGetMemory_cb(-1, 0, 1, 0);
+                      obj->mData_cb(CAMERA_MSG_COMPRESSED_IMAGE, mem, 0, NULL, obj->mUser);
+                      mem->release(mem);
+                  }
+                  TRANSITION_ALWAYS(QCS_IDLE);
+                }
+                break;
+            case CAMERA_EVT_CB_SNAPSHOT_JPEG_DONE:
 			 	TRANSITION_LOCKED(QCS_WAITING_RAW,
                                           //obj->mJpegPictureCallback != NULL ?
                                           obj->mData_cb != NULL ?
