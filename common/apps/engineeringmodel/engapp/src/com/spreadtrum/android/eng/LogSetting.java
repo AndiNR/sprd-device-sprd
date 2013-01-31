@@ -28,6 +28,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
     private static final int LOG_DSP   = 2;
     private static final int LOG_MODEM_ARM = 3;
     private static final int LOG_ANDROID = 4;
+    private static final int LOG_MODEM_SLOG = 5;
 
     private static final String PROPERTY_LOGCAT = "persist.sys.logstate";
     private static final String KEY_ANDROID_LOG = "android_log_enable";
@@ -115,6 +116,8 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
             logType = LOG_MODEM_ARM;
         } else if("android_log_enable".equals(key)){
             logType = LOG_ANDROID;
+        } else if("modem_slog_enable".equals(key)){
+            logType = LOG_MODEM_SLOG;
         } else {
             Log.e(LOG_TAG, "Unknown type!");
             return false;
@@ -237,9 +240,18 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
             state = "running".equals(re)?1:0;
         }
         break;
+        case LOG_MODEM_SLOG: {
+            String re = SystemProperties.get("persist.sys.modem_slog", "0");
+            try {
+                state = Integer.parseInt(re);
+            }catch(Exception e){
+                state =0;
+            }
+            break ;
+        }
 
         default:
-        break;
+            break;
         }
 
 		return state;
@@ -329,6 +341,41 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
                     SystemProperties.set("ctl.stop", "logs4android");
                 }
             break;
+            case LOG_MODEM_SLOG: {
+                SystemProperties.set("persist.sys.modem_slog",String.valueOf(state));
+                outputBuffer = new ByteArrayOutputStream();
+                outputBufferStream = new DataOutputStream(outputBuffer);
+                Log.e(LOG_TAG, "Engmode socket open, id:" + mSocketID);
+
+                if (state == 1) {
+                    mATline = String.format("%d,%d,%s",engconstents.ENG_AT_NOHANDLE_CMD, 1, "AT+SLOG=2");
+                }else {
+                    mATline = String.format("%d,%d,%s",engconstents.ENG_AT_NOHANDLE_CMD, 1, "AT+SLOG=3");
+                }
+                Log.e(LOG_TAG, "cmd" + mATline);
+                try{
+                    outputBufferStream.writeBytes(mATline);
+                }catch (IOException e) {
+                    Log.e(LOG_TAG, "writeBytes() error!");
+                    return ;
+                }
+                mEf.engwrite(mSocketID, outputBuffer.toByteArray(),
+                        outputBuffer.toByteArray().length);
+
+                int dataSize = 128;
+                byte[] inputBytes = new byte[dataSize];
+                int showlen = mEf.engread(mSocketID, inputBytes, dataSize);
+                mATResponse = new String(inputBytes, 0, showlen);
+                Log.d(LOG_TAG, "AT response:" + mATResponse);
+                if (mATResponse.contains("OK")) {
+                    Toast.makeText(getApplicationContext(), "Success!",
+                            Toast.LENGTH_SHORT).show();
+                }else {
+                    Toast.makeText(getApplicationContext(), "Fail!",
+                            Toast.LENGTH_SHORT).show();
+                }
+                break;
+            }
 
             default:
             break;

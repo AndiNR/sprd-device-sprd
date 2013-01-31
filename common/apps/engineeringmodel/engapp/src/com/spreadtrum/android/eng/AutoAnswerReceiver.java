@@ -1,5 +1,9 @@
 package com.spreadtrum.android.eng;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -7,11 +11,18 @@ import android.content.SharedPreferences;
 import android.os.SystemProperties;
 import android.preference.PreferenceManager;
 import android.util.Log;
+import android.widget.Toast;
 
 public class AutoAnswerReceiver extends BroadcastReceiver {
 	private final String TAG = "AutoAnswerReceiver";
 
 	public static final String PREFS_NAME = "ENGINEERINGMODEL";
+
+    private int mSocketID = 0;
+    private engfetch mEf;
+    private String mATline;
+    private String mATResponse;
+
 
 	@Override
 	public void onReceive(Context context, Intent intent) {
@@ -45,6 +56,51 @@ public class AutoAnswerReceiver extends BroadcastReceiver {
 				SystemProperties.set("ro.hisense.cmcc.test.cmmb.wire", "0");
 			}
 			// add by wangxiaobin 11-9 cmmb set end
+            atSlog(context);
 		}
+	}
+
+    private void atSlog (Context context){
+        mEf = new engfetch();
+        mSocketID = mEf.engopen();
+        mATline = new String();
+        String re = SystemProperties.get("persist.sys.modem_slog", "1");
+        int state = Integer.parseInt(re);
+
+        ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
+        DataOutputStream outputBufferStream = new DataOutputStream(outputBuffer);
+
+        Log.e(TAG, "Engmode socket open, id:" + mSocketID);
+
+        if (state == 1) {
+            mATline = String.format("%d,%d,%s",engconstents.ENG_AT_NOHANDLE_CMD, 1, "AT+SLOG=2");
+        }else {
+            mATline = String.format("%d,%d,%s",engconstents.ENG_AT_NOHANDLE_CMD, 1, "AT+SLOG=3");
+        }
+        try{
+            outputBufferStream.writeBytes(mATline);
+        }catch (IOException e) {
+            Log.e(TAG, "writeBytes() error!");
+            return ;
+        }
+        mEf.engwrite(mSocketID, outputBuffer.toByteArray(),
+                outputBuffer.toByteArray().length);
+
+        int dataSize = 128;
+        byte[] inputBytes = new byte[dataSize];
+
+        int showlen = mEf.engread(mSocketID, inputBytes, dataSize);
+        mATResponse = new String(inputBytes, 0, showlen);
+
+        Log.d(TAG, "AT response:" + mATResponse);
+        if (mATResponse.contains("OK")) {
+            Toast.makeText(context, "Success!",
+                    Toast.LENGTH_SHORT).show();
+        }else {
+            Toast.makeText(context, "Fail!",
+                    Toast.LENGTH_SHORT).show();
+        }
+
+        mEf.engclose(mSocketID);
 	}
 }
