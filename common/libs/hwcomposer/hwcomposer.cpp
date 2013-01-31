@@ -596,7 +596,7 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
        for (size_t i=0 ; i<list->numHwLayers ; i++) {
 		dump_layer(&list->hwLayers[i]);
 		list->hwLayers[i].compositionType = HWC_FRAMEBUFFER;
-		if((list->hwLayers[i].flags & HWC_SKIP_LAYER)|| !list->hwLayers[i].handle || list->numHwLayers >= 3){//only support 2 layers
+		if((list->hwLayers[i].flags & HWC_SKIP_LAYER)|| !list->hwLayers[i].handle) {
 			ctx->fb_layer_count++;
 			ALOGI("skip_layer %p",list->hwLayers[i].handle);
 			continue;
@@ -610,11 +610,15 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 			overlay_video = &list->hwLayers[i];
 			ALOGI("find video overlay %d",list->hwLayers[i].handle);
 		} else if((support_overlay == SPRD_LAYERS_OSD) && (ctx->osd_overlay_flag == 0)) {
-			ctx->osd_overlay_flag = 1;
-			list->hwLayers[i].compositionType = HWC_OVERLAY;
-			//list->hwLayers[i].hints = HWC_HINT_CLEAR_FB;//must set it???
-			overlay_osd = &list->hwLayers[i];
-			ALOGI("find osd overlay %d",list->hwLayers[i].handle);
+			if ( list->numHwLayers >= 3) {
+				ctx->fb_layer_count++;
+			} else {
+				ctx->osd_overlay_flag = 1;
+				list->hwLayers[i].compositionType = HWC_OVERLAY;
+				//list->hwLayers[i].hints = HWC_HINT_CLEAR_FB;//must set it???
+				overlay_osd = &list->hwLayers[i];
+				ALOGI("find osd overlay %d",list->hwLayers[i].handle);
+			}
 		}else {
 			ctx->fb_layer_count++;
 		}
