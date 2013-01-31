@@ -203,6 +203,7 @@ struct tiny_audio_device {
     struct pcm *pcm_modem_ul;
     int call_start;
     int call_connected;
+    int call_prestop;
     float voice_volume;
     struct tiny_stream_in *active_input;
     struct tiny_stream_out *active_output;
@@ -998,15 +999,19 @@ static bool out_bypass_data(struct tiny_audio_device *adev,uint32_t frame_size, 
     /*
         1. There is some time between call_start and call_connected, we should throw away some data here.
         2. During in  AUDIO_MODE_IN_CALL and not in call_start, we should throw away some data in BT device.
+        3. If mediaserver crash, we should throw away some pcm data after restarting mediaserver.
+        4. After call thread gets stop_call cmd, but hasn't get lock.
     */
-       if (( (!adev->call_start) && (adev->mode == AUDIO_MODE_IN_CALL) && (adev->devices & AUDIO_DEVICE_OUT_ALL_SCO) )
-        || (adev->call_start && (!adev->call_connected))) {
-//           ALOGI("out_write throw away data call_start(%d) mode(%d) devices(0x%x) call_connected(%d)...",adev->call_start,adev->mode,adev->devices,adev->call_connected);
-           usleep(bytes * 1000000 / frame_size / sample_rate);
-           return true;
-       }else{
-         return false;
-       }
+    int vbc_2arm =  0;
+    vbc_2arm = mixer_ctl_get_value(adev->private_ctl.vbc_switch,0);
+    if (( (!adev->call_start) && (adev->mode == AUDIO_MODE_IN_CALL) && (adev->devices & AUDIO_DEVICE_OUT_ALL_SCO) )
+        || (adev->call_start && (!adev->call_connected)) || ((!vbc_2arm) && (!adev->call_start)) || adev->call_prestop) {
+        MY_TRACE("out_write throw away data call_start(%d) mode(%d) devices(0x%x) call_connected(%d) vbc_2arm(%d) call_prestop(%d)...",adev->call_start,adev->mode,adev->devices,adev->call_connected,vbc_2arm,adev->call_prestop);
+        usleep(bytes * 1000000 / frame_size / sample_rate);
+        return true;
+    }else{
+        return false;
+    }
 }
 
 static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
@@ -2657,6 +2662,7 @@ static int adev_open(const hw_module_t* module, const char* name,
     adev->pcm_modem_ul = NULL;
     adev->call_start = 0;
     adev->call_connected = 0;
+    adev->call_prestop = 0;
     adev->voice_volume = 1.0f;
     adev->bluetooth_nrec = false;
 

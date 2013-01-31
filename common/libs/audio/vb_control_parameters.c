@@ -541,6 +541,7 @@ int GetParas_Route_Incall(int fd_pipe,paras_mode_gain_t *mode_gain_paras)	//set_
     ret = ReadParas_ModeGain(fd_pipe,mode_gain_paras);
     if (ret <= 0) {
         ALOGE("Error, read %s failed(%d).",__func__,ret);
+        return ret;
     }
 	if((!mode_gain_paras->is_mode)){	//check whether is setDevMode
 		ret =-1;
@@ -749,7 +750,7 @@ RESTART:
                 adev->call_connected = 0;
                 pthread_mutex_unlock(&adev->lock);
             }
-            usleep(1000*1000);
+            sleep(1);
             goto RESTART;
         } else {
             ALOGW("s_vbpipe_fd(%d) open successfully.", s_vbpipe_fd);
@@ -767,6 +768,8 @@ RESTART:
         if (ret <= 0) {
             ALOGE("Error, %s read head failed(%s).",__func__,strerror(errno));
 	        sleep(1);
+            close(s_vbpipe_fd);
+            s_vbpipe_fd = -1;
             goto RESTART;
         }
         ALOGW("%s call start, Get CMD(%d) from cp, paras_size:%d devices:0x%x mode:%d", adev->call_start ? "":"NOT",read_common_head.cmd_type,read_common_head.paras_size,adev->devices,adev->mode);
@@ -776,7 +779,9 @@ RESTART:
             case VBC_CMD_HAL_OPEN:
             {
                 MY_TRACE("VBC_CMD_HAL_OPEN IN.");
+                ALOGW("VBC_CMD_HAL_OPEN, try lock");
                 pthread_mutex_lock(&adev->lock);
+                ALOGW("VBC_CMD_HAL_OPEN, got lock");
                 force_all_standby(adev);    /*should standby because MODE_IN_CALL is later than call_start*/
                 adev->pcm_modem_dl= pcm_open(s_tinycard, PORT_MODEM, PCM_OUT | PCM_MMAP, &pcm_config_vx);
                 if (!pcm_is_ready(adev->pcm_modem_dl)) {
@@ -801,17 +806,27 @@ RESTART:
             case VBC_CMD_HAL_CLOSE:
             {
                 MY_TRACE("VBC_CMD_HAL_CLOSE IN.");
-                mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);  //switch to arm
-                pthread_mutex_lock(&adev->lock);
-                force_all_standby(adev);
-                pcm_close(adev->pcm_modem_ul);
-                pcm_close(adev->pcm_modem_dl);
-                adev->call_start = 0;
-                adev->call_connected = 0;
-                ALOGW("END CALL,close pcm device & switch to arm...");
-                pthread_mutex_unlock(&adev->lock);
-                write_common_head.cmd_type = VBC_CMD_RSP_CLOSE;
+                adev->call_prestop = 1;
+                write_common_head.cmd_type = VBC_CMD_RSP_CLOSE;     //ask cp to read vaudio data, "call_prestop" will stop to write pcm data again.
                 WriteParas_Head(s_vbpipe_fd, &write_common_head);
+                mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);  //switch vbc to arm
+                if(adev->call_start){  //if mediaserver crashed, audio will reopen, "call_start" value is 0, should bypass all the settings.
+                    ALOGW("VBC_CMD_HAL_CLOSE, try lock");
+                    pthread_mutex_lock(&adev->lock);
+                    ALOGW("VBC_CMD_HAL_CLOSE, got lock");
+                    force_all_standby(adev);
+                    pcm_close(adev->pcm_modem_ul);
+                    pcm_close(adev->pcm_modem_dl);
+                    adev->call_start = 0;
+                    adev->call_connected = 0;
+                    ALOGW("END CALL,close pcm device & switch to arm...");
+                    pthread_mutex_unlock(&adev->lock);
+                }else{
+                    ALOGW("VBC_CMD_HAL_CLOSE, call thread restart, we should stop call!!!");
+                }
+                ReadParas_Head(s_vbpipe_fd,&write_common_head);
+                Write_Rsp2cp(s_vbpipe_fd,VBC_CMD_HAL_CLOSE);
+                adev->call_prestop = 0;
                 MY_TRACE("VBC_CMD_HAL_CLOSE OUT.");
             }
             break;
