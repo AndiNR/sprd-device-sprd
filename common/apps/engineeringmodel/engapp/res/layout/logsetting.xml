@@ -3,8 +3,8 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
 	android:title="Log Setting">
 	<CheckBoxPreference android:key="android_log_enable"
-		android:title="Android log"   
-		android:summaryOn="android log enable"  
+		android:title="Android log"
+		android:summaryOn="android log enable"
 		android:summaryOff="android log disable"
 		android:enabled="false"
 		android:defaultValue="true"
@@ -12,17 +12,23 @@
 		<!-- SlogUI needed to change visibility to invisible ,by yuntao.xiao -->
 	</CheckBoxPreference>
 	<CheckBoxPreference android:key="applog_enable"
-		android:title="Application"   
-		android:summaryOn="Logcat enable"  
-		android:summaryOff="Logcat disable"  
-		android:defaultValue="true">  
+		android:title="Application"
+		android:summaryOn="Logcat enable"
+		android:summaryOff="Logcat disable"
+		android:defaultValue="true">
 	</CheckBoxPreference>
 	<CheckBoxPreference android:key="modemlog_enable"
-		android:title="Modem"   
-		android:summaryOn="Modem log enable"  
-		android:summaryOff="Modem log disable"  
-		android:defaultValue="true">  
+		android:title="Modem"
+		android:summaryOn="Modem log enable"
+		android:summaryOff="Modem log disable"
+		android:defaultValue="true">
 	</CheckBoxPreference>
+    <CheckBoxPreference android:key="modem_slog_enable"
+        android:title="Modem slog"
+        android:summaryOn="Modem slog enable"
+        android:summaryOff="Modem slog disable"
+        android:defaultValue="true">
+    </CheckBoxPreference>
         <!--Modify 20130109 Spreadst of 112844 can't click the item "Modem ARM log" start-->
         <ListPreference
            android:key="modem_arm_log"
@@ -50,5 +56,5 @@
 		android:targetClass="com.spreadtrum.android.eng.LogSettingSlogUITabHostActivity"
 		android:targetPackage="com.spreadtrum.android.eng" />
 	</Preference>
-</PreferenceScreen>  
+</PreferenceScreen>
 
