@@ -56,7 +56,7 @@ extern "C" {
 
 int32_t g_camera_id = -1;
 uint32_t g_sprd_zoom_levle = 0;
-
+int isSettingPreviewWindow = 0;
 static inline void print_time()
 {
 #if PRINT_TIME
@@ -1383,6 +1383,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
                 return;
         }
 #if 1
+if(0 == isSettingPreviewWindow)
 {
         int width, height, frame_size, offset_size;
 
@@ -3068,13 +3069,14 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 
     Mutex::Autolock stateLock(&mStateLock);
     Mutex::Autolock previewLock(&mPreviewLock);
-
+    isSettingPreviewWindow = 1;
+/*
     //if (mPreviewRunning && !mPreviewStartDeferred) {
     if (mCameraState == QCS_PREVIEW_IN_PROGRESS){
         ALOGI("stop preview (window change)");
         stopPreviewInternal();
     }
-
+*/
     if (w->get_min_undequeued_buffer_count(w, &min_bufs)) {
         ALOGE("%s: could not retrieve min undequeued buffer count", __func__);
         return INVALID_OPERATION;
@@ -3142,13 +3144,13 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
             mPreviewCondition.signal();
         }
     }
-    mPreviewLock.unlock();*/
+    mPreviewLock.unlock();
 
    status_t ret = startPreviewInternal();
    if (ret != NO_ERROR) {
    	return INVALID_OPERATION;
-   }
-
+   }*/
+    isSettingPreviewWindow = 0;
     return NO_ERROR;
 }
 
