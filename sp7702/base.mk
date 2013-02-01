@@ -62,15 +62,16 @@ PRODUCT_PACKAGES += \
 	mplayer \
 	calibration_init \
 	gralloc.$(TARGET_PLATFORM) \
-	hwcomposer.$(TARGET_PLATFORM) \
+    hwcomposer.$(TARGET_PLATFORM) \
 	camera.$(TARGET_PLATFORM) \
 	lights.$(TARGET_PLATFORM) \
 	audio.primary.$(TARGET_PLATFORM) \
 	audio_policy.$(TARGET_PLATFORM) \
 	tinymix \
-	sensors.$(TARGET_BOARD)  \
-	libmbbms_tel_jni.so\
-	$(MALI)
+	sensors.$(TARGET_BOARD) \
+	libmbbms_tel_jni.so \
+	$(MALI) \
+    zram.sh
 
 PRODUCT_PACKAGES += \
             $(BRCM_FM) \

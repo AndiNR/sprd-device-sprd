@@ -27,7 +27,10 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
 	ro.com.android.dataroaming=false \
 	persist.msms.phone_count=2 \
-	persist.msms.phone_default=0
+	persist.msms.phone_default=0 \
+    lmk.autocalc=false \
+    zram.support=true \
+    ro.build.product.lowmem=1    
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1
@@ -63,7 +66,7 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/pixcir_ts.kl:system/usr/keylayout/pixcir_ts.kl \
 	$(BOARDDIR)/pixcir_ts.idc:system/usr/idc/pixcir_ts.idc
 
-$(call inherit-product, frameworks/native/build/phone-hdpi-dalvik-heap.mk)
+$(call inherit-product, frameworks/native/build/phone-hdpi-256-dalvik-heap.mk)
 
 # include classified configs
 $(call inherit-product, $(BOARDDIR)/base.mk)
