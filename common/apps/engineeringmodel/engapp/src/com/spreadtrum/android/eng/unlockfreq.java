@@ -11,10 +11,13 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import android.view.View;
 import android.widget.Toast;
-
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.app.AlertDialog.Builder;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.content.DialogInterface;
 
 public class unlockfreq extends Activity {
 	private static final String LOG_TAG = "engnetinfo";
@@ -44,6 +47,21 @@ public class unlockfreq extends Activity {
 			public void onClick(View v) {
 			// TODO Auto-generated method stub
 			Log.d(LOG_TAG, "before engwrite");
+           /*Add 20130201 Spreadst of 122488 crash when input a long number to UNLOCK FREQUENCY start */
+            int len =mET.getText().toString().length();
+            if(len>=10){
+                AlertDialog.Builder builder = new AlertDialog.Builder(unlockfreq.this);
+                builder.setTitle("number is too long").setMessage("the largest size of number is 9");
+                builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                    }
+                });
+                Dialog alertDialog = builder.create();
+                alertDialog.show();
+                return;
+            }
+            /*Add 20130201 Spreadst of 122488 crash when input a long number to UNLOCK FREQUENCY end */
 			Message m = mHandler.obtainMessage(engconstents.ENG_AT_SETSPFRQ, 0, 0, 0);
 			mHandler.sendMessage(m);
 			Log.d(LOG_TAG, "after engwrite");
