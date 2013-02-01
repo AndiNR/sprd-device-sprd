@@ -203,7 +203,7 @@ struct tiny_audio_device {
     struct pcm *pcm_modem_ul;
     int call_start;
     int call_connected;
-    int call_prestop;
+    volatile int call_prestop;
     float voice_volume;
     struct tiny_stream_in *active_input;
     struct tiny_stream_out *active_output;
