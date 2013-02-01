@@ -56,7 +56,9 @@ public class AutoAnswerReceiver extends BroadcastReceiver {
 				SystemProperties.set("ro.hisense.cmcc.test.cmmb.wire", "0");
 			}
 			// add by wangxiaobin 11-9 cmmb set end
-            atSlog(context);
+            /*Delete 20130201 Spreadst of 124470 have a fail toast  start*/
+          //  atSlog(context);
+            /*Delete 20130201 Spreadst of 124470 have a fail toast  end*/
 		}
 	}
 
