@@ -445,10 +445,21 @@ static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *m
     for(i=0; i<(sizeof(switch_table)/sizeof(unsigned short));i++)
     {
         if(!switch_table[i]){
+        #ifdef _DSP_CTRL_CODEC      //if dsp control codec, we cann't close headset.
+            if(i == 5 || i == 4){
+                continue;
+            }
+        #endif
             set_call_route(adev,switch_device[i],0);
         }
     }
-
+    /*
+        we need to wait for codec here,maybe driver needs to fix this problem.
+        We don't need to wait when in headset,because there is 200ms opening headset.
+    */
+    if((!switch_headset) && (android_cur_device)){
+        usleep(1000*100);
+    }
 	ALOGW("%s successfully, device: earpice(%s), headphone(%s), speaker(%s), Main_Mic(%s), Back_Mic(%s), hp_mic(%s) devices(0x%x)"
 				,__func__,switch_earpice ? "Open":"Close",switch_headset ? "Open":"Close",switch_speaker ? "Open":"Close",
 				switch_mic0 ? "Open":"Close",switch_mic1 ? "Open":"Close",switch_hp_mic ? "Open":"Close",android_cur_device);
