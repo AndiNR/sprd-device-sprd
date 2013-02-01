@@ -23,14 +23,13 @@
 #include <pthread.h>
 #include <time.h>
 #include <sys/inotify.h>
-
-#include "slog.h"
-
 #include <cutils/logger.h>
 #include <cutils/logd.h>
 #include <cutils/sockets.h>
 #include <cutils/logprint.h>
 #include <cutils/event_tag_map.h>
+
+#include "slog.h"
 
 static void gen_logfile(char *filename, struct slog_info *info)
 {
@@ -51,6 +50,7 @@ void record_snap(struct slog_info *info)
 	struct stat st;
 	FILE *fcmd, *fp;
 	char buffer[4096];
+	char buffer_cmd[MAX_NAME_LEN];
 	time_t t;
 	struct tm tm;
 	int ret;
@@ -62,19 +62,6 @@ void record_snap(struct slog_info *info)
 		err_log("open file %s failed!", buffer);
 		exit(0);
 	}
-
-        if(!strncmp(info->opt, "file", 4)) {
-                fcmd = fopen(info->content, "r");
-        } else {
-                fcmd = popen(info->content, "r");
-        }
-
-	if(fcmd == NULL) {
-		err_log("open target %s failed!", info->content);
-		fclose(fp);
-		return;
-	}
-
 	/* add timestamp */
 	t = time(NULL);
 	localtime_r(&t, &tm);
@@ -86,16 +73,27 @@ void record_snap(struct slog_info *info)
 				tm.tm_min,
 				tm.tm_sec);
 
+        if(!strncmp(info->opt, "cmd", 3)) {
+		fclose(fp);
+		sprintf(buffer_cmd, "%s >> %s", info->content, buffer);
+		system(buffer_cmd);
+		return;
+	}
+
+	fcmd = fopen(info->content, "r");
+
+	if(fcmd == NULL) {
+		err_log("open target %s failed!", info->content);
+		fclose(fp);
+		return;
+	}
+
 	/* recording... */
 	while( (ret = fread(buffer, 1, 4096, fcmd)) > 0)
 		fwrite(buffer, 1, ret, fp);
 
 	fclose(fp);
-
-        if(!strncmp(info->opt, "file", 4))
-                fclose(fcmd);
-        else
-                pclose(fcmd);
+	fclose(fcmd);
 
 	return;
 }
@@ -182,24 +180,13 @@ void cp_file(char *path, char *new_path)
 
 static int capture_snap_for_notify(struct slog_info *head, char *filepath)
 {
-        struct slog_info *procrank_info = NULL, *info = head;
+        struct slog_info *info = head;
 
         while(info) {
-                if(info->level <= 6){
-			if(!strncmp(info->name, "procrank", 8)){
-				procrank_info = info;
-				info = info->next;
-				continue;
-			}
-                        exec_or_dump_content(info, filepath);
-		}
-
-                info = info->next;
+		if(info->level <= 6)
+			exec_or_dump_content(info, filepath);
+		info = info->next;
         }
-
-	sleep(1);
-	if(procrank_info)
-		exec_or_dump_content(procrank_info, filepath);
 
         return 0;
 }
@@ -207,13 +194,14 @@ static int capture_snap_for_notify(struct slog_info *head, char *filepath)
 static void handle_notify_file(int wd, const char *name)
 {
 	struct slog_info *info;
+	struct stat st;
 	char src_file[MAX_NAME_LEN], dest_file[MAX_NAME_LEN];
 	time_t t;
-        struct tm tm;
+	struct tm tm;
 	int ret;
 
-        t = time(NULL);
-        localtime_r(&t, &tm);
+	t = time(NULL);
+	localtime_r(&t, &tm);
 
 	info = notify_log_head;
 	while(info) {
@@ -223,24 +211,30 @@ static void handle_notify_file(int wd, const char *name)
 		}
 
 		gettimeofday(&info->current, NULL);
-		if(info->current.tv_sec > info->last.tv_sec + 20) {
+		if(info->current.tv_sec > info->last.tv_sec + 10) {
 			info->last.tv_sec = info->current.tv_sec;
 		} else {
 			return;
 		}
 
+		sprintf(src_file, "%s/%s", info->content, name);
+		if(stat(src_file, &st)) {
+			return;
+		}
+
 		sprintf(dest_file, "%s/%s/%s", current_log_path, top_logdir, info->log_path);
 		ret = mkdir(dest_file, S_IRWXU | S_IRWXG | S_IRWXO);
-		if (-1 == ret && (errno != EEXIST)){
+		if (-1 == ret && (errno != EEXIST)) {
 			err_log("mkdir %s failed.", dest_file);
 			exit(0);
 		}
+
 		sprintf(dest_file, "%s/%s/%s/%s", current_log_path, top_logdir, info->log_path, info->name);
 		ret = mkdir(dest_file, S_IRWXU | S_IRWXG | S_IRWXO);
-		if (-1 == ret && (errno != EEXIST)){
-                        err_log("mkdir %s failed.", dest_file);
-                        exit(0);
-                }
+		if (-1 == ret && (errno != EEXIST)) {
+			err_log("mkdir %s failed.", dest_file);
+			exit(0);
+		}
 
 		sprintf(dest_file, "%s/%s/%s/%s/screenshot_%02d%02d%02d.jpg",
 				current_log_path,
@@ -265,11 +259,7 @@ static void handle_notify_file(int wd, const char *name)
 		capture_snap_for_notify(snapshot_log_head, dest_file);
 
 		/* for collect log */
-		if( !strncmp(info->name, "hprofs", 6) ) {
-			capture_by_name(snapshot_log_head, "dumpsys", dest_file);
-			sleep(10);
-		} else
-			sleep(2);
+		sleep(3);
 
 		sprintf(src_file, "%s/%s", info->content, name);
 		sprintf(dest_file, "%s/%s/%s/%s/%s_%02d%02d%02d.log",
@@ -282,9 +272,9 @@ static void handle_notify_file(int wd, const char *name)
 				tm.tm_min,
 				tm.tm_sec
 		);
+
 		debug_log("%s, %s", src_file, dest_file);
 		cp_file(src_file, dest_file);
-		return;
 	}
 	return;
 }
@@ -322,15 +312,15 @@ void *notify_log_handler(void *arg)
 	info = notify_log_head;
 	while(info) {
 		/* misc_log level decided which log will be restored */
-		if(info->level > misc_log->level){
+		if(info->level > misc_log->level) {
 			info = info->next;
-                        continue;
-                }
+			continue;
+		}
 		ret = mkdir(info->content, S_IRWXU | S_IRWXG | S_IRWXO);
-		if (-1 == ret && (errno != EEXIST)){
-                        err_log("mkdir %s failed.", info->content);
-                        exit(0);
-                }
+		if (-1 == ret && (errno != EEXIST)) {
+			err_log("mkdir %s failed.", info->content);
+			exit(0);
+		}
 		debug_log("notify add watch %s\n", info->content);
 		wd = inotify_add_watch(notify_fd, info->content, IN_MODIFY);
 		if(wd == -1) {
@@ -520,9 +510,7 @@ static void rotatelogs(struct slog_info *info)
 	}
 
 	info->fd_out = gen_outfd(info);
-
 	info->outbytecount = 0;
-
 }
 
 /*
@@ -534,12 +522,13 @@ static void log_size_handler(struct slog_info *info)
 {
 	if( !strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)) ) {
 		if(info->outbytecount >= internal_log_size * 1024 * 1024) {
-                        lseek(info->fd_out, 0, SEEK_SET);
-                        info->outbytecount = 0;
-                }
+			lseek(info->fd_out, 0, SEEK_SET);
+			info->outbytecount = 0;
+		}
 		return;
 	}
-	if(info->max_size == 0){
+
+	if(info->max_size == 0) {
 		if(info->outbytecount >= DEFAULT_MAX_LOG_SIZE * 1024 * 1024)
 			rotatelogs(info);
 	} else {
@@ -549,6 +538,32 @@ static void log_size_handler(struct slog_info *info)
 		}
 	}
 }
+
+/*
+ * add timestamp when start logging.
+ */
+static void add_timestamp(struct slog_info *info)
+{
+	char buffer[MAX_NAME_LEN];
+	int ret;
+	time_t t;
+	struct tm tm;
+	t = time(NULL);
+	localtime_r(&t, &tm);
+	sprintf(buffer, "\n============  %02d-%02d-%02d %02d:%02d:%02d  ==============\n",
+				tm.tm_year % 100,
+				tm.tm_mon + 1,
+				tm.tm_mday,
+				tm.tm_hour,
+				tm.tm_min,
+				tm.tm_sec);
+	do {
+		ret = write(info->fd_out, buffer, strlen(buffer));
+	} while (ret < 0 && errno == EINTR);
+
+	return;
+}
+
 
 static AndroidLogFormat * g_logformat;
 
@@ -576,6 +591,7 @@ void *stream_log_handler(void *arg)
 		if(!strncmp(info->name, "kernel", 6)) {
 			open_device(info, KERNEL_LOG_SOURCE);
 			info->fd_out = gen_outfd(info);
+			add_timestamp(info);
 		} else if(!strncmp(info->name, "modem", 5)) {
 			if( !strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)) ) {
 				info->state = SLOG_STATE_OFF;
@@ -588,6 +604,7 @@ void *stream_log_handler(void *arg)
 			sprintf(devname, "%s/%s", "/dev/log", info->name);
 			open_device(info, devname);
 			info->fd_out = gen_outfd(info);
+			add_timestamp(info);
 		} else {
 			info = info->next;
 			continue;
@@ -643,6 +660,8 @@ void *stream_log_handler(void *arg)
 				ret = read(info->fd_device, buf_kmsg, LOGGER_ENTRY_MAX_LEN);
 				if(ret <= 0) {
 					err_log("read %s log failed!", info->name);
+					close(info->fd_device);
+					open_device(info, KERNEL_LOG_SOURCE);
 					info = info->next;
 					continue;
 				}
@@ -654,6 +673,9 @@ void *stream_log_handler(void *arg)
 
 				if((size_t)ret < strlen(wbuf_kmsg)) {
 					err_log("write %s log partial (%d of %d)", info->name, ret, strlen(wbuf_kmsg));
+					close(info->fd_out);
+					info->fd_out = gen_outfd(info);
+					add_timestamp(info);
 					info = info->next;
 					continue;
 				}
@@ -681,24 +703,31 @@ void *stream_log_handler(void *arg)
 				info->outbytecount += result;
 				log_size_handler(info);
 			} else if(!strncmp(info->name, "main", 4) || !strncmp(info->name, "system", 6)
-				|| !strncmp(info->name, "radio", 5) ){
+				|| !strncmp(info->name, "radio", 5) ) {
 				ret = read(info->fd_device, buf, LOGGER_ENTRY_MAX_LEN);
 				if(ret <= 0) {
 					err_log("read %s log failed!", info->name);
+					close(info->fd_device);
+					sprintf(devname, "%s/%s", "/dev/log", info->name);
+					open_device(info, devname);
 					info = info->next;
 					continue;
-                                }
+                		}
 
 				entry = (struct logger_entry *)buf;
 				entry->msg[entry->len] = '\0';
 				/*add android log 'tag' and other format*/
 				android_log_processLogBuffer(entry, &entry_write);
 				ret = android_log_printLogLine(g_logformat, info->fd_out, &entry_write);
+				if(ret == 0 ){
+					close(info->fd_out);
+					info->fd_out = gen_outfd(info);
+					add_timestamp(info);
+				}
 
 				info->outbytecount += ret;
 				log_size_handler(info);
 			}
-
 			info = info->next;
 		}
 	}
@@ -741,13 +770,13 @@ void *bt_log_handler(void *arg)
 		return NULL;
 	}
 
+	bt_log_handler_started = 1;
 	pid = fork();
 	if(pid < 0){
 		err_log("fork error!");
 	}
 
 	if(pid == 0){
-		bt_log_handler_started = 1;
 		sprintf(buffer, "%s/%s/%s", current_log_path, top_logdir, bt->log_path);
 		ret = mkdir(buffer, S_IRWXU | S_IRWXG | S_IRWXO);
 		if (-1 == ret && (errno != EEXIST)){
@@ -777,7 +806,7 @@ void *bt_log_handler(void *arg)
 			free(file1);
 			free(file0);
 		}
-#ifdef SLOG_BTLOG_B
+#ifdef SLOG_BTLOG_235
 		execl("/system/xbin/hcidump", "hcidump", "-Bw", buffer, (char *)0);
 #else
 		execl("/system/xbin/hcidump", "hcidump", "-w", buffer, (char *)0);
@@ -791,6 +820,81 @@ void *bt_log_handler(void *arg)
 
 	kill(pid, SIGTERM);
 	bt_log_handler_started = 0;
+
+	return NULL;
+}
+
+void *tcp_log_handler(void *arg)
+{
+	struct slog_info *info = NULL, *tcp = NULL;
+	char buffer[MAX_NAME_LEN];
+	int ret, i, err;
+	pid_t pid;
+
+	info = stream_log_head;
+	while(info){
+		if((info->state == SLOG_STATE_ON) && !strncmp(info->name, "tcp", 2)) {
+			tcp = info;
+			break;
+		}
+		info = info->next;
+	}
+
+	if( !tcp)
+		return NULL;
+
+	if(!strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH))) {
+		tcp->state = SLOG_STATE_OFF;
+		return NULL;
+	}
+
+	tcp_log_handler_started = 1;
+	pid = fork();
+	if(pid < 0){
+		err_log("fork error!");
+	}
+
+	if(pid == 0){
+		sprintf(buffer, "%s/%s/%s", current_log_path, top_logdir, tcp->log_path);
+		ret = mkdir(buffer, S_IRWXU | S_IRWXG | S_IRWXO);
+		if (-1 == ret && (errno != EEXIST)){
+			err_log("mkdir %s failed.", buffer);
+			exit(0);
+		}
+		sprintf(buffer, "%s/%s/%s/%s.log",
+			current_log_path, top_logdir, tcp->log_path, tcp->log_basename);
+
+		for (i = MAXROLLLOGS ; i > 0 ; i--) {
+			char *file0, *file1;
+
+			asprintf(&file1, "%s.%d", buffer, i);
+
+			if (i - 1 == 0) {
+				asprintf(&file0, "%s", buffer);
+			} else {
+				asprintf(&file0, "%s.%d", buffer, i - 1);
+			}
+
+			err = rename (file0, file1);
+
+			if (err < 0 && errno != ENOENT) {
+				perror("while rotating log files");
+			}
+
+			free(file1);
+			free(file0);
+		}
+
+		execl("/system/xbin/tcpdump", "tcpdump", "-i", "any", "-p", "-s 0", "-w", buffer, (char *)0);
+		exit(0);
+	}
+
+	while(slog_enable){
+		sleep(1);
+	}
+
+	kill(pid, SIGTERM);
+	tcp_log_handler_started = 0;
 
 	return NULL;
 }

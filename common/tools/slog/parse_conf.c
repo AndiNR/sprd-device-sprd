@@ -19,7 +19,7 @@
 #include "slog.h"
 #include <cutils/properties.h>
 /*
-	#here is the config file example, all fields are split by '\t'
+#here is the config file example, all fields are split by '\t'
 #control: enable/disable
 enable
 
@@ -71,12 +71,12 @@ char *parse_string(char *src, char c, char *token)
 
 int parse_3_entries(char *type)
 {
-        char *name, *pos3;
+	char *name, *pos3;
 	
-        /* sanity check */
-        if(type == NULL) {
+	/* sanity check */
+	if(type == NULL) {
 		err_log("type is null!");
-                return -1;
+		return -1;
 	}
 
 	if((name = parse_string(type, '\t', "name")) == NULL) return -1;
@@ -106,13 +106,13 @@ int parse_3_entries(char *type)
 	
 int parse_4_entries(char *type)
 {
-        struct slog_info *info;
-        char *name, *pos3, *pos4;
-	
-        /* sanity check */
-        if(type == NULL) {
+	struct slog_info *info;
+	char *name, *pos3, *pos4;
+
+	/* sanity check */
+	if(type == NULL) {
 		err_log("type is null!");
-                return -1;
+		return -1;
 	}
 
 	if((name = parse_string(type, '\t', "name")) == NULL) return -1;
@@ -150,13 +150,13 @@ int parse_4_entries(char *type)
 
 int parse_5_entries(char *type)
 {
-        struct slog_info *info;
-        char *name, *pos3, *pos4, *pos5;
-	
-        /* sanity check */
-        if(type == NULL) {
+	struct slog_info *info;
+	char *name, *pos3, *pos4, *pos5;
+
+	/* sanity check */
+	if(type == NULL) {
 		err_log("type is null!");
-                return -1;
+		return -1;
 	}
 
 	/* fetch each field */
@@ -182,6 +182,8 @@ int parse_5_entries(char *type)
 			info->log_path = strdup("modem");
 		} else if(!strncmp(info->name, "bt", 2)) {
 			info->log_path = strdup("bt");
+		} else if(!strncmp(info->name, "tcp", 2)) {
+			info->log_path = strdup("tcp");
 		} else {
 			info->log_path = strdup("android");
 		}
@@ -215,13 +217,13 @@ int parse_5_entries(char *type)
 
 int parse_6_entries(char *type)
 {
-        struct slog_info *info;
-        char *name, *pos3, *pos4, *pos5, *pos6;
+	struct slog_info *info;
+	char *name, *pos3, *pos4, *pos5, *pos6;
 
-        /* sanity check */
-        if(type == NULL) {
+	/* sanity check */
+	if(type == NULL) {
 		err_log("type is null!");
-                return -1;
+		return -1;
 	}
 
 	/* fetch each field */
@@ -268,9 +270,9 @@ int gen_config_string(char *buffer)
 	int off = 0;
 	struct slog_info *info;
 
-	off += sprintf(buffer + off, "enable: %s\nbackend threads(stream snapshot notify bt): %d %d %d %d\n",
-					slog_enable ? "on" : "off", stream_log_handler_started,
-					snapshot_log_handler_started, notify_log_handler_started, bt_log_handler_started);
+	off += sprintf(buffer + off, "enable: %s\nbackend threads(stream snapshot notify bt tcp): %d %d %d %d %d\n",
+			slog_enable ? "on" : "off", stream_log_handler_started,
+			snapshot_log_handler_started, notify_log_handler_started, bt_log_handler_started, tcp_log_handler_started);
 	off += sprintf(buffer + off, "current logpath,%s,\n", current_log_path);
 	off += sprintf(buffer + off, "config logpath,%s,\n", config_log_path);
 	off += sprintf(buffer + off, "internal storage,%s,\n", INTERNAL_LOG_PATH);
