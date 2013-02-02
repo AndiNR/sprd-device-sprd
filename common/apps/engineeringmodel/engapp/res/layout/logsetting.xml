@@ -29,16 +29,16 @@
         android:summaryOff="Modem slog disable"
         android:defaultValue="true">
     </CheckBoxPreference>
-        <!--Modify 20130109 Spreadst of 112844 can't click the item "Modem ARM log" start-->
+        <!--Modify 20130201 Spreadst of 122525 set the armlog unavailable start-->
         <ListPreference
            android:key="modem_arm_log"
            android:title="Modem ARM log"
-           android:enabled="true"
+           android:enabled="false"
            android:entries="@array/modem_arm_log_entries"
            android:entryValues="@array/modem_arm_log_values"
            android:defaultValue="@string/modem_arm_log_entries_values_default"
            android:persistent="true"/>
-        <!--Modify 20130109 Spreadst of 112844 can't click the item "Modem ARM log" end-->
+        <!--Modify 20130201 Spreadst of 122525 set the armlog unavailable  end-->
 	   <!-- SlogUI needed to change visibility to invisible, by yuntao.xiao -->
 	<ListPreference android:key="dsplog_enable"
            android:title="DSP options"
