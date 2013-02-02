@@ -749,8 +749,8 @@ RESTART:
     /* open vbpipe to build connection.*/
     if (s_vbpipe_fd == -1) {
         s_vbpipe_fd = open("/dev/vbpipe6", O_RDWR);
-        if (s_vbpipe_fd <= 0) {
-            ALOGE("Error: s_vbpipe_fd(%d) open failed.", s_vbpipe_fd);
+        if (s_vbpipe_fd < 0) {
+            ALOGE("Error: s_vbpipe_fd(%d) open failed, %s ", s_vbpipe_fd,strerror(errno));
             if(adev->call_start){                  //cp crash during call
                 mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);  //switch to arm
                 pthread_mutex_lock(&adev->lock);
@@ -776,8 +776,11 @@ RESTART:
     	ALOGW("looping now...");
         /* read parameters common head of the packet.*/
         ret = ReadParas_Head(s_vbpipe_fd, &read_common_head);
-        if (ret <= 0) {
-            ALOGE("Error, %s read head failed(%s).",__func__,strerror(errno));
+        if (ret < 0) {
+            ALOGE("Error, %s read head failed(c), need to read again ",__func__,strerror(errno));
+            continue;
+        }else if (ret == 0) {   //cp something wrong
+            ALOGE("Error, %s read head failed(%s), need to reopen vbpipe ",__func__,strerror(errno));
 	        sleep(1);
             close(s_vbpipe_fd);
             s_vbpipe_fd = -1;
