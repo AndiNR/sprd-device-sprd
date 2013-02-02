@@ -46,7 +46,8 @@ PRODUCT_PACKAGES := \
 PRODUCT_PACKAGES += \
     AudioProfile \
     ValidationTools \
-    libvalidationtoolsjni
+    libvalidationtoolsjni \
+    vtserver
 
 # prebuild files
 PRODUCT_PACKAGES += \

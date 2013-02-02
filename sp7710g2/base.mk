@@ -48,7 +48,8 @@ PRODUCT_PACKAGES += \
     SprdNote \
     CallFireWall \
     ValidationTools \
-    libvalidationtoolsjni
+    libvalidationtoolsjni \
+    vtserver
 
 # prebuild files
 PRODUCT_PACKAGES += \

@@ -41,7 +41,7 @@ PRODUCT_PACKAGES := \
 	Stk
 
 # prebuild files
-PRODUCT_PACKAGES +=  vtserver
+PRODUCT_PACKAGES += \
 	
 # packages files
 PRODUCT_PACKAGES += \

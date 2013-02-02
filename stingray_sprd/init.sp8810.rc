@@ -111,3 +111,8 @@ service akmd /system/bin/akmd8975 -m 3
 service slog /system/bin/slog
     class main
     user root
+
+service vtserver /system/bin/vtserver
+    user root
+    disabled
+    oneshot
