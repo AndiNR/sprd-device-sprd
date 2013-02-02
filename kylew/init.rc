@@ -124,7 +124,8 @@ on fs
 # ---------------------------- spreadtrum on fs section start
     mkdir /productinfo 0774 system system
 # ---------------------------- spreadtrum on fs section end
-
+    chmod 0774 /modem_control
+#    start modem_control
 on post-fs
     # once everything is setup, no need to modify /
     mount rootfs rootfs / ro remount
