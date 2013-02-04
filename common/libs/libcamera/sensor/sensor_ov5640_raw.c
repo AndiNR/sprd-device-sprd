@@ -400,9 +400,7 @@ static const uint8_t s_ov5640_tune_info[sizeof(struct sensor_raw_tune_info)]={
 #include "sensor_ov5640_tune_info.dat"
 };
 #endif
-static struct sensor_raw_tune_info s_ov5640_tune_info={
-	0x00
-};
+static struct sensor_raw_tune_info s_ov5640_tune_info;
 
 static struct sensor_raw_fix_info s_ov5640_fix_info={
 //ae
