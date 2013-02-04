@@ -166,8 +166,10 @@
     <string name="alert_dump_dialog_cancel">取消</string>
 
     <string name="alert_clear_title">清除Log</string>
-    <string name="alert_clear_dialog_ok">删除</string>
-    <string name="alert_clear_dialog_cancel">放弃</string>
+    <!-- Modify 20130202 Spreadst of 122485 change the button title start  -->
+    <string name="alert_clear_dialog_ok">确定</string>
+    <string name="alert_clear_dialog_cancel">取消</string>
+    <!-- Modify 20130202 Spreadst of 122485 change the button title end  -->
     <string name="alert_clear_string">真的要清除所有Log?</string>
 
     <string name="tabtag_tabhost_tabgeneral">General</string>
