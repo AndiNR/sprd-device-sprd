@@ -17,8 +17,11 @@ import com.android.internal.telephony.ITelephony;
 
 public class AutoAnswerService extends Service{
     private final String TAG = "AutoAnswerService";
-    private TelephonyManager mTele1;
-    private TelephonyManager mTele2;
+    /*Modify 20130204 spreadst of 123833 let sim1's auto answer start */
+//    private TelephonyManager mTele1;
+//    private TelephonyManager mTele2;
+    private TelephonyManager mTele;
+    /*Modify 20130204 spreadst of 123833 let sim1's auto answer end */
     private MyPhoneStateListener mListener;
 
     private static final int MSG_DELAY_AUTOANSWER = 0;
@@ -39,23 +42,30 @@ public class AutoAnswerService extends Service{
         super.onStart(intent, startId);
 
         Log.d(TAG, "listen PhoneState");
+        /*Modify 20130204 spreadst of 123833 let sim1's auto answer start */
 //        mTele1 = (TelephonyManager)getSystemService(TELEPHONY_SERVICE + 0);
 //        mTele2 = (TelephonyManager)getSystemService(TELEPHONY_SERVICE + 1);
-        mTele1 = (TelephonyManager) getSystemService(PhoneFactory
-                .getServiceName(Context.TELEPHONY_SERVICE, 0));
-        mTele2 = (TelephonyManager) getSystemService(PhoneFactory
-                .getServiceName(Context.TELEPHONY_SERVICE, 1));
+//        mTele1 = (TelephonyManager) getSystemService(PhoneFactory
+//                .getServiceName(Context.TELEPHONY_SERVICE, 0));
+//        mTele2 = (TelephonyManager) getSystemService(PhoneFactory
+//                .getServiceName(Context.TELEPHONY_SERVICE, 1));
+        mTele = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         mListener = new MyPhoneStateListener();
-        mTele1.listen(mListener, PhoneStateListener.LISTEN_CALL_STATE);
-        mTele2.listen(mListener, PhoneStateListener.LISTEN_CALL_STATE);
+//        mTele1.listen(mListener, PhoneStateListener.LISTEN_CALL_STATE);
+//        mTele2.listen(mListener, PhoneStateListener.LISTEN_CALL_STATE);
+        mTele.listen(mListener, PhoneStateListener.LISTEN_CALL_STATE);
+        /*Modify 20130204 spreadst of 123833 let sim1's auto answer end */
      }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
         Log.d(TAG, "AutoAnswerService onDestroy");
-        mTele1.listen(mListener, PhoneStateListener.LISTEN_NONE);
-        mTele2.listen(mListener, PhoneStateListener.LISTEN_NONE);
+        /*Modify 20130204 spreadst of 123833 let sim1's auto answer start */
+//        mTele1.listen(mListener, PhoneStateListener.LISTEN_NONE);
+//        mTele2.listen(mListener, PhoneStateListener.LISTEN_NONE);
+        mTele.listen(mListener, PhoneStateListener.LISTEN_NONE);
+        /*Modify 20130204 spreadst of 123833 let sim1's auto answer end */
     }
 
     private final class MyHandler extends Handler {
