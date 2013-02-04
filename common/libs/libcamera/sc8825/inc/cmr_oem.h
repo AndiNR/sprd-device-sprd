@@ -249,6 +249,7 @@ struct camera_context {
 	sem_t                    start_sem;
 	sem_t                    stop_sem;
 	uint32_t                 err_code;
+	uint32_t                 camera_id;
 
 	/*for preview*/
 	struct img_size          display_size;

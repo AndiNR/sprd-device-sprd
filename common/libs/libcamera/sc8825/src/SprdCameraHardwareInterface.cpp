@@ -1272,12 +1272,14 @@ void SprdCameraHardware::receivePreviewFDFrame(camera_frame_type *frame)
             face_info[k].rect[3] = frame->face_ptr->ey;
             ALOGV("rect:%d,%d,%d,%d.\n",
                 face_info[k].rect[0],face_info[k].rect[1],face_info[k].rect[2],face_info[k].rect[3]);
-#endif
+
             if(frame->face_ptr->smile_level > FACE_SMILE_LIMIT) {
                 face_info[k].score   = 100;
             } else {
                 face_info[k].score   = 0;
             }
+#endif
+            face_info[k].score = frame->face_ptr->smile_level;
             frame->face_ptr++;
        }
     }
@@ -1360,11 +1362,14 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 							goto callbacks;
 						}
 #else
-
+                        #if 0
 						if(0 != camera_copy_data_virtual(width, height, frame->buffer_phy_addr, (uint32_t)vaddr)){
 							ALOGE("fail to camera_copy_data_virtual() in receivePreviewFrame.");
 							goto callbacks;
 						}
+                        #else
+                        memcpy((void*)vaddr, (void*)frame->buf_Virt_Addr,width*height*3/2);
+                        #endif
 
 						//memcpy(vaddr, frame_addr, width*height*3/2);
 						//ALOGV("receivePreviewFrame, copy to vaddr: src=%x, dst=%x, dstphy=%x \n", (uint32_t)frame_addr, (uint32_t)vaddr, phy_addr);
@@ -2389,6 +2394,7 @@ static uint32_t s_focus_zone[25];
                         CAMERA_ISO_AUTO));
 
 #ifndef CONFIG_CAMERA_788
+    if (g_camera_id == 0) {
 	if(0xFFFFFFFF == (unsigned int)lookupvalue(flash_mode_map,
                         mParameters.get("flash-mode"))){
 		mParameters.set("flash-mode", "off");
@@ -2398,6 +2404,7 @@ static uint32_t s_focus_zone[25];
                  lookup(flash_mode_map,
                         mParameters.get("flash-mode"),
                         CAMERA_FLASH_MODE_OFF));
+    }
 #endif
 
         int ns_mode = mParameters.getInt("nightshot-mode");

@@ -55,7 +55,9 @@ enum {
 	JPEG_TARGET = 0,
 	THUM_YUV,
 	THUM_JPEG,
+#if 0
 	JPEG_TMP,
+#endif
 	SCALER_TMP,
 #if CMR_ISP_YUV422
 	ISP_TMP,
@@ -90,7 +92,7 @@ static const struct cap_size_to_mem back_cam_raw_mem_size_tab[IMG_SIZE_NUM] = {
 static const struct cap_size_to_mem back_cam_mem_size_tab[IMG_SIZE_NUM] = {
 	{PIXEL_1P3_MEGA, (4 << 20),  (0 << 20)},
 	{PIXEL_2P0_MEGA, (5 << 20),  (0 << 20)},
-	{PIXEL_3P0_MEGA, (7 << 20),  (0 << 20)},
+	{PIXEL_3P0_MEGA, (7550 << 10),  (0 << 20)},
 	{PIXEL_5P0_MEGA, (16 << 20), (0 << 20)},
 	{PIXEL_8P0_MEGA, (16 << 20), (8 << 20)},
 };
@@ -161,7 +163,9 @@ static const cmr_get_size get_size[BUF_TYPE_NUM] = {
 	get_jpeg_size,
 	get_thum_yuv_size,
 	get_thum_jpeg_size,
+#if 0
 	get_jpg_tmp_size,
+#endif
 	get_scaler_tmp_size,
 #if CMR_ISP_YUV422
 	get_isp_tmp_size
@@ -550,7 +554,7 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 		img_frame[THUM_JPEG].addr_phy.addr_y,
 		img_frame[THUM_JPEG].addr_vir.addr_y,
 		img_frame[THUM_JPEG].buf_size);
-
+#if 0
 	cap_mem->jpeg_tmp.buf_size = img_frame[JPEG_TMP].buf_size;
 	cap_mem->jpeg_tmp.addr_phy.addr_y = img_frame[JPEG_TMP].addr_phy.addr_y;
 	cap_mem->jpeg_tmp.addr_vir.addr_y = img_frame[JPEG_TMP].addr_vir.addr_y;
@@ -558,7 +562,7 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 		img_frame[JPEG_TMP].addr_phy.addr_y,
 		img_frame[JPEG_TMP].addr_vir.addr_y,
 		img_frame[JPEG_TMP].buf_size);
-
+#endif
 	cap_mem->scale_tmp.buf_size = img_frame[SCALER_TMP].buf_size;
 	cap_mem->scale_tmp.addr_phy.addr_y = img_frame[SCALER_TMP].addr_phy.addr_y;
 	cap_mem->scale_tmp.addr_vir.addr_y = img_frame[SCALER_TMP].addr_vir.addr_y;

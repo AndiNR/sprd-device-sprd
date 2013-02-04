@@ -41,7 +41,7 @@
 
 typedef struct
 {
-	pthread_t	v4l2_thread;
+	pthread_t	jpeg_thread;
 	sem_t       stop_sem;
 	sem_t       sync_sem;
 	uint32_t	msg_queue_handle;
@@ -208,7 +208,7 @@ static uint32_t _quality_covert(uint32_t quality)
 		jq = JPEGENC_QUALITY_MIDDLE_LOW;
 	} else if (quality <= 80) {
 		jq = JPEGENC_QUALITY_MIDDLE;
-	} else if (quality <= 90) {
+	} else if (quality < 90) {
 		jq = JPEGENC_QUALITY_MIDDLE_HIGH;
 	} else {
 		jq = JPEGENC_QUALITY_HIGH;
@@ -515,7 +515,11 @@ void _dec_callback(uint32_t buf_id, uint32_t stream_size, uint32_t is_last_slice
 	param.src_img->size = dec_cxt_ptr->size;
 	if((dec_cxt_ptr->slice_height != dec_cxt_ptr->size.height)
 		||(param.total_height == dec_cxt_ptr->size.height)) {
-		jcontext.event_cb(CMR_JPEG_DEC_DONE, &param);
+		if (NULL != jcontext.event_cb) {
+			jcontext.event_cb(CMR_JPEG_DEC_DONE, &param);
+		} else {
+			CMR_LOGE("even cb is NULL.");
+		}
 	}
 
 	return;
@@ -643,7 +647,7 @@ static int   _create_thread(void)
 
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-	ret = pthread_create(&jcontext.v4l2_thread, &attr, _thread_proc, NULL);
+	ret = pthread_create(&jcontext.jpeg_thread, &attr, _thread_proc, NULL);
 	pthread_attr_destroy(&attr);
 	return ret;
 }
@@ -654,10 +658,10 @@ static int _kill_thread(void)
 	char                     write_ch;
 	void                     *dummy;
 
-	CMR_LOGV("Call write function to kill v4l2 manage thread");
+	CMR_LOGV("Call write function to kill jpeg manage thread");
 
 	CMR_LOGV("write OK!");
-	ret = pthread_join(jcontext.v4l2_thread, &dummy);
+	ret = pthread_join(jcontext.jpeg_thread, &dummy);
 
 	CMR_LOGV("kill jpeg thread result %d.",ret);
 	return ret;
@@ -770,9 +774,17 @@ static void* _thread_proc(void* data)
 				JPEG_ENC_CB_PARAM_T param;
 				memset((void*)&param,0,sizeof(JPEG_ENC_CB_PARAM_T));
 				_prc_enc_cbparam(handle, &param);
-				jcontext.event_cb(CMR_JPEG_ENC_DONE, &param );
+				if (NULL != jcontext.event_cb) {
+					jcontext.event_cb(CMR_JPEG_ENC_DONE, &param );
+				} else {
+					CMR_LOGE("even cb is NULL.");
+				}
 			} else{
-				jcontext.event_cb(CMR_JPEG_ERR, NULL );
+				if (NULL != jcontext.event_cb) {
+					jcontext.event_cb(CMR_JPEG_ERR, NULL );
+				} else {
+					CMR_LOGE("even cb is NULL.");
+				}
 			}
 
 			CMR_LOGE("jpeg:receive JPEG_EVT_ENC_START message");
@@ -796,9 +808,17 @@ static void* _thread_proc(void* data)
 					JPEG_ENC_CB_PARAM_T param;
 					memset((void*)&param,0,sizeof(JPEG_ENC_CB_PARAM_T));
 					_prc_enc_cbparam(handle, &param);
-					jcontext.event_cb(CMR_JPEG_ENC_DONE, &param );
+					if (NULL != jcontext.event_cb) {
+						jcontext.event_cb(CMR_JPEG_ENC_DONE, &param );
+					} else {
+						CMR_LOGE("even cb is NULL.");
+					}
 				} else {
-					jcontext.event_cb(CMR_JPEG_ERR, NULL );
+					if (NULL != jcontext.event_cb) {
+						jcontext.event_cb(CMR_JPEG_ERR, NULL );
+					} else {
+						CMR_LOGE("even cb is NULL.");
+					}
 				}
 			}
 			CMR_LOGI("receive enc next message.");
@@ -809,7 +829,11 @@ static void* _thread_proc(void* data)
 			if(JPEG_CODEC_SUCCESS == ret){
 				_dec_callback(0,0,0);
 			} else{
-				jcontext.event_cb(CMR_JPEG_ERR, NULL );
+				if (NULL != jcontext.event_cb) {
+					jcontext.event_cb(CMR_JPEG_ERR, NULL );
+				} else {
+					CMR_LOGE("even cb is NULL.");
+				}
 			}
 			CMR_LOGI("jpeg:receive JPEG_EVT_DEC_START message");
 			break;
@@ -827,7 +851,11 @@ static void* _thread_proc(void* data)
 			if(JPEG_CODEC_SUCCESS == ret){
 				_dec_callback(0,0,0);
 			} else {
-				jcontext.event_cb(CMR_JPEG_ERR, NULL );
+				if (NULL != jcontext.event_cb) {
+					jcontext.event_cb(CMR_JPEG_ERR, NULL );
+				} else {
+					CMR_LOGE("even cb is NULL.");
+				}
 			}
 			CMR_LOGI("jpeg:receive dec next message.");
 			break;

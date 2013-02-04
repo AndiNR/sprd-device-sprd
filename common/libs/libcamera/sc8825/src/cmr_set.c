@@ -55,6 +55,7 @@ static int camera_set_flicker(uint32_t flicker_mode, uint32_t *skip_mode, uint32
 static int camera_set_iso(uint32_t iso, uint32_t *skip_mode, uint32_t *skip_num);
 static int camera_set_flash(uint32_t flash_mode, uint32_t *skip_mode, uint32_t *skip_num);
 static int camera_set_video_mode(uint32_t mode, uint32_t *skip_mode, uint32_t *skip_num);
+static int camera_set_flashdevice(uint32_t param);
 
 
 static int camera_param_to_isp(uint32_t cmd, uint32_t in_param, uint32_t *ptr_out_param)
@@ -408,7 +409,7 @@ int camera_set_flash(uint32_t flash_mode, uint32_t *skip_mode, uint32_t *skip_nu
 	status = camera_flash_mode_to_status(flash_mode);
 	if (status != cxt->cmr_set.flash) {
 		if (FLASH_CLOSE == status || FLASH_TORCH == status)
-		ret = Sensor_Ioctl(SENSOR_IOCTL_FLASH, status);
+		ret = camera_set_flashdevice(status);
 		cxt->cmr_set.flash = status;
 	}
 
@@ -443,9 +444,9 @@ int camera_flash_process(uint32_t on_off)
 
 	if ((FLASH_OPEN_ON_RECORDING == cxt->cmr_set.flash)
 		&& (CAMERA_PREVIEW_MODE_MOVIE == cxt->cmr_set.video_mode)){
-		Sensor_Ioctl(SENSOR_IOCTL_FLASH, status);
+		camera_set_flashdevice(status);
 	} else if (FLASH_TORCH == cxt->cmr_set.flash) {
-		Sensor_Ioctl(SENSOR_IOCTL_FLASH, status);
+		camera_set_flashdevice(status);
 	}
 	
 	return CAMERA_SUCCESS;
@@ -567,7 +568,8 @@ int camera_snapshot_start_set(void)
 	struct camera_context    *cxt = camera_get_cxt();
 
 	if (cxt->cmr_set.flash) {
-		Sensor_Ioctl(SENSOR_IOCTL_FLASH, FLASH_OPEN);/*open flash*/
+		/*open flash*/
+		camera_set_flashdevice((uint32_t)FLASH_OPEN);
 	}
 
 	ret = Sensor_Ioctl(SENSOR_IOCTL_BEFORE_SNAPSHOT, cxt->sn_cxt.capture_mode);
@@ -591,7 +593,8 @@ int camera_snapshot_stop_set(void)
 		camera_set_hdr_ev(SENSOR_HDR_EV_LEVE_1);
 	}
 	if (cxt->cmr_set.flash) {
-		Sensor_Ioctl(SENSOR_IOCTL_FLASH, FLASH_CLOSE_AFTER_OPEN);/*open flash*/
+		/*open flash*/
+		camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN);
 	}
 	ret = Sensor_Ioctl(SENSOR_IOCTL_AFTER_SNAPSHOT, cxt->sn_cxt.preview_mode);
 	if (ret) {
@@ -707,7 +710,8 @@ int camera_set_ctrl(camera_parm_type id,
 		&& (CAMERA_PARM_ISO != id)
 		&& (CAMERA_PARM_SENSOR_ROTATION != id)
 		&& (CAMERA_PARM_ORIENTATION != id)
-		&& (CAMERA_PARM_THUMBCOMP != id)) {
+		&& (CAMERA_PARM_THUMBCOMP != id)
+		&& (CAMERA_PARM_JPEGCOMP != id)) {
 		return ret;
 	}
 
@@ -745,9 +749,30 @@ int camera_set_ctrl(camera_parm_type id,
 		break;
 		
 	case CAMERA_PARM_SENSOR_ROTATION: /* 0, 90, 180, 270 degrees */
-		cxt->prev_rot = parm;
-		camera_set_rot_angle(&cxt->prev_rot);
-		cxt->cap_rot = cxt->prev_rot;
+		if (CMR_PREVIEW == cxt->camera_status) {
+			if (before_set) {
+				ret = (*before_set)(RESTART_MIDDLE);
+				CMR_RTN_IF_ERR(ret);
+			}
+			skip_mode = IMG_SKIP_HW;
+			if(SCENE_MODE_NIGHT == cxt->cmr_set.scene_mode){
+				skip_number = 3;
+			} else {
+				skip_number = 0;
+			}
+			CMR_RTN_IF_ERR(ret);
+			cxt->prev_rot = parm;
+			camera_set_rot_angle(&cxt->prev_rot);
+			cxt->cap_rot = cxt->prev_rot;
+			if (after_set) {
+				ret = (*after_set)(RESTART_MIDDLE, skip_mode, skip_number);
+				CMR_RTN_IF_ERR(ret);
+			}
+		}else {
+			cxt->prev_rot = parm;
+			camera_set_rot_angle(&cxt->prev_rot);
+			cxt->cap_rot = cxt->prev_rot;
+		}
 		break;
 		
 	case CAMERA_PARM_FOCAL_LENGTH: 
@@ -999,7 +1024,8 @@ int camera_autofocus_start(void)
 
 	
 	if (cxt->cmr_set.flash) {
-		Sensor_Ioctl(SENSOR_IOCTL_FLASH, FLASH_OPEN);/*open flash*/
+		/*open flash*/
+		camera_set_flashdevice((uint32_t)FLASH_OPEN);
 	}
 
 	if (CAMERA_FOCUS_MODE_MACRO == cxt->cmr_set.af_mode) {
@@ -1068,7 +1094,7 @@ int camera_autofocus_start(void)
 
 
 	if (cxt->cmr_set.flash) {
-		Sensor_Ioctl(SENSOR_IOCTL_FLASH, FLASH_CLOSE_AFTER_OPEN);
+		camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN);
 	}
 
 	CMR_PRINT_TIME;
@@ -1152,4 +1178,22 @@ int camera_isp_af_done(void *data)
 	cxt->cmr_set.isp_af_win_val = isp_af->valid_win;
 	sem_post(&cxt->cmr_set.isp_af_sem);
 	return 0;
+}
+
+int camera_set_flashdevice(uint32_t param)
+{
+	int                      ret = 0;
+	struct camera_context    *cxt = camera_get_cxt();
+
+	if (0 != cxt->camera_id) {
+		CMR_LOGE("don't support flash.");
+		return ret;
+	}
+
+	ret = Sensor_SetFlash(param);
+
+	if (0 != ret) {
+		CMR_LOGE("error:%d.",ret);
+	}
+	return ret;
 }
