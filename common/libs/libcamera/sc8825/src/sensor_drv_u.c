@@ -674,6 +674,7 @@ LOCAL void Sensor_SetExportInfo(SENSOR_EXP_INFO_T * exp_info_ptr)
 	SENSOR_PRINT("SENSOR: Sensor_SetExportInfo.\n");
 
 	SENSOR_MEMSET(exp_info_ptr, 0x00, sizeof(SENSOR_EXP_INFO_T));
+	exp_info_ptr->name= sensor_info_ptr->name;
 	exp_info_ptr->image_format = sensor_info_ptr->image_format;
 	exp_info_ptr->image_pattern = sensor_info_ptr->image_pattern;
 
@@ -956,8 +957,11 @@ LOCAL int _Sensor_SetId(SENSOR_ID_E sensor_id)
 			}
 			g_is_main_sensor = 1;
 		}
-
+		g_is_register_sensor = 0;
 		if (_Sensor_Device_I2CInit(sensor_id)) {
+			if (SENSOR_MAIN == sensor_id) {
+				g_is_main_sensor = 0;
+			}
 			SENSOR_PRINT_HIGH("SENSOR: add I2C driver error\n");
 			return SENSOR_FAIL;
 		} else {
@@ -1283,7 +1287,7 @@ LOCAL void _Sensor_SetStatus(SENSOR_ID_E sensor_id)
 	s_sensor_info_ptr = s_sensor_list_ptr[sensor_id];
 	SENSOR_PRINT("_Sensor_SetStatus: 3");
 	//reset target sensor. and make normal.
-	Sensor_Reset_EX((BOOLEAN)s_sensor_info_ptr->power_down_level, s_sensor_info_ptr->reset_pulse_level);
+/*	Sensor_Reset_EX((BOOLEAN)s_sensor_info_ptr->power_down_level, s_sensor_info_ptr->reset_pulse_level);*/
 	Sensor_SetExportInfo(&s_sensor_exp_info);
 	SENSOR_PRINT("_Sensor_SetStatus: 4");
 }
@@ -1532,6 +1536,7 @@ int Sensor_Open(uint32_t sensor_id)
 		//confirm camera identify OK
 		if(SENSOR_SUCCESS != s_sensor_info_ptr->ioctl_func_tab_ptr->identify(SENSOR_ZERO_I2C)){
 			sensor_register_info_ptr->is_register[sensor_id] = SENSOR_FALSE;
+			_Sensor_I2CDeInit(sensor_id);
 			SENSOR_PRINT("SENSOR: Sensor_Open: sensor identify not correct!!");
 			return SENSOR_FAIL;
 		}
@@ -1539,6 +1544,7 @@ int Sensor_Open(uint32_t sensor_id)
 		ret_val = SENSOR_SUCCESS;
 		if (SENSOR_SUCCESS != Sensor_SetMode(SENSOR_MODE_COMMON_INIT)) {
 			SENSOR_PRINT_ERR("Sensor set init mode error!");
+			_Sensor_I2CDeInit(sensor_id);
 			ret_val = SENSOR_FAIL;
 		}
 		SENSOR_PRINT("Sensor_Open: 4\n");

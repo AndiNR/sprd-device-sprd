@@ -53,6 +53,7 @@ typedef enum
 //	CAMERA_SCENE_MODE_PARTY, //not support
 //	CAMERA_SCENE_MODE_CANDLELIGHT, //not support
 //	CAMERA_SCENE_MODE_BARCODE, //not support
+	CAMERA_SCENE_MODE_NORMAL,
 	CAMERA_SCENE_MODE_MAX
  }camera_scene_mode_type;
 
@@ -165,6 +166,7 @@ struct str_map {
         { "portrait", CAMERA_SCENE_MODE_PORTRAIT },
         { "landscape", CAMERA_SCENE_MODE_LANDSCAPE },
 	{ "action", CAMERA_SCENE_MODE_ACTION},
+		{ "normal", CAMERA_SCENE_MODE_NORMAL},
         { NULL, 0 }
    };
   const struct str_map camera_id_map[] = {
@@ -348,11 +350,15 @@ struct config_element sprd_back_camera_hardware_config[] = {
 #endif
 	 {"picture-size", "640x480"},
 	{"preview-size-values",
-	 "640x480,352x288,320x240,176x144"},
+	"640x480,352x288,176x144"},
 	 {"preview-size", "640x480"},
-	{"video-size-values", "1280x720,720x480,352x288,320x240,176x144"},
-	{"video-size", "176x144"},
-	{"preferred-preview-size-for-video", "320x240"},
+#ifndef CONFIG_CAMERA_SUPPORT_720P
+	{"video-size-values", "720x480,352x288,176x144"},
+#else
+	{"video-size-values", "1280x720,720x480,352x288,176x144"},
+#endif
+	{"video-size", "720x480"},
+	{"preferred-preview-size-for-video", "352x288"},
 	{"video-frame-format-values", "yuv420sp,yuv420p"},
 	{"video-frame-format", "yuv420sp"},
 	{"preview-format-values", "yuv420sp,yuv420p"},
@@ -372,7 +378,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
      	"none,mono,negative,sepia,cold,antique"},
          {"effect", "none"},
 	{"scene-mode-values",
-	 "auto,night,portrait,landscape,action"},
+	"auto,night,portrait,landscape,action,normal"},
 	{"scene-mode", "auto"},
 	{"cameraid-values",
 	 "back_camera,front_camera"},
@@ -405,7 +411,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
         {"focal-length", "3.75"},
         {"horizontal-view-angle", "54"},
         {"vertical-view-angle", "54"},
-	{"flash-mode-values", "off,on,torch"},
+	{"flash-mode-values", "off,on,torch,auto"},
 	{"flash-mode", "off"},
 	{"flash-mode-supported", "true"},
         {"focus-distances", "2.0,2.5,3.75"},

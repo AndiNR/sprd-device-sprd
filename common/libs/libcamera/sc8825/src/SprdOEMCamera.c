@@ -591,6 +591,7 @@ int camera_init_internal(uint32_t camera_id)
 	if (ret) {
 		CMR_LOGE("Fail to init Setting sub-module");
 	} else {
+		g_cxt->camera_id = camera_id;
 		goto exit;
 	}
 
@@ -1365,7 +1366,12 @@ int camera_stop_capture_internal(void)
 	}
 	if((JPEG_ENCODE == g_cxt->jpeg_cxt.jpeg_state)
 		|| JPEG_DECODE == g_cxt->jpeg_cxt.jpeg_state) {
-		jpeg_stop(g_cxt->jpeg_cxt.handle);
+		if (0 != g_cxt->jpeg_cxt.handle) {
+			jpeg_stop(g_cxt->jpeg_cxt.handle);
+			g_cxt->jpeg_cxt.handle = 0;
+		} else {
+			CMR_LOGI("don't need stop jpeg.");
+		}
 	}
 	arithmetic_hdr_deinit();
 	return ret;
@@ -2111,9 +2117,15 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 			&g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg.addr_vir);
 #endif
 		TAKE_PIC_CANCEL;
-		ret = jpeg_stop(g_cxt->jpeg_cxt.handle);
-		if (ret) {
-			CMR_LOGE("Failed to stop jpeg, %d", ret);
+		if (0 != g_cxt->jpeg_cxt.handle) {
+			ret = jpeg_stop(g_cxt->jpeg_cxt.handle);
+			if (ret) {
+				CMR_LOGE("Failed to stop jpeg, %d", ret);
+			} else {
+				g_cxt->jpeg_cxt.handle = 0;
+			}
+		} else {
+			CMR_LOGI("don't need stop jpeg.");
 		}
 		TAKE_PIC_CANCEL;
 		if (THUM_FROM_CAP != g_cxt->thum_from) {
@@ -2159,8 +2171,12 @@ int camera_jpeg_decode_handle(JPEG_DEC_CB_PARAM_T *data)
 	CMR_LOGI("dec total height %d.",data->total_height);
 	g_cxt->jpeg_cxt.proc_status.slice_height_out += data->slice_height;
 	if (data->total_height >= g_cxt->cap_orig_size.height) {
-		jpeg_stop(g_cxt->jpeg_cxt.handle);
-		g_cxt->jpeg_cxt.handle = 0;
+		if (0 != g_cxt->jpeg_cxt.handle) {
+			jpeg_stop(g_cxt->jpeg_cxt.handle);
+			g_cxt->jpeg_cxt.handle = 0;
+		} else {
+			CMR_LOGI("don't need stop jpeg.");
+		}
 		g_cxt->jpeg_cxt.jpeg_state = JPEG_IDLE;
 		g_cxt->cap_original_fmt = IMG_DATA_TYPE_YUV420;
 		ret = camera_capture_yuv_process(&g_cxt->jpeg_cxt.proc_status.frame_info);
@@ -3672,9 +3688,15 @@ int camera_start_jpeg_decode(struct frm_info *data)
 	dec_in.dst_addr_vir.addr_y  = frm->addr_vir.addr_y;
 	dec_in.dst_addr_vir.addr_u  = frm->addr_vir.addr_u;
 	dec_in.dst_fmt              = IMG_DATA_TYPE_YUV420;
+#if 0
 	dec_in.temp_buf_phy         = g_cxt->cap_mem[frm_id].jpeg_tmp.addr_phy.addr_y;
 	dec_in.temp_buf_vir         = g_cxt->cap_mem[frm_id].jpeg_tmp.addr_vir.addr_y;
 	dec_in.temp_buf_size        = g_cxt->cap_mem[frm_id].jpeg_tmp.buf_size;
+#else
+	dec_in.temp_buf_phy  = g_cxt->cap_mem[frm_id].scale_tmp.addr_phy.addr_y;
+	dec_in.temp_buf_vir    = g_cxt->cap_mem[frm_id].scale_tmp.addr_vir.addr_y;
+	dec_in.temp_buf_size = g_cxt->cap_mem[frm_id].scale_tmp.buf_size;
+#endif
 	dec_in.slice_mod 			= JPEG_YUV_SLICE_ONE_BUF;
 	ret = jpeg_dec_start(&dec_in, &dec_out);
 	if (0 == ret) {
@@ -3818,9 +3840,15 @@ int camera_start_jpeg_encode(struct frm_info *data)
 	in_parm.stream_buf_phy       = target_frm->addr_phy.addr_y;
 	in_parm.stream_buf_vir       = target_frm->addr_vir.addr_y;
 	in_parm.stream_buf_size      = target_frm->buf_size;
+#if 0
 	in_parm.temp_buf_phy         = tmp_frm->addr_phy.addr_y;
 	in_parm.temp_buf_vir         = tmp_frm->addr_vir.addr_y;
 	in_parm.temp_buf_size        = tmp_frm->buf_size;
+#else
+	in_parm.temp_buf_phy         = 0;
+	in_parm.temp_buf_vir         = 0;
+	in_parm.temp_buf_size        = 0;
+#endif
 
 	CMR_LOGI("w h, %d %d, quality level %d", in_parm.size.width, in_parm.size.height,
 		in_parm.quality_level);
@@ -4598,7 +4626,16 @@ int camera_get_preview_rect(int *rect_x, int *rect_y, int *rect_width, int *rect
 	int ret = 0;
 	SENSOR_MODE_INFO_T       *sensor_mode;
 
+	if (NULL == g_cxt->sn_cxt.sensor_info) {
+		CMR_LOGE("sensor info is NULL.");
+		return -1;
+	}
+
 	sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.preview_mode];
+	if (NULL == sensor_mode) {
+		CMR_LOGE("sensor mode %d is NULL.",g_cxt->sn_cxt.preview_mode);
+		return -1;
+	}
 
 	if((g_cxt->preview_rect.width > sensor_mode->width) || (g_cxt->preview_rect.height > sensor_mode->height)){
 		CMR_LOGE("camera_get_preview_rect error: preview rect: %d, %d is greate than sensor output: %d %d \n",

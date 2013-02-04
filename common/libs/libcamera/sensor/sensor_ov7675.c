@@ -55,6 +55,7 @@ LOCAL uint32_t set_ov7675_video_mode(uint32_t mode);
 //LOCAL uint32_t _ov7675_Power_On(uint32_t power_on);
 LOCAL uint32_t _ov7675_GetExifInfo(uint32_t param);
 LOCAL uint32_t _ov7675_InitExifInfo(void);
+LOCAL uint32_t _ov7675_PowerOn(uint32_t power_on);
 LOCAL uint32_t s_preview_mode;
 LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_ov7675_exif;
 /**---------------------------------------------------------------------------*
@@ -490,7 +491,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
 {
         // Internal 
         PNULL,
-        PNULL,
+        _ov7675_PowerOn,
         PNULL,
         OV7675_Identify,
 
@@ -633,7 +634,33 @@ LOCAL uint8_t OV7675_ReadReg( uint8_t  subaddr)
         //SENSOR_TRACE("SENSOR: OV7675_ReadReg reg/value(%x,%x) !!\n", subaddr, value);
         return value;
 }
+LOCAL uint32_t _ov7675_PowerOn(uint32_t power_on)
+{
+	SENSOR_AVDD_VAL_E dvdd_val = g_OV7675_yuv_info.dvdd_val;
+	SENSOR_AVDD_VAL_E avdd_val = g_OV7675_yuv_info.avdd_val;
+	SENSOR_AVDD_VAL_E iovdd_val = g_OV7675_yuv_info.iovdd_val;
+	BOOLEAN power_down = g_OV7675_yuv_info.power_down_level;
+	BOOLEAN reset_level = g_OV7675_yuv_info.reset_pulse_level;
+	//uint32_t reset_width=g_ov5640_yuv_info.reset_pulse_width;
 
+	if (SENSOR_TRUE == power_on) {
+		Sensor_PowerDown(power_down);
+		// Open power
+		Sensor_SetVoltage(dvdd_val, avdd_val, iovdd_val);
+		usleep(10*1000);
+		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
+		usleep(10*1000);
+		Sensor_PowerDown(!power_down);
+
+	} else {
+		Sensor_PowerDown(power_down);
+		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
+		Sensor_SetVoltage(SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED,
+				  SENSOR_AVDD_CLOSED);
+	}
+	SENSOR_PRINT("(1:on, 0:off): %d", power_on);
+	return SENSOR_SUCCESS;
+}
 LOCAL uint32_t OV7675_Identify(uint32_t param)
 {
 #define OV7675_PID_VALUE	0x76	

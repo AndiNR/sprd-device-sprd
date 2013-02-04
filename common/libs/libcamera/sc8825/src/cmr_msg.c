@@ -88,7 +88,6 @@ int cmr_msg_post(unsigned int queue_handle, struct cmr_msg *message)
 	struct cmr_msg_cxt *msg_cxt = (struct cmr_msg_cxt*)queue_handle;
 	struct cmr_msg     *ori_node = msg_cxt->msg_write;
 
-
 	if (0 == queue_handle || NULL == message) {
 		return -CMR_MSG_PARAM_ERR;
 	}

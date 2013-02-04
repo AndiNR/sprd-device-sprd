@@ -438,9 +438,10 @@ int camera_sync_var_deinit(struct camera_context *p_cxt)
 int camera_wait_start(struct camera_context *p_cxt)
 {
 	int                      ret = CAMERA_SUCCESS;
+	struct camera_context    *cxt = camera_get_cxt();
 
 	sem_wait(&p_cxt->start_sem);
-
+	ret = cxt->err_code;
 	return ret;
 }
 
@@ -456,8 +457,10 @@ int camera_start_done(struct camera_context *p_cxt)
 int camera_wait_stop(struct camera_context *p_cxt)
 {
 	int                      ret = CAMERA_SUCCESS;
+	struct camera_context    *cxt = camera_get_cxt();
 
 	sem_wait(&p_cxt->stop_sem);
+	ret = cxt->err_code;
 
 	return ret;
 }
@@ -474,8 +477,10 @@ int camera_stop_done(struct camera_context *p_cxt)
 int camera_wait_init(struct camera_context *p_cxt)
 {
 	int                      ret = CAMERA_SUCCESS;
+	struct camera_context    *cxt = camera_get_cxt();
 
 	sem_wait(&p_cxt->init_sem);
+	ret = cxt->err_code;
 
 	return ret;
 
@@ -485,16 +490,16 @@ int camera_init_done(struct camera_context *p_cxt)
 	int                      ret = CAMERA_SUCCESS;
 
 	sem_post(&p_cxt->init_sem);
-	ret = p_cxt->err_code;
 	return ret;
 }
 
 int camera_wait_exit(struct camera_context *p_cxt)
 {
 	int                      ret = CAMERA_SUCCESS;
+	struct camera_context    *cxt = camera_get_cxt();
 
 	sem_wait(&p_cxt->exit_sem);
-
+	ret = cxt->err_code;
 	return ret;
 
 }
