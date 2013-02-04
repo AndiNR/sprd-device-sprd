@@ -683,16 +683,22 @@ static void * ispserver_thread(void *args)
 	optval = 1;
 	if (setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0) {
 		 DBG("setsockopt error\n");
+		 if (close(lfd) == -1)           /* Close connection */
+				DBG("close socket lfd error\n");
 		 return NULL;
 	}
 
 	if (bind(lfd, (struct sockaddr *)&sock_addr, sizeof (struct sockaddr_in)) != 0) {
 		DBG("bind error %s\n", strerror(errno));
+		if (close(lfd) == -1)           /* Close connection */
+			DBG("close socket lfd error\n");
 		 return NULL;
 	}
 
 	if (listen(lfd, BACKLOG) == -1){
 		DBG("listen error\n");
+		if (close(lfd) == -1)           /* Close connection */
+			DBG("close socket lfd error\n");
 		 return NULL;
 	}
 
