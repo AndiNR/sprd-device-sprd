@@ -63,6 +63,30 @@ service modem_control /modem_control
     class main
     user root
     oneshot
+    
+on property:lmk.autocalc=false
+    setprop ro.LMK_SLOT0_ADJ 0
+    setprop ro.LMK_SLOT1_ADJ 1
+    setprop ro.LMK_SLOT2_ADJ 2
+    setprop ro.LMK_SLOT3_ADJ 4
+    setprop ro.LMK_SLOT4_ADJ 9
+    setprop ro.LMK_SLOT5_ADJ 15
+    setprop ro.LMK_SLOT0_MINFREE 4096
+    setprop ro.LMK_SLOT1_MINFREE 16384
+    setprop ro.LMK_SLOT2_MINFREE 24576
+    setprop ro.LMK_SLOT3_MINFREE 32768
+    setprop ro.LMK_SLOT4_MINFREE 38428
+    setprop ro.LMK_SLOT5_MINFREE 45776
+
+    write /sys/module/lowmemorykiller/parameters/adj 0,1,2,4,9,15
+    write /sys/module/lowmemorykiller/parameters/minfree 1024,4096,6144,8192,9607,11444
+
+on property:zram.support=true
+    setprop zram.disksize 180
+    setprop sys.vm.swappiness 100
+    service zram /system/xbin/zram.sh
+        class main
+        oneshot
 
 #telephony service
 service sprd_monitor /system/bin/sprd_monitor
