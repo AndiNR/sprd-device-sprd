@@ -135,7 +135,13 @@ public class DebugParam extends PreferenceActivity {
         addPreferencesFromResource(R.layout.debugparam);
         //mAssertModePreference = (Preference)findPreference(ASSERT_MODE);
         mBandSelectPreference = (Preference)findPreference(BAND_SELECT);
-
+        /*Add 20130206 Spreadst of 122017 8810 7710 don't support PLMN start*/
+        String mode = SystemProperties.get("ro.product.hardware");
+        if(mode.contains("8810") ||mode.contains("7710")){
+            getPreferenceScreen().removePreference((Preference)findPreference("key_forbidplmn"));
+            getPreferenceScreen().removePreference((Preference)findPreference("key_plmnselect"));
+        }
+        /*Add 20130206 Spreadst of 122017 8810 7710 don't support PLMN end*/
         mUiThread = new Handler();
         HandlerThread t = new HandlerThread("debugparam");
         t.start();
