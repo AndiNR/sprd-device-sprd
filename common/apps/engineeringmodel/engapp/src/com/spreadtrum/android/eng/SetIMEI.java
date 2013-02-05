@@ -69,7 +69,11 @@ public class SetIMEI extends Activity  implements OnClickListener {
         outputBufferStream = new DataOutputStream(outputBuffer);
 
         Log.e(LOG_TAG, "Engmode socket open, id:" + mSocketID);
-        mATline =String.format("%d,%d", engconstents.ENG_AT_REQUEST_IMEI, 0);
+        /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+        //mATline =String.format("%d,%d", engconstents.ENG_AT_REQUEST_IMEI, 0);
+        mATline =new StringBuilder().append(engconstents.ENG_AT_REQUEST_IMEI).append(",")
+                 .append(0).toString();
+        /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 
         try {
             outputBufferStream.writeBytes(mATline);

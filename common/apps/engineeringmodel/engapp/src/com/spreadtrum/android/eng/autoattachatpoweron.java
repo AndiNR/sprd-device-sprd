@@ -62,9 +62,13 @@ implements Preference.OnPreferenceChangeListener{
 
 				Log.e(LOG_TAG, "engopen sockid=" + sockid);
 				if(hasPara)
-				str=String.format("%d,%d,%d", msg.what, 1, onoroff);
+ /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+            //   str=String.format("%d,%d,%d", msg.what, 1, onoroff);
+                str=new StringBuilder().append(msg.what).append(",").append(1).append(",").append(onoroff).toString();
 				else
-				str=String.format("%d,%d", msg.what,0);
+            //    str=String.format("%d,%d", msg.what,0);
+                str=new StringBuilder().append(msg.what).append(",").append(0).toString();
+/*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 				try {
 				outputBufferStream.writeBytes(str);
 				} catch (IOException e) {

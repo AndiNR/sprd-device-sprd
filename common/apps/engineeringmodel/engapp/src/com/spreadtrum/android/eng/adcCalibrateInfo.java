@@ -56,7 +56,11 @@ public class adcCalibrateInfo extends Activity {
 
 			Log.e(LOG_TAG, "engopen sockid=" + sockid);
 
-			str=String.format("%d,%d,%d,%d,%d", msg.what,3,0,0,3);
+            /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+            //str=String.format("%d,%d,%d,%d,%d", msg.what,3,0,0,3);
+            str = new StringBuilder().append(msg.what).append(",").append(3).append(",")
+                  .append(0).append(",").append(0).append(",").append(3).toString();
+            /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 			try {
 			    outputBufferStream.writeBytes(str);
 			} catch (IOException e) {

@@ -80,12 +80,20 @@ implements Preference.OnPreferenceChangeListener{
 
 				Log.e(LOG_TAG, "engopen sockid=" + sockid);
 				try {
+    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
 					if(engconstents.ENG_AT_SETARMLOG == msg.what)
-				    outputBufferStream.writeBytes(String.format("%d,%d,%d", msg.what,1,openlog));
+                        //outputBufferStream.writeBytes(String.format("%d,%d,%d", msg.what,1,openlog));
+                        outputBufferStream.writeBytes(new StringBuilder().append(msg.what).append(",")
+                                .append(1).append(",").append(openlog).toString());
 					else if(engconstents.ENG_AT_SETCAPLOG == msg.what)
-					outputBufferStream.writeBytes(String.format("%d,%d,%d", msg.what,1,openlog));
+                       // outputBufferStream.writeBytes(String.format("%d,%d,%d", msg.what,1,openlog));
+                        outputBufferStream.writeBytes(new StringBuilder().append(msg.what).append(",")
+                                .append(1).append(",").append(openlog).toString());
 					else
-					outputBufferStream.writeBytes(String.format("%d,%d,%d,%d", msg.what,2,msg.arg1,msg.arg2));	
+                       // outputBufferStream.writeBytes(String.format("%d,%d,%d,%d", msg.what,2,msg.arg1,msg.arg2));
+                        outputBufferStream.writeBytes(new StringBuilder().append(msg.what).append(",")
+                                .append(2).append(",").append(msg.arg1).append(",").append(msg.arg2).toString());
+   /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 				} catch (IOException e) {
 				Log.e(LOG_TAG, "writebytes error");
 				return;

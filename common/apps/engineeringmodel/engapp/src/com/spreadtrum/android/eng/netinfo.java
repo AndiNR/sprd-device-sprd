@@ -58,7 +58,11 @@ public class netinfo extends Activity {
 			ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
 			DataOutputStream outputBufferStream = new DataOutputStream(outputBuffer);
 			Log.e(TAG, "engopen sockid=" + sockid);
-			str = String.format("%d,%d,%d,%d", code, 2, arg1,arg2);
+/*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+            //str = String.format("%d,%d,%d,%d", code, 2, arg1,arg2);
+            str = new StringBuilder().append(code).append(",").append(2)
+                  .append(",").append(arg1).append(",").append(arg2).toString();
+/*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 			try {
 				outputBufferStream.writeBytes(str);
 			} catch (IOException e) {
@@ -76,8 +80,13 @@ public class netinfo extends Activity {
 				String s = "";
 				if (str.indexOf(",") != -1) {
 					String[] strs = str.split(",");
-					s = String.format("        %s,%s,%s,%s", strs[0],
-							strs[1], strs[5], strs[6]);
+/*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+              //      s = String.format("        %s,%s,%s,%s", strs[0],
+              //              strs[1], strs[5], strs[6]);
+                    s = new StringBuilder().append("        ").append(strs[0]).append(",")
+                        .append(strs[1]).append(",").append(strs[5]).append(",").append(strs[6])
+                        .toString();
+/*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 					updateUi(tv1_1, s);
 				} else {
 					updateUi(tv1_1,"    "+str);
@@ -88,9 +97,14 @@ public class netinfo extends Activity {
 					String s = "";
 					int nums = strs.length / 7;
 					for (int i = 0; i < nums; i++) {
-						s += String.format("        %s,%s,%s,%s\n",
-								strs[i * 7], strs[i * 7 + 1],
-								strs[i * 7 + 5], strs[i * 7 + 6]);
+    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+//                        s += String.format("        %s,%s,%s,%s\n",
+//                                strs[i * 7], strs[i * 7 + 1],
+//                                strs[i * 7 + 5], strs[i * 7 + 6]);
+                        s +=new StringBuilder().append("        ").append(strs[i * 7]).append(",")
+                            .append(strs[i * 7 + 1]).append(",").append(strs[i * 7 + 5]).append(",")
+                            .append(strs[i * 7 + 6]).toString();
+    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 					}
 					updateUi(tv2_2, s);
 				} else {

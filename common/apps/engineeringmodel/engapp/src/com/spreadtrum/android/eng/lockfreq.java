@@ -100,7 +100,12 @@ public class lockfreq extends Activity {
 
 				    Log.e(LOG_TAG, "engopen sockid=" + sockid);
 				    getEditTextValue();
-				    str=String.format("%d,%d,%d,%d,%d,%d", msg.what,4,mInt01,mInt02,mInt03,mInt04);
+    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+                    //str=String.format("%d,%d,%d,%d,%d,%d", msg.what,4,mInt01,mInt02,mInt03,mInt04);
+                    str= new StringBuilder().append(msg.what).append(",").append(4).append(",")
+                         .append(mInt01).append(",").append(mInt02).append(",").append(mInt03)
+                         .append(",").append(mInt04).toString();
+    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 				    try {
 				    	outputBufferStream.writeBytes(str);
 				    } catch (IOException e) {

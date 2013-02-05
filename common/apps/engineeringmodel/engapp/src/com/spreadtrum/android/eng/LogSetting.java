@@ -165,9 +165,12 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
                     outputBufferStream = new DataOutputStream(outputBuffer);
 
                     try {
-
+                        /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
                     Log.e(LOG_TAG, "Engmode socket open, id:" + mSocketID);
-                    mATline =String.format("%d,%d", engconstents.ENG_AT_GETARMLOG, 0);
+                    //mATline =String.format("%d,%d", engconstents.ENG_AT_GETARMLOG, 0);
+                    mATline = new StringBuilder().append(engconstents.ENG_AT_GETARMLOG).append(",")
+                              .append(0).toString();
+                    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 
                     outputBufferStream.writeBytes(mATline);
                     } catch (IOException e) {
@@ -201,7 +204,11 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
                     outputBufferStream = new DataOutputStream(outputBuffer);
 
                     Log.e(LOG_TAG, "Engmode socket open, id:" + mSocketID);
-                    mATline =String.format("%d,%d", engconstents.ENG_AT_GETDSPLOG, 0);
+                    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+                   //mATline =String.format("%d,%d", engconstents.ENG_AT_GETDSPLOG, 0);
+                    mATline = new StringBuilder().append(engconstents.ENG_AT_GETDSPLOG).append(",")
+                              .append(0).toString();
+                    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 
                     try {
                         outputBufferStream.writeBytes(mATline);
@@ -273,7 +280,11 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
                 outputBufferStream = new DataOutputStream(outputBuffer);
 
                 Log.e(LOG_TAG, "Engmode socket open, id:" + mSocketID);
-                mATline =String.format("%d,%d,%d", engconstents.ENG_AT_SETARMLOG,1, state);
+                /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+                //mATline =String.format("%d,%d,%d", engconstents.ENG_AT_SETARMLOG,1, state);
+                mATline = new StringBuilder().append(engconstents.ENG_AT_SETARMLOG).append(",")
+                         .append(1).append(",").append(state).toString();
+                /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 
                 try {
                     outputBufferStream.writeBytes(mATline);
@@ -302,7 +313,11 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
                 outputBufferStream = new DataOutputStream(outputBuffer);
 
                 Log.e(LOG_TAG, "Engmode socket open, id:" + mSocketID);
-                mATline =String.format("%d,%d,%d", engconstents.ENG_AT_SETDSPLOG,1, state);
+                /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+                //mATline =String.format("%d,%d,%d", engconstents.ENG_AT_SETDSPLOG,1, state);
+                mATline = new StringBuilder().append(engconstents.ENG_AT_SETDSPLOG).append(",")
+                          .append(1).append(",").append(state).toString();
+                /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 
                 try {
                     outputBufferStream.writeBytes(mATline);
@@ -346,11 +361,16 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
                 outputBuffer = new ByteArrayOutputStream();
                 outputBufferStream = new DataOutputStream(outputBuffer);
                 Log.e(LOG_TAG, "Engmode socket open, id:" + mSocketID);
-
+                /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
                 if (state == 1) {
-                    mATline = String.format("%d,%d,%s",engconstents.ENG_AT_NOHANDLE_CMD, 1, "AT+SLOG=2");
+                  // mATline = String.format("%d,%d,%s",engconstents.ENG_AT_NOHANDLE_CMD, 1, "AT+SLOG=2");
+                    mATline = new StringBuilder().append(engconstents.ENG_AT_NOHANDLE_CMD).append(",")
+                             .append(1).append(",").append("AT+SLOG=2").toString();
                 }else {
-                    mATline = String.format("%d,%d,%s",engconstents.ENG_AT_NOHANDLE_CMD, 1, "AT+SLOG=3");
+                  //  mATline = String.format("%d,%d,%s",engconstents.ENG_AT_NOHANDLE_CMD, 1, "AT+SLOG=3");
+                    mATline = new StringBuilder().append(engconstents.ENG_AT_NOHANDLE_CMD).append(",")
+                             .append(1).append(",").append("AT+SLOG=3").toString();
+                 /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
                 }
                 Log.e(LOG_TAG, "cmd" + mATline);
                 try{

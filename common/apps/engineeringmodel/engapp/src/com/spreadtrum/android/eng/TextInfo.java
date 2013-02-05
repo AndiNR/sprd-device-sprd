@@ -61,11 +61,15 @@ public class TextInfo extends Activity{
 
                         switch (mStartN) {
                         case 1:
-                            mATline = String.format("%d,%d", engconstents.ENG_AT_SFPL, 0);
+                            /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+                            //mATline = String.format("%d,%d", engconstents.ENG_AT_SFPL, 0);
+                            mATline = new StringBuilder().append(engconstents.ENG_AT_SFPL).append(",").append(0).toString();
                             break;
 
                         case 2:
-                            mATline = String.format("%d,%d", engconstents.ENG_AT_SEPL, 0);
+                           // mATline = String.format("%d,%d", engconstents.ENG_AT_SEPL, 0);
+                            mATline = new StringBuilder().append(engconstents.ENG_AT_SEPL).append(",").append(0).toString();
+                            /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
                             break;
                         default:
                             mTextView.setText("ERROR");

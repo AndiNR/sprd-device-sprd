@@ -86,7 +86,10 @@ public class lockcell extends Activity {
 					DataOutputStream outputBufferStream = new DataOutputStream(outputBuffer);
 
 					Log.e(LOG_TAG, "engopen sockid=" + sockid);
-					str=String.format("%d,%d", msg.what,0,0);
+/*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+                    //str=String.format("%d,%d", msg.what,0,0);
+                    str=new StringBuilder().append(msg.what).append(",").append(0).toString();
+/*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 					try {
 					outputBufferStream.writeBytes(str);
 					} catch (IOException e) {

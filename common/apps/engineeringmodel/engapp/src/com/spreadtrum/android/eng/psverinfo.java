@@ -66,8 +66,11 @@ public class psverinfo extends Activity {
 			ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
 			DataOutputStream outputBufferStream = new DataOutputStream(outputBuffer);
 			Log.e(LOG_TAG, "engopen sockid=" + sockid);
-			str=String.format("%d,%d,%d", what,1,0);
-			try {
+/*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+            //str=String.format("%d,%d,%d", what,1,0);
+            str = new StringBuilder().append(what).append(",").append(1).append(",").append(0).toString();
+/*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
+            try {
 			    outputBufferStream.writeBytes(str);
 			} catch (IOException e) {
 			    Log.e(LOG_TAG, "writebytes error");

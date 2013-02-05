@@ -106,8 +106,12 @@ public class unlockfreq extends Activity {
 					DataOutputStream outputBufferStream = new DataOutputStream(outputBuffer);
 
 					Log.e(LOG_TAG, "engopen sockid=" + sockid);
-
-					str=String.format("%d,%d,%d,%d,%d", msg.what,3,1,Integer.parseInt(mET.getText().toString()),10088);
+ /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+                    //str=String.format("%d,%d,%d,%d,%d", msg.what,3,1,Integer.parseInt(mET.getText().toString()),10088);
+                    str=new StringBuilder().append(msg.what).append(",").append(3).append(",").append(1)
+                        .append(",").append(Integer.parseInt(mET.getText().toString())).append(",")
+                        .append(10088).toString();
+ /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 					try {
 					outputBufferStream.writeBytes(str);
 					} catch (IOException e) {

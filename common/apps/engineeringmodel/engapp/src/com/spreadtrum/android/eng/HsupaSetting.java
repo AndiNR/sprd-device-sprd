@@ -61,15 +61,20 @@ public class HsupaSetting extends PreferenceActivity implements Preference.OnPre
 			String str;
 			switch (msg.what) {
 			case QUERY: {
-				str = String.format("%d,%d",engconstents.ENG_AT_SPENGMD_QUERY,0);
+   /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+            //str = String.format("%d,%d",engconstents.ENG_AT_SPENGMD_QUERY,0);
+                str = new StringBuilder().append(engconstents.ENG_AT_SPENGMD_QUERY).append(",").append(0).toString();
 				break;
 			}
 			case OPEN: {
-				str = String.format("%d,%d",engconstents.ENG_AT_SPENGMD_OPEN,0);
+                //str = String.format("%d,%d",engconstents.ENG_AT_SPENGMD_OPEN,0);
+                str = new StringBuilder().append(engconstents.ENG_AT_SPENGMD_OPEN).append(",").append(0).toString();
 				break;
 			}
 			case CLOSE: {
-				str = String.format("%d,%d",engconstents.ENG_AT_SPENGMD_CLOSE,0);
+                //str = String.format("%d,%d",engconstents.ENG_AT_SPENGMD_CLOSE,0);
+                str = new StringBuilder().append(engconstents.ENG_AT_SPENGMD_OPEN).append(",").append(0).toString();
+   /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 				break;
 			}
 			default: {
