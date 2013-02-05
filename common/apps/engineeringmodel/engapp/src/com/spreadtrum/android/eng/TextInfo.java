@@ -18,7 +18,9 @@ public class TextInfo extends Activity{
     private engfetch mEf;
     private String mATline;
     private int mSocketID;
-
+    /*Add 20130201 Spreadst of 123080 ANR after press mannual assert  start */
+    private int mStartN;
+    /*Add 20130201 Spreadst of 123080 ANR after press mannual assert  end */
     private ByteArrayOutputStream outputBuffer;
     private DataOutputStream outputBufferStream;
 
@@ -31,7 +33,7 @@ public class TextInfo extends Activity{
         mTextView = (TextView) findViewById(R.id.text_view);
         mEf = new engfetch();
         Intent intent = this.getIntent();
-        int mStartN = intent.getIntExtra("text_info", 0);
+        mStartN = intent.getIntExtra("text_info", 0);
 
 		switch (mStartN) {
 		case 1:
@@ -45,49 +47,56 @@ public class TextInfo extends Activity{
 		default:
 			Log.e(TAG, "mStartN:" + mStartN);
 		}
-        mText = getDisplayText(mStartN);
-        mTextView.setText(mText);
+        /*Add 20130201 Spreadst of 123080 ANR after press mannual assert  start */
+        this.setDisplayText();
+        /*Add 20130201 Spreadst of 123080 ANR after press mannual assert  end */
     }
+    /*Add 20130201 Spreadst of 123080 ANR after press mannual assert  start */
+    private void  setDisplayText(){
+        new Thread(
+                new Runnable(){
+                    public void run(){
+                        outputBuffer = new ByteArrayOutputStream();
+                        outputBufferStream = new DataOutputStream(outputBuffer);
 
-    private String getDisplayText(int n){
-        outputBuffer = new ByteArrayOutputStream();
-        outputBufferStream = new DataOutputStream(outputBuffer);
+                        switch (mStartN) {
+                        case 1:
+                            mATline = String.format("%d,%d", engconstents.ENG_AT_SFPL, 0);
+                            break;
 
-		switch (n) {
-		case 1:
-			mATline = String.format("%d,%d", engconstents.ENG_AT_SFPL, 0);
-			break;
+                        case 2:
+                            mATline = String.format("%d,%d", engconstents.ENG_AT_SEPL, 0);
+                            break;
+                        default:
+                            mTextView.setText("ERROR");
+                        }
+                        Log.d(TAG, "mATline :" + mATline);
+                        try {
+                            outputBufferStream.writeBytes(mATline);
+                        } catch (IOException e) {
+                            Log.e(TAG, "writeBytes() error!");
+                            mTextView.setText("ERROR");
+                        }
 
-		case 2:
-			mATline = String.format("%d,%d", engconstents.ENG_AT_SEPL, 0);
-			break;
-		default:
-			return "ERROR";
-		}
-		Log.d(TAG, "mATline :" + mATline);
-        try {
-            outputBufferStream.writeBytes(mATline);
-        } catch (IOException e) {
-            Log.e(TAG, "writeBytes() error!");
-            return "ERROR";
-        }
+                        mEf.engwrite(mSocketID,outputBuffer.toByteArray(),outputBuffer.toByteArray().length);
 
-        mEf.engwrite(mSocketID,outputBuffer.toByteArray(),outputBuffer.toByteArray().length);
+                        int dataSize = 512;
+                        byte[] inputBytes = new byte[dataSize];
 
-        int dataSize = 512;
-        byte[] inputBytes = new byte[dataSize];
-
-        int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
-        String mATResponse =  new String(inputBytes, 0, showlen);
-        if(mATResponse.length() >= 10){
-        	mATResponse = mATResponse.substring(10);//delete "+SFPL: " line
-        }
-        Log.e(TAG, "mATResponse:" + mATResponse);
-		if (mATResponse.length() > 0) {
-			return mATResponse;
-		} else {
-			return "NULL";
-		}
+                        int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
+                        String mATResponse =  new String(inputBytes, 0, showlen);
+                        if(mATResponse.length() >= 10){
+                            mATResponse = mATResponse.substring(10);//delete "+SFPL: " line
+                        }
+                        Log.e(TAG, "mATResponse:" + mATResponse);
+                        if (mATResponse.length() > 0) {
+                            mTextView.setText(mATResponse);
+                        } else {
+                            mTextView.setText("NULL");
+                        }
+                    }
+                }).start();
+        /*Add 20130201 Spreadst of 123080 ANR after press mannual assert  end */
     }
 }
 
