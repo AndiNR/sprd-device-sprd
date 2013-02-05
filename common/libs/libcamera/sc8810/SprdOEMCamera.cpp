@@ -27,8 +27,10 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <math.h>
+#include <semaphore.h>
 
 #include "../sc8810/SprdOEMCamera.h"
+#include "../arithmetic/sc8810/inc/FaceSolid.h"
 #include "jpeg_exif_header.h"
 #include "sprd_scale.h"
 #include "sprd_rotation.h"
@@ -155,6 +157,14 @@ typedef struct
 	uint32_t focal_length;
 	SENSOR_MODE_INFO_T sensor_mode_info[10];
 	camera_frame_type frame_info;
+    uint32_t facedetect;
+    uint32_t facedetect_init;
+    uint32_t facedetect_busy;
+    uint32_t facedetect_exit_flag;
+    void *fd_addr;
+    void *fd_src_addr;
+    sem_t fd_sync_sem;
+    sem_t fd_exit_sem;
 }SPRD_OEMCAMERA_INFO_T;
 
 #define G_PREVIEW_BUF_OFFSET 0 // 2 //the freview buffer from this number
@@ -243,6 +253,7 @@ static int camera_scale_functions(SCALE_DATA_FORMAT_E output_fmt, uint32_t outpu
 	                                                      uint32_t input_width,uint32_t input_height,uint32_t input_yaddr,
 	                                                      uint32_t intput_uvaddr, SCALE_DATA_FORMAT_E input_fmt,
 	                                                      ISP_ENDIAN_T input_endian);
+void camera_fd_start(void *addr);
 static void errno_exit(const char * s)
 {
     fprintf(stderr, "%s error %d, %s\n", s, errno, strerror(errno));
@@ -340,7 +351,7 @@ static uint32_t s_front_cam_orientation = 0;
 void camera_set_rot_angle(uint32_t *is_set_orientation,uint32_t *angle)
 {
 	uint32_t temp = *angle;
-	ALOGV("wjp:s_front_cam_orientation=%d.\n",s_front_cam_orientation);
+	ALOGV("s_front_cam_orientation=%d.\n",s_front_cam_orientation);
 	if((1 != g_camera_id) || (0 == s_front_cam_orientation))
 		return;
 	switch(temp){
@@ -2932,7 +2943,13 @@ void *camera_preview_thread(void *client_data)
 					ALOGE("SPRD OEM:Fail to preview because camera_rotation");
 					camera_release_frame(g_releasebuff_index);
 					if(1 == check_stop())
+					{
+					    if(1 == s_camera_info.facedetect_init) {
+    						FaceSolid_Finalize();
+                            s_camera_info.facedetect_init = 0;
+					    }
 						return NULL;
+					}
 					continue;
 				}
 				timestamp_new = systemTime();
@@ -2982,6 +2999,7 @@ void *camera_preview_thread(void *client_data)
 			frame_type.dy = g_dcam_dimensions.display_height;
 			frame_type.format = CAMERA_YCBCR_4_2_0;
                            frame_type.timestamp = buf.timestamp.tv_sec * 1000000000LL + buf.timestamp.tv_usec * 1000;
+            camera_fd_start(frame_type.buf_Virt_Addr);
 			g_callback(CAMERA_EVT_CB_FRAME, client_data, CAMERA_FUNC_START_PREVIEW, (uint32_t)&frame_type);
    	     	}
 		else
@@ -3241,6 +3259,112 @@ int camera_preview_streamon(void)
 	}
 	return 0;
 }
+#define IMAGE_FORMAT		 "YUV420_SEMIPLANAR"
+void *camera_fd_thread(void *client_data)
+{
+    uint32_t size = g_dcam_dimensions.display_width * g_dcam_dimensions.display_height *3 / 2;
+	camera_frame_type frame_type;
+    int face_num = 0;
+    int k = 0;
+    morpho_FaceRect *face_rect_ptr;
+    unsigned char *p_format = (unsigned char*)IMAGE_FORMAT;
+
+    while(1) {
+        sem_wait(&s_camera_info.fd_sync_sem);
+        if(0 == s_camera_info.facedetect_exit_flag) {
+            s_camera_info.facedetect_busy = 1;
+            if(NULL != s_camera_info.fd_addr) {
+                memcpy(s_camera_info.fd_addr,s_camera_info.fd_src_addr,size);
+                frame_type.face_num = 0;
+                if( 0 != FaceSolid_Function((uint8_t*)s_camera_info.fd_addr,
+                                &face_rect_ptr, (int*)&face_num,1,p_format)) {
+                    ALOGV("FaceSolid_Function fail.\n");
+                }
+                else {
+                    frame_type.face_ptr = face_rect_ptr;
+                    frame_type.face_num = face_num;
+                    g_callback(CAMERA_EVT_CB_FD,
+                            client_data,
+                            CAMERA_FUNC_START_PREVIEW,
+                            (uint32_t)&frame_type);
+                }
+                s_camera_info.facedetect_busy = 0;
+            }
+        } else {
+            ALOGV("camera_fd_thread exit.");
+            sem_post(&s_camera_info.fd_exit_sem);
+            break;
+       }
+    }
+    ALOGV("camera_fd_thread exit done.");
+
+    return NULL;
+}
+
+void camera_fd_init(void *client_data)
+{
+    int ret = 0;
+    pthread_attr_t attr;
+    uint32_t phy_addr = 0;
+    unsigned char *p_format = (unsigned char*)IMAGE_FORMAT;
+
+    sem_init(&s_camera_info.fd_sync_sem, 0, 0);
+    sem_init(&s_camera_info.fd_exit_sem, 0, 0);
+
+    if( 0 != FaceSolid_Init(g_dcam_dimensions.display_height,
+                            g_dcam_dimensions.display_width,p_format)) {
+        s_camera_info.facedetect_init = 0;
+		ALOGV("FaceSolid_Init fail.\n");
+        return;
+	}
+    if (NULL == s_camera_info.fd_addr) {
+        s_camera_info.fd_addr = (void*)malloc(g_dcam_dimensions.display_width*g_dcam_dimensions.display_height*3/2);
+    }
+    s_camera_info.facedetect_init = 1;
+    //create the thread for FD
+    pthread_attr_init (&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    if(0 != (ret = pthread_create(&g_preview_thr, &attr, camera_fd_thread, client_data))) {
+        ALOGE("Fail to create FD thread.");
+    } else {
+        ALOGV("create FD thread done.");
+    }
+}
+void camera_fd_deinit(void)
+{
+    ALOGV("camera_fd_deinit:%d.\n",s_camera_info.facedetect_init);
+
+    s_camera_info.facedetect_exit_flag = 1;
+    sem_post(&s_camera_info.fd_sync_sem);
+    sem_wait(&s_camera_info.fd_exit_sem);
+    if(1 == s_camera_info.facedetect_init) {
+		FaceSolid_Finalize();
+        s_camera_info.facedetect_init = 0;
+        ALOGV("facedetect deinit done.");
+    }
+    s_camera_info.facedetect_exit_flag = 0;
+    if(NULL != s_camera_info.fd_addr) {
+        free(s_camera_info.fd_addr);
+        s_camera_info.fd_addr = NULL;
+    }
+    s_camera_info.facedetect_busy = 0;
+}
+
+void camera_fd_start(void *addr)
+{
+    uint32_t phy_addr = 0;
+
+    ALOGV("%d,%d,0x%x",s_camera_info.facedetect,s_camera_info.facedetect_busy,s_camera_info.fd_addr);
+
+    if ((1 == s_camera_info.facedetect)
+        && (1 != s_camera_info.facedetect_busy)
+        &&(NULL != s_camera_info.fd_addr)) {
+        s_camera_info.fd_src_addr = addr;
+        sem_post(&s_camera_info.fd_sync_sem);
+    } else {
+        ALOGV("camera_fd_start:discard.\n");
+    }
+}
 
 camera_ret_code_type camera_start_preview (camera_cb_f_type callback, void *client_data)
 {
@@ -3291,6 +3415,8 @@ camera_ret_code_type camera_start_preview (camera_cb_f_type callback, void *clie
 	//update the status
 	callback(CAMERA_RSP_CB_SUCCESS, g_dcam_obj, CAMERA_FUNC_START_PREVIEW, 0);
 	ALOGV("OK to CAMERA_FUNC_START_PREVIEW.");
+
+    camera_fd_init(client_data);
 
 	//create the thread for preview
 	pthread_attr_init (&attr);
@@ -3639,6 +3765,8 @@ camera_ret_code_type camera_stop_preview(void)
 	camera_ret_code_type ret_type = CAMERA_SUCCESS;
 	uint32_t num = 0;
 	ALOGV("camera_stop_preview: Start to stop preview thread.");
+
+    camera_fd_deinit();
 
 	//stop camera preview thread
 	g_stop_preview_flag = 1;
@@ -5086,5 +5214,11 @@ void camera_set_preview_mode(int mode)
 {
 	ALOGV("SPRD OEM:camera_set_preview_mode,mode = %d.\n",mode);
 	camera_set_ctrl(V4L2_CID_BLACK_LEVEL,mode);
+}
+
+void camera_set_start_facedetect(uint32_t param)
+{
+    s_camera_info.facedetect = param;
+    ALOGV("camera_set_start_facedetect,param %d.\n",param);
 }
 };

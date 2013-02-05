@@ -138,6 +138,7 @@ gralloc_module_t const* SprdCameraHardware::mGrallocHal;
         mJpegencZoomHeap(NULL),
         mMetadataHeap(NULL),
         mJpegencSwapHeap(NULL),
+       mFDHeap(NULL),
         mIsStoreMetaData(false)
     {
         ALOGV("openCameraHardware: call createInstance. cameraId: %d.", cameraId);
@@ -402,6 +403,8 @@ void SprdCameraHardware::deinitPreview()
 {
         FreePmem(mPreviewHeap);
         mPreviewHeap = NULL;
+        FreePmem(mFDHeap);
+        mFDHeap = NULL;
 }
 
     // Called with mStateLock held!
@@ -668,6 +671,8 @@ void SprdCameraHardware::stopPreviewInternal()
                 mCameraState = QCS_ERROR;
                 FreePmem(mPreviewHeap);
                 mPreviewHeap = NULL;
+                FreePmem(mFDHeap);
+                mFDHeap = NULL;
                 ALOGE("stopPreviewInternal: fail to camera_stop_preview().");
                 return;
         }
@@ -680,6 +685,8 @@ void SprdCameraHardware::stopPreviewInternal()
         ALOGV("stopPreviewInternal: Freeing preview heap.");
         FreePmem(mPreviewHeap);
         mPreviewHeap = NULL;
+        FreePmem(mFDHeap);
+        mFDHeap = NULL;
         ALOGV("stopPreviewInternal: X Preview has stopped.");
 }
 
@@ -727,6 +734,7 @@ status_t SprdCameraHardware::startRecording()
                 if(CAMERA_SUCCESS != camera_stop_preview()){
                         mCameraState = QCS_ERROR;
                         mPreviewHeap = NULL; 
+                        mFDHeap = NULL;
                         ALOGE("startRecording: fail to camera_stop_preview().");		
                         return INVALID_OPERATION;
                 }
@@ -739,6 +747,8 @@ status_t SprdCameraHardware::startRecording()
 	        ALOGV("startRecording: Freeing preview heap.");
 		FreePmem(mPreviewHeap);
 	        mPreviewHeap = NULL;
+            FreePmem(mFDHeap);
+            mFDHeap = NULL;
         }		
         mRecordingMode = 1;
         ALOGV("startRecording,mRecordingMode=%d.",mRecordingMode);
@@ -1290,6 +1300,35 @@ void SprdCameraHardware::free_temp_mem_by_HW(void)
 
         return;
 }
+void* SprdCameraHardware::get_fd_mem(uint32_t size, uint32_t *phy_addr)
+{
+    uint32_t i;
+    uint32_t real_size = 0;
+    uint32_t vaddr = 0;
+    int buffer_size = camera_get_size_align_page(size);
+    ALOGV("get_fd_mem:size=%d,align size=%d .",size,buffer_size);
+    mFDHeap = GetPmem("/dev/pmem_adsp", buffer_size, 1);
+    if(NULL == mFDHeap)
+        return NULL;
+    if(NULL == mFDHeap->handle){
+        ALOGE("Fail to GetPmem mFDHeap. buffer_size: 0x%x.", buffer_size);
+        return NULL;
+    }
+    *phy_addr = (uint32_t)get_physical_address(mFDHeap,&real_size);
+    vaddr = (uint32_t)mFDHeap->data;
+    return (void *)vaddr;
+
+    ALOGV("get_fd_mem: done");
+    return NULL;
+}
+
+void SprdCameraHardware::free_fd_mem(void)
+{
+    FreePmem(mFDHeap);
+    mFDHeap = NULL;
+    ALOGV("free_fd_mem: done.");
+    return;
+}
 void* SprdCameraHardware::get_temp_mem_by_jpegslice(uint32_t size, uint32_t count, uint32_t *phy_addr)
 {
         uint32_t num = 3;
@@ -1365,6 +1404,58 @@ void SprdCameraHardware::HandleErrorState(void)
         }
         ALOGE("HandleErrorState:don't enable error msg!");
 }
+
+void SprdCameraHardware::receivePreviewFDFrame(camera_frame_type *frame)
+{
+    Mutex::Autolock cbLock(&mCallbackLock);
+    ssize_t offset = frame->buf_id;
+    camera_frame_metadata_t metadata;
+    camera_face_t face_info[FACE_DETECT_NUM];
+    uint32_t k = 0;
+
+   /* if(1 == mParameters.getInt("smile-snap-mode")){*/
+          ALOGV("receive face_num %d.",frame->face_num);
+  /*         {*/
+               metadata.number_of_faces = frame->face_num;
+    if(0 != frame->face_num) {
+           for(k=0 ; k<frame->face_num ; k++) {
+                face_info[k].id = k;
+#if 1
+                face_info[k].rect[0] = (frame->face_ptr->sx*2000/mPreviewWidth)-1000;
+                face_info[k].rect[1] = (frame->face_ptr->sy*2000/mPreviewHeight)-1000;
+                face_info[k].rect[2] = (frame->face_ptr->ex*2000/mPreviewWidth)-1000;
+                face_info[k].rect[3] = (frame->face_ptr->ey*2000/mPreviewHeight)-1000;
+                ALOGV("smile level %d.\n",frame->face_ptr->smile_level);
+#else
+                face_info[k].rect[0] = frame->face_ptr->sx;
+                face_info[k].rect[1] = frame->face_ptr->sy;
+                face_info[k].rect[2] = frame->face_ptr->ex;
+                face_info[k].rect[3] = frame->face_ptr->ey;
+                ALOGV("rect:%d,%d,%d,%d.\n",
+                    face_info[k].rect[0],face_info[k].rect[1],face_info[k].rect[2],face_info[k].rect[3]);
+
+                if(frame->face_ptr->smile_level > FACE_SMILE_LIMIT) {
+                    face_info[k].score   = 100;
+                } else {
+                    face_info[k].score   = 0;
+                }
+#endif
+                face_info[k].score = frame->face_ptr->smile_level;
+                frame->face_ptr++;
+           }
+        }
+       metadata.faces = &face_info[0];
+       if(mMsgEnabled&CAMERA_MSG_PREVIEW_METADATA) {
+            ALOGV("smile capture msg is enabled.");
+            mData_cb(CAMERA_MSG_PREVIEW_METADATA,mPreviewHeap->camera_memory,offset,&metadata,mUser);
+       } else {
+            ALOGV("smile capture msg is disabled.");
+       }
+       mParameters.set("smile-snap-mode",0);
+/*          }*/
+/*     }*/
+}
+
 void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 {
         Mutex::Autolock cbLock(&mCallbackLock);
@@ -2381,6 +2472,7 @@ static uint32_t s_focus_zone[25];
                         CAMERA_ISO_AUTO));
 
 #ifndef CONFIG_CAMERA_788
+	if (g_camera_id == 0) {
 	if(0xFFFFFFFF == lookupvalue(flash_mode_map,
                         mParameters.get("flash-mode"))){
 		mParameters.set("flash-mode", "off");
@@ -2390,6 +2482,7 @@ static uint32_t s_focus_zone[25];
                  lookup(flash_mode_map,
                         mParameters.get("flash-mode"),
                         CAMERA_FLASH_MODE_OFF));
+	}
 #endif
 
         int ns_mode = mParameters.getInt("nightshot-mode");
@@ -2587,6 +2680,7 @@ ALOGV("start to getCameraStateStr.");
                         break;
                     }
                     break;
+
 		   case CAMERA_EXIT_CB_FAILED:
                      //free memory
                      ALOGE("camera cb: invalid state %s for taking a picture!",
@@ -2595,6 +2689,14 @@ ALOGV("start to getCameraStateStr.");
                     TRANSITION_ALWAYS(QCS_ERROR);
                     obj->HandleErrorState();
 		    break;
+
+                case CAMERA_EVT_CB_FD:
+                    if( QCS_PREVIEW_IN_PROGRESS == obj->mCameraState) {
+                        if (parm4)
+                            obj->receivePreviewFDFrame((camera_frame_type *)parm4);
+                    }
+                    break;
+
                 default:
                     // transition to QCS_ERROR
                     ALOGE("unexpected cb %d for CAMERA_FUNC_START_PREVIEW.",
@@ -3067,10 +3169,12 @@ const char* const SprdCameraHardware::getCameraStateStr(
     }
 status_t SprdCameraHardware::sendCommand(int32_t cmd, int32_t arg1, int32_t arg2){
 	if(CAMERA_CMD_START_FACE_DETECTION == cmd){
-		ALOGE("sendCommand: not support the CAMERA_CMD_START_FACE_DETECTION.");
-		return BAD_VALUE;
+		ALOGE("sendCommand: support the CAMERA_CMD_START_FACE_DETECTION.");
+        camera_set_start_facedetect(1);
+	} else if(CAMERA_CMD_STOP_FACE_DETECTION == cmd) {
+	    ALOGE("sendCommand: not support the CAMERA_CMD_STOP_FACE_DETECTION.");
+        camera_set_start_facedetect(0);
 	}
-
 	return NO_ERROR;
 }
 

@@ -44,7 +44,8 @@ PRODUCT_PACKAGES := \
 	bttest\
 	hostapd \
 	wpa_supplicant.conf \
-    SoundRecorder
+        SoundRecorder \
+        libmorpho_facesolid.so
 
 # own copyright packages files
 PRODUCT_PACKAGES += \

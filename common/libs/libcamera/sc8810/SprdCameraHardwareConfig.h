@@ -315,7 +315,9 @@ struct config_element sprd_front_camera_hardware_config[] = {
         {"focus-mode-values", "infinity"},
         {"focus-mode", "infinity"},
         {"focus-distances", "2.0,2.5,3.75,Infinity"},
-	{"max-num-detected-faces-hw", "0"}
+	{"max-num-detected-faces-hw", "5"},
+	{"smile-snap-mode","0"},
+	{"hdr-supported","false"}
 };
 struct config_element sprd_back_camera_hardware_config[] = {
 	{"whitebalance-values",
@@ -410,12 +412,14 @@ struct config_element sprd_back_camera_hardware_config[] = {
 #else
 	{"focus-distances", "2.0,2.5,3.75"},
 #endif
-	{"max-num-detected-faces-hw", "0"},
+	{"max-num-detected-faces-hw", "5"},
 #ifdef CONFIG_CAMERA_788
-	{"max-num-focus-areas", "0"}
+	{"max-num-focus-areas", "0"},
 #else
-	{"max-num-focus-areas", "3"}
+	{"max-num-focus-areas", "3"},
 #endif
+	{"smile-snap-mode","0"},
+	{"hdr-supported","false"}
 };
 
 #endif //_SPRD_CAMERA_HARDWARE_CONFIG_H_

@@ -18,12 +18,15 @@
 #ifndef CAMERA_IFC_H
 #define CAMERA_IFC_H
 
+#include "../arithmetic/sc8810/inc/FaceSolid.h"
 #define FEATURE_CAMERA_V7
 #define FEATURE_NATIVELINUX
 #define FEATURE_CAMERA_ENCODE_PROPERTIES
 
 #define JPEG_ENC_HW_PMEM (1024 * 1024) //0x0100000 // 2M
 #define JPEG_ENC_HW_BUF_NUM 2
+#define FACE_DETECT_NUM		5
+#define FACE_SMILE_LIMIT    10
 
 typedef enum {
     QDSP_MODULE_KERNEL,
@@ -193,6 +196,8 @@ typedef struct
 #endif
     uint32_t buf_id;
     int64_t timestamp;
+	uint32_t face_num;
+	morpho_FaceRect *face_ptr;
 } camera_frame_type;
 
 typedef enum
@@ -253,6 +258,7 @@ typedef enum
     CAMERA_EXIT_CB_BUFFER,    /* A buffer is returned         */
     CAMERA_EVT_CB_SNAPSHOT_DONE,/*  Snapshot updated               */
     CAMERA_EVT_CB_SNAPSHOT_JPEG_DONE,
+    CAMERA_EVT_CB_FD,
     CAMERA_CB_MAX
 } camera_cb_type;
 

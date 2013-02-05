@@ -43,7 +43,8 @@ PRODUCT_PACKAGES := \
 	rawdatad \
 	nvm_daemon \
 	modemd \
-	mfserial
+	mfserial \
+        libmorpho_facesolid.so
 
 # own copyright packages files
 PRODUCT_PACKAGES += \

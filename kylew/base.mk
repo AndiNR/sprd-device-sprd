@@ -49,7 +49,8 @@ PRODUCT_PACKAGES += \
     CallFireWall \
     ValidationTools \
     libvalidationtoolsjni \
-    vtserver
+    vtserver \
+    libmorpho_facesolid.so
 
 # prebuild files
 PRODUCT_PACKAGES += \

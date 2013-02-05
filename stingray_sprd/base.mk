@@ -11,7 +11,8 @@ PRODUCT_PACKAGES := \
 	audio_policy.$(TARGET_PLATFORM) \
 	tinymix \
 	sensors.$(TARGET_BOARD)  \
-	$(MALI)
+	$(MALI) \
+        libmorpho_facesolid.so
 
 # own copyright packages files
 PRODUCT_PACKAGES += \

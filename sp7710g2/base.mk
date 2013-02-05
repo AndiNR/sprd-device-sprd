@@ -39,7 +39,8 @@ PRODUCT_PACKAGES := \
 	hcitool \
 	hcidump \
 	bttest\
-	audio.a2dp.default
+	audio.a2dp.default \
+        libmorpho_facesolid.so
 
 # own copyright packages files
 PRODUCT_PACKAGES += \

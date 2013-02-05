@@ -94,12 +94,14 @@ public:
 	void* get_jpeg_encoder_mem_by_HW(uint32_t *phy_addr);
 	void* get_temp_mem_by_HW(uint32_t size, uint32_t num, uint32_t *phy_addr);
 	void* get_temp_mem_by_jpegslice(uint32_t size, uint32_t num, uint32_t *phy_addr);
+	void* get_fd_mem(uint32_t size, uint32_t *phy_addr);
 	void free_preview_mem(uint32_t *phy_addr, uint32_t size, uint32_t index);
 	void free_raw_mem(uint32_t *phy_addr, uint32_t size, uint32_t index);
 	void free_jpeg_encoder_mem_by_HW(void);
 	void free_temp_mem_by_HW(void);
 	void free_temp_mem_by_jpegslice(void);
 	void FreeCameraMem(void);
+	void free_fd_mem(void);
      //virtual void setCallbacks(notify_callback notify_cb,data_callback data_cb,data_callback_timestamp data_cb_timestamp, void* user);
     virtual void        setCallbacks(camera_notify_callback notify_cb,
                                      camera_data_callback data_cb,
@@ -166,6 +168,7 @@ private:
     int mOrientation_parm;
 
     void receivePreviewFrame(camera_frame_type *frame);
+    void receivePreviewFDFrame(camera_frame_type *frame);
     void HandleErrorState(void);
 
     static void stop_camera_cb(camera_cb_type cb,
@@ -266,6 +269,7 @@ sp<RawPmemPool> mJpegencSwapHeap; //for capture zoom scale.
     sprd_camera_memory_t *mJpegencHWHeap;
     sprd_camera_memory_t *mTempHWHeap;
     sprd_camera_memory_t *mTempJpegSliceHeap;
+	sprd_camera_memory_t *mFDHeap;
     sp<AshmemPool> mJpegHeap;
     sprd_camera_memory_t *mJpegencZoomHeap; //for capture zoom.
     sprd_camera_memory_t *mJpegencSwapHeap; //for capture zoom scale.

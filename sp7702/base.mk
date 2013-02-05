@@ -40,7 +40,8 @@ PRODUCT_PACKAGES := \
 	hostapd \
 	wpa_supplicant.conf \
 	audio.a2dp.default \
-    SoundRecorder
+        SoundRecorder \
+        libmorpho_facesolid.so
 
 # own copyright packages files
 PRODUCT_PACKAGES += \

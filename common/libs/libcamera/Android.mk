@@ -266,7 +266,7 @@ LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia li
 endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
-LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware
+LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libmorpho_facesolid
 endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
@@ -309,6 +309,15 @@ include $(BUILD_MULTI_PREBUILT)
 
 include $(CLEAR_VARS)
 LOCAL_PREBUILT_LIBS := arithmetic/sc8825/libmorpho_easy_hdr.so
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_MULTI_PREBUILT)
+
+endif
+
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
+
+include $(CLEAR_VARS)
+LOCAL_PREBUILT_LIBS := arithmetic/sc8810/libmorpho_facesolid.so
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_MULTI_PREBUILT)
 
