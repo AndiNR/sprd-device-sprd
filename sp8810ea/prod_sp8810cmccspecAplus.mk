@@ -38,6 +38,7 @@ PRODUCT_PACKAGES := \
     VoiceDialer \
     MsmsPhone \
     Settings \
+    Launcher2 \
     MsmsStk \
     Stk1 \
     framework2
