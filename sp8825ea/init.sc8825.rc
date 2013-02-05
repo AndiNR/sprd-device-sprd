@@ -370,49 +370,68 @@ on boot
     chown system system /sys/bus/iio/devices/iio:device0/tap_on
     chown system system /sys/bus/iio/devices/iio:device0/temperature
     chown system system /sys/bus/iio/devices/iio:device0/trigger/current_trigger
-    chmod 0666 /dev/iio:device0
-    chmod 0666 /sys/bus/iio/devices/trigger0/name
-    chmod 0666 /sys/bus/iio/devices/iio:device0/accl_bias
-    chmod 0666 /sys/bus/iio/devices/iio:device0/accl_enable
-    chmod 0666 /sys/bus/iio/devices/iio:device0/accl_matrix
-    chmod 0666 /sys/bus/iio/devices/iio:device0/buffer/length
-    chmod 0666 /sys/bus/iio/devices/iio:device0/buffer/enable
-    chmod 0666 /sys/bus/iio/devices/iio:device0/compass_enable
-    chmod 0666 /sys/bus/iio/devices/iio:device0/compass_matrix
-    chmod 0666 /sys/bus/iio/devices/iio:device0/dmp_event_int_on
-    chmod 0666 /sys/bus/iio/devices/iio:device0/dmp_firmware
-    chmod 0666 /sys/bus/iio/devices/iio:device0/dmp_int_on
-    chmod 0666 /sys/bus/iio/devices/iio:device0/dmp_on
-    chmod 0666 /sys/bus/iio/devices/iio:device0/dmp_output_rate
-    chmod 0666 /sys/bus/iio/devices/iio:device0/event_display_orientation
-    chmod 0666 /sys/bus/iio/devices/iio:device0/firmware_loaded
-    chmod 0666 /sys/bus/iio/devices/iio:device0/gyro_enable
-    chmod 0666 /sys/bus/iio/devices/iio:device0/gyro_matrix
-    chmod 0666 /sys/bus/iio/devices/iio:device0/in_accel_scale
-    chmod 0666 /sys/bus/iio/devices/iio:device0/in_anglvel_scale
-    chmod 0666 /sys/bus/iio/devices/iio:device0/in_magn_scale
-    chmod 0666 /sys/bus/iio/devices/iio:device0/key
-    chmod 0666 /sys/bus/iio/devices/iio:device0/power_state
-    chmod 0666 /sys/bus/iio/devices/iio:device0/quaternion_on
-    chmod 0666 /sys/bus/iio/devices/iio:device0/sampling_frequency
-    chmod 0666 /sys/bus/iio/devices/iio:device0/scan_elements/in_accel_x_en
-    chmod 0666 /sys/bus/iio/devices/iio:device0/scan_elements/in_accel_y_en
-    chmod 0666 /sys/bus/iio/devices/iio:device0/scan_elements/in_accel_z_en
-    chmod 0666 /sys/bus/iio/devices/iio:device0/scan_elements/in_anglvel_x_en
-    chmod 0666 /sys/bus/iio/devices/iio:device0/scan_elements/in_anglvel_y_en
-    chmod 0666 /sys/bus/iio/devices/iio:device0/scan_elements/in_anglvel_z_en
-    chmod 0666 /sys/bus/iio/devices/iio:device0/scan_elements/in_magn_x_en
-    chmod 0666 /sys/bus/iio/devices/iio:device0/scan_elements/in_magn_y_en
-    chmod 0666 /sys/bus/iio/devices/iio:device0/scan_elements/in_magn_z_en
-    chmod 0666 /sys/bus/iio/devices/iio:device0/scan_elements/in_quaternion_r_en
-    chmod 0666 /sys/bus/iio/devices/iio:device0/scan_elements/in_quaternion_x_en
-    chmod 0666 /sys/bus/iio/devices/iio:device0/scan_elements/in_quaternion_y_en
-    chmod 0666 /sys/bus/iio/devices/iio:device0/scan_elements/in_quaternion_z_en
-    chmod 0666 /sys/bus/iio/devices/iio:device0/scan_elements/in_timestamp_en
-    chmod 0666 /sys/bus/iio/devices/iio:device0/self_test
-    chmod 0666 /sys/bus/iio/devices/iio:device0/tap_on
-    chmod 0666 /sys/bus/iio/devices/iio:device0/temperature
-    chmod 0666 /sys/bus/iio/devices/iio:device0/trigger/current_trigger
+    chown system system /sys/bus/iio/devices/iio:device0/in_accel_x_offset
+    chown system system /sys/bus/iio/devices/iio:device0/in_accel_y_offset
+    chown system system /sys/bus/iio/devices/iio:device0/in_accel_z_offset
+    chown system system /sys/bus/iio/devices/iio:device0/in_accel_x_calibbias
+    chown system system /sys/bus/iio/devices/iio:device0/in_accel_y_calibbias
+    chown system system /sys/bus/iio/devices/iio:device0/in_accel_z_calibbias
+    chown system system /sys/bus/iio/devices/iio:device0/in_anglvel_x_calibbias
+    chown system system /sys/bus/iio/devices/iio:device0/in_anglvel_y_calibbias
+    chown system system /sys/bus/iio/devices/iio:device0/in_anglvel_z_calibbias
+
+    chmod 0664 /dev/iio:device0
+    chmod 0664 /sys/bus/iio/devices/trigger0/name
+    chmod 0664 /sys/bus/iio/devices/iio:device0/accl_bias
+    chmod 0664 /sys/bus/iio/devices/iio:device0/accl_enable
+    chmod 0664 /sys/bus/iio/devices/iio:device0/accl_matrix
+    chmod 0664 /sys/bus/iio/devices/iio:device0/buffer/length
+    chmod 0664 /sys/bus/iio/devices/iio:device0/buffer/enable
+    chmod 0664 /sys/bus/iio/devices/iio:device0/compass_enable
+    chmod 0664 /sys/bus/iio/devices/iio:device0/compass_matrix
+    chmod 0664 /sys/bus/iio/devices/iio:device0/dmp_event_int_on
+    chmod 0664 /sys/bus/iio/devices/iio:device0/dmp_firmware
+    chmod 0664 /sys/bus/iio/devices/iio:device0/dmp_int_on
+    chmod 0664 /sys/bus/iio/devices/iio:device0/dmp_on
+    chmod 0664 /sys/bus/iio/devices/iio:device0/dmp_output_rate
+    chmod 0664 /sys/bus/iio/devices/iio:device0/event_display_orientation
+    chmod 0664 /sys/bus/iio/devices/iio:device0/firmware_loaded
+    chmod 0664 /sys/bus/iio/devices/iio:device0/gyro_enable
+    chmod 0664 /sys/bus/iio/devices/iio:device0/gyro_matrix
+    chmod 0664 /sys/bus/iio/devices/iio:device0/in_accel_scale
+    chmod 0664 /sys/bus/iio/devices/iio:device0/in_anglvel_scale
+    chmod 0664 /sys/bus/iio/devices/iio:device0/in_magn_scale
+    chmod 0664 /sys/bus/iio/devices/iio:device0/key
+    chmod 0664 /sys/bus/iio/devices/iio:device0/power_state
+    chmod 0664 /sys/bus/iio/devices/iio:device0/quaternion_on
+    chmod 0664 /sys/bus/iio/devices/iio:device0/sampling_frequency
+    chmod 0664 /sys/bus/iio/devices/iio:device0/scan_elements/in_accel_x_en
+    chmod 0664 /sys/bus/iio/devices/iio:device0/scan_elements/in_accel_y_en
+    chmod 0664 /sys/bus/iio/devices/iio:device0/scan_elements/in_accel_z_en
+    chmod 0664 /sys/bus/iio/devices/iio:device0/scan_elements/in_anglvel_x_en
+    chmod 0664 /sys/bus/iio/devices/iio:device0/scan_elements/in_anglvel_y_en
+    chmod 0664 /sys/bus/iio/devices/iio:device0/scan_elements/in_anglvel_z_en
+    chmod 0664 /sys/bus/iio/devices/iio:device0/scan_elements/in_magn_x_en
+    chmod 0664 /sys/bus/iio/devices/iio:device0/scan_elements/in_magn_y_en
+    chmod 0664 /sys/bus/iio/devices/iio:device0/scan_elements/in_magn_z_en
+    chmod 0664 /sys/bus/iio/devices/iio:device0/scan_elements/in_quaternion_r_en
+    chmod 0664 /sys/bus/iio/devices/iio:device0/scan_elements/in_quaternion_x_en
+    chmod 0664 /sys/bus/iio/devices/iio:device0/scan_elements/in_quaternion_y_en
+    chmod 0664 /sys/bus/iio/devices/iio:device0/scan_elements/in_quaternion_z_en
+    chmod 0664 /sys/bus/iio/devices/iio:device0/scan_elements/in_timestamp_en
+    chmod 0664 /sys/bus/iio/devices/iio:device0/self_test
+    chmod 0664 /sys/bus/iio/devices/iio:device0/tap_on
+    chmod 0664 /sys/bus/iio/devices/iio:device0/temperature
+    chmod 0664 /sys/bus/iio/devices/iio:device0/trigger/current_trigger
+    chmod 0664 /sys/bus/iio/devices/iio:device0/in_accel_x_offset
+    chmod 0664 /sys/bus/iio/devices/iio:device0/in_accel_y_offset
+    chmod 0664 /sys/bus/iio/devices/iio:device0/in_accel_z_offset
+    chmod 0664 /sys/bus/iio/devices/iio:device0/in_accel_x_calibbias
+    chmod 0664 /sys/bus/iio/devices/iio:device0/in_accel_y_calibbias
+    chmod 0664 /sys/bus/iio/devices/iio:device0/in_accel_z_calibbias
+    chmod 0664 /sys/bus/iio/devices/iio:device0/in_anglvel_x_calibbias
+    chmod 0664 /sys/bus/iio/devices/iio:device0/in_anglvel_y_calibbias
+    chmod 0664 /sys/bus/iio/devices/iio:device0/in_anglvel_z_calibbias
 
     chown system system /sys/class/compass/akm8975/enable_acc
     chown system system /sys/class/compass/akm8975/enable_mag
@@ -424,4 +443,4 @@ on boot
 
     insmod /system/lib/modules/ltr_558als.ko
     chown system system /dev/ltr_558als
-    chmod 0666 /dev/ltr_558als
+    chmod 0664 /dev/ltr_558als
