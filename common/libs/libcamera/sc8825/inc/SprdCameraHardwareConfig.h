@@ -259,15 +259,12 @@ struct config_element{
 	const char *const value;
 };
 struct config_element sprd_front_camera_hardware_config[] = {
-        {"whitebalance-values",
-         "auto,incandescent,fluorescent,daylight,cloudy-daylight"},
-        {"whitebalance", "auto"},
-#if defined(CONFIG_CAMERA_SUPPORT_5M) || defined(CONFIG_CAMERA_SUPPORT_8M)
-	{"picture-size-values", "2048x1536,1600x1200,1280x960,640x480"},
-#else
-	{"picture-size-values", "1600x1200,1280x960,640x480"},
-#endif
-         {"picture-size", "640x480"},
+    {"whitebalance-values",
+     "auto,incandescent,fluorescent,daylight,cloudy-daylight"},
+    {"whitebalance", "auto"},
+/*	{"picture-size-values", "2048x1536,1600x1200,1280x960,640x480"},*/
+	{"picture-size-values", "1280x960,640x480"},
+    {"picture-size", "640x480"},
 	{"preview-size-values",
 	 "640x480,352x288,320x240,176x144"},
 	 {"preview-size", "640x480"},
