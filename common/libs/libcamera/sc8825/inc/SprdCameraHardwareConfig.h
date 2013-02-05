@@ -133,6 +133,13 @@ typedef enum
     CAMERA_FLASH_MODE_MAX
 } camera_flash_mode_type;
 
+typedef enum
+{
+    CAMERA_RECORDING_FALSE = 0,
+    CAMERA_RECORDING_TRUE = 1,
+    CAMERA_RECORDING_MAX
+} camera_recording_hint_type;
+
 struct str_map {
         const char *const desc;
         int val;
@@ -253,6 +260,11 @@ const struct str_map exposure_compensation_map[] = {
         { NULL, 0 }
    };
 
+const struct str_map recording_hint_map[] = {
+    { "false",  CAMERA_RECORDING_FALSE},
+    { "true",   CAMERA_RECORDING_TRUE},
+    { NULL, 0 }
+};
 
 struct config_element{
 	const char *const key;

@@ -429,6 +429,7 @@ int camera_set_video_mode(uint32_t mode, uint32_t *skip_mode, uint32_t *skip_num
 	} else {
 		*skip_mode = IMG_SKIP_HW;
 		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		CMR_LOGI("SENSOR_IOCTL_VIDEO_MODE %d", mode);
 		ret = Sensor_Ioctl(SENSOR_IOCTL_VIDEO_MODE, mode);
 	}
 
@@ -710,6 +711,7 @@ int camera_set_ctrl(camera_parm_type id,
 		&& (CAMERA_PARM_ISO != id)
 		&& (CAMERA_PARM_SENSOR_ROTATION != id)
 		&& (CAMERA_PARM_ORIENTATION != id)
+		&& (CAMERA_PARM_PREVIEW_MODE != id)
 		&& (CAMERA_PARM_THUMBCOMP != id)
 		&& (CAMERA_PARM_JPEGCOMP != id)) {
 		return ret;
@@ -747,7 +749,8 @@ int camera_set_ctrl(camera_parm_type id,
 		cxt->cap_rot = 0;//(uint32_t)camera_get_rot_angle(parm);*/
 		cxt->jpeg_cxt.set_encode_rotation = parm;
 		break;
-		
+
+
 	case CAMERA_PARM_SENSOR_ROTATION: /* 0, 90, 180, 270 degrees */
 		if (CMR_PREVIEW == cxt->camera_status) {
 			if (before_set) {
@@ -968,8 +971,13 @@ int camera_set_ctrl(camera_parm_type id,
 		break;
 
 	case CAMERA_PARM_PREVIEW_MODE:   /* Use camera_preview_mode_type */
+		CMR_LOGV("parm=%d, cxt->cmr_set.video_mode = %d \n", parm, cxt->cmr_set.video_mode);
 		if (parm != cxt->cmr_set.video_mode) {
+
+			CMR_LOGV("cxt->camera_status = %d \n", cxt->camera_status);
+
 			if (CMR_PREVIEW == cxt->camera_status) {
+
 				if (before_set) {
 					ret = (*before_set)(RESTART_LIGHTLY);
 					CMR_RTN_IF_ERR(ret);

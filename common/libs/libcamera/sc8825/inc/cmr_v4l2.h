@@ -23,7 +23,7 @@ extern "C"
 
 #include "cmr_common.h"
 
-#define V4L2_BUF_MAX                   4
+#define V4L2_BUF_MAX                   8
 
 enum v4l2_sensor_format {
 	V4L2_SENSOR_FORMAT_YUV = 0,

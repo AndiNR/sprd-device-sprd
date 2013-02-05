@@ -137,7 +137,7 @@ private:
        for preview and raw, and need to be updated when libqcamera
        changes.
     */
-    static const int kPreviewBufferCount = 4;
+    static const int kPreviewBufferCount = 8;
 	static const int kPreviewRotBufferCount = 4;
     static const int kRawBufferCount = 1;
     static const int kJpegBufferCount = 1;

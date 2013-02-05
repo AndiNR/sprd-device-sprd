@@ -2393,6 +2393,13 @@ static uint32_t s_focus_zone[25];
                         mParameters.get("iso"),
                         CAMERA_ISO_AUTO));
 
+#if 0
+	int recordin_hit = lookup(recording_hint_map, mParameters.get("recording-hint"), CAMERA_RECORDING_MAX);
+	ALOGV("recordin_hit = %d \n", recordin_hit);
+	if(CAMERA_RECORDING_MAX != recordin_hit)
+		SET_PARM(CAMERA_PARM_PREVIEW_MODE, recordin_hit);
+#endif
+
 #ifndef CONFIG_CAMERA_788
     if (g_camera_id == 0) {
 	if(0xFFFFFFFF == (unsigned int)lookupvalue(flash_mode_map,
