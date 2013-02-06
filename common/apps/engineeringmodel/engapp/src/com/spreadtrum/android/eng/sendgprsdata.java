@@ -105,9 +105,15 @@ public class sendgprsdata extends Activity {
 
 				Log.e(LOG_TAG, "engopen sockid=" + sockid);
 				if(bHasContent){
-				str=String.format("%d,%d,%d,%d,%s", msg.what,3,100,1,strInput);
+    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+                //str=String.format("%d,%d,%d,%d,%s", msg.what,3,100,1,strInput);
+                str=new StringBuilder().append(msg.what).append(",").append(3).append(",")
+                    .append(100).append(",").append(1).append(",").append(strInput).toString();
 				}else{
-				str=String.format("%d,%d,%d", msg.what,1,mInt01);
+                //str=String.format("%d,%d,%d", msg.what,1,mInt01);
+                str=new StringBuilder().append(msg.what).append(",").append(1).append(",")
+                    .append(mInt01).toString();
+    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 				}
 				try {
 				outputBufferStream.writeBytes(str);

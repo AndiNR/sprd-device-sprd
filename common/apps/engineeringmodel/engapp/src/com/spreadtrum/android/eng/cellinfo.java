@@ -57,8 +57,11 @@ private class EventHandler extends Handler
 			    DataOutputStream outputBufferStream = new DataOutputStream(outputBuffer);
 
 			    Log.e(LOG_TAG, "engopen sockid=" + sockid);
-			    String strtemp = new String("?");	
-			    str=String.format("%d,%s", msg.what,strtemp);
+			    String strtemp = new String("?");
+    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+                //str=String.format("%d,%s", msg.what,strtemp);
+                str=new StringBuilder().append(msg.what).append(",").append(strtemp).toString();
+     /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 			    try {
 			    	//outputBufferStream.writeBytes("pcclient");
 			    	outputBufferStream.writeBytes(str);

@@ -334,8 +334,11 @@ public class DebugParam extends PreferenceActivity {
         //Sim1
         outputBuffer = new ByteArrayOutputStream();
         outputBufferStream = new DataOutputStream(outputBuffer);
-
-        mATline =String.format("%d,%d,%d", engconstents.ENG_AT_SELECT_BAND, 1,bands);
+        /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+        //mATline =String.format("%d,%d,%d", engconstents.ENG_AT_SELECT_BAND, 1,bands);
+        mATline = new StringBuilder().append(engconstents.ENG_AT_SELECT_BAND).append(",").
+                              append(1).append(",").append(bands).toString();
+        /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 
         try {
             outputBufferStream.writeBytes(mATline);
@@ -361,8 +364,11 @@ public class DebugParam extends PreferenceActivity {
     private int getSelectedBand() {
         outputBuffer = new ByteArrayOutputStream();
         outputBufferStream = new DataOutputStream(outputBuffer);
-
-        mATline =String.format("%d,%d", engconstents.ENG_AT_CURRENT_BAND, 0);
+        /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+//        mATline =String.format("%d,%d", engconstents.ENG_AT_CURRENT_BAND, 0);
+        mATline = new StringBuilder().append(engconstents.ENG_AT_CURRENT_BAND).append(",")
+                              .append(0).toString();
+        /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 
         try {
             outputBufferStream.writeBytes(mATline);
@@ -391,8 +397,11 @@ public class DebugParam extends PreferenceActivity {
     private int getAssertMode() {
         outputBuffer = new ByteArrayOutputStream();
         outputBufferStream = new DataOutputStream(outputBuffer);
-
-        mATline =String.format("%d,%d", engconstents.ENG_AT_GET_ASSERT_MODE, 0);
+        /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+//        mATline =String.format("%d,%d", engconstents.ENG_AT_GET_ASSERT_MODE, 0);
+        mATline = new StringBuilder().append(engconstents.ENG_AT_GET_ASSERT_MODE).append(",")
+        .append(0).toString();
+        /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 
         try {
             outputBufferStream.writeBytes(mATline);
@@ -420,8 +429,11 @@ public class DebugParam extends PreferenceActivity {
 
         outputBuffer = new ByteArrayOutputStream();
         outputBufferStream = new DataOutputStream(outputBuffer);
-
-        mATline =String.format("%d,%d,%d", engconstents.ENG_AT_SET_ASSERT_MODE, 1,mode);
+        /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+//        mATline =String.format("%d,%d,%d", engconstents.ENG_AT_SET_ASSERT_MODE, 1,mode);
+        mATline = new StringBuilder().append(engconstents.ENG_AT_SET_ASSERT_MODE).append(",")
+        .append(1).append(",").append(mode).toString();
+        /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
         System.out.println("onPreferenceChange At Line is " + mATline);
         try {
             outputBufferStream.writeBytes(mATline);
@@ -447,8 +459,11 @@ public class DebugParam extends PreferenceActivity {
     private void setManualAssert() {
         outputBuffer = new ByteArrayOutputStream();
         outputBufferStream = new DataOutputStream(outputBuffer);
-
-        mATline =String.format("%d,%d", engconstents.ENG_AT_SET_MANUAL_ASSERT, 0);
+        /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+//        mATline =String.format("%d,%d", engconstents.ENG_AT_SET_MANUAL_ASSERT, 0);
+        mATline = new StringBuilder().append(engconstents.ENG_AT_SET_MANUAL_ASSERT)
+                  .append(",").append(0).toString();
+        /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 
         try {
             outputBufferStream.writeBytes(mATline);

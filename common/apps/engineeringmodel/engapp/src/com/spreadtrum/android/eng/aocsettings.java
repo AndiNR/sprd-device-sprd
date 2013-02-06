@@ -85,10 +85,16 @@ implements Preference.OnPreferenceChangeListener{
 				case engconstents.ENG_AT_CAOC:
 				case engconstents.ENG_AT_CAOCD:
 				case engconstents.ENG_AT_CAOCQ:
-					outputBufferStream.writeBytes(String.format("%d,%d",msg.what, 0));
+    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+                    //outputBufferStream.writeBytes(String.format("%d,%d",msg.what, 0));
+                    outputBufferStream.writeBytes(new StringBuilder().append(msg.what)
+                            .append(",").append(0).toString());
 					break;
 				case engconstents.ENG_AT_CAMM:
-					outputBufferStream.writeBytes(String.format("%d,%d,%s,%s",msg.what, 2, strInput, PIN2));
+                    //outputBufferStream.writeBytes(String.format("%d,%d,%s,%s",msg.what, 2, strInput, PIN2));
+                    outputBufferStream.writeBytes(new StringBuilder().append(msg.what)
+                            .append(",").append(2).append(",").append(strInput).append(",").append(PIN2).toString());
+     /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 					break;
 				default:return;
 				}

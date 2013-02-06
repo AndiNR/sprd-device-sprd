@@ -50,8 +50,10 @@ public class RFMaxPower extends Activity {
 			ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
 			DataOutputStream outputBufferStream = new DataOutputStream(
 					outputBuffer);
-
-			str = String.format("%d,%d", code, 0);
+            /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+            //str = String.format("%d,%d", code, 0);
+            str = new StringBuilder().append(code).append(",").append(0).toString();
+            /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 			try {
 				outputBufferStream.writeBytes(str);
 			} catch (IOException e) {

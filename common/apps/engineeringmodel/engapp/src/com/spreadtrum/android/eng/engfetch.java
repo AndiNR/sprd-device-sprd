@@ -64,8 +64,10 @@ public class engfetch  {
         ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
         DataOutputStream outputBufferStream = new DataOutputStream(outputBuffer);
 
-
-        String str=String.format("CMD:%s",cmd);
+        /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+        //String str=String.format("CMD:%s",cmd);
+        String str = new StringBuilder().append("CMD:").append(cmd).toString();
+        /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
         try {
             outputBufferStream.writeBytes(str);
         } catch (IOException e) {

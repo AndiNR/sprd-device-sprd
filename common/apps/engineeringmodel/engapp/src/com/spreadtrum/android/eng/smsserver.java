@@ -62,7 +62,11 @@ implements Preference.OnPreferenceChangeListener{
 
 				Log.e(LOG_TAG, "engopen sockid=" + sockid);
 				try {
-				outputBufferStream.writeBytes(String.format("%d,%d,%d", msg.what,1,valueofsms));
+             /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+            //    outputBufferStream.writeBytes(String.format("%d,%d,%d", msg.what,1,valueofsms));
+                outputBufferStream.writeBytes(new StringBuilder().append(msg.what).append(",")
+                        .append(1).append(",").append(valueofsms).toString());
+                /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 				} catch (IOException e) {
 				Log.e(LOG_TAG, "writebytes error");
 				return;

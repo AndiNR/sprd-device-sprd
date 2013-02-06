@@ -297,7 +297,11 @@ public class uplmnsettings extends Activity {
 			ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
 			DataOutputStream outputBufferStream = new DataOutputStream(outputBuffer);
 			if(msg.what == engconstents.ENG_AT_GETUPLMN){
-				str=String.format("%d,%d,%d", msg.what, 1, msg.arg1);
+    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+                //str=String.format("%d,%d,%d", msg.what, 1, msg.arg1);
+                str=new StringBuilder().append(msg.what).append(",").append(1)
+                    .append(",").append(msg.arg1).toString();
+    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 				try {
 				outputBufferStream.writeBytes(str);
 				} catch (IOException e) {
@@ -333,7 +337,10 @@ public class uplmnsettings extends Activity {
 				}
 		}
 		else if(msg.what == engconstents.ENG_AT_GETUPLMNLEN){
-			str=String.format("%d,%d", msg.what,0);
+    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+            //str=String.format("%d,%d", msg.what,0);
+            str=new StringBuilder().append(msg.what).append(",").append(0).toString();
+    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 			try {
 				outputBufferStream.writeBytes(str);
 			} catch (IOException e) {
@@ -375,18 +382,23 @@ public class uplmnsettings extends Activity {
 
 		}
 			else if(msg.what == engconstents.ENG_AT_SETUPLMN){
-				str=String.format("%d,%d,%d,%d,%d,%d,%d,%s,%s",
-						msg.what,
-						7,
-						214,
-						28512,
-						0,
-						0,
-						lenth_get< at_read_lenth? lenth_get:at_read_lenth,
-						getPacketData(),
-						"3F007FFF"
-						);
-
+    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+//              str=String.format("%d,%d,%d,%d,%d,%d,%d,%s,%s",
+//                      msg.what,
+//                      7,
+//                      214,
+//                      28512,
+//                      0,
+//                      0,
+//                      lenth_get< at_read_lenth? lenth_get:at_read_lenth,
+//                      getPacketData(),
+//                      "3F007FFF"
+//                      );
+                str=new StringBuilder().append(msg.what).append(",").append(7).append(",")
+                    .append(214).append(",").append(28512).append(",").append(0).append(",")
+                    .append(0).append(",").append(lenth_get< at_read_lenth? lenth_get:at_read_lenth)
+                    .append(",").append(getPacketData()).append(",").append("3F007FFF").toString();
+    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 					Log.e(LOG_TAG, "setuplmn"+str);
 				try {
 					outputBufferStream.writeBytes(str);

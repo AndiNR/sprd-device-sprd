@@ -58,7 +58,11 @@ implements Preference.OnPreferenceChangeListener{
 				DataOutputStream outputBufferStream = new DataOutputStream(outputBuffer);
 
 				Log.e(LOG_TAG, "engopen sockid=" + sockid);
-				str=String.format("%d,%d,%d,%d", msg.what,2,active,1);
+/*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+                //str=String.format("%d,%d,%d,%d", msg.what,2,active,1);
+                str = new StringBuilder().append(msg.what).append(",").append(2).append(",")
+                      .append(active).append(",").append(1).toString();
+/*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 				Log.e(LOG_TAG, "str=" + str);
 				try {
 				outputBufferStream.writeBytes(str);
