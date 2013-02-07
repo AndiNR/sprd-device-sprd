@@ -86,6 +86,12 @@ service rawdatad /bin/rawdatad
     user root
     oneshot
 
+#start nvitem daemon.
+service nvitem /system/bin/nvitemd
+    class main
+    user root
+    oneshot
+
 #telephony service
 service sprd_monitor /system/bin/sprd_monitor
     class main
