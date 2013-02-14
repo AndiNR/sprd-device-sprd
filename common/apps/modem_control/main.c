@@ -14,7 +14,7 @@
 #include "cutils/properties.h" 	      
 #include "packet.h"
 
-#define	MODEM_SOCKET_NAME	"modemstate"
+#define	MODEM_SOCKET_NAME	"modemd"
 #define	MAX_CLIENT_NUM		10
 #define	MODEM_PATH		"/dev/vbpipe2"
 #define	MODEM_STATE_PATH	"/sys/devices/platform/modem_interface/state"
@@ -133,7 +133,7 @@ static void *modemd_listenaccept_thread(void *par)
 		client_fd[i]=-1;
 	
 	sfd = socket_local_server(MODEM_SOCKET_NAME, 
-		ANDROID_SOCKET_NAMESPACE_RESERVED, SOCK_STREAM);
+		0,/*ANDROID_SOCKET_NAMESPACE_RESERVED,*/ SOCK_STREAM);
 	if (sfd < 0) {
 		printf("modemd_listenaccept_thread: cannot create local socket server\n");
 		exit(-1);

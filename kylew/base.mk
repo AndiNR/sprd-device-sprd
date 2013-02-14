@@ -59,7 +59,6 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
 	rawdatad \
 	charge \
-	vcharged \
 	poweroff_alarm \
 	mplayer \
 	gralloc.$(TARGET_PLATFORM) \
