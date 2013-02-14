@@ -78,7 +78,9 @@ PRODUCT_PACKAGES += \
 	tinymix \
 	sensors.$(TARGET_BOARD)  \
 	libmbbms_tel_jni.so\
-	$(MALI)
+	$(MALI) \
+	libsprdstreamrecoder \
+	libvtmanager
 
 PRODUCT_PACKAGES += \
             $(BRCM_FM) \

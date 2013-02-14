@@ -73,7 +73,9 @@ PRODUCT_PACKAGES += \
 	libvbeffect \
         sensors.$(TARGET_PLATFORM) \
         $(INVENSENSE) \
-	$(MALI)
+	$(MALI) \
+	libsprdstreamrecoder \
+	libvtmanager
 
 PRODUCT_PACKAGES += \
             $(BRCM_FM) \

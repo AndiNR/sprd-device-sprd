@@ -71,7 +71,9 @@ PRODUCT_PACKAGES += \
 	$(MALI)\
 	modem_control \
         nvitemd   \
-    mcom_monitor
+	mcom_monitor \
+	libsprdstreamrecoder \
+	libvtmanager
 
 PRODUCT_PACKAGES += \
             $(BRCM_FM) \

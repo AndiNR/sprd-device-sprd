@@ -71,7 +71,9 @@ PRODUCT_PACKAGES += \
 	sensors.$(TARGET_BOARD) \
 	libmbbms_tel_jni.so \
 	$(MALI) \
-    zram.sh
+	zram.sh \
+	libsprdstreamrecoder \
+	libvtmanager
 
 PRODUCT_PACKAGES += \
             $(BRCM_FM) \
