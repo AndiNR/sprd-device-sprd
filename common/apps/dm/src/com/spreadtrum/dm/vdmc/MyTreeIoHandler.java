@@ -1579,9 +1579,20 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
 			        }
 				else
 				 Settings.System.putString(resolver, "CMCC_HOMEPAGE", str);
+				{//for compatible with old version dm
+			            Intent i= new Intent("com.spreadtrum.dm.waphomepage");
+			            i.putExtra("homepage",str);
+			            _context.sendBroadcast(i);
+				}
 				break;
 			case  BROWSER_HOMEPAGE_IO_HANDLER:
 				 Settings.System.putString(resolver, "BROWSER_HOMEPAGE", str);
+				 { 
+				 //
+			            Intent i= new Intent("com.spreadtrum.dm.waphomepage");
+			            i.putExtra("homepage",str);
+			            _context.sendBroadcast(i);
+				 }
 				break;
 				
 			case WAP_PROXY_IO_HANDLER:
@@ -1595,6 +1606,7 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
 			default:
 				break;
 		}		 
+
 		Log.d(TAG, "writeWapParam: NEW type = " + type + ", value = " + str);
 
 		return;
