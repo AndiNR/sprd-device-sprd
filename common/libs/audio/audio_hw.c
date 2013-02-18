@@ -1332,7 +1332,6 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     char *str;
     char value[32];
     int ret, val = 0;
-    bool do_standby = false;
 
     BLUE_TRACE("[in_set_parameters], kvpairs=%s devices:0x%x mode:%d ", kvpairs,adev->devices,adev->mode);
 
@@ -1347,7 +1346,6 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
         /* no audio source uses val == 0 */
         if ((in->source != val) && (val != 0)) {
             in->source = val;
-            do_standby = true;
         }
     }
 
@@ -1356,12 +1354,12 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
         val = atoi(value);
         if ((in->device != val) && (val != 0)) {
             in->device = val;
-            do_standby = true;
+            adev->devices &= ~AUDIO_DEVICE_IN_ALL;
+            adev->devices |= in->device;
+            select_devices_signal(adev);
         }
     }
 
-    if (do_standby)
-        do_input_standby(in);
     pthread_mutex_unlock(&in->lock);
     pthread_mutex_unlock(&adev->lock);
 
