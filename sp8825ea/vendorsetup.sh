@@ -20,3 +20,4 @@ add_lunch_combo sp8825eacmccspecAplus-userdebug
 
 add_lunch_combo sp8825eanativebase-userdebug
 add_lunch_combo sp8825eanativeplus-userdebug
+add_lunch_combo sp8825eacmccspecAplusUUI-userdebug
