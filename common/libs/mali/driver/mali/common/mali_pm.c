@@ -541,12 +541,12 @@ void mali_pm_os_resume(void)
 
 void mali_pm_runtime_suspend(void)
 {
-	MALI_DEBUG_PRINT(2, ("Mali PM: OS runtime suspended\n"));
+	MALI_DEBUG_PRINT(3, ("Mali PM: OS runtime suspended\n"));
 	mali_platform_power_mode_change(MALI_POWER_MODE_LIGHT_SLEEP);
 }
 
 void mali_pm_runtime_resume(void)
 {
-	MALI_DEBUG_PRINT(2, ("Mali PM: OS runtime resumed\n"));
+	MALI_DEBUG_PRINT(3, ("Mali PM: OS runtime resumed\n"));
 	mali_platform_power_mode_change(MALI_POWER_MODE_ON);
 }
