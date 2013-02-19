@@ -20,4 +20,4 @@ PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_sp8825eacmccspecAplus.mk
 
 PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_sp8825eanativebase.mk
 PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_sp8825eanativeplus.mk
-PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_sp8825eacmccspecAplusUUI.mk
+PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_sp8825eacmccspecAplus_UUI.mk
