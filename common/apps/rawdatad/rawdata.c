@@ -207,6 +207,10 @@ static void wirte_productinfo(int partition, int block)
 
 	fclose(fp);
 
+	if(block == 0){
+		if(chmod(PRODUCT_INFO[block],0774)<0)
+			DBG("chmod productinfo.bin error");
+	}
 	DBG("%s: write %s successfully",__FUNCTION__, PRODUCT_INFO[block]);
 }
 
