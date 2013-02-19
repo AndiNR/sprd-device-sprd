@@ -45,14 +45,12 @@ _mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
 	{
 	case MALI_POWER_MODE_ON:
 		sprd_greg_set_bits(REG_TYPE_AHB_GLOBAL, BIT(21), AHB_CTL0);
-		udelay(100);
-		pr_debug("mali: clock up done\n");
 		break;
 	case MALI_POWER_MODE_LIGHT_SLEEP:
 		sprd_greg_clear_bits(REG_TYPE_AHB_GLOBAL, BIT(21), AHB_CTL0);
-		pr_debug("mali: clock down done\n");
 		break;
 	case MALI_POWER_MODE_DEEP_SLEEP:
+		sprd_greg_clear_bits(REG_TYPE_AHB_GLOBAL, BIT(21), AHB_CTL0);
 		break;
 	};
 	MALI_SUCCESS;
