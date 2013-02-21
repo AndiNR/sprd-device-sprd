@@ -154,8 +154,20 @@ service ril-daemon1 /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -
     user root
     group radio cache inet misc audio sdcard_rw log
 
+service ril-daemon2 /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -- -n 2
+    class main
+    socket rild2 stream 660 root radio
+    socket rild-debug2 stream 660 radio system
+    disabled
+    user root
+    group radio cache inet misc audio sdcard_rw log
+
 on property:persist.msms.phone_count=2
     start ril-daemon1
+
+on property:persist.msms.phone_count=3
+    start ril-daemon1
+    start ril-daemon2
 
 #nvitemd
 service nvitemd /system/bin/nvitemd
