@@ -114,6 +114,7 @@ void spdm_task_need_confirm_msg(char *msg, int msglen, int timeout)
 	req_ptr->buf = malloc(msglen+1);
 	if (req_ptr->buf == NULL)
 		{
+		free(req_ptr);
 		spdm_print("spdm_task_need_confirm_msg malloc2 Failed \n");
 		return;
 		}

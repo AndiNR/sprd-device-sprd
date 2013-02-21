@@ -138,7 +138,7 @@ LOCAL BOOLEAN MMIDM_BuildISource(DMXML_TAG_SOURCE_T source_info, char* source_bu
 //  Modify:
 //  Note:
 /*****************************************************************************/
-LOCAL BOOLEAN MMIDM_BuildIMeta(DMXML_TAG_META_T meta_info, char* meta_buf, uint16 buf_size);
+LOCAL BOOLEAN MMIDM_BuildIMeta(DMXML_TAG_META_T *meta_info, char* meta_buf, uint16 buf_size);
 /*****************************************************************************/
 //  Description : 根据item节点内容产生item部分的xml
 //  Global resource dependence :
@@ -146,7 +146,7 @@ LOCAL BOOLEAN MMIDM_BuildIMeta(DMXML_TAG_META_T meta_info, char* meta_buf, uint1
 //  Modify:
 //  Note:
 /*****************************************************************************/
-LOCAL BOOLEAN MMIDM_BuildItem(DMXML_TAG_ITEM_T item_info, char* item_buf, uint16 buf_size);
+LOCAL BOOLEAN MMIDM_BuildItem(DMXML_TAG_ITEM_T *item_info, char* item_buf, uint16 buf_size);
 /*****************************************************************************/
 //  Description : 根据replace节点内容产生replace部分的xml
 //  Global resource dependence :
@@ -162,7 +162,7 @@ LOCAL BOOLEAN MMIDM_BuildReplace(char* replace_buf, uint16 buf_size);
 //  Modify:
 //  Note:
 /*****************************************************************************/
-LOCAL BOOLEAN MMIDM_BuildIChal(DMXML_TAG_CHAL_T chal_info, char* chal_buf);
+LOCAL BOOLEAN MMIDM_BuildIChal(DMXML_TAG_CHAL_T *chal_info, char* chal_buf);
 /*****************************************************************************/
 //  Description : 根据status节点内容产生status部分的xml
 //  Global resource dependence :
@@ -315,6 +315,7 @@ LOCAL void MMIDM_ReleaseXMLData(void);
 //  Note: 解析接受到的xml数据
 /*****************************************************************************/
 LOCAL void MMIDM_ParseXMLData(char* xmlbuf);
+LOCAL void MMIDM_GetDmParaInfo(MMIDM_DEBUG_TYPE_E type,char* string,uint32 len);
 
 
 void MMIDM_IU32toa(uint32 value, char *string, uint32 radix);
@@ -664,6 +665,11 @@ LOCAL void MMIDM_GetCreddata(char* outbuf, uint16 buf_size)
          len = strlen(s_g_nonce);
     }
     len1 = DM_Base64_decode(s_g_nonce, len,nonce_buf,len1); /*lint !e718 !e746 */
+	if (len1 == -1)  //2013-2-20@hong
+		{
+		  SCI_TRACE_LOW("MMIDM_GetCreddata base64 decode error! ");
+		return;
+		}   //2013-2-20@hong
     sprintf(outbuf, "%s%s", buf,":");
     SCI_MEMCPY(outbuf+strlen(outbuf), nonce_buf,len1);
     SCI_TRACE_LOW("MMIDM_GetCreddata  %s",outbuf);
@@ -1270,7 +1276,7 @@ LOCAL BOOLEAN MMIDM_BuildISource(DMXML_TAG_SOURCE_T source_info, char* source_bu
 //  Modify:
 //  Note:
 /*****************************************************************************/
-LOCAL BOOLEAN MMIDM_BuildIMeta(DMXML_TAG_META_T meta_info, char* meta_buf, uint16 buf_size)
+LOCAL BOOLEAN MMIDM_BuildIMeta(DMXML_TAG_META_T *meta_info, char* meta_buf, uint16 buf_size)
 {
     char* buf=PNULL;
     char* buf2=PNULL;
@@ -1304,19 +1310,19 @@ LOCAL BOOLEAN MMIDM_BuildIMeta(DMXML_TAG_META_T meta_info, char* meta_buf, uint1
         }
         SCI_MEMSET(buf2, 0, MAX_TAG_BUF_SIZE);
 
-        if(meta_info.format.tagContent)
+        if(meta_info->format.tagContent)
         {
-            MMIDM_CreateTag(&(meta_info.format), buf2, MAX_TAG_BUF_SIZE, TRUE);
+            MMIDM_CreateTag(&(meta_info->format), buf2, MAX_TAG_BUF_SIZE, TRUE);
             strcat(buf, buf2);
         }
-        if(meta_info.type.tagContent)
+        if(meta_info->type.tagContent)
         {
-            MMIDM_CreateTag(&(meta_info.type), buf2, MAX_TAG_BUF_SIZE, TRUE);
+            MMIDM_CreateTag(&(meta_info->type), buf2, MAX_TAG_BUF_SIZE, TRUE);
             strcat(buf, buf2);
         }
-        if(meta_info.nextnonce.tagContent)
+        if(meta_info->nextnonce.tagContent)
         {
-            MMIDM_CreateTag(&(meta_info.nextnonce), buf2, MAX_TAG_BUF_SIZE, TRUE);
+            MMIDM_CreateTag(&(meta_info->nextnonce), buf2, MAX_TAG_BUF_SIZE, TRUE);
             strcat(buf, buf2);
         }
         if(strlen(buf))
@@ -1380,7 +1386,7 @@ LOCAL BOOLEAN MMIDM_BuildIMeta(DMXML_TAG_META_T meta_info, char* meta_buf, uint1
 //  Modify:
 //  Note:
 /*****************************************************************************/
-LOCAL BOOLEAN MMIDM_BuildItem(DMXML_TAG_ITEM_T item_info, char* item_buf, uint16 buf_size)
+LOCAL BOOLEAN MMIDM_BuildItem(DMXML_TAG_ITEM_T *item_info, char* item_buf, uint16 buf_size)
 {
     char* buf=PNULL;
     char* buf2 =PNULL;
@@ -1417,8 +1423,8 @@ LOCAL BOOLEAN MMIDM_BuildItem(DMXML_TAG_ITEM_T item_info, char* item_buf, uint16
         SCI_MEMSET(buf2, 0, MAX_TAG_BUF_SIZE);
 
 
-        MMIDM_BuildISource(item_info.source, buf);
-        MMIDM_BuildIMeta(item_info.meta, buf2, MAX_TAG_BUF_SIZE);
+        MMIDM_BuildISource(item_info->source, buf);
+        MMIDM_BuildIMeta(&(item_info->meta), buf2, MAX_TAG_BUF_SIZE);
         if(MAX_TAG_BUF_SIZE> strlen(buf)+strlen(buf2))
         {
             strcat(buf, buf2);
@@ -1429,9 +1435,9 @@ LOCAL BOOLEAN MMIDM_BuildItem(DMXML_TAG_ITEM_T item_info, char* item_buf, uint16
 
         }
 
-        if(item_info.data.tagContent)
+        if(item_info->data.tagContent)
         {
-            MMIDM_CreateTag(&(item_info.data), buf2, MAX_TAG_BUF_SIZE, TRUE);
+            MMIDM_CreateTag(&(item_info->data), buf2, MAX_TAG_BUF_SIZE, TRUE);
             if(MAX_TAG_BUF_SIZE> strlen(buf)+strlen(buf2))
             {
                 strcat(buf, buf2);
@@ -1565,7 +1571,7 @@ LOCAL BOOLEAN MMIDM_BuildReplace(char* replace_buf, uint16 buf_size)
             }
             for(item_tag = cur_tag->item_ptr; item_tag!= PNULL; item_tag=item_tag->next)
             {
-                MMIDM_BuildItem(*item_tag, buf2, MAX_TAG_BUF_SIZE);
+                MMIDM_BuildItem(item_tag, buf2, MAX_TAG_BUF_SIZE);
                 if(MAX_XML_BUF_SIZE > (strlen(buf)+strlen(buf2)))
                 {
                     strcat(buf, buf2);
@@ -1599,7 +1605,17 @@ LOCAL BOOLEAN MMIDM_BuildReplace(char* replace_buf, uint16 buf_size)
                 SCI_STRCPY(ptr->tagContent, buf);
                 MMIDM_CreateTag(ptr, buf, MAX_XML_BUF_SIZE, TRUE);
                 strcat(replace_buf, buf);
+		    if(PNULL != ptr)  //2013-2-20@hong
+		    {
+		        if(PNULL != ptr->tagContent)
+		        {
+		            SCI_FREE(ptr->tagContent);
+		            ptr->tagContent = PNULL;
+		        }
 
+		        SCI_FREE(ptr);
+		        ptr = PNULL;
+		    }  //2013-2-20@hong
             }
         }
 
@@ -1659,7 +1675,7 @@ LOCAL BOOLEAN MMIDM_BuildReplace(char* replace_buf, uint16 buf_size)
 //  Note:
 /*****************************************************************************/
 
-LOCAL BOOLEAN MMIDM_BuildIChal(DMXML_TAG_CHAL_T chal_info, char* chal_buf)
+LOCAL BOOLEAN MMIDM_BuildIChal(DMXML_TAG_CHAL_T *chal_info, char* chal_buf)
 {
     char* buf=PNULL;
     DMXML_TAG_T * ptr = PNULL;
@@ -1678,7 +1694,7 @@ LOCAL BOOLEAN MMIDM_BuildIChal(DMXML_TAG_CHAL_T chal_info, char* chal_buf)
         SCI_MEMSET(buf, 0, MAX_TAG_BUF_SIZE);
 
 
-        MMIDM_BuildIMeta(chal_info.meta, buf, MAX_TAG_BUF_SIZE);
+        MMIDM_BuildIMeta(&(chal_info->meta), buf, MAX_TAG_BUF_SIZE);
 
         if(strlen(buf))
         {
@@ -1871,7 +1887,7 @@ LOCAL BOOLEAN MMIDM_BuildStatus(char* status_buf, uint16 buf_size)
 #endif
 
 	     SCI_MEMSET(buf2, 0, MAX_TAG_BUF_SIZE);
-            MMIDM_BuildIChal(cur_tag->chal, buf2);
+            MMIDM_BuildIChal(&(cur_tag->chal), buf2);
 	     SCI_TRACE_LOW("MMIDM_BuildStatus MMIDM_BuildIChal  %s",buf2);
             strcat(buf, buf2);
             if(cur_tag->data.tagContent)
@@ -1913,6 +1929,17 @@ LOCAL BOOLEAN MMIDM_BuildStatus(char* status_buf, uint16 buf_size)
                 SCI_STRCPY(ptr->tagContent, buf);
                 MMIDM_CreateTag(ptr, buf, MAX_XML_BUF_SIZE, TRUE);
                 strcat(status_buf, buf);
+		    if(PNULL != ptr)  //2013-2-20@hong
+		    {
+		        if(PNULL != ptr->tagContent)
+		        {
+		            SCI_FREE(ptr->tagContent);
+		            ptr->tagContent = PNULL;
+		        }
+
+		        SCI_FREE(ptr);
+		        ptr = PNULL;
+		    }		//2013-2-20@hong		
 		   SCI_TRACE_LOW("MMIDM_BuildStatus status_buf  %s",status_buf);
             }
         }
@@ -2059,7 +2086,7 @@ LOCAL BOOLEAN MMIDM_BuildResult(char* result_buf, uint16 buf_size)
 
             for(item_tag = cur_tag->item_ptr; item_tag!= PNULL; item_tag=item_tag->next)
             {
-                MMIDM_BuildItem(*item_tag, buf2, MAX_TAG_BUF_SIZE);
+                MMIDM_BuildItem(item_tag, buf2, MAX_TAG_BUF_SIZE);
                 if(MAX_XML_BUF_SIZE > (strlen(buf)+strlen(buf2)))
                 {
                     strcat(buf, buf2);
@@ -2110,6 +2137,7 @@ LOCAL BOOLEAN MMIDM_BuildResult(char* result_buf, uint16 buf_size)
                 ptr->tagContent = SCI_ALLOCA(strlen(buf)+1);
                 if(PNULL==  ptr->tagContent)
                 {
+                    SCI_FREE(ptr);
                     SCI_TRACE_LOW("MMIDM_BuildResult PNULL==  ptr->tagContent");
                     ret = FALSE;
                     break;
@@ -2207,7 +2235,7 @@ LOCAL BOOLEAN MMIDM_CodecXmlBody(char* bodybuf, uint16 buf_size)
 
 
 
-        if(s_g_step == STEP_GETNONCE || s_g_step == STEP_GETNONCE)
+        if(s_g_step == STEP_GETNONCE )
         {
             alert_tag = SCI_ALLOCA(sizeof(DMXML_TAG_ALERT_T)) ;
             if(PNULL== alert_tag)
@@ -4481,7 +4509,7 @@ LOCAL void MMIDM_releaseStatusContent(DMXML_TAG_STATUS_T* status_tag)
             SCI_FREE(status_tag->cmd.tagContent);
             status_tag->cmd.tagContent == PNULL;
         }
-        if(PNULL != status_tag->cmd.tagContent)
+        if(PNULL != status_tag->CmdId.tagContent)
         {
             SCI_FREE(status_tag->CmdId.tagContent);
             status_tag->CmdId.tagContent == PNULL;
