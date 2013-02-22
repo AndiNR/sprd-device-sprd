@@ -253,7 +253,7 @@ exit:
 	}
 }
 
-int camera_scaling(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
+int camera_scaling(HW_SCALE_DATA_FORMAT_E output_fmt,
 	uint32_t output_width, uint32_t output_height,
 	uint32_t output_yaddr,uint32_t output_uvaddr,
 	HW_SCALE_DATA_FORMAT_E input_fmt,uint32_t input_uv_endian,
@@ -303,7 +303,12 @@ int camera_scaling(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 		}
 		dst_img.data_end.y_endian = 1;
 		dst_img.data_end.uv_endian = 1;
-
+		int fd = open("/dev/sprd_scale", O_RDONLY);
+		if(fd < 0)
+		{
+			ALOGE("error to open dev sprd_scale");
+			goto exit;
+		}
 		ret = ioctl(fd, SCALE_IO_INPUT_SIZE, &src_img.size);
 		HWCOMPOSER_EXIT_IF_ERR(ret);
 
@@ -340,6 +345,10 @@ int camera_scaling(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 		ret = ioctl(fd, SCALE_IO_IS_DONE, &scale_frm);
 
 		exit:
+		if(fd > 0)
+		{
+			close(fd);
+		}
 		if (ret) {
 			ALOGE("camera_scaling fail. Line:%d", __LINE__);
 			ret = -1;
@@ -353,7 +362,7 @@ int camera_scaling(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	}
 }
 
-int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
+int do_scaling_and_rotaion(HW_SCALE_DATA_FORMAT_E output_fmt,
 	uint32_t output_width, uint32_t output_height,
 	uint32_t output_yaddr,uint32_t output_uvaddr,
 	HW_SCALE_DATA_FORMAT_E input_fmt,uint32_t input_uv_endian,
@@ -362,20 +371,19 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	struct sprd_rect *trim_rect, HW_ROTATION_MODE_E rotation, uint32_t tmp_addr)
 {
 	int ret = 0;
-
-	ret = camera_scaling(fd, output_fmt, output_width, output_height,
-		output_yaddr, output_uvaddr, input_fmt, input_uv_endian,
-		input_width, input_height, input_yaddr, intput_uvaddr,
-		trim_rect, rotation, tmp_addr);
-
+	ret = camera_scaling(output_fmt, output_width, output_height,
+			output_yaddr, output_uvaddr, input_fmt, input_uv_endian,
+			input_width, input_height, input_yaddr, intput_uvaddr,
+			trim_rect, rotation, tmp_addr);
 	if (ret){
 		ALOGE("do_scaling_and_rotaion: camera_scaling fail. Line:%d", __LINE__);
 		return -1;
 	}
 
 	if(HW_ROTATION_0 == rotation)
+	{
 		return 0;
-
+	}
 	ret = camera_rotation( output_fmt, rotation_degree_hw2user(rotation), output_width, output_height, tmp_addr, output_yaddr);
 
 	if (ret) {

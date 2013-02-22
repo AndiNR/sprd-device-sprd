@@ -64,7 +64,7 @@ int camera_rotation_copy_data_from_virtual(uint32_t width, uint32_t height, uint
 
 int camera_rotation(HW_ROTATION_DATA_FORMAT_E rot_format, int degree, uint32_t width, uint32_t height, uint32_t in_addr, uint32_t out_addr);
 
-int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
+int do_scaling_and_rotaion(HW_SCALE_DATA_FORMAT_E output_fmt,
 	uint32_t output_width, uint32_t output_height,
 	uint32_t output_yaddr,uint32_t output_uvaddr,
 	HW_SCALE_DATA_FORMAT_E input_fmt,uint32_t input_uv_endian,

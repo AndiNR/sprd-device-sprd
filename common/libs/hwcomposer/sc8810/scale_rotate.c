@@ -199,7 +199,7 @@ int camera_rotation(HW_ROTATION_DATA_FORMAT_E rot_format, int degree, uint32_t w
 	return ret;
 }
 
-int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
+int do_scaling_and_rotaion(HW_SCALE_DATA_FORMAT_E output_fmt,
 	uint32_t output_width, uint32_t output_height,
 	uint32_t output_yaddr,uint32_t output_uvaddr,
 	HW_SCALE_DATA_FORMAT_E input_fmt,uint32_t input_uv_endian,
@@ -217,7 +217,12 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	uint32_t slice_height = 0;
 	ISP_ENDIAN_T in_endian;
 	ISP_ENDIAN_T out_endian;
-
+	int fd = open("/dev/sprd_scale", O_RDONLY);
+	if(fd < 0)
+	{
+		ALOGE("error to open dev sprd_scale");
+		return -1;
+	}
 	//set mode
 	scale_config.id = SCALE_PATH_MODE;
 	scale_mode = SCALE_MODE_SCALE;
@@ -225,6 +230,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
                 return -1;
 	}
 
@@ -235,6 +241,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 	//set output data format
@@ -244,6 +251,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 	//set input size
@@ -254,6 +262,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 	//set output size
@@ -264,6 +273,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 	//set input size
@@ -276,6 +286,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 	//set input address
@@ -291,6 +302,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 	//set output address
@@ -303,6 +315,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 	//set input endian
@@ -313,6 +326,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 	//set output endian
@@ -323,6 +337,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;;
 	}
 
@@ -333,6 +348,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 
@@ -340,9 +356,10 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_DONE, 0))
 	{
 		ALOGE("Fail to SCALE_IOC_DONE");
+		close(fd);
 		return -1;
 	}
-
+	close(fd);
 	return 0;
 }
 

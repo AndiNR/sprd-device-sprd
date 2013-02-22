@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include <hardware/hardware.h>
 
 #include <fcntl.h>
@@ -23,15 +22,12 @@
 #include <cutils/atomic.h>
 
 #include <hardware/hwcomposer.h>
-
 #include <EGL/egl.h>
 
+#include "hwcomposer_android.h"
 /*****************************************************************************/
 
-struct hwc_context_t {
-    hwc_composer_device_t device;
-    /* our private state goes below here */
-};
+
 
 static int hwc_device_open(const struct hw_module_t* module, const char* name,
         struct hw_device_t** device);
@@ -93,13 +89,43 @@ static int hwc_set(hwc_composer_device_t *dev,
     return 0;
 }
 
+static int hwc_eventControl(struct hwc_composer_device* dev, int event, int enabled)
+{
+    struct hwc_context_t *hwc_dev = (struct hwc_context_t *) dev;
+
+    switch(event)
+    {
+    case HWC_EVENT_VSYNC:
+        if (hwc_dev->mVSyncThread != 0)
+            hwc_dev->mVSyncThread->setEnabled(enabled);
+        break;
+    default:
+        break;
+    }
+    return 0;
+}
+static hwc_methods_t hwc_device_methods = {
+    eventControl: hwc_eventControl
+};
+
 static int hwc_device_close(struct hw_device_t *dev)
 {
     struct hwc_context_t* ctx = (struct hwc_context_t*)dev;
     if (ctx) {
+        hwc_eventControl(&ctx->device, HWC_EVENT_VSYNC, 0);
+        if (ctx->mVSyncThread != NULL) {
+            ctx->mVSyncThread->requestExitAndWait();
+        }
         free(ctx);
     }
     return 0;
+}
+static void hwc_registerProcs(struct hwc_composer_device* dev,
+                                    hwc_procs_t const* procs)
+{
+    struct hwc_context_t *hwc_dev = (struct hwc_context_t *) dev;
+
+    hwc_dev->procs = (typeof(hwc_dev->procs)) procs;
 }
 
 /*****************************************************************************/
@@ -117,15 +143,18 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
 
         /* initialize the procs */
         dev->device.common.tag = HARDWARE_DEVICE_TAG;
-        dev->device.common.version = 0;
+        dev->device.common.version = HWC_DEVICE_API_VERSION_0_3;
         dev->device.common.module = const_cast<hw_module_t*>(module);
         dev->device.common.close = hwc_device_close;
 
         dev->device.prepare = hwc_prepare;
         dev->device.set = hwc_set;
-
+        dev->device.registerProcs = hwc_registerProcs;
+        dev->device.methods = &hwc_device_methods;
         *device = &dev->device.common;
+        dev->mVSyncThread = new VSyncThread(dev);
         status = 0;
     }
     return status;
 }
+

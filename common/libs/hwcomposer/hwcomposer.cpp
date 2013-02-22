@@ -20,8 +20,6 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include <pthread.h>
-#include <semaphore.h>
 
 #include <sys/ioctl.h>
 #include <sys/mman.h>
@@ -37,9 +35,8 @@
 #include "sprd_fb.h"
 #include "scale_rotate.h"
 
-#include <binder/MemoryHeapIon.h>
 #include "ion_sprd.h"
-
+#include "hwcomposer_sprd.h"
 #define SPRD_ION_DEV "/dev/ion"
 
 #define OVERLAY_BUF_NUM 2
@@ -50,63 +47,7 @@ inline unsigned int round_up_to_page_size(unsigned int x)
 
 using namespace android;
 /*****************************************************************************/
-struct sprd_img {
-    uint32_t w;
-    uint32_t h;
-    uint32_t format;
-    uint32_t y_addr;
-    uint32_t u_addr;
-    uint32_t v_addr;
-};
 
-struct hwc_context_t {
-    hwc_composer_device_t device;
-
-    hwc_procs_t *procs;
-    /* our private state goes below here */
-    int fb_layer_count;
-    int fbfd;
-    int fb_width;
-    int fb_height;
-    int pre_fb_layer_count;
-
-    //the following are for osd overlay layer
-    int osd_overlay_flag;
-    int osd_overlay_phy_addr;
-    //the following are for video overlay layer
-    int video_overlay_flag;
-    sp<MemoryHeapIon> ion_heap;
-    int overlay_phy_addr;
-    void *overlay_v_addr;
-    uint32_t overlay_buf_size;
-    int    overlay_index;
-	
-    sp<MemoryHeapIon> ion_heap2;
-    int overlay_phy_addr2;
-    void *overlay_v_addr2;
-    uint32_t overlay_buf_size2;
-    int    overlay_index2;
-    int    osd_sync_display;
-
-#ifdef SCAL_ROT_TMP_BUF
-    sp<MemoryHeapIon> ion_heap_tmp;
-    int overlay_phy_addr_tmp;
-    void *overlay_v_addr_tmp;
-    uint32_t overlay_buf_size_tmp;
-#endif
-
-    struct sprd_img src_img;
-    struct sprd_rect src_rect;//scaling&rot input
-
-    struct sprd_rect fb_rect;//fb position
-
-#ifdef _PROC_OSD_WITH_THREAD
-    pthread_t  osd_proc_thread;
-    sem_t         cmd_sem;
-    sem_t         done_sem;
-    volatile void * osd_proc_cmd;
-#endif
-};
 
 inline int MIN(int x, int y) {
     return ((x < y) ? x : y);
@@ -190,20 +131,13 @@ static int transform_video_layer(struct hwc_context_t *context, hwc_layer_t * l)
 #else
 		uint32_t tmp_addr = 0;
 #endif
-		 int fd = open("/dev/sprd_scale", O_RDONLY);
-		 if (fd >= 0) {
-		 ret = do_scaling_and_rotaion(fd, HW_SCALE_DATA_YUV420,
-			output_width,output_height,
-			current_overlay_addr,current_overlay_addr + context->fb_rect.w*context->fb_rect.h,
-			input_format,input_endian,
-			context->src_img.w,context->src_img.h,
-			context->src_img.y_addr,context->src_img.y_addr + context->src_img.w*context->src_img.h,
-			&context->src_rect,rot, tmp_addr);
-		 close(fd);
-		 } else {
-		 	ret = -1;
-			ALOGE("fail to open scale driver");
-		 }
+		ret = do_scaling_and_rotaion(HW_SCALE_DATA_YUV420,
+		output_width,output_height,
+		current_overlay_addr,current_overlay_addr + context->fb_rect.w*context->fb_rect.h,
+		input_format,input_endian,
+		context->src_img.w,context->src_img.h,
+		context->src_img.y_addr,context->src_img.y_addr + context->src_img.w*context->src_img.h,
+		&context->src_rect,rot, tmp_addr);
 	}
 	return ret;
 }
@@ -773,11 +707,31 @@ static int hwc_set(hwc_composer_device_t *dev,
 	return 0;
 }
 
+
+static int hwc_eventControl(struct hwc_composer_device* dev, int event, int enabled)
+{
+    struct hwc_context_t *hwc_dev = (struct hwc_context_t *) dev;
+
+    switch(event)
+    {
+    case HWC_EVENT_VSYNC:
+        if (hwc_dev->mVSyncThread != 0)
+            hwc_dev->mVSyncThread->setEnabled(enabled);
+        break;
+    default:
+        break;
+    }
+    return 0;
+}
+static hwc_methods_t hwc_device_methods = {
+    eventControl: hwc_eventControl
+};
+
+
 static int hwc_device_close(struct hw_device_t *dev)
 {
     struct hwc_context_t* ctx = (struct hwc_context_t*)dev;
     if (ctx) {
-        free(ctx);
 	if (ctx->fbfd) {
 	    close(ctx->fbfd);
 	}
@@ -805,6 +759,11 @@ static int hwc_device_close(struct hw_device_t *dev)
 	sem_destroy(&ctx->cmd_sem);
 	sem_destroy(&ctx->done_sem);
 #endif
+	hwc_eventControl(&ctx->device, HWC_EVENT_VSYNC, 0);
+	if (ctx->mVSyncThread != NULL) {
+		ctx->mVSyncThread->requestExitAndWait();
+	}
+	free(ctx);
     }
     return 0;
 }
@@ -832,13 +791,14 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
 
         /* initialize the procs */
         dev->device.common.tag = HARDWARE_DEVICE_TAG;
-        dev->device.common.version = 0;
+        dev->device.common.version = HWC_DEVICE_API_VERSION_0_3;
         dev->device.common.module = const_cast<hw_module_t*>(module);
         dev->device.common.close = hwc_device_close;
 
         dev->device.prepare = hwc_prepare;
         dev->device.set = hwc_set;
-	dev->device.registerProcs = hwc_registerProcs;
+        dev->device.registerProcs = hwc_registerProcs;
+        dev->device.methods = &hwc_device_methods;
 
 #ifdef _PROC_OSD_WITH_THREAD
 	sem_init(&dev->cmd_sem, 0, 0);
@@ -915,6 +875,7 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
 		}
 #endif
 	}
+	dev->mVSyncThread = new VSyncThread(dev);
     }
     return status;
 }
