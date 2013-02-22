@@ -131,74 +131,75 @@
         <string name="btut_tag">enter BT EUT mode，waiting...</string>
 
 	<!-- SlogUI add by Yuntao.xiao -->
-    <string name="chk_general_switch">总开关</string>
-    <string name="chk_general_android">Android Log开关</string>
-    <string name="chk_general_modem">Modem Log开关</string>
-    <string name="txv_general_storagelocation">存储路径</string>
-    <string name="rdo_general_sdcard">SD卡</string>
-    <string name="rdo_general_nand">手机内部存储</string>
-    <string name="btn_general_clearlog">清除Log</string>
-    <string name="btn_general_dump">导出Log</string>
-    <string name="chk_general_snapsvc">截屏服务</string>
-    <string name="chk_general_alwaysrun">始终显示Slog提示</string>
+    <string name="label_slogui">SlogUI</string>
+    <string name="chk_general_switch">General switch</string>
+    <string name="chk_general_android">Record Android log</string>
+    <string name="chk_general_modem">Record modem log</string>
+    <string name="txv_general_storagelocation">Log path</string>
+    <string name="rdo_general_sdcard">SDCard</string>
+    <string name="rdo_general_nand">Data directory</string>
+    <string name="btn_general_clearlog">Clear logs in Log path</string>
+    <string name="btn_general_dump">Dump log in SD</string>
+    <string name="chk_general_snapsvc">Start screenshot service</string>
+    <string name="chk_general_alwaysrun">Always showing the notification in status bar</string>
+    <string name="chk_general_autoclear">Save more logs in last_log</string>
+    <string name="alert_request_dump_title">Request dumping log in SDCard</string>
+    <string name="alert_request_dump_prompt">Need to dump logs in T-Card? Please ensure that you have chosen the SDCard in logpath.</string>
+    <string name="toast_dump_filename_error">Please check your input, you can input latin-characters and numbers only.</string>
 
+    <string name="chk_android_switch">Record Android Log</string>
+    <string name="txv_android_branch">Subswitch</string>
+    <string name="chk_android_kernel">Record kernel log</string>
+    <string name="chk_android_system">Record system log</string>
+    <string name="chk_android_main">Record main log</string>
+    <string name="chk_android_radio">Record radio log</string>
 
+    <string name="chk_modem_switch">Record modem log</string>
+    <string name="txv_modem_other">Misc options</string>
+    <string name="chk_modem_bluetooth">Record bluetooth log</string>
+    <string name="chk_modem_tcp">Record tcp log</string>
+    <string name="chk_modem_misc">Record misc log</string>
 
-    <string name="chk_android_switch">开始记录AndroidLog</string>
-    <string name="txv_android_branch">分支开关</string>
-    <string name="chk_android_kernel">启用Kernel</string>
-    <string name="chk_android_system">启用System</string>
-    <string name="chk_android_main">启用Main</string>
-    <string name="chk_android_radio">启用Radio</string>
+    <string name="txv_alert_dump">Please input package name</string>
 
-    <string name="chk_modem_switch">启用Modem Log</string>
-    <string name="txv_modem_other">其他选项</string>
-    <string name="chk_modem_bluetooth">蓝牙 Log</string>
-    <string name="chk_modem_wifi">Wifi Log</string>
-    <string name="chk_modem_misc">其他 Log</string>
+    <string name="txv_alert_clearlog">Really clear all logs?</string>
 
-    <string name="txv_alert_dump">请输入包名</string>
+    <string name="alert_dump_title">Dump logs</string>
+    <string name="alert_dump_dialog_ok">OK</string>
+    <string name="alert_dump_dialog_cancel">Cancel</string>
 
-    <string name="txv_alert_clearlog">确实要清除所有Log?</string>
-
-    <string name="alert_dump_title">输入包名</string>
-    <string name="alert_dump_dialog_ok">确认</string>
-    <string name="alert_dump_dialog_cancel">取消</string>
-
-    <string name="alert_clear_title">清除Log</string>
-    <!-- Modify 20130202 Spreadst of 122485 change the button title start  -->
-    <string name="alert_clear_dialog_ok">确定</string>
-    <string name="alert_clear_dialog_cancel">取消</string>
-    <!-- Modify 20130202 Spreadst of 122485 change the button title end  -->
-    <string name="alert_clear_string">真的要清除所有Log?</string>
+    <string name="alert_clear_title">Clear logs</string>
+    <string name="alert_clear_dialog_ok">Delete</string>
+    <string name="alert_clear_dialog_cancel">Abort</string>
+    <string name="alert_clear_string">Really clear all logs?</string>
 
     <string name="tabtag_tabhost_tabgeneral">General</string>
     <string name="tabtag_tabhost_tabandroid">Android Log</string>
     <string name="tabtag_tabhost_tabmodem">Modem and Misc</string>
 
-    <string name="toast_receiver_failed">启动Slog服务失败</string>
+    <string name="toast_receiver_failed">Failed to start Slog service</string>
 
-    <string name="notification_slogsvc_title">Slog正在进行</string>
-    <string name="notification_slogsvc_prompt">点击这里进入Slog设置</string>
-    <string name="notification_slogsvc_statusbarprompt">正在开启Slog服务</string>
+    <string name="notification_slogsvc_title">SlogUI running in background</string>
+    <string name="notification_slogsvc_prompt">Press to return SlogUI</string>
+    <string name="notification_slogsvc_statusbarprompt">Starting SlogUI service</string>
 
-    <string name="notification_snapsvc_title">Slog截屏服务</string>
-    <string name="notification_snapsvc_prompt">点击这里,截取当前画面</string>
-    <string name="notification_snapsvc_statusbarprompt">截屏服务已经开启,请查看下拉通知查看</string>
+    <string name="notification_snapsvc_title">SlogUI screenshot service</string>
+    <string name="notification_snapsvc_prompt">Press here to screenshot now</string>
+    <string name="notification_snapsvc_statusbarprompt">SlogUI screenshot service has begun</string>
 
-    <string name="progressdialog_tabhost_prompt">请稍候</string>
+    <string name="progressdialog_tabhost_prompt">Please wait..</string>
 
-    <string name="toast_snap_success">截屏成功</string>
-    <string name="toast_snap_failed">截屏失败</string>
-    <string name="toast_snap_prompt">截屏服务已经开启,下拉通知栏可找到截屏服务</string>
+    <string name="toast_snap_success">Screenshot successfully</string>
+    <string name="toast_snap_failed">Failed to screenshot</string>
+    <string name="toast_snap_prompt">Pull the statusbar, you\'ll find screenshot service, press it to snap the screen.</string>
 
-    <string name="toast_service_snap_start_failed">截屏服务开启失败</string>
-    <string name="toast_service_snap_end_failed">截屏服务停止失败</string>
-    <string name="toast_service_slog_start_failed">Slog服务开启失败</string>
-    <string name="toast_service_slog_end_failed">Slog服务停止失败</string>
+    <string name="toast_service_snap_start_failed">Failed to start snap service.</string>
+    <string name="toast_service_snap_end_failed">Failed to stop snap service.</string>
+    <string name="toast_service_slog_start_failed">Failed to start slog service.</string>
+    <string name="toast_service_slog_end_failed">Failed to stop slog service.</string>
 
-    <string name="toast_freespace_nand">手机剩余空间:</string>
-    <string name="toast_freespace_sdcard">SD卡剩余空间</string>
+    <string name="toast_freespace_nand">Free space in Data directory:</string>
+    <string name="toast_freespace_sdcard">Free space in SDCard:</string>
 	<!-- SlogUI Added Done -->
 
 </resources>

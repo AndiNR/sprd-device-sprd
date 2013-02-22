@@ -31,10 +31,10 @@
             android:text="@string/chk_modem_bluetooth" />
 
         <CheckBox
-            android:id="@+id/chk_modem_wifi"
+            android:id="@+id/chk_modem_tcp"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:text="@string/chk_modem_wifi" />
+            android:text="@string/chk_modem_tcp" />
 
         <CheckBox
             android:id="@+id/chk_modem_misc"

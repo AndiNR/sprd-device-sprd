@@ -41,21 +41,21 @@
         <RadioGroup
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
+            android:orientation="horizontal"
             android:paddingTop="10dip" >
 
             <RadioButton
                 android:id="@+id/rdo_general_sdcard"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
-                android:paddingTop="10dip"
+                android:layout_weight="1"
                 android:text="@string/rdo_general_sdcard" />
 
             <RadioButton
                 android:id="@+id/rdo_general_nand"
                 android:layout_width="fill_parent"
+                android:layout_weight="1"
                 android:layout_height="wrap_content"
-                android:paddingTop="10dip"
                 android:text="@string/rdo_general_nand" />
         </RadioGroup>
 
@@ -63,7 +63,7 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:paddingTop="30dip" >
+            android:paddingTop="10dip" >
 
             <Button
                 android:id="@+id/btn_general_dump"
@@ -91,6 +91,13 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:text="@string/chk_general_snapsvc" />
+
+        <CheckBox
+            android:id="@+id/chk_general_autoclear"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/chk_general_autoclear" />
+
         <!--
     <CheckBox 
         android:padding="30dip"

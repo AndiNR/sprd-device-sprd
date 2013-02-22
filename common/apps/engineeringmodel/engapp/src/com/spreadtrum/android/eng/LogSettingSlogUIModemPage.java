@@ -11,7 +11,7 @@ import android.widget.CheckBox;
 
 public class LogSettingSlogUIModemPage extends Activity {
 
-	private CheckBox chkModem, chkBuleTooth, chkWifi, chkMisc;
+	private CheckBox chkModem, chkBuleTooth, chkTcp, chkMisc;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -20,7 +20,7 @@ public class LogSettingSlogUIModemPage extends Activity {
 
 		chkModem = (CheckBox) findViewById(R.id.chk_modem_branch);
 		chkBuleTooth = (CheckBox) findViewById(R.id.chk_modem_bluetooth);
-		chkWifi = (CheckBox) findViewById(R.id.chk_modem_wifi);
+		chkTcp = (CheckBox) findViewById(R.id.chk_modem_tcp);
 		chkMisc = (CheckBox) findViewById(R.id.chk_modem_misc);
 
 		SyncState();
@@ -28,7 +28,7 @@ public class LogSettingSlogUIModemPage extends Activity {
 		ClkListenner clickListen = new ClkListenner();
 		chkModem.setOnClickListener(clickListen);
 		chkBuleTooth.setOnClickListener(clickListen);
-		chkWifi.setOnClickListener(clickListen);
+		chkTcp.setOnClickListener(clickListen);
 		chkMisc.setOnClickListener(clickListen);
 
 	}
@@ -50,8 +50,8 @@ public class LogSettingSlogUIModemPage extends Activity {
 				SlogAction.SetState(SlogAction.BULETOOTHKEY,
 						chkBuleTooth.isChecked(), false);
 				break;
-			case R.id.chk_modem_wifi:
-				SlogAction.SetState(SlogAction.WIFIKEY, chkWifi.isChecked(),
+			case R.id.chk_modem_tcp:
+				SlogAction.SetState(SlogAction.TCPKEY, chkTcp.isChecked(),
 						false);
 				break;
 			case R.id.chk_modem_misc:
@@ -68,8 +68,8 @@ public class LogSettingSlogUIModemPage extends Activity {
 				SlogAction.GetState(SlogAction.MODEMKEY));
 		SlogAction.SetCheckBoxBranchState(chkBuleTooth, tempHost,
 				SlogAction.GetState(SlogAction.BULETOOTHKEY));
-		SlogAction.SetCheckBoxBranchState(chkWifi, tempHost,
-				SlogAction.GetState(SlogAction.WIFIKEY));
+		SlogAction.SetCheckBoxBranchState(chkTcp, tempHost,
+				SlogAction.GetState(SlogAction.TCPKEY));
 		SlogAction.SetCheckBoxBranchState(chkMisc, tempHost,
 				SlogAction.GetState(SlogAction.MISCKEY));
 

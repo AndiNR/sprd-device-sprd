@@ -47,29 +47,7 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:text="@string/chk_android_main" />
-        <!--
-	<TextView
-	    android:paddingTop="50dip"
-	    android:layout_height="wrap_content"
-	    android:layout_width="fill_parent"
-	    android:text="文件分段大小"
-	     /> 
-	     
-	 <Spinner 
-	     android:paddingRight="30dip"
-	     android:layout_width="fill_parent"
-	     android:layout_height="wrap_content"
-	     android:id="@+id/spnr_android_size"
-	     />
-	 
-	 <Button 
-	     android:paddingRight="30dip"
-	     android:layout_width="fill_parent"
-	     android:layout_height="wrap_content"
-	     android:text="清除Log"
-	     android:id="@+id/btn_android_clear"	     
-	     />   
-        -->
+
     </LinearLayout>
 
 </ScrollView>
