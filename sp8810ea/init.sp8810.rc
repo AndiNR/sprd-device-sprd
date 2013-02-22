@@ -11,6 +11,11 @@ on early-init
     # for backwards compatibility
     symlink /storage/sdcard0 /sdcard
     symlink /storage/sdcard0 /mnt/sdcard
+# radio pipe
+    mkdir /dev/rpipe 0550 radio radio
+    pipe 666 /dev/rpipe/ril.vt.0
+    pipe 666 /dev/rpipe/ril.vt.1
+    pipe 666 /dev/rpipe/ril.vt.2
 
 on fs
     mount_all /fstab.sp8810
