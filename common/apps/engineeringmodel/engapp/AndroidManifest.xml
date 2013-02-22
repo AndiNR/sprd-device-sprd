@@ -311,7 +311,8 @@
 	<!--  SlogUI Added by Yuntao.xiao  -->
 	<activity
             android:name=".LogSettingSlogUITabHostActivity"
-            android:label="@string/app_name"
+            android:label="@string/label_slogui"
+            android:configChanges="orientation|screenSize|locale"
             android:launchMode="singleTask" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -330,13 +331,14 @@
             android:noHistory="true"
             android:taskAffinity="" >
         </activity>
-<!--Add 20130109 Spreadst of 112929,dialog disappear when change the direction of phone start -->
+
         <activity android:name=".LogSettingSlogUICommonControl"
-            android:configChanges="orientation|keyboardHidden|screenSize">
+            android:configChanges="orientation|screenSize|locale">
         </activity>
-<!--Add 20130109 Spreadst of 112929,dialog disappear when change the direction of phone end -->
-        <activity android:name=".LogSettingSlogUIAndroidPage" />
-        <activity android:name=".LogSettingSlogUIModemPage" >
+        <activity android:name=".LogSettingSlogUIAndroidPage" 
+            android:configChanges="orientation|screenSize|locale"/>
+        <activity android:name=".LogSettingSlogUIModemPage"
+            android:configChanges="orientation|screenSize|locale" >
         </activity>
 
         <service android:name=".SlogService" >
