@@ -104,6 +104,8 @@ PRODUCT_COPY_FILES := \
 	device/sprd/common/res/media/media_profiles.xml:system/etc/media_profiles.xml \
 	frameworks/native/data/etc/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml \
 	frameworks/native/data/etc/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml \
+	frameworks/native/data/etc/android.hardware.touchscreen.multitouch.xml:system/etc/permissions/android.hardware.touchscreen.multitouch.xml \
+	frameworks/native/data/etc/android.hardware.touchscreen.xml:system/etc/permissions/android.hardware.touchscreen.xml \
 	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml
 
 BOARD_WLAN_DEVICE_REV       := bcm4330_b2
