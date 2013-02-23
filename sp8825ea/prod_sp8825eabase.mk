@@ -38,7 +38,8 @@ PRODUCT_PACKAGES := \
 	Phone \
 	framework2 \
 	Stk \
-	Settings
+	Settings \
+	Launcher2
 
 # prebuild files
 PRODUCT_PACKAGES += \

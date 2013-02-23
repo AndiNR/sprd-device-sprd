@@ -43,7 +43,8 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 PRODUCT_PACKAGES := \
 	MsmsStk \
 	Stk1 \
-	VoiceDialer
+	VoiceDialer \
+	Launcher2
 
 # prebuild files
 PRODUCT_PACKAGES += \

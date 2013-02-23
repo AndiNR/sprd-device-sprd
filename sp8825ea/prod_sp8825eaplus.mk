@@ -38,7 +38,8 @@ PRODUCT_PACKAGES := \
 	MsmsStk \
 	Stk1 \
 	framework2 \
-	VoiceDialer
+	VoiceDialer \
+	Launcher2
 
 
 # prebuild files

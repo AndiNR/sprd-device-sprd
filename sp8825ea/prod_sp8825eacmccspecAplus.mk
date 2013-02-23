@@ -40,7 +40,8 @@ PRODUCT_PACKAGES := \
     Settings \
     MsmsStk \
     Stk1 \
-    framework2
+    framework2 \
+    Launcher2
 
 # prebuild files
 PRODUCT_PACKAGES += \
