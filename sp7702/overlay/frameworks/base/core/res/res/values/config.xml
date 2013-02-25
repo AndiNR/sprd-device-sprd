@@ -71,6 +71,15 @@
         <item>"mobile1_cbs,212,0,2,60000,true"</item>
         <item>"mobile1_dm,214,0,3,60000,true"</item>
         <item>"mobile1_wap,235,0,4,60000,true"</item>
+        <item>"mobile,300,0,0,-1,true"</item>
+        <item>"mobile2_mms,302,0,2,60000,true"</item>
+        <item>"mobile2_supl,303,0,2,60000,true"</item>
+        <item>"mobile2_hipri,305,0,3,60000,true"</item>
+        <item>"mobile2_fota,310,0,2,60000,true"</item>
+        <item>"mobile2_ims,311,0,2,60000,true"</item>
+        <item>"mobile2_cbs,312,0,2,60000,true"</item>
+        <item>"mobile2_dm,314,0,3,60000,true"</item>
+        <item>"mobile2_wap,335,0,4,60000,true"</item>
     </string-array>
 
     <!-- Array of ConnectivityManager.TYPE_xxxx values allowable for tethering -->
@@ -79,15 +88,18 @@
     <integer-array translatable="false" name="config_tether_upstream_types">
         <item>0</item>
         <item>1</item>
-	<item>4</item>
+        <item>4</item>
         <item>5</item>
         <item>6</item>
         <item>7</item>
         <item>100</item>
         <item>104</item>
-	<item>105</item>
+        <item>105</item>
         <item>200</item>
         <item>204</item>
-	<item>205</item>
+        <item>205</item>
+        <item>300</item>
+        <item>304</item>
+        <item>305</item>
     </integer-array>
 </resources>
