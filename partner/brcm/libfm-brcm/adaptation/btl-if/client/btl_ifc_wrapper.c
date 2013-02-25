@@ -637,9 +637,10 @@ void set_blocking(int s)
 {
     int opts;
     opts = fcntl(s, F_GETFL);
-    //if (opts<0) //error("set blocking (%s)", str//error(errno));
+    if (opts<0) error("set blocking F_GETFL fail(%s)", strerror(errno));
     opts &= ~O_NONBLOCK;
-    fcntl(s, F_SETFL, opts);
+    opts = fcntl(s, F_SETFL, opts);
+    if (opts<0) error("set blocking F_SETFL fail(%s)", strerror(errno));
 }
 
 int wrp_sock_connect(t_wsock* ws, int s, char *name, int port)

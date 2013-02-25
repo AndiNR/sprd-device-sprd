@@ -41,6 +41,8 @@
 **              LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE OF
 **              ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
 */
+#ifndef _FM_FMRECEIVERSERVICE_INT_H_
+#define _FM_FMRECEIVERSERVICE_INT_H_
 #include "fm_cfg.h"
 
 
@@ -389,5 +391,11 @@ typedef struct
                                                 can not exceed BTA_FM_MAX_PRESET_STA */
 } tBTA_FM_CFG;
 
+typedef struct
+{
+    UINT16   cur_freq;
+}tBTA_FM_CTX;
+
+#endif
 
 
