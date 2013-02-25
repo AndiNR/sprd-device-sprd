@@ -39,6 +39,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <cutils/properties.h>
+#include <sys/time.h>
 
 #include <btl_if.h>
 #include <sys/ioctl.h>
@@ -88,6 +89,7 @@ const int SCAN_MODE_UP = 0x80;
 extern tBTA_FM gfm_params;
 extern CMutex gMutex;
 extern tBTLIF_CTRL_MSG_ID gCurrentEventID;
+extern tBTA_FM_CTX gfm_context;
 
 bool tuneNative(int freq) ;
 
@@ -97,7 +99,8 @@ getFreq(struct fm_device_t* dev,int* freq)
     struct bcm4330_fm_device_t *device = (struct bcm4330_fm_device_t *)dev;
     LOGD("%s, %d\n", __FUNCTION__, gfm_params.chnl_info.freq );
 
-    *freq = gfm_params.chnl_info.freq/10;
+    //*freq = gfm_params.chnl_info.freq/10;
+    *freq = gfm_context.cur_freq/10;
 
     return FM_SUCCESS;
 }
@@ -209,33 +212,55 @@ static int
 startSearch(struct fm_device_t* dev,int freq, int dir, int timeout, int reserve)
 {
     struct bcm4330_fm_device_t *device = (struct bcm4330_fm_device_t *)dev;
-
+    unsigned long long last_time, cur_time;
+    timeval tv;
+    unsigned   elapse_time = 0;
     LOGD("%s\n", __FUNCTION__);
+
+    gettimeofday( &tv, NULL);
+    last_time = ( tv.tv_sec*1000*1000 + tv.tv_usec )/1000;
 
     if( tuneNative(freq*10) )
     {
-        gMutex.wait(0, 3);
+        if( gMutex.wait(0, 2))
+            return FM_FAILURE;
     }
 
     searchNative(dir == APP_SCAN_MODE_DOWN ? SCAN_MODE_DOWN : SCAN_MODE_UP,
-	       	105/*rssi*/, 0/*rds enable*/, 0/* rds type*/);
+		105/*rssi*/, 0/*rds enable*/, 0/* rds type*/);
+    gettimeofday( &tv, NULL);
+    cur_time = ( tv.tv_sec*1000*1000 + tv.tv_usec )/1000;
+    elapse_time = cur_time - last_time;
 
-	  if(gMutex.wait(0, 6))
-		{
-	     return FM_FAILURE;
-		}
+    LOGD("%s, Tag1 elapse time is %d ms\n", __FUNCTION__, elapse_time );
+
+    if(gMutex.wait(0, 5-(elapse_time+500)/1000))
+    {
+        return FM_FAILURE;
+    }
+
+    gettimeofday( &tv, NULL);
+    cur_time = ( tv.tv_sec*1000*1000 + tv.tv_usec )/1000;
+    elapse_time = cur_time - last_time;
+
+    LOGD("%s, Tag2 elapse time is %d ms\n", __FUNCTION__, elapse_time );
 
     if(gfm_params.chnl_info.status == BTA_FM_OK)
     {
        return FM_SUCCESS;
     }
-    else
+    else if( elapse_time < 4000 )
     {
         searchNative(dir == APP_SCAN_MODE_DOWN ? SCAN_MODE_DOWN : SCAN_MODE_UP,
-	       	105/*rssi*/, 0/*rds enable*/, 0/* rds type*/);
+		105/*rssi*/, 0/*rds enable*/, 0/* rds type*/);
+        gettimeofday( &tv, NULL);
+        cur_time = ( tv.tv_sec*1000*1000 + tv.tv_usec )/1000;
+        elapse_time = cur_time - last_time;
 
-	  if(gMutex.wait(0, 3))
-	     return FM_FAILURE;
+        LOGD("%s, Tag3 elapse time is %d ms\n", __FUNCTION__, elapse_time );
+
+        if(gMutex.wait(0, 5-(elapse_time+500)/1000))
+            return FM_FAILURE;
 
         if(gfm_params.chnl_info.status == BTA_FM_OK)
        {
@@ -245,6 +270,7 @@ startSearch(struct fm_device_t* dev,int freq, int dir, int timeout, int reserve)
         return FM_FAILURE;
     }
 
+    return FM_FAILURE;
 }
 
 static int
@@ -253,8 +279,6 @@ cancelSearch(struct fm_device_t* dev)
     struct bcm4330_fm_device_t *device = (struct bcm4330_fm_device_t *)dev;
 
     LOGD("%s\n", __FUNCTION__);
-
-    return FM_SUCCESS;		// no effect, return now
 
     searchAbortNative();
 

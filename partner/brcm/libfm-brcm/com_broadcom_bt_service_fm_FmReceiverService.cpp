@@ -112,30 +112,6 @@ typedef struct {
 
 #define USER_CLASSPATH "."
 
-//static JavaVM *jvm;
-
-/* Local references to java callback event functions. */
-#if 0
-static jmethodID method_onRadioOnEvent;
-static jmethodID method_onRadioOffEvent;
-static jmethodID method_onRadioMuteEvent;
-static jmethodID method_onRadioTuneEvent;
-static jmethodID method_onRadioSearchEvent;
-static jmethodID method_onRadioSearchCompleteEvent;
-static jmethodID method_onRadioAfJumpEvent;
-static jmethodID method_onRadioAudioModeEvent;
-static jmethodID method_onRadioAudioPathEvent;
-static jmethodID method_onRadioAudioDataEvent;
-static jmethodID method_onRadioRdsModeEvent;
-static jmethodID method_onRadioRdsTypeEvent;
-static jmethodID method_onRadioRdsUpdateEvent;
-static jmethodID method_onRadioDeemphEvent;
-static jmethodID method_onRadioScanStepEvent;
-static jmethodID method_onRadioRegionEvent;
-static jmethodID method_onRadioNflEstimationEvent;
-static jmethodID method_onRadioVolumeEvent;
-#endif
-
 static bool systemActive;
 
 #ifdef BRCM_BT_USE_BTL_IF
@@ -168,66 +144,10 @@ static void enqueuePendingEvent(tBTA_FM_EVT new_event, tBTA_FM* new_event_data);
 static bool setRdsRdbsNative(int rdsType);
 
 CMutex gMutex;
-/* Static native initializer. */
-#if 0
-static void classFmInitNative(JNIEnv* env, jclass clazz) {
-    LOGV("%s", __FUNCTION__);
-
-    if (env->GetJavaVM(&jvm) < 0) {
-            LOGE("%s: Java VM not found!", __FUNCTION__);
-    }
-
-    method_onRadioOnEvent = env->GetMethodID(clazz, "onRadioOnEvent", "(I)V");
-    method_onRadioOffEvent = env->GetMethodID(clazz, "onRadioOffEvent", "(I)V");
-    method_onRadioMuteEvent = env->GetMethodID(clazz, "onRadioMuteEvent", "(IZ)V");
-    method_onRadioTuneEvent = env->GetMethodID(clazz, "onRadioTuneEvent", "(IIII)V");
-    method_onRadioSearchEvent = env->GetMethodID(clazz, "onRadioSearchEvent", "(III)V");
-    method_onRadioSearchCompleteEvent = env->GetMethodID(clazz, "onRadioSearchCompleteEvent", "(IIII)V");
-    method_onRadioAfJumpEvent = env->GetMethodID(clazz, "onRadioAfJumpEvent", "(III)V");
-    method_onRadioAudioPathEvent = env->GetMethodID(clazz, "onRadioAudioPathEvent", "(II)V");
-    method_onRadioAudioModeEvent = env->GetMethodID(clazz, "onRadioAudioModeEvent", "(II)V");
-    method_onRadioAudioDataEvent = env->GetMethodID(clazz, "onRadioAudioDataEvent", "(IIII)V");
-    method_onRadioRdsModeEvent = env->GetMethodID(clazz, "onRadioRdsModeEvent", "(IZZI)V");
-    method_onRadioRdsTypeEvent = env->GetMethodID(clazz, "onRadioRdsTypeEvent", "(II)V");
-    method_onRadioRdsUpdateEvent = env->GetMethodID(clazz, "onRadioRdsUpdateEvent", "(IIILjava/lang/String;)V");
-    method_onRadioDeemphEvent = env->GetMethodID(clazz, "onRadioDeemphEvent", "(II)V");
-    method_onRadioScanStepEvent = env->GetMethodID(clazz, "onRadioScanStepEvent", "(I)V");
-    method_onRadioRegionEvent = env->GetMethodID(clazz, "onRadioRegionEvent", "(II)V");
-    method_onRadioNflEstimationEvent = env->GetMethodID(clazz, "onRadioNflEstimationEvent", "(I)V");
-    method_onRadioVolumeEvent = env->GetMethodID(clazz, "onRadioVolumeEvent", "(II)V");
-
-    /* Initialize the callback object references. */
-    pthread_mutex_init(&fm_nat.mutex, NULL);
-    fm_nat.object=NULL;
-
-    /* Indicate that events are to be listened to. */
-    systemActive = true;
-}
-
-/* Dynamic native initializer. */
-void initNativeDataNative()
-{
-    LOGV("%s",__FUNCTION__);
-}
-
-
-static void initLoopNative()
-{
-    LOGV("%s",__FUNCTION__);
-    fm_nat.object = env->NewGlobalRef(obj);
-
-}
-
-static void cleanupLoopNative(JNIEnv* env, jobject object) {
-    LOGV("%s",__FUNCTION__);
-    env->DeleteGlobalRef(fm_nat.object);
-}
-
-#endif
-
 #ifdef BRCM_BT_USE_BTL_IF
 tBTA_FM gfm_params;
 tBTLIF_CTRL_MSG_ID gCurrentEventID = BTLIF_FM_CMD_BASE ;
+tBTA_FM_CTX gfm_context = {0};
 
 /* Callback handler for stack originated events. */
 static void decodePendingEvent(tCTRL_HANDLE handle, tBTLIF_CTRL_MSG_ID id, tBTL_PARAMS *params) {
@@ -256,7 +176,7 @@ static void decodePendingEvent(tCTRL_HANDLE handle, tBTLIF_CTRL_MSG_ID id, tBTL_
 
             fm_params->chnl_info.status = (tBTA_FM_STATUS)(params->fm_IIII_param.i1);
             fm_params->chnl_info.rssi = (UINT8)(params->fm_IIII_param.i2);
-            fm_params->chnl_info.freq = (UINT16)(params->fm_IIII_param.i3);
+            fm_params->chnl_info.freq = gfm_context.cur_freq = (UINT16)(params->fm_IIII_param.i3);
             fm_params->chnl_info.snr = (INT8)(params->fm_IIII_param.i4);
             enqueuePendingEvent(BTA_FM_TUNE_EVT, fm_params);
             gMutex.signal();
@@ -280,7 +200,7 @@ static void decodePendingEvent(tCTRL_HANDLE handle, tBTLIF_CTRL_MSG_ID id, tBTL_
             //fm_params = (tBTA_FM*)malloc(sizeof(tBTA_FM));
             fm_params->chnl_info.status = (tBTA_FM_STATUS)(params->fm_IIII_param.i1);
             fm_params->chnl_info.rssi = (UINT8)(params->fm_IIII_param.i2);
-            fm_params->chnl_info.freq = (UINT16)(params->fm_IIII_param.i3);
+            fm_params->chnl_info.freq = gfm_context.cur_freq = (UINT16)(params->fm_IIII_param.i3);
             fm_params->chnl_info.snr = (INT8)(params->fm_IIII_param.i4);
 
             LOGI("%s: Event ID: %d, Frequence:%d\n",__FUNCTION__,id, fm_params->chnl_info.freq);
@@ -291,7 +211,7 @@ static void decodePendingEvent(tCTRL_HANDLE handle, tBTLIF_CTRL_MSG_ID id, tBTL_
             //fm_params = (tBTA_FM*)malloc(sizeof(tBTA_FM));
             fm_params->chnl_info.status = (tBTA_FM_STATUS)(params->fm_III_param.i1);
             fm_params->chnl_info.rssi = (UINT8)(params->fm_III_param.i2);
-            fm_params->chnl_info.freq = (UINT16)(params->fm_III_param.i3);
+            fm_params->chnl_info.freq = gfm_context.cur_freq = (UINT16)(params->fm_III_param.i3);
             enqueuePendingEvent(BTA_FM_SEARCH_CMPL_EVT, fm_params);
             gMutex.signal();
             break;
@@ -398,7 +318,11 @@ static void screenData(tBTA_FM* data) {
             data->rds_update.text[i] = '*';
         }
         /* Look at next character. */
-        c = data->rds_update.text[++i];
+
+		i+=1;
+		if(i <= 64){
+            c = data->rds_update.text[i];
+        }
     }
     /* Cap for safety at end of 64 bytes. */
     data->rds_update.text[64] = 0;
@@ -407,189 +331,6 @@ static void screenData(tBTA_FM* data) {
 /* Forwards the event to the application. */
 static void enqueuePendingEvent(tBTA_FM_EVT new_event, tBTA_FM* new_event_data) {
 
-#if 0
-    int r;
-    jclass cls;
-
-    jmethodID mid;
-    int event = new_event;
-    tBTA_FM* data = new_event_data;
-
-#ifdef BRCM_BT_USE_BTL_IF
-
-    pthread_mutex_lock(&fm_nat.mutex);
-
-    /* Attach callback thread to JVM. */
-    LOGI("%s: event ID: %d, ATTACHING THREAD",__FUNCTION__,new_event);
-
-    if (jvm->AttachCurrentThread(&local_env, NULL) != JNI_OK) {
-        LOGI("%s: THREAD NOT ATTACHED",__FUNCTION__);
-    } else {
-        LOGI("%s: THREAD ATTACHED OK",__FUNCTION__);
-    }
-
-    LOGI("[JNI] - TRANSMITTING EVENT UP :    event = %i", event);
-
-#endif
-
-    switch (event)
-    {
-    case BTA_FM_ENABLE_EVT:
-//	    fm_enable_complete();
-	       memset(&previous_rds_update, 0, sizeof(tBTA_FM_RDS_UPDATE));
-    //    local_env->CallVoidMethod(fm_nat.object, method_onRadioOnEvent, (int)(data->status));
-        gMutex.signal();
-        break;
-    case BTA_FM_DISABLE_EVT:
-        #if IS_STANDALONE_FM != TRUE
-        fm_disable();
-        #endif
-      //  local_env->CallVoidMethod(fm_nat.object, method_onRadioOffEvent, (int)(data->status));
-//        BTL_IFC_UnregisterSubSystem(&btl_if_fm_handle, SUB_FM);
-        gMutex.signal();
-        break;
-    case BTA_FM_TUNE_EVT:
-	    memset(&previous_rds_update, 0, sizeof(tBTA_FM_RDS_UPDATE));
-        //local_env->CallVoidMethod(fm_nat.object, method_onRadioTuneEvent,
-        //    (int)(data->chnl_info.status), (int)(data->chnl_info.rssi),
-        //    (int)(data->chnl_info.snr), (int)(data->chnl_info.freq));
-        gMutex.signal();
-        break;
-    case BTA_FM_MUTE_AUD_EVT:
-        //local_env->CallVoidMethod(fm_nat.object, method_onRadioMuteEvent,
-        //    (int)(data->mute_stat.status), (bool)(data->mute_stat.is_mute));
-        gMutex.signal();
-        break;
-    case BTA_FM_SEARCH_EVT:
-        //local_env->CallVoidMethod(fm_nat.object, method_onRadioSearchEvent,
-        //    (int)(data->scan_data.rssi), (int)(data->scan_data.snr), (int)(data->scan_data.freq));
-        gMutex.signal();
-        break;
-    case BTA_FM_SEARCH_CMPL_EVT:
-	    memset(&previous_rds_update, 0, sizeof(tBTA_FM_RDS_UPDATE));
-       // local_env->CallVoidMethod(fm_nat.object, method_onRadioSearchCompleteEvent,
-       //     (int)(data->chnl_info.status), (int)(data->chnl_info.rssi),
-       //     (int)(data->chnl_info.snr), (int)(data->chnl_info.freq));
-        LOGI("[JNI] - TRANSMITTING EVENT BTA_FM_SEARCH_CMPL_EVT : rssi = %i freq = %i snr = %i", data->chnl_info.rssi, data->chnl_info.freq, data->chnl_info.snr);
-        gMutex.signal();
-        break;
-    case BTA_FM_AF_JMP_EVT:
-		memset(&previous_rds_update, 0, sizeof(tBTA_FM_RDS_UPDATE));
-        //local_env->CallVoidMethod(fm_nat.object, method_onRadioAfJumpEvent,
-        //    (int)(data->chnl_info.status), (int)(data->chnl_info.rssi),
-        //    (int)(data->chnl_info.freq));
-        //     LOGI("[JNI] - TRANSMITTING EVENT BTA_FM_AF_JMP_EVT :    status = %i rssi = %i freq = %i", data->chnl_info.status,data->chnl_info.rssi,data->chnl_info.freq);
-        gMutex.signal();
-        break;
-    case BTA_FM_AUD_MODE_EVT:
-        //local_env->CallVoidMethod(fm_nat.object, method_onRadioAudioModeEvent,
-        //    (int)(data->mode_info.status), (int)(data->mode_info.audio_mode));
-        gMutex.signal();
-        break;
-    case BTA_FM_AUD_PATH_EVT:
-        //local_env->CallVoidMethod(fm_nat.object, method_onRadioAudioPathEvent,
-        //    (int)(data->path_info.status), (int)(data->path_info.audio_path));
-        gMutex.signal();
-        break;
-    case BTA_FM_AUD_DATA_EVT:
-	LOGI("BTA_FM_AUD_DATA_EVT rssi:%d snr:%d", (int)(data->audio_data.rssi), (int)(data->audio_data.snr));
-        local_env->CallVoidMethod(fm_nat.object, method_onRadioAudioDataEvent,
-            (int)(data->audio_data.status), (int)(data->audio_data.rssi),
-            (int)(data->audio_data.audio_mode), (int)(data->audio_data.snr));
-        gMutex.signal();
-        break;
-    case BTA_FM_RDS_MODE_EVT:
-        LOGI("%s: BTA_FM_RDS_MODE_EVT",__FUNCTION__);
-        if(data->rds_mode.status == BTA_FM_OK)
-		{
-			af_on_save = (bool)(data->rds_mode.af_on);
-			rds_on_save = (bool)(data->rds_mode.rds_on);
-			setRdsRdbsNative(rds_type_save);
-		}
-	else{
-              local_env->CallVoidMethod(fm_nat.object, method_onRadioRdsModeEvent,
-            (int)(data->rds_mode.status), (bool)(data->rds_mode.rds_on),
-            (bool)(data->rds_mode.af_on),((int)rds_type_save));
-		}
-		    gMutex.signal();
-        break;
-    case BTA_FM_RDS_TYPE_EVT:
-        LOGI("%s: BTA_FM_RDS_TYPE_EVT",__FUNCTION__);
-//        local_env->CallVoidMethod(fm_nat.object, method_onRadioRdsTypeEvent,
-//            (int)(data->rds_type.status), (int)(data->rds_type.type));
-              local_env->CallVoidMethod(fm_nat.object, method_onRadioRdsModeEvent,
-            (int)(data->rds_mode.status), rds_on_save,
-           af_on_save,(int)(data->rds_type.type));
-
-        gMutex.signal();
-        break;
-    case BTA_FM_RDS_UPD_EVT:
-        LOGI("%s: BTA_FM_RDS_UPD_EVT, 0x%8x",__FUNCTION__,data);
-        if (NULL != data) {
-            /* Pre-process data. */
-            screenData(data);
-	     //not to overload system with useless events check if data has changed
-        LOGI("%s: BTA_FM_RDS_UPD_EVT, previous_rds%s",__FUNCTION__,previous_rds_update.text);
-        LOGI("%s: BTA_FM_RDS_UPD_EVT, new_rds%s",__FUNCTION__,data->rds_update.text);
-        LOGI("%s: BTA_FM_RDS_UPD_EVT, memcmp 0x%8x",__FUNCTION__,memcmp(&previous_rds_update.text, &data->rds_update.text, 65));
-//        LOGI("%s: BTA_FM_RDS_UPD_EVT, 0x%8x",__FUNCTION__,data);
-	     if(memcmp(&previous_rds_update, &data->rds_update, sizeof(tBTA_FM_RDS_UPDATE)))
-			{
-			memcpy(&previous_rds_update, &data->rds_update, sizeof(tBTA_FM_RDS_UPDATE));
-            /* Transmit upwards. */
-            local_env->CallVoidMethod(fm_nat.object, method_onRadioRdsUpdateEvent,
-                (int)(data->rds_update.status), (int)(data->rds_update.data),
-                (int)(data->rds_update.index),
-                local_env->NewStringUTF(data->rds_update.text));
-			}
-        }
-        gMutex.signal();
-        break;
-    case BTA_FM_SET_DEEMPH_EVT:
-        local_env->CallVoidMethod(fm_nat.object, method_onRadioDeemphEvent,
-            (int)(data->deemphasis.status), (int)(data->deemphasis.time_const));
-        gMutex.signal();
-        break;
-    case BTA_FM_SCAN_STEP_EVT:
-        local_env->CallVoidMethod(fm_nat.object, method_onRadioScanStepEvent,
-            (int)(data->scan_step));
-        gMutex.signal();
-        break;
-    case BTA_FM_SET_REGION_EVT:
-        local_env->CallVoidMethod(fm_nat.object, method_onRadioRegionEvent,
-            (int)(data->region_info.status), (int)(data->region_info.region));
-        gMutex.signal();
-        break;
-    case BTA_FM_NFL_EVT:
-        local_env->CallVoidMethod(fm_nat.object, method_onRadioNflEstimationEvent,
-            (int)(data->nfloor));
-        gMutex.signal();
-        break;
-    case BTA_FM_VOLUME_EVT:
-        local_env->CallVoidMethod(fm_nat.object, method_onRadioVolumeEvent,
-            (int)(data->volume.status), (int)(data->volume.volume));
-        gMutex.signal();
-        break;
-    default:
-        LOGI("[JNI_CALLBACK] - androidFmRxCback :    unknown event received");
-        break;
-    }
-    if (NULL != data) {
-        free(data);
-    }
-
-#ifdef BRCM_BT_USE_BTL_IF
-
-    if (jvm->DetachCurrentThread() != JNI_OK) {
-        LOGE("%s: DetachCurrentThread() failed", __FUNCTION__);
-    }
-
-    /* Detach thread from JVM. */
-    pthread_mutex_unlock(&fm_nat.mutex);
-
-#endif
-
-#endif
 }
 
 
@@ -1237,89 +978,3 @@ bool setSnrThresholdNative(int snr_thres)
 #endif
     return true;
 }
-
-/* List of native functions that will be registered with Android startup. */
-
-/* Note: All functions must be "called" by Java or they will be removed by
-   the compiler, resulting in mysterious JNI registration errors. */
-
-/* These functions are used for initialization and calls to the FM stack.*/
-
-#if 0
-JNINativeMethod sMethods[] = {
-     /* name, signature, funcPtr */
-    {"initNativeDataNative", "()V", (void *)initNativeDataNative},
-    {"enableNative", "(I)Z", (void *)enableNative},
-    {"disableNative", "(Z)Z", (void *)disableNative},
-    {"tuneNative", "(I)Z", (void *)tuneNative},
-    {"muteNative", "(Z)Z", (void *)muteNative},
-    {"searchNative", "(IIII)Z", (void *)searchNative},
-    {"comboSearchNative", "(IIIIIZII)Z", (void *)comboSearchNative},
-    {"searchAbortNative", "()Z", (void *)searchAbortNative},
-    {"setRdsModeNative", "(ZZI)Z", (void *) setRdsModeNative},
-//    {"setRdsRdbsNative", "(I)Z", (void *) setRdsRdbsNative},
-    {"setAudioModeNative", "(I)Z", (void *)setAudioModeNative},
-    {"setAudioPathNative", "(I)Z", (void *)setAudioPathNative},
-    {"setScanStepNative", "(I)Z", (void *) setScanStepNative},
-    {"setRegionNative", "(I)Z", (void *) setRegionNative},
-    {"configureDeemphasisNative", "(I)Z", (void *) configureDeemphasisNative},
-    {"estimateNoiseFloorNative", "(I)Z", (void *) estimateNoiseFloorNative},
-    {"getAudioQualityNative", "(Z)Z", (void *) getAudioQualityNative},
-    {"configureSignalNotificationNative", "(I)Z", (void *) configureSignalNotificationNative},
-    {"setFMVolumeNative", "(I)Z", (void *) setFMVolumeNative},
-    {"setSnrThresholdNative", "(I)Z", (void *) setSnrThresholdNative},
-    {"classFmInitNative", "()V", (void *)classFmInitNative},
-    {"initLoopNative", "()V", (void *)initLoopNative},
-    {"cleanupLoopNative", "()V", (void *)cleanupLoopNative},
-};
-
-
-#if IS_STANDALONE_FM != TRUE
-/* Register stack calling functions with Android JNI. */
-int register_com_broadcom_bt_service_fm_FmReceiverService(JNIEnv *env) {
-    return AndroidRuntime::registerNativeMethods(env,
-            "com/broadcom/bt/service/fm/FmReceiverService", sMethods, NELEM(sMethods));
-}
-} /* namespace android */
-#else
-
-
-/**
- * Register several native methods for one class.
- */
-static int registerNativeMethods(JNIEnv* env, const char* className,
-        JNINativeMethod* gMethods, int numMethods)
-{
-    jclass clazz;
-
-    clazz = env->FindClass(className);
-    if (clazz == NULL) {
-        LOGE("Native registration unable to find class '%s'", className);
-		return false;
-    }
-    if (env->RegisterNatives(clazz, gMethods, numMethods) < 0) {
-        LOGE("RegisterNatives failed for '%s'", className);
-		return false;
-    }
-
-    return true;
-}
-
-/*
- * Register native methods for all classes we know about.
- *
- * returns true on success.
- */
-int register_com_broadcom_bt_service_fm_FmReceiverService(JNIEnv *env)
-{
-    if (!registerNativeMethods(env, "com/broadcom/bt/service/fm/FmReceiverService",
-            sMethods, sizeof(sMethods) / sizeof(sMethods[0]))) {
-        return false;
-    }
-
-    return true;
-}
-
-#endif
-
-#endif

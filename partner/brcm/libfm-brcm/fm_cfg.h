@@ -1,5 +1,7 @@
-#ifndef fm_cfg
-//#define HAVE_BLUETOOTH
+#ifndef _FM_CFG_H_
+#define _FM_CFG_H_
+
+
 #define IS_STANDALONE_FM TRUE
 
 /* Use BTL-IF */
@@ -7,13 +9,6 @@
 #define BRCM_BT_USE_BTL_IF
 #endif
 
-//Uncomment to use BTAPP calls directly
-//#define BRCM_USE_BTAPP
-
-
-//#include <jni.h>
-//#include <JNIHelp.h>
-//#include <android_runtime/AndroidRuntime.h>
 
 //Define logging calls
 #include <android/log.h>
@@ -24,3 +19,4 @@
 #define LOGD(fmt, args...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, fmt, ##args)
 
 #endif
+//_FM_CFG_H_

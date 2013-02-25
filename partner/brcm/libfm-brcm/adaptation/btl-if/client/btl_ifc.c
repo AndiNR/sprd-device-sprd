@@ -312,17 +312,21 @@ static inline int btl_ifc_select_wakeup_init(void)
 }
 
 /* signal socketpair to wake up select loop */
-static inline int btl_ifc_select_wakeup(void)
+static inline void btl_ifc_select_wakeup(void)
 {
     char sig_on = 1;
-    return send(signal_fds[1], &sig_on, sizeof(sig_on), 0);
+    if(send(signal_fds[1], &sig_on, sizeof(sig_on), 0) < 0) {
+        error("btl_ifc_select_wakeup failed: %s", strerror(errno));
+	}
 }
 
 /* clear signal by reading signal */
 static inline int btl_ifc_select_wake_reset(void)
 {
     char sig_recv = 0;
-    recv(signal_fds[0], &sig_recv, sizeof(sig_recv), MSG_WAITALL);
+	if(recv(signal_fds[0], &sig_recv, sizeof(sig_recv), MSG_WAITALL) < 0) {
+        error("btl_ifc_select_wake_reset failed: %s", strerror(errno));
+	}
     return (int)sig_recv;
 }
 
@@ -938,6 +942,9 @@ tBTL_IF_Result BTL_IFC_ConnectDatapath(tDATA_HANDLE* handle, tBTL_IF_SUBSYSTEM s
     CHECK_SUBSYSTEM(sub);
 
     s = wrp_sock_create(sub);
+    if (s < 0)
+        return BTL_IF_GENERIC_ERR;
+
     ws = wrp_find_wsock(s);
 
     /* establish connection */
@@ -984,6 +991,9 @@ tBTL_IF_Result BTL_IFC_WaitForDataChan(tDATA_HANDLE* handle,
     CHECK_SUBSYSTEM(sub);
 
     s = wrp_sock_create(sub);
+    if (s < 0)
+        return BTL_IF_GENERIC_ERR;
+
     ws = wrp_find_wsock(s);
 
     result = wrp_sock_bind(ws, s, btl_ifc_get_srvaddr(), wrp_getport(sub, sub_port));
@@ -1027,7 +1037,8 @@ tBTL_IF_Result BTL_IFC_SetupDatapathListener(tCTRL_HANDLE ctrl, tBTL_IF_SUBSYSTE
     CHECK_SUBSYSTEM(sub);
 
     s = wrp_sock_create(sub);
-
+    if (s < 0)
+        return BTL_IF_GENERIC_ERR;
     ws = wrp_find_wsock(s);
 
     result = wrp_sock_bind(ws, s, btl_ifc_get_srvaddr(), wrp_getport(sub, sub_port));
@@ -1045,7 +1056,7 @@ tBTL_IF_Result BTL_IFC_SetupDatapathListener(tCTRL_HANDLE ctrl, tBTL_IF_SUBSYSTE
     param.listenreq.subport = sub_port;
 
     /* Notify server that we have a listener available */
-    BTL_IFC_CtrlSend(ctrl, sub, BTLIF_LISTEN_REQ, &param, sizeof(tBTLIF_LISTEN_REQ_PARAM));
+    result = BTL_IFC_CtrlSend(ctrl, sub, BTLIF_LISTEN_REQ, &param, sizeof(tBTLIF_LISTEN_REQ_PARAM));
 
     if (result<0)
         return BTL_IF_GENERIC_ERR;
