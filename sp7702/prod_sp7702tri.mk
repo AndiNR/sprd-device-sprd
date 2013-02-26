@@ -28,9 +28,10 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.com.android.dataroaming=false \
 	persist.msms.phone_count=3 \
 	persist.msms.phone_default=0 \
-    lmk.autocalc=false \
-    zram.support=true \
-    ro.build.product.lowmem=1    
+	lmk.autocalc=false \
+	zram.support=true \
+	ro.build.product.lowmem=1 \
+	universe_ui_support=true
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1
@@ -74,6 +75,7 @@ $(call inherit-product, frameworks/native/build/phone-hdpi-256-dalvik-heap.mk)
 $(call inherit-product, $(BOARDDIR)/base.mk)
 $(call inherit-product, $(BOARDDIR)/proprietories.mk)
 $(call inherit-product, device/sprd/common/res/boot/boot_res.mk)
+$(call inherit-product, vendor/sprd/UniverseUI/universeui.mk)
 
 # include standard configs
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base.mk)
