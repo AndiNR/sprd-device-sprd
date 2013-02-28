@@ -1689,6 +1689,23 @@ static ssize_t process_frames(struct tiny_stream_in *in, void* buffer, ssize_t f
     return frames_wr;
 }
 
+static bool in_bypass_data(struct tiny_stream_in *in,uint32_t frame_size, uint32_t sample_rate, void* buffer, size_t bytes)
+{
+    struct tiny_audio_device *adev = in->dev;
+    /*
+        1. If cp stopped calling and in-devices is AUDIO_DEVICE_IN_VOICE_CALL, it means that cp already stopped vt call, we should write
+            0 data, otherwise, AudioRecord will obtainbuffer timeout.
+    */
+   if ((!adev->call_start) && (adev->mode == AUDIO_MODE_IN_CALL) && ((in->device == AUDIO_DEVICE_IN_VOICE_CALL))){
+       ALOGW("in_bypass_data write 0 data call_start(%d) mode(%d) devices(0x%x) in_device(0x%x) call_connected(%d) call_prestop(%d) ",adev->call_start,adev->mode,adev->devices,in->device,adev->call_connected,adev->call_prestop);
+       memset(buffer,0,bytes);
+       usleep(bytes * 1000000 / frame_size / sample_rate);
+       return true;
+   }else{
+     return false;
+   }
+}
+
 static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
                        size_t bytes)
 {
@@ -1703,6 +1720,13 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
      */
     pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&in->lock);
+#ifndef _VOICE_CALL_VIA_LINEIN
+    if(in_bypass_data(in,audio_stream_frame_size(&stream->common),in_get_sample_rate(&stream->common),buffer,bytes)){
+        pthread_mutex_unlock(&adev->lock);
+        pthread_mutex_unlock(&in->lock);
+        return bytes;
+    }
+#endif
     if (in->standby) {
         ret = start_input_stream(in);
         if (ret == 0)
