@@ -121,11 +121,13 @@ implements Preference.OnPreferenceChangeListener{
 		}
 	}
 
-	private void DisplayToast(String str) {
-		Toast mToast = Toast.makeText(this, str, Toast.LENGTH_SHORT);
-		mToast.setGravity(Gravity.TOP, 0, 100);
-		mToast.show();
-	}
+    private void DisplayToast(String str) {
+        Toast mToast = Toast.makeText(this, str, Toast.LENGTH_SHORT);
+        /*Delete 20130228 Spreadst of 130815 set the toast location as the default start*/
+        //mToast.setGravity(Gravity.TOP, 0, 100);
+        /*Delete 20130228 Spreadst of 130815 set the toast location as the default end  */
+        mToast.show();
+    }
 
 	public boolean onPreferenceChange(Preference preference, Object newValue) {
 		// TODO Auto-generated method stub
