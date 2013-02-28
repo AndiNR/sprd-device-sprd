@@ -105,7 +105,11 @@ PRODUCT_COPY_FILES := \
 	device/sprd/common/res/media/media_profiles.xml:system/etc/media_profiles.xml \
 	frameworks/native/data/etc/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml \
 	frameworks/native/data/etc/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml \
-	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml
+	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml \
+	frameworks/native/data/etc/android.hardware.location.gps.xml:system/etc/permissions/android.hardware.location.gps.xml \
+	device/sprd/partner/brcm/gps/glgps:/system/bin/glgps \
+	device/sprd/partner/brcm/gps/gpsconfig_uart.xml:/system/etc/gpsconfig.xml \
+	device/sprd/partner/brcm/gps/gps.default.so:/system/lib/hw/gps.default.so
 
 BOARD_WLAN_DEVICE_REV       := bcm4330_b2
 $(call inherit-product, hardware/broadcom/wlan/bcmdhd/firmware/bcm4330/device-bcm.mk)
