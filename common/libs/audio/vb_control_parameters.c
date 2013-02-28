@@ -777,7 +777,7 @@ RESTART:
         /* read parameters common head of the packet.*/
         ret = ReadParas_Head(s_vbpipe_fd, &read_common_head);
         if (ret < 0) {
-            ALOGE("Error, %s read head failed(c), need to read again ",__func__,strerror(errno));
+            ALOGE("Error, %s read head failed(%s), need to read again ",__func__,strerror(errno));
             continue;
         }else if (ret == 0) {   //cp something wrong
             ALOGE("Error, %s read head failed(%s), need to reopen vbpipe ",__func__,strerror(errno));
