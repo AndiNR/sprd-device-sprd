@@ -25,7 +25,6 @@ PRODUCT_PACKAGES := \
 	Gallery2 \
 	InputDevices \
 	LatinIME \
-	Launcher2 \
 	Music \
 	MusicFX \
 	Provision \
@@ -33,21 +32,19 @@ PRODUCT_PACKAGES := \
 	SystemUI \
 	CalendarProvider \
 	bluetooth-health \
-	hostapd \
-	wpa_supplicant.conf \
 	hciconfig \
 	hcitool \
 	hcidump \
 	bttest\
+	hostapd \
+	wpa_supplicant.conf \
 	audio.a2dp.default \
+        SoundRecorder \
         libmorpho_facesolid.so
 
 # own copyright packages files
 PRODUCT_PACKAGES += \
-    AppBackup \
     AudioProfile \
-    SprdNote \
-    CallFireWall \
     ValidationTools \
     libvalidationtoolsjni \
     vtserver
@@ -57,9 +54,12 @@ PRODUCT_PACKAGES += \
     ES_File_Explorer.apk
 
 PRODUCT_PACKAGES += \
+	modem_control\
+	nvitemd \
 	charge \
 	poweroff_alarm \
 	mplayer \
+	calibration_init \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \
 	camera.$(TARGET_PLATFORM) \
@@ -67,41 +67,42 @@ PRODUCT_PACKAGES += \
 	audio.primary.$(TARGET_PLATFORM) \
 	audio_policy.$(TARGET_PLATFORM) \
 	tinymix \
-	sensors.$(TARGET_BOARD)  \
-	$(MALI)\
-	modem_control \
-        nvitemd   \
-    mcom_monitor
+	sensors.$(TARGET_BOARD) \
+	libmbbms_tel_jni.so \
+	$(MALI) \
+	zram.sh \
+	libsprdstreamrecoder \
+	libvtmanager
 
 PRODUCT_PACKAGES += \
             $(BRCM_FM) \
             $(SPRD_FM_APP)
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/init.rc:root/init.rc \
-	$(BOARDDIR)/init.sp8810.rc:root/init.sp8810.rc \
-	$(BOARDDIR)/init.sp8810.usb.rc:root/init.sp8810.usb.rc \
-	$(BOARDDIR)/ueventd.sp8810.rc:root/ueventd.sp8810.rc \
-	$(BOARDDIR)/fstab.sp8810:root/fstab.sp8810 \
+	$(BOARDDIR)/init.sc7710g.rc:root/init.sc7710g.rc \
+	$(BOARDDIR)/init.sc7710g.usb.rc:root/init.sc7710g.usb.rc \
+	$(BOARDDIR)/ueventd.sc7710g.rc:root/ueventd.sc7710g.rc \
+	$(BOARDDIR)/fstab.sc7710g:root/fstab.sc7710g \
 	$(BOARDDIR)/vold.fstab:system/etc/vold.fstab \
 	$(BOARDDIR)/modem_images.info:root/modem_images.info \
+	device/sprd/common/res/CDROM/adb.iso:system/etc/adb.iso \
 	device/sprd/common/libs/audio/apm/devicevolume.xml:system/etc/devicevolume.xml \
 	device/sprd/common/libs/audio/apm/formatvolume.xml:system/etc/formatvolume.xml \
         $(BOARDDIR)/hw_params/tiny_hw.xml:system/etc/tiny_hw.xml \
         $(BOARDDIR)/hw_params/codec_pga.xml:system/etc/codec_pga.xml \
         $(BOARDDIR)/hw_params/audio_para:system/etc/audio_para \
-	device/sprd/common/res/CDROM/adb.iso:system/etc/adb.iso \
 	device/sprd/common/libs/mali/egl.cfg:system/lib/egl/egl.cfg \
 	device/sprd/common/libs/audio/audio_policy.conf:system/etc/audio_policy.conf \
 	device/sprd/common/res/media/media_codecs.xml:system/etc/media_codecs.xml \
 	device/sprd/common/res/media/media_profiles.xml:system/etc/media_profiles.xml \
-	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml \
-	device/sprd/partner/g05t/lib_gsd5t.so:system/lib/hw/gps.kylew.so \
-	device/sprd/partner/g05t/sirfgps.conf:system/vendor/etc/sirfgps.conf \
 	frameworks/native/data/etc/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml \
-	frameworks/native/data/etc/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml
+	frameworks/native/data/etc/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml \
+	frameworks/native/data/etc/android.hardware.touchscreen.multitouch.xml:system/etc/permissions/android.hardware.touchscreen.multitouch.xml \
+	frameworks/native/data/etc/android.hardware.touchscreen.xml:system/etc/permissions/android.hardware.touchscreen.xml \
+	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml
 
 $(call inherit-product, $(BOARDDIR)/../common/apps/engineeringmodel/module.mk)
 $(call inherit-product, $(BOARDDIR)/../common/apps/modemassert/module.mk)
 BOARD_WLAN_DEVICE_REV       := bcm4330_b1
 $(call inherit-product, hardware/broadcom/wlan/bcmdhd/firmware/bcm4330/device-bcm.mk)
-
+$(call inherit-product, $(BOARDDIR)/../common/apps/modemassert/module.mk)

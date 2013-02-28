@@ -26,19 +26,30 @@ PRODUCT_AAPT_CONFIG := hdpi
 PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
 	ro.com.android.dataroaming=false \
-	persist.msms.phone_count=1 \
-	persist.sys.sprd.modemreset=1
+	persist.msms.phone_count=2 \
+	persist.msms.phone_default=0 \
+    lmk.autocalc=false \
+    zram.support=true \
+    ro.build.product.lowmem=1    
+
+ifeq ($(TARGET_BUILD_VARIANT),user)
+  PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1
+else
+  PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=0
+endif
 
 # Set default USB interface
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
-	persist.sys.usb.config=mtp
+	persist.sys.usb.config=mass_storage
 
 PRODUCT_PACKAGES := \
 	VoiceDialer \
-	Phone \
-	framework2 \
+	MsmsPhone \
 	Settings \
-	Stk
+	MsmsStk \
+	Stk1 \
+	framework2 \
+	Launcher2
 
 # prebuild files
 PRODUCT_PACKAGES += \

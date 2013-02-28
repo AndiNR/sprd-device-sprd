@@ -1,17 +1,25 @@
-import init.sp8810.usb.rc
+import init.sc7710g.usb.rc
 
 on early-init
-    export EXTERNAL_STORAGE /storage/sdcard0
-    export SECONDARY_STORAGE /storage/sdcard1
+    export EXTERNAL_STORAGE /storage/sdcard1
+    export SECONDARY_STORAGE /storage/sdcard0
+    # 0 for nand,1 for emmc,2 for sdcard
+    export SECOND_STORAGE_TYPE 0
     mkdir /storage 0050 system sdcard_r
     mkdir /storage/sdcard0 0000 system system
     mkdir /storage/sdcard1 0000 system system
     # for backwards compatibility
-    symlink /storage/sdcard0 /sdcard
-    symlink /storage/sdcard0 /mnt/sdcard
+    symlink /storage/sdcard1 /sdcard
+    symlink /storage/sdcard1 /mnt/sdcard
+    symlink /dev/ts0710mux22  /dev/vbpipe0
+# radio pipe
+    mkdir /dev/rpipe 0550 radio radio
+    pipe 666 /dev/rpipe/ril.vt.0
+    pipe 666 /dev/rpipe/ril.vt.1
+    pipe 666 /dev/rpipe/ril.vt.2
 
 on fs
-    mount_all /fstab.sp8810
+    mount_all /fstab.sc7710g
     setprop ro.crypto.fuse_sdcard true
 
 on post-fs
@@ -56,19 +64,39 @@ on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
 
 #modem_control
-service modem_control /system/bin/logwrapper /modem_control
+service modem_control /modem_control
     class main
     user root
     oneshot
+    
+on property:lmk.autocalc=false
+    setprop ro.LMK_SLOT0_ADJ 0
+    setprop ro.LMK_SLOT1_ADJ 1
+    setprop ro.LMK_SLOT2_ADJ 2
+    setprop ro.LMK_SLOT3_ADJ 4
+    setprop ro.LMK_SLOT4_ADJ 9
+    setprop ro.LMK_SLOT5_ADJ 15
+    setprop ro.LMK_SLOT0_MINFREE 4096
+    setprop ro.LMK_SLOT1_MINFREE 16384
+    setprop ro.LMK_SLOT2_MINFREE 24576
+    setprop ro.LMK_SLOT3_MINFREE 32768
+    setprop ro.LMK_SLOT4_MINFREE 38428
+    setprop ro.LMK_SLOT5_MINFREE 45776
+
+    write /sys/module/lowmemorykiller/parameters/adj 0,1,2,4,9,15
+    write /sys/module/lowmemorykiller/parameters/minfree 1024,4096,6144,8192,9607,11444
+
+on property:zram.support=true
+    setprop zram.disksize 180
+    setprop sys.vm.swappiness 100
+    service zram /system/xbin/zram.sh
+        class main
+        oneshot
 
 #telephony service
 service sprd_monitor /system/bin/sprd_monitor
     class main
     user root
-    oneshot
-
-service modemd /system/bin/modemd
-    class main
     oneshot
 
 service engpcclient /system/bin/engpcclient
@@ -127,8 +155,20 @@ service ril-daemon1 /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -
     user root
     group radio cache inet misc audio sdcard_rw log
 
+service ril-daemon2 /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -- -n 2
+    class main
+    socket rild2 stream 660 root radio
+    socket rild-debug2 stream 660 radio system
+    disabled
+    user root
+    group radio cache inet misc audio sdcard_rw log
+
 on property:persist.msms.phone_count=2
     start ril-daemon1
+
+on property:persist.msms.phone_count=3
+    start ril-daemon1
+    start ril-daemon2
 
 #nvitemd
 service nvitemd /system/bin/nvitemd

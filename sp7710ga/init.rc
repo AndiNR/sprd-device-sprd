@@ -120,24 +120,31 @@ loglevel 3
 
 on fs
 # mount mtd partitions
-    chmod 0774 /modem_control
     # Mount /system rw first to give the filesystem a chance to save a checkpoint
-    mount yaffs2 mtd@system /system
-    mount yaffs2 mtd@system /system ro remount
-    mount yaffs2 mtd@userdata /data nosuid nodev
-    mount yaffs2 mtd@cache /cache nosuid nodev
+
+    chmod 0744   /modem_control
+    start modem_control
 
 on post-fs
     # once everything is setup, no need to modify /
     mount rootfs rootfs / ro remount
 
-    # We chown/chmod /cache again so because mount is run as root + defaults
-    chown system cache /cache
-    chmod 0770 /cache
+    mount yaffs2 mtd@fixnv /fixnv nosuid nodev no-checkpoint,tags-ecc-off
+    chown system system /fixnv
+    chmod 0774 /fixnv
 
     mount yaffs2 mtd@runtimenv /runtimenv nosuid nodev no-checkpoint,tags-ecc-off
     chown system system /runtimenv
     chmod 0774 /runtimenv
+
+    mount yaffs2 mtd@system /system
+    mount yaffs2 mtd@system /system ro remount
+    mount yaffs2 mtd@userdata /data nosuid nodev
+    mount yaffs2 mtd@cache /cache nosuid nodev
+
+    # We chown/chmod /cache again so because mount is run as root + defaults
+    chown system cache /cache
+    chmod 0770 /cache
 
     mount yaffs2 mtd@backupfixnv /backupfixnv nosuid nodev no-checkpoint,tags-ecc-off
     chown system system /backupfixnv
@@ -147,9 +154,6 @@ on post-fs
     chown system system /productinfo
     chmod 0774 /productinfo
 
-    mount yaffs2 mtd@fixnv /fixnv nosuid nodev no-checkpoint,tags-ecc-off
-    chown system system /fixnv
-    chmod 0774 /fixnv
 
     chmod 0660 /fixnv/fixnv.bin
     chmod 0660 /backupfixnv/fixnv.bin
@@ -215,6 +219,7 @@ on post-fs-data
     # Do not place files or directories in /data/local/tmp
     mkdir /data/local/tmp 0771 shell shell
     mkdir /data/data 0771 system system
+    mkdir /data/anr 0775 system system
     mkdir /data/app-private 0771 system system
     mkdir /data/app-asec 0700 root root
     mkdir /data/app 0771 system system
