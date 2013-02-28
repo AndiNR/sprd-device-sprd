@@ -43,6 +43,7 @@ PRODUCT_PACKAGES := \
 	VoiceDialer \
 	Phone \
 	framework2 \
+	SprdDM \
 	Settings \
 	Stk \
 	Launcher2

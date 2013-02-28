@@ -39,6 +39,7 @@ PRODUCT_PACKAGES := \
     VoiceDialer \
     MsmsPhone \
     Settings \
+    SprdDM \
     MsmsStk \
     Stk1 \
     framework2

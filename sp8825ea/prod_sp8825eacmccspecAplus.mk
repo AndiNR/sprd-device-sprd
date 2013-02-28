@@ -37,6 +37,7 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 PRODUCT_PACKAGES := \
     VoiceDialer \
     MsmsPhone \
+    SprdDM \
     Settings \
     MsmsStk \
     Stk1 \

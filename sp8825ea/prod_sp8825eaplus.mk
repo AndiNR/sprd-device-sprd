@@ -37,6 +37,7 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 PRODUCT_PACKAGES := \
 	MsmsStk \
 	Stk1 \
+	SprdDM \
 	framework2 \
 	VoiceDialer \
 	Launcher2
