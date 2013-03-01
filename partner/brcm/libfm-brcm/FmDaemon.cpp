@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 
 	memset(&fromAddr,0,sizeof(fromAddr));
 	fromAddr.sin_family=AF_INET;
-	fromAddr.sin_addr.s_addr=htonl(INADDR_ANY);
+	fromAddr.sin_addr.s_addr=htonl(INADDR_LOOPBACK);
 	fromAddr.sin_port = htons(4000);
 
 	if(bind(sock,(struct sockaddr*)&fromAddr,sizeof(fromAddr))<0)
