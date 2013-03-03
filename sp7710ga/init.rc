@@ -125,6 +125,11 @@ on fs
     chmod 0744   /modem_control
     start modem_control
 
+    mount yaffs2 mtd@system /system
+    mount yaffs2 mtd@system /system ro remount
+    mount yaffs2 mtd@userdata /data nosuid nodev
+    mount yaffs2 mtd@cache /cache nosuid nodev
+
 on post-fs
     # once everything is setup, no need to modify /
     mount rootfs rootfs / ro remount
@@ -137,11 +142,6 @@ on post-fs
     chown system system /runtimenv
     chmod 0774 /runtimenv
 
-    mount yaffs2 mtd@system /system
-    mount yaffs2 mtd@system /system ro remount
-    mount yaffs2 mtd@userdata /data nosuid nodev
-    mount yaffs2 mtd@cache /cache nosuid nodev
-
     # We chown/chmod /cache again so because mount is run as root + defaults
     chown system cache /cache
     chmod 0770 /cache
@@ -153,7 +153,6 @@ on post-fs
     mount yaffs2 mtd@productinfo /productinfo nosuid nodev no-checkpoint,tags-ecc-off
     chown system system /productinfo
     chmod 0774 /productinfo
-
 
     chmod 0660 /fixnv/fixnv.bin
     chmod 0660 /backupfixnv/fixnv.bin
@@ -356,6 +355,7 @@ on charger
     class_start charger
 
 on alarm
+    insmod /system/lib/modules/ft5306_ts.ko
     class_start core
     start media
     exec /bin/poweroff_alarm

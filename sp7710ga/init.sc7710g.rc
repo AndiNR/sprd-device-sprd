@@ -1,16 +1,16 @@
 import init.sc7710g.usb.rc
 
 on early-init
-    export EXTERNAL_STORAGE /storage/sdcard1
-    export SECONDARY_STORAGE /storage/sdcard0
+    export EXTERNAL_STORAGE /storage/sdcard0
+    export SECONDARY_STORAGE /storage/sdcard1
     # 0 for nand,1 for emmc,2 for sdcard
     export SECOND_STORAGE_TYPE 0
     mkdir /storage 0050 system sdcard_r
     mkdir /storage/sdcard0 0000 system system
     mkdir /storage/sdcard1 0000 system system
     # for backwards compatibility
-    symlink /storage/sdcard1 /sdcard
-    symlink /storage/sdcard1 /mnt/sdcard
+    symlink /storage/sdcard0 /sdcard
+    symlink /storage/sdcard0 /mnt/sdcard
     symlink /dev/ts0710mux22  /dev/vbpipe0
 # radio pipe
     mkdir /dev/rpipe 0550 radio radio
@@ -18,17 +18,15 @@ on early-init
     pipe 666 /dev/rpipe/ril.vt.1
     pipe 666 /dev/rpipe/ril.vt.2
 
-on fs
-    mount_all /fstab.sc7710g
-    setprop ro.crypto.fuse_sdcard true
 
 on post-fs
     insmod /system/lib/modules/ump.ko
     insmod /system/lib/modules/mali.ko
+    setprop ro.crypto.fuse_sdcard true
 
 on post-fs-data
     # we will remap this as /storage/sdcard0 with the sdcard fuse tool
-    mkdir /data/media 0770 media_rw media_rw
+    mkdir /data/media 0775 media_rw media_rw
     chown media_rw media_rw /data/media
 
     # Set indication (checked by vold) that we have finished this action
@@ -46,9 +44,9 @@ on boot
     chown system system /sys/class/compass/akm8975/accel
 
     chmod 666 /dev/ttyS0
-    chmod 660 /proc/bluetooth/sleep/proto
-    chmod 660 /sys/class/rfkill/rfkill0/state
-    chmod 660 /sys/class/rfkill/rfkill0/type
+    chmod 666 /proc/bluetooth/sleep/proto
+    chmod 666 /sys/class/rfkill/rfkill0/state
+    chmod 666 /sys/class/rfkill/rfkill0/type
     chown bluetooth bluetooth /sys/class/rfkill/rfkill0/state
     chown bluetooth bluetooth /sys/class/rfkill/rfkill0/type
     chown bluetooth system /proc/bluetooth/sleep/proto

@@ -12,9 +12,9 @@
 /dev/ump                0666     system      graphics
 /dev/al3006_pls         0666     system      system
 /dev/lis3dh_acc         0660     system      system
-/dev/akm8975_dev        0660     system      system
+/dev/akm8963_dev        0660     system      system
 /dev/ts0710mux*         0660     radio       radio
-
+/dev/BEKEN_FM           0666     system      audio
 /dev/mdtv*              0600     system  system
 /dev/mxdspidev          0666     system  system
 /dev/vbpipe1            0660     system  system
