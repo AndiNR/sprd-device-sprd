@@ -26,12 +26,19 @@ struct image_info {
 #define	FDL_PACKET_SIZE 	256
 #define HS_PACKET_SIZE		(60*1024)
 
+#define FDL_CP_PWRON_DLY	(180*1000)//us
+#define FDL_CP_UART_TIMEOUT	(200) //ms
+#define FDL_CP_UART_REC_DLY	(5*1000) //us
+
 #define	DL_FAILURE		(-1)
 #define DL_SUCCESS		(0)
 char test_buffer[HS_PACKET_SIZE+128]={0};
+
 static int modem_images_count=6;
 static char *uart_dev = UART_DEVICE_NAME;
 static int need_shutdown = 0;
+static int fdl_cp_poweron_delay = FDL_CP_PWRON_DLY;
+	
 struct image_info download_image_info[]={
         { //fixvn
                 "/dev/mtd/mtd3",
@@ -123,9 +130,14 @@ int get_modem_images_info(void)
         info[images_count].image_size = strtol(&length_ptr[2],&save_ptr,16);
         info[images_count].address = strtol(&address_ptr[2],&save_ptr,16);
         if((info[images_count].address == 0) || (info[images_count].image_size==0)){
+                /*get tty device number from modem_images.info*/
                 uart_dev = info[images_count].image_path;
                 printf("UART Device = %s",uart_dev);
-        } else {
+                if(info[images_count].image_size != 0){
+                        /*get cp power delay param from modem_images.info*/
+                        fdl_cp_poweron_delay = info[images_count].image_size;
+                }
+        }else {
                 images_count++;
         }
         if(images_count >= max_item) break;
@@ -168,7 +180,7 @@ void delay_ms(int ms)
 	delay.tv_usec = ms * 1000; 
 	select(0, NULL, NULL, NULL, &delay);
 }
-#define UART_TIMEOUT    200
+
 static void try_to_connect_modem(int uart_fd)
 {
 	unsigned long hand_shake = 0x7E7E7E7E;
@@ -182,21 +194,21 @@ static void try_to_connect_modem(int uart_fd)
 
 	delay_time.tv_sec = 0;
     	printf("try to connect modem(%d)......\n",boot_status);
-        modem_connect = UART_TIMEOUT;
+        modem_connect = FDL_CP_UART_TIMEOUT;
 
 	for(;;){
 		
-		if(modem_connect >= UART_TIMEOUT){
+		if(modem_connect >= FDL_CP_UART_TIMEOUT){
         		if(boot_status == 0){
 				reset_modem();
-				usleep(180*1000);
+				usleep(fdl_cp_poweron_delay);
 			}
 		}
 
 		data = version_string;
 		if(boot_status == 0){
 			i=0;
-			if(modem_connect >= UART_TIMEOUT){
+			if(modem_connect >= FDL_CP_UART_TIMEOUT){
 				do{
 					ret = read(uart_fd,data,1);
 					i++;
@@ -210,7 +222,7 @@ static void try_to_connect_modem(int uart_fd)
 				modem_connect = 0;
 			}
 		}
-		usleep(5*1000);
+		usleep(FDL_CP_UART_REC_DLY);
 		write(uart_fd,&hand_shake,1);
 		
 		data = version_string;
@@ -241,7 +253,7 @@ static void try_to_connect_modem(int uart_fd)
 						modem_connect += 2;
 					}
 				
-				}while(modem_connect < UART_TIMEOUT);
+				}while(modem_connect < FDL_CP_UART_TIMEOUT);
 			} else {
 				if(version_string[0] == 0x55){
 					write(uart_fd,&hand_shake,3);

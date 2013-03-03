@@ -2,7 +2,8 @@
 #file length and download must begin with "0x"
 #the first item MUST be FDL filename
 #the last item can be UART device , when set UART device
-#file length download address are 0x00
+#download address is 0x00, or download size is zero
+#file length means cp poweron delay time(us), if is zero, will use the default value in modem_boot.c(180x1000us)
 
 /dev/mtd/mtd3			0x3000		0x40000000
 /dev/mtd/mtd7			0x200000	0x20000
@@ -10,5 +11,4 @@
 /fixnv/fixnv.bin		0x1E000		0x400
 /fixnv/fixnv.bin		0x1E000		0x2100000
 /runtimenv/runtimenv.bin	0x20000		0x2120000
-
-/dev/ttyS3			0x00		0x00
+/dev/ttyS3			0x2d000		0x00

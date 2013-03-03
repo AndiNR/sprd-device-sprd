@@ -123,7 +123,7 @@ on fs
     # Mount /system rw first to give the filesystem a chance to save a checkpoint
 
     chmod 0744   /modem_control
-    start modem_control
+    #start modem_control
 
     mount yaffs2 mtd@system /system
     mount yaffs2 mtd@system /system ro remount
