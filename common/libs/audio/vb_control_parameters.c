@@ -418,22 +418,22 @@ static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *m
 //At present, switch of pa cannot handle mulit-device
     android_cur_device = 0;
     if(switch_earpice){
-        android_cur_device |= 0x1;
+        android_cur_device |= AUDIO_DEVICE_OUT_EARPIECE;
     }
     if(switch_speaker){
-        android_cur_device |= 0x2;
+        android_cur_device |= AUDIO_DEVICE_OUT_SPEAKER;
     }
     if(switch_headset){
-        android_cur_device |= 0x4;
+        android_cur_device |= AUDIO_DEVICE_OUT_WIRED_HEADSET;
     }
     if(switch_mic0){
-        android_cur_device |= 0x40000;
+        android_cur_device |= AUDIO_DEVICE_IN_BUILTIN_MIC;
     }
     if(switch_mic1){
-        android_cur_device |= 0x800000;
+        android_cur_device |= AUDIO_DEVICE_IN_BACK_MIC;
     }
     if(switch_hp_mic){
-        android_cur_device |= 0x100000;
+        android_cur_device |= AUDIO_DEVICE_IN_WIRED_HEADSET;
     }
 
 	for(i=0; i<(sizeof(switch_table)/sizeof(unsigned short));i++)
