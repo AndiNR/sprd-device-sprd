@@ -18,7 +18,7 @@
 #include "mali_kernel_core.h"
 #include "mali_group.h"
 
-#define MALI_PM_LIGHT_SLEEP_TIMEOUT 1000
+#define MALI_PM_LIGHT_SLEEP_TIMEOUT 50
 
 enum mali_pm_scheme
 {
@@ -405,7 +405,7 @@ static void mali_pm_event(enum mali_pm_event pm_event, mali_bool schedule_work, 
 			MALI_DEBUG_ASSERT( MALI_PM_SCHEME_OS_SUSPENDED    != current_scheme );
 			break;
 		case MALI_PM_EVENT_CORES_IDLE:
-			next_level_dynamic = MALI_PM_LEVEL_3_LIGHT_SLEEP;
+			next_level_dynamic = MALI_PM_LEVEL_2_STANDBY;
 			/*MALI_DEBUG_ASSERT( MALI_PM_SCHEME_OS_SUSPENDED    != current_scheme );*/
 			break;
 		case MALI_PM_EVENT_TIMER_LIGHT_SLEEP:
@@ -542,11 +542,11 @@ void mali_pm_os_resume(void)
 void mali_pm_runtime_suspend(void)
 {
 	MALI_DEBUG_PRINT(3, ("Mali PM: OS runtime suspended\n"));
-//	mali_platform_power_mode_change(MALI_POWER_MODE_LIGHT_SLEEP);
+	mali_platform_power_mode_change(MALI_POWER_MODE_LIGHT_SLEEP);
 }
 
 void mali_pm_runtime_resume(void)
 {
 	MALI_DEBUG_PRINT(3, ("Mali PM: OS runtime resumed\n"));
-//	mali_platform_power_mode_change(MALI_POWER_MODE_ON);
+	mali_platform_power_mode_change(MALI_POWER_MODE_ON);
 }
