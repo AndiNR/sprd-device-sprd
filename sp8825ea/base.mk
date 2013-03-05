@@ -48,7 +48,7 @@ PRODUCT_PACKAGES += \
     SprdNote \
     CallFireWall \
     ValidationTools \
-    libsprddm.so \
+    libsprddm \
     libvalidationtoolsjni \
     vtserver
 

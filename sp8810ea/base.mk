@@ -44,7 +44,7 @@ PRODUCT_PACKAGES := \
 	hostapd \
 	wpa_supplicant.conf \
         SoundRecorder \
-	libsprddm.so \
+	libsprddm \
         libmorpho_facesolid.so
 
 # own copyright packages files
