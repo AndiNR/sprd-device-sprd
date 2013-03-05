@@ -82,7 +82,7 @@ PRODUCT_PACKAGES += \
             $(SPRD_FM_APP)
 #We confirm(2012-12-26):we will only use maxscend
 #ifeq ($(BOARD_CMMB_HW), mxd)
-PRODUCT_PACKAGES += $(MXD_CMMB_PLAYER)
+#PRODUCT_PACKAGES += $(MXD_CMMB_PLAYER)
 #else
 #PRODUCT_PACKAGES += $(SIANOMTV)
 #endif
