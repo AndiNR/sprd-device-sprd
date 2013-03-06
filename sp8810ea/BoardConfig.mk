@@ -88,6 +88,7 @@ USE_CAMERA_STUB := true
 
 BOARD_USES_GENERIC_AUDIO := false
 
+HAVE_WLAN_CU_FEATURE := true
 
 USE_BOOT_AT_DIAG := true
 
