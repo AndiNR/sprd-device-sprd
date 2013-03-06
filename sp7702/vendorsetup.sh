@@ -17,3 +17,4 @@
 add_lunch_combo sp7702base-userdebug
 add_lunch_combo sp7702plus-userdebug
 add_lunch_combo sp7702tri-userdebug
+add_lunch_combo sp7702cuccspecAplus-userdebug
