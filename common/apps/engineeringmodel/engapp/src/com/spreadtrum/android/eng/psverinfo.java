@@ -8,6 +8,7 @@ import android.os.Bundle;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -80,7 +81,7 @@ public class psverinfo extends Activity {
 			int dataSize = 128;
 			byte[] inputBytes = new byte[dataSize];
 			int showlen= mEf.engread(sockid,inputBytes,dataSize);
-			String str123 =  new String(inputBytes, 0, showlen);
+			String str123 =  new String(inputBytes, 0, showlen,Charset.defaultCharset());
 			Log.e(LOG_TAG, "str123" + str123);
 			return str123;
 	}

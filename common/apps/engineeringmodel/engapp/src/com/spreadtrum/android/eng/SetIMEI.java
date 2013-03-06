@@ -10,7 +10,7 @@ import android.os.Bundle;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-
+import java.nio.charset.Charset;
 
 import android.view.View;
 import android.os.Handler;
@@ -87,7 +87,7 @@ public class SetIMEI extends Activity  implements OnClickListener {
         byte[] inputBytes = new byte[dataSize];
 
         int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
-        mATResponse =  new String(inputBytes, 0, showlen);
+        mATResponse =  new String(inputBytes, 0, showlen,Charset.defaultCharset());
         Log.d(LOG_TAG, "Read IMEI: " + mATResponse);
         if (mATResponse.equals("Error") == false) {
 			return mATResponse;

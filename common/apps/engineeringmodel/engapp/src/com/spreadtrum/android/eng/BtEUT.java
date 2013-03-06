@@ -36,7 +36,7 @@ public class BtEUT extends Activity implements OnClickListener{
 
 	private AlertDialog dialog;
 	private ProgressDialog progressDialog;
-	private String notnum = " is not a num";
+	//private String notnum = " is not a num";
 	private String title = "Test Result";
 	private boolean mHaveFinish = true;
 

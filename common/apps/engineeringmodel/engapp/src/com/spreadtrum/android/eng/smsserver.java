@@ -6,6 +6,7 @@ import android.os.Bundle;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -76,7 +77,7 @@ implements Preference.OnPreferenceChangeListener{
 				int dataSize = 128;
 				byte[] inputBytes = new byte[dataSize];
 				int showlen= mEf.engread(sockid,inputBytes,dataSize);
-				String str1 =new String(inputBytes,0,showlen); 
+				String str1 =new String(inputBytes,0,showlen,Charset.defaultCharset());
 	
 				if(str1.equals("OK"))
 				{

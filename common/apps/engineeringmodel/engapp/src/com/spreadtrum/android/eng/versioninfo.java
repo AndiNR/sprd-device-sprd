@@ -3,7 +3,7 @@ package com.spreadtrum.android.eng;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-
+import java.nio.charset.Charset;
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.Handler;
@@ -64,7 +64,7 @@ public class versioninfo extends Activity {
 			int dataSize = 256;
 			byte[] inputBytes = new byte[dataSize];
 			int showlen = mEf.engread(sockid, inputBytes, dataSize);
-			final String str = new String(inputBytes, 0, showlen);
+			final String str = new String(inputBytes, 0, showlen,Charset.defaultCharset());
 			mUiThread.post(new Runnable() {
 				public void run() {
 					txtViewlabel01.setText(str);

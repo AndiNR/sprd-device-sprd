@@ -132,20 +132,28 @@ public class AppSettings extends PreferenceActivity {
         final String key = preference.getKey();
 
         if (CALL_FORWARD_QUERY.equals(key)) {
-            SystemProperties.set("persist.sys.callforwarding", ((CheckBoxPreference) preference)
+	    if(preference instanceof CheckBoxPreference){
+                SystemProperties.set("persist.sys.callforwarding", ((CheckBoxPreference) preference)
                     .isChecked() ? "1" : "0");
+	    }
             return true;
         } else if (AUTO_RETRY_DIAL.equals(key)) {
+	    if(preference instanceof CheckBoxPreference){
             SystemProperties.set("persist.sys.emergencyCallRetry", ((CheckBoxPreference) preference)
                     .isChecked() ? "1" : "0");
+	    }
             return true;
         } else if (CARD_LOG.equals(key)) {
+	    if(preference instanceof CheckBoxPreference){
             SystemProperties.set("persist.sys.cardlog", ((CheckBoxPreference) preference)
                     .isChecked() ? "1" : "0");
+            }
             return true;
         } else if ("modem_reset".equals(key)) {
+            if(preference instanceof CheckBoxPreference){
 	    SystemProperties.set("persist.sys.sprd.modemreset",
 		((CheckBoxPreference) preference).isChecked() ? "1" : "0");
+            }
             return true;
 	}else{
             return false;

@@ -3,6 +3,7 @@ package com.spreadtrum.android.eng;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 import android.os.Bundle;
 import android.os.Handler;
@@ -92,7 +93,7 @@ public class HsupaSetting extends PreferenceActivity implements Preference.OnPre
 			int dataSize = 128;
 			byte[] inputBytes = new byte[dataSize];
 			int showlen = mEf.engread(sockid, inputBytes, dataSize);
-			String str1 = new String(inputBytes, 0, showlen);
+			String str1 = new String(inputBytes, 0, showlen,Charset.defaultCharset());
 			Log.e(TAG, "str1=" + str1);
 			if (str1.equals("1")) {
 				setChecked(false);
