@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+ifneq ($(TARGET_SIMULATOR),true)
 LOCAL_PATH := $(call my-dir)
 
 # HAL module implemenation, not prelinked and stored in
@@ -66,3 +66,4 @@ LOCAL_SRC_FILES := \
 
 #LOCAL_CFLAGS+= -DMALI_VSYNC_EVENT_REPORT_ENABLE
 include $(BUILD_SHARED_LIBRARY)
+endif

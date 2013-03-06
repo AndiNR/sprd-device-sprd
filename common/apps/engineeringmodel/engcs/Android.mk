@@ -1,3 +1,4 @@
+ifneq ($(TARGET_SIMULATOR),true)
 #ENGSERVER
 LOCAL_PATH := $(call my-dir)
 
@@ -227,3 +228,4 @@ LOCAL_MODULE:= enghardwaretest
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_EXECUTABLE)
+endif
