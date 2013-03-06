@@ -137,10 +137,12 @@ public class DebugParam extends PreferenceActivity {
         mBandSelectPreference = (Preference)findPreference(BAND_SELECT);
         /*Add 20130206 Spreadst of 122017 8810 7710 don't support PLMN start*/
         String mode = SystemProperties.get("ro.product.hardware");
-        if(mode.contains("8810") ||mode.contains("7710")){
+        /*Modify 20130306 Spreadst of 130799 77XX dont support PLMN start */
+        if(mode.contains("8810") ||mode.contains("77")||mode.contains("8825")){
             getPreferenceScreen().removePreference((Preference)findPreference("key_forbidplmn"));
             getPreferenceScreen().removePreference((Preference)findPreference("key_plmnselect"));
         }
+        /*Modify 20130306 Spreadst of 130799 77XX dont support PLMN end  */
         /*Add 20130206 Spreadst of 122017 8810 7710 don't support PLMN end*/
         mUiThread = new Handler();
         HandlerThread t = new HandlerThread("debugparam");
