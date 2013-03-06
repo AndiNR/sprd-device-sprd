@@ -73,7 +73,7 @@ $(call inherit-product, frameworks/native/build/phone-hdpi-256-dalvik-heap.mk)
 # include classified configs
 $(call inherit-product, $(BOARDDIR)/base.mk)
 $(call inherit-product, $(BOARDDIR)/proprietories.mk)
-$(call inherit-product, device/sprd/common/res/boot/boot_res.mk)
+$(call inherit-product, vendor/sprd/operator/cucc/specA/res/boot/boot_res.mk)
 $(call inherit-product, vendor/sprd/UniverseUI/universeui.mk)
 
 # include standard configs
