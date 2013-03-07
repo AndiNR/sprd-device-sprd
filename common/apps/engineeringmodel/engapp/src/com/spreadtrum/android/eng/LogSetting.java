@@ -199,35 +199,49 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
             break;
 
             case LOG_DSP:
-                {
-                    outputBuffer = new ByteArrayOutputStream();
-                    outputBufferStream = new DataOutputStream(outputBuffer);
+            {
+                outputBuffer = new ByteArrayOutputStream();
+                outputBufferStream = new DataOutputStream(outputBuffer);
 
-                    Log.e(LOG_TAG, "Engmode socket open, id:" + mSocketID);
-                    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
-                   //mATline =String.format("%d,%d", engconstents.ENG_AT_GETDSPLOG, 0);
-                    mATline = new StringBuilder().append(engconstents.ENG_AT_GETDSPLOG).append(",")
-                              .append(0).toString();
-                    /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
+                Log.e(LOG_TAG, "Engmode socket open, id:" + mSocketID);
+                /*
+                 * Modify 20130205 Spreadst of 125480 change the method of
+                 * creating cmd start
+                 */
+                // mATline =String.format("%d,%d",
+                // engconstents.ENG_AT_GETDSPLOG, 0);
+                mATline = new StringBuilder().append(engconstents.ENG_AT_GETDSPLOG).append(",")
+                        .append(0).toString();
+                /*
+                 * Modify 20130205 Spreadst of 125480 change the method of
+                 * creating cmd end
+                 */
 
-                    try {
-                        outputBufferStream.writeBytes(mATline);
-                    } catch (IOException e) {
-                        Log.e(LOG_TAG, "writeBytes() error!");
-                        return -1;
-                    }
-                    mEf.engwrite(mSocketID,outputBuffer.toByteArray(),outputBuffer.toByteArray().length);
-
-                    int dataSize = 128;
-                    byte[] inputBytes = new byte[dataSize];
-
-                    int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
-                    mATResponse =  new String(inputBytes, 0, showlen);
-
-                    state = Integer.parseInt(mATResponse);
-                    if (state > 2 || state< 0)
-		        state = 0;
+                try {
+                    outputBufferStream.writeBytes(mATline);
+                } catch (IOException e) {
+                    Log.e(LOG_TAG, "writeBytes() error!");
+                    return -1;
                 }
+                mEf.engwrite(mSocketID, outputBuffer.toByteArray(),
+                        outputBuffer.toByteArray().length);
+
+                int dataSize = 128;
+                byte[] inputBytes = new byte[dataSize];
+
+                int showlen = mEf.engread(mSocketID, inputBytes, dataSize);
+                mATResponse = new String(inputBytes, 0, showlen);
+                /*Add 20130307 Spreadst of 134187 number format error start */
+                try {
+                    state = Integer.parseInt(mATResponse);
+                } catch (NumberFormatException e) {
+                    Log.e(LOG_TAG, "NumberFormatException! : mATResponse = " + mATResponse);
+                    return -1;
+                }
+                /*Add 20130307 Spreadst of 134187 number format error end  */
+                if (state > 2 || state < 0)
+                    state = 0;
+            }
         break;
 
         case LOG_MODEM_ARM:
