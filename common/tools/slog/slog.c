@@ -32,17 +32,21 @@
 
 #include "slog.h"
 
-int slog_enable = 1;
+int slog_enable = SLOG_ENABLE;
 int screenshot_enable = 1;
 int slog_save_all = 0;
 int slog_start_step = 0;
+int slog_init_complete = 0;
 int stream_log_handler_started = 0;
 int snapshot_log_handler_started = 0;
 int notify_log_handler_started = 0;
 int bt_log_handler_started = 0;
 int tcp_log_handler_started = 0;
+int modem_log_handler_started = 0;
 
 int internal_log_size = 10; /*M*/
+
+int hook_modem_flag = 0;
 
 char *config_log_path = INTERNAL_LOG_PATH;
 char *current_log_path;
@@ -53,7 +57,7 @@ char external_path[MAX_NAME_LEN];
 struct slog_info *stream_log_head, *snapshot_log_head;
 struct slog_info *notify_log_head, *misc_log;
 
-pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, command_tid, bt_tid, tcp_tid;
+pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, command_tid, bt_tid, tcp_tid, modem_tid;
 
 static void handler_exec_cmd(struct slog_info *info, char *filepath)
 {
@@ -141,7 +145,7 @@ void exec_or_dump_content(struct slog_info *info, char *filepath)
 	char buffer[MAX_NAME_LEN];
 
 	/* slog_enable on/off state will control all snapshot log */
-	if(slog_enable == 0)
+	if(slog_enable != SLOG_ENABLE)
 		return;
 
 	/* misc_log on/off state will control all snapshot log */
@@ -206,7 +210,7 @@ static int capture_all(struct slog_info *head)
 	struct slog_info *info = head;
 
 	/* slog_enable on/off state will control all snapshot log */
-	if(slog_enable == 0)
+	if(slog_enable != SLOG_ENABLE)
 		return 0;
 
 	if(!head)
@@ -277,6 +281,9 @@ static void handler_last_dir()
 
 	sprintf(buffer, "%s %s/%s %s/%s", "mv", current_log_path, "20*", current_log_path, LAST_LOG);
 	debug_log("%s\n", buffer);
+	system(buffer);
+
+	sprintf(buffer, "%s %s/%s", "rm -r", current_log_path, "20*");
 	system(buffer);
 
 	closedir(p_dir);
@@ -387,9 +394,20 @@ static void use_ori_log_dir()
 	return;
 }
 
+static int handle_low_power()
+{
+	if(slog_enable == SLOG_DISABLE)
+		return 0;
+
+	if(!modem_log_handler_started)
+		pthread_create(&modem_tid, NULL, modem_log_handler, NULL);
+
+	return 0;
+}
+
 static int start_sub_threads()
 {
-	if(slog_enable == 0)
+	if(slog_enable != SLOG_ENABLE)
 		return 0;
 
 	if(!stream_log_handler_started)
@@ -512,7 +530,7 @@ int clear_all_log()
 {
 	char cmd[MAX_NAME_LEN];
 
-	slog_enable = 0;
+	slog_enable = SLOG_DISABLE;
 	stop_sub_threads();
 	sleep(3);
 	sprintf(cmd, "rm -r %s", INTERNAL_LOG_PATH);
@@ -638,6 +656,8 @@ static int start_monitor_sdcard_fun()
 			current_log_path = external_storage;
 		}
 		/* create a sdcard monitor thread */
+		if(slog_enable != SLOG_ENABLE)
+			return 0;
 		pthread_create(&sdcard_tid, NULL, monitor_sdcard_fun, NULL);
 	} else
 		current_log_path = INTERNAL_LOG_PATH;
@@ -651,7 +671,7 @@ static int start_monitor_sdcard_fun()
  */
 static int do_init()
 {
-	if(slog_enable == 0)
+	if(slog_enable != SLOG_ENABLE)
 		return 0;
 
 	handle_top_logdir();
@@ -660,6 +680,8 @@ static int do_init()
 
 	/* all backend log capture handled by follows threads */
 	start_sub_threads();
+
+	slog_init_complete = 1;
 
 	return 0;
 }
@@ -733,7 +755,7 @@ void *command_handler(void *arg)
 			ret = -1;
 			break;
 		case CTRL_CMD_TYPE_OFF:
-			slog_enable = 0;
+			slog_enable = SLOG_DISABLE;
 			ret = stop_sub_threads();
 			sleep(3);
 			break;
@@ -746,8 +768,16 @@ void *command_handler(void *arg)
 		case CTRL_CMD_TYPE_DUMP:
 			ret = dump_all_log(cmd.content);
 			break;
+		case CTRL_CMD_TYPE_HOOK_MODEM:
+			ret = mkdir("/data/log", S_IRWXU | S_IRWXG | S_IRWXO);
+			if (-1 == ret && (errno != EEXIST)){
+				err_log("mkdir /data/log failed.");
+			}
+			ret = 0;
+			hook_modem_flag = 1;
+			break;
 		case CTRL_CMD_TYPE_SCREEN:
-			if(slog_enable == 0)
+			if(slog_enable != SLOG_ENABLE || slog_init_complete == 0)
 				break;
 			if(cmd.content[0])
 				ret = screen_shot(cmd.content);
@@ -915,6 +945,8 @@ int main(int argc, char *argv[])
 
 	/* backend capture threads started here */
 	do_init();
+
+	handle_low_power();
 
 	while(1) sleep(10);
 	return 0;

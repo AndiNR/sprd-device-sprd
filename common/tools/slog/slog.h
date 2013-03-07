@@ -30,6 +30,11 @@
 #define SLOG_STATE_ON 0
 #define SLOG_STATE_OFF 1
 
+/*"slog state" field*/
+#define SLOG_LOW_POWER 2
+#define SLOG_ENABLE 1
+#define SLOG_DISABLE 0
+
 /* "opt" field */
 #define SLOG_EXEC_OPT_EXEC	0
 
@@ -45,6 +50,7 @@ enum {
 	CTRL_CMD_TYPE_CLEAR,
 	CTRL_CMD_TYPE_DUMP,
 	CTRL_CMD_TYPE_SCREEN,
+	CTRL_CMD_TYPE_HOOK_MODEM,
 	CTRL_CMD_TYPE_RSP
 };
 
@@ -73,6 +79,10 @@ enum {
 #define DEFAULT_MAX_LOG_SIZE		256 /* MB */
 #define MAXROLLLOGS			10
 #define TIMEOUT_FOR_SD_MOUNT		5 /* seconds */
+#define MODEM_CIRCULAR_SIZE		(2 * 1024 * 1024) /* 2 MB */
+#define SINGLE_BUFFER_SIZE		2048
+#define RING_BUFFER_NUM			(MODEM_CIRCULAR_SIZE / SINGLE_BUFFER_SIZE)
+#define HOOK_MODEM_TARGET_DIR		"/data/log"
 
 #define KERNEL_LOG_SOURCE		"/proc/kmsg"
 #define MODEM_LOG_SOURCE		"/dev/vbpipe0"
@@ -140,11 +150,12 @@ extern char top_logdir[MAX_NAME_LEN];
 extern char external_storage[MAX_NAME_LEN];
 extern struct slog_info *stream_log_head, *snapshot_log_head;
 extern struct slog_info *notify_log_head, *misc_log;
-extern pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, bt_tid, tcp_tid;
+extern pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, bt_tid, tcp_tid, modem_tid;
 extern int slog_enable;
 extern int internal_log_size;
 extern int screenshot_enable;
 extern int slog_save_all;
+extern int hook_modem_flag;
 
 /* function */
 extern int parse_config();
@@ -153,11 +164,13 @@ extern void *snapshot_log_handler(void *arg);
 extern void *notify_log_handler(void *arg);
 extern void *bt_log_handler(void *arg);
 extern void *tcp_log_handler(void *arg);
+extern void *modem_log_handler(void *arg);
 extern int stream_log_handler_started;
 extern int snapshot_log_handler_started;
 extern int notify_log_handler_started;
 extern int bt_log_handler_started;
 extern int tcp_log_handler_started;
+extern int modem_log_handler_started;
 extern int gen_config_string(char *buffer);
 extern void cp_file(char *path, char *new_path);
 extern void exec_or_dump_content(struct slog_info *info, char *filepath);

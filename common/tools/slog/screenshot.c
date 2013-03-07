@@ -177,7 +177,7 @@ static int snap2jpg(const char * filename, int quality, FBInfo* fb)
 
 	while (cinfo.next_scanline < cinfo.image_height) 
 	{
-		int i = 0;
+		unsigned int i = 0;
 		int offset = 0;
 		unsigned char* line = fb->bits + cinfo.next_scanline * fb_width(fb) * fb_bpp(fb);
 
