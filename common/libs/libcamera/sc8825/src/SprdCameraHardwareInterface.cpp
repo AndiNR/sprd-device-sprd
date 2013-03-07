@@ -325,11 +325,7 @@ sprd_camera_memory_t* SprdCameraHardware::GetPmem(const char *device_name, int b
 	}
 	camera_memory_t *camera_memory;
 	int paddr, psize;
-        int order = 0, acc = 1;
-	while(acc < buf_size * num_bufs) {
-		order++;
-		acc = acc*2;
-	}
+        int order = 0, acc = buf_size *num_bufs ;
 	acc = camera_get_size_align_page(acc);
         MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc , MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
 
@@ -406,6 +402,7 @@ bool SprdCameraHardware::initPreview()
 	camerea_set_preview_format(mPreviewFormat);
         mPreviewFrameSize = mPreviewWidth * mPreviewHeight * 3 / 2;
         buffer_size = camera_get_size_align_page(mPreviewFrameSize);
+
         if(camera_get_rot_set())
         {
                 /* allocate 1 more buffer for rotation */
@@ -2337,7 +2334,7 @@ static uint32_t s_focus_zone[25];
 
 	//SET_PARM(CAMERA_PARM_FOCUS_RECT,(int32_t)s_focus_zone);
 	SET_PARM(CAMERA_PARM_FOCUS_RECT,(int32_t)s_save_zone_info);
-
+if (g_camera_id == 0) {
 	if(0xFFFFFFFF == (unsigned int)lookupvalue(focus_mode_map,
                         mParameters.get("focus-mode"))){
 		mParameters.set("focus-mode", "auto");
@@ -2347,7 +2344,7 @@ static uint32_t s_focus_zone[25];
                  lookup(focus_mode_map,
                         mParameters.get("focus-mode"),
                         CAMERA_FOCUS_MODE_AUTO));
-
+}
         SET_PARM(CAMERA_PARM_WB,
                  lookup(wb_map,
                         mParameters.get("whitebalance"),
