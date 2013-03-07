@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Spreadtrum Communications Inc.
+//                 Last Change:  2013-03-06 09:39:00
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -112,7 +113,7 @@ void *snapshot_log_handler(void *arg)
 
 	snapshot_log_handler_started = 1;
 
-	while(slog_enable) {
+	while(slog_enable == SLOG_ENABLE) {
 		info = snapshot_log_head;
 		while(info) {
 			/* misc_log level decided which log will be restored */
@@ -144,7 +145,7 @@ void *snapshot_log_handler(void *arg)
 
 		/* update sleep times */
 		sleep_secs = next_sleep_secs;
-		while(next_sleep_secs-- > 0 && slog_enable)
+		while(next_sleep_secs-- > 0 && slog_enable == SLOG_ENABLE)
 			sleep(1);
 		next_sleep_secs = 0;
 	}
@@ -211,7 +212,7 @@ static void handle_notify_file(int wd, const char *name)
 		}
 
 		gettimeofday(&info->current, NULL);
-		if(info->current.tv_sec > info->last.tv_sec + 10) {
+		if(info->current.tv_sec > info->last.tv_sec + 20) {
 			info->last.tv_sec = info->current.tv_sec;
 		} else {
 			return;
@@ -334,7 +335,7 @@ void *notify_log_handler(void *arg)
 		info = info->next;
 	}
 
-	while(slog_enable) {
+	while(slog_enable == SLOG_ENABLE) {
 
 		FD_ZERO(&readset);
 		FD_SET(notify_fd, &readset);
@@ -473,6 +474,47 @@ static void strinst(char* dest, char* src)
 
 	return;
 }
+
+/*
+ * The file name to upgrade
+ */
+static void file_name_rotate(char *buf)
+{
+	int i, err;
+
+	for (i = MAXROLLLOGS ; i > 0 ; i--) {
+		char *file0, *file1;
+
+		err = asprintf(&file1, "%s.%d", buf, i);
+		if(err == -1){
+			err_log("asprintf return err!");
+			exit(0);
+		}
+		if (i - 1 == 0) {
+			err = asprintf(&file0, "%s", buf);
+			if(err == -1){
+				err_log("asprintf return err!");
+				exit(0);
+			}
+		} else {
+			err = asprintf(&file0, "%s.%d", buf, i - 1);
+			if(err == -1){
+				err_log("asprintf return err!");
+				exit(0);
+			}
+		}
+
+		err = rename (file0, file1);
+
+		if (err < 0 && errno != ENOENT) {
+			perror("while rotating log files");
+		}
+
+		free(file1);
+		free(file0);
+	}
+}
+
 /*
  *  File volume
  *
@@ -488,27 +530,7 @@ static void rotatelogs(struct slog_info *info)
 
 	close(info->fd_out);
 
-	for (i = MAXROLLLOGS ; i > 0 ; i--) {
-		char *file0, *file1;
-
-		asprintf(&file1, "%s.%d", buffer, i);
-
-		if (i - 1 == 0) {
-			asprintf(&file0, "%s", buffer);
-		} else {
-			asprintf(&file0, "%s.%d", buffer, i - 1);
-		}
-
-		err = rename (file0, file1);
-
-		if (err < 0 && errno != ENOENT) {
-			perror("while rotating log files");
-		}
-
-		free(file1);
-		free(file0);
-	}
-
+	file_name_rotate(buffer);
 	info->fd_out = gen_outfd(info);
 	info->outbytecount = 0;
 }
@@ -563,7 +585,133 @@ static void add_timestamp(struct slog_info *info)
 
 	return;
 }
+static int write_from_buffer(int fd, char *buf, int len)
+{
+	int result = 0, err = 0;
 
+	if(buf == NULL || fd < 0)
+		return -1;
+
+	if(len <= 0)
+		return 0;
+
+	while(result < len) {
+		err = write(fd, buf + result, len - result);
+		if(err < 0 && errno == EINTR)
+			continue;
+		if(err < 0)
+			return err;
+		result += err;
+	}
+	return result;
+}
+
+void *modem_log_handler(void *arg)
+{
+	struct slog_info *info;
+	int buffer_start = 0, buffer_end = 0;
+	int buffer_len[RING_BUFFER_NUM];
+	unsigned char *ring_buffer_table;
+	int old_flags = 0, ret;
+	int data_fd;
+	char buffer[MAX_NAME_LEN];
+	time_t t;
+	struct tm tm;
+
+	if(slog_enable == SLOG_DISABLE)
+		return NULL;
+
+	ring_buffer_table = malloc(MODEM_CIRCULAR_SIZE);
+
+	info = stream_log_head;
+	while (info) {
+		if (strncmp(info->name, "modem", 5)) {
+			info = info->next;
+			continue;
+		}
+
+		open_device(info, MODEM_LOG_SOURCE);
+		old_flags = fcntl(info->fd_device, F_GETFL);
+
+		if(slog_enable == SLOG_ENABLE && info->state == SLOG_STATE_ON)
+			info->fd_out = gen_outfd(info);
+		else
+			info->fd_out = -1;
+		break;
+	}
+
+	if(info == NULL) {
+		err_log("modem log disabled!");
+		return NULL;
+	}
+	modem_log_handler_started = 1;
+	while(slog_enable != SLOG_DISABLE) {
+		memset((char *)ring_buffer_table + buffer_end * SINGLE_BUFFER_SIZE, 0, SINGLE_BUFFER_SIZE);
+		if (fcntl(info->fd_device, F_SETFL, old_flags | O_NONBLOCK) == -1) {
+			err_log("fcntl failed!");
+			sleep(1);
+			continue;
+		}
+
+		ret = read(info->fd_device, (char *)ring_buffer_table + buffer_end * SINGLE_BUFFER_SIZE, SINGLE_BUFFER_SIZE);
+		if (ret <= 0) {
+			if(errno != EAGAIN) {
+				err_log("read modem log failed.");
+				close(info->fd_device);
+				open_device(info, MODEM_LOG_SOURCE);
+			}
+			sleep(1);
+			continue;
+		}
+		buffer_len[buffer_end] = ret;
+
+		if(info->fd_out != -1) {
+			ret = write_from_buffer(info->fd_out, (char *)ring_buffer_table + buffer_end * SINGLE_BUFFER_SIZE,
+				buffer_len[buffer_end]);
+			info->outbytecount += ret;
+			log_size_handler(info);
+		}
+
+		buffer_end = (buffer_end + 1) % RING_BUFFER_NUM;
+		if(buffer_end == buffer_start)
+			buffer_start = (buffer_start + 1) % RING_BUFFER_NUM;
+
+		if(hook_modem_flag != 1)
+			continue;
+
+		/* add timestamp */
+		t = time(NULL);
+		localtime_r(&t, &tm);
+		sprintf(buffer, "/data/log/modem_%d%02d%02d%02d%02d.log",
+					tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min);
+
+		data_fd = open(buffer, O_WRONLY | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
+		if(data_fd < 0) {
+			err_log("open modem log failed!");
+			break;
+		}
+
+		while(1) {
+			ret = write_from_buffer(data_fd, (char *)ring_buffer_table + buffer_start * SINGLE_BUFFER_SIZE,
+				buffer_len[buffer_start]);
+			buffer_start = (buffer_start + 1) % RING_BUFFER_NUM;
+			if(buffer_end == buffer_start)
+				break;
+		}
+		close(data_fd);
+		hook_modem_flag = 0;
+	}
+
+	/* close all open fds */
+	if(info->fd_device)
+		close(info->fd_device);
+	if(info->fd_out)
+		close(info->fd_out);
+	modem_log_handler_started = 0;
+
+	return NULL;
+
+}
 
 static AndroidLogFormat * g_logformat;
 
@@ -593,13 +741,8 @@ void *stream_log_handler(void *arg)
 			info->fd_out = gen_outfd(info);
 			add_timestamp(info);
 		} else if(!strncmp(info->name, "modem", 5)) {
-			if( !strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)) ) {
-				info->state = SLOG_STATE_OFF;
-				info = info->next;
-				continue;
-			}
-			open_device(info, MODEM_LOG_SOURCE);
-			info->fd_out = gen_outfd(info);
+			info = info->next;
+			continue;
 		} else if( !strncmp(info->name, "main", 4) || !strncmp(info->name, "system", 6) || !strncmp(info->name, "radio", 5) ){
 			sprintf(devname, "%s/%s", "/dev/log", info->name);
 			open_device(info, devname);
@@ -624,7 +767,7 @@ void *stream_log_handler(void *arg)
 	format = android_log_formatFromString("threadtime");
 	android_log_setPrintFormat(g_logformat, format);
 
-	while(slog_enable) {
+	while(slog_enable == SLOG_ENABLE) {
 		FD_ZERO(&readset);
 		timeout.tv_sec = 3;
 		timeout.tv_usec = 0;
@@ -683,25 +826,8 @@ void *stream_log_handler(void *arg)
 				info->outbytecount += ret;
 				log_size_handler(info);
 			} else if(!strncmp(info->name, "modem", 5)) {
-				memset(buf_kmsg, 0, LOGGER_ENTRY_MAX_LEN);
-				ret = read(info->fd_device, buf_kmsg, LOGGER_ENTRY_MAX_LEN);
-				if (ret == 0) {
-					close(info->fd_device);
-					open_device(info, MODEM_LOG_SOURCE);
-					info = info->next;
-					continue;
-				} else if (ret < 0) {
-					err_log("read %s log failed!", info->name);
-					info = info->next;
-					continue;
-				}
-
-				do {
-					result = write(info->fd_out, buf_kmsg, ret);
-				} while (result < 0 && errno == EINTR);
-
-				info->outbytecount += result;
-				log_size_handler(info);
+				info = info->next;
+				continue;
 			} else if(!strncmp(info->name, "main", 4) || !strncmp(info->name, "system", 6)
 				|| !strncmp(info->name, "radio", 5) ) {
 				ret = read(info->fd_device, buf, LOGGER_ENTRY_MAX_LEN);
@@ -785,27 +911,8 @@ void *bt_log_handler(void *arg)
 		}
 		sprintf(buffer, "%s/%s/%s/%s.log",
 			current_log_path, top_logdir, bt->log_path, bt->log_basename);
+		file_name_rotate(buffer);
 
-		for (i = MAXROLLLOGS ; i > 0 ; i--) {
-			char *file0, *file1;
-
-			asprintf(&file1, "%s.%d", buffer, i);
-
-			if (i - 1 == 0) {
-				asprintf(&file0, "%s", buffer);
-			} else {
-				asprintf(&file0, "%s.%d", buffer, i - 1);
-			}
-
-			err = rename (file0, file1);
-
-			if (err < 0 && errno != ENOENT) {
-				perror("while rotating log files");
-			}
-
-			free(file1);
-			free(file0);
-		}
 #ifdef SLOG_BTLOG_235
 		execl("/system/xbin/hcidump", "hcidump", "-Bw", buffer, (char *)0);
 #else
@@ -814,7 +921,7 @@ void *bt_log_handler(void *arg)
 		exit(0);
 	}
 
-	while(slog_enable){
+	while(slog_enable == SLOG_ENABLE){
 		sleep(1);
 	}
 
@@ -863,33 +970,13 @@ void *tcp_log_handler(void *arg)
 		}
 		sprintf(buffer, "%s/%s/%s/%s.log",
 			current_log_path, top_logdir, tcp->log_path, tcp->log_basename);
-
-		for (i = MAXROLLLOGS ; i > 0 ; i--) {
-			char *file0, *file1;
-
-			asprintf(&file1, "%s.%d", buffer, i);
-
-			if (i - 1 == 0) {
-				asprintf(&file0, "%s", buffer);
-			} else {
-				asprintf(&file0, "%s.%d", buffer, i - 1);
-			}
-
-			err = rename (file0, file1);
-
-			if (err < 0 && errno != ENOENT) {
-				perror("while rotating log files");
-			}
-
-			free(file1);
-			free(file0);
-		}
+		file_name_rotate(buffer);
 
 		execl("/system/xbin/tcpdump", "tcpdump", "-i", "any", "-p", "-s 0", "-w", buffer, (char *)0);
 		exit(0);
 	}
 
-	while(slog_enable){
+	while(slog_enable == SLOG_ENABLE){
 		sleep(1);
 	}
 

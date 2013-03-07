@@ -270,9 +270,9 @@ int gen_config_string(char *buffer)
 	int off = 0;
 	struct slog_info *info;
 
-	off += sprintf(buffer + off, "enable: %s\nbackend threads(stream snapshot notify bt tcp): %d %d %d %d %d\n",
-			slog_enable ? "on" : "off", stream_log_handler_started,
-			snapshot_log_handler_started, notify_log_handler_started, bt_log_handler_started, tcp_log_handler_started);
+	off += sprintf(buffer + off, "state: %d\nbackend threads(stream snapshot notify bt tcp modem): %d %d %d %d %d %d\n",
+			slog_enable, stream_log_handler_started, snapshot_log_handler_started,
+		notify_log_handler_started, bt_log_handler_started, tcp_log_handler_started, modem_log_handler_started);
 	off += sprintf(buffer + off, "current logpath,%s,\n", current_log_path);
 	off += sprintf(buffer + off, "config logpath,%s,\n", config_log_path);
 	off += sprintf(buffer + off, "internal storage,%s,\n", INTERNAL_LOG_PATH);
@@ -343,9 +343,11 @@ int parse_config()
 		if(buffer[0] == '#')
 			continue;
 		if(!strncmp("enable", buffer, 6))
-			slog_enable = 1;
+			slog_enable = SLOG_ENABLE;
 		if(!strncmp("disable", buffer, 7))
-			slog_enable = 0;
+			slog_enable = SLOG_DISABLE;
+		if(!strncmp("low_power", buffer, 9))
+			slog_enable = SLOG_LOW_POWER;
 		if(!strncmp("var", buffer, 3))
 			ret = parse_3_entries(buffer);
 		else if(!strncmp("snap", buffer, 4)) 
