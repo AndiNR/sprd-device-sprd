@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<string name="app_name">engineering model</string>
-	<string name="thirdverinfo">third version info</string>
+    <!-- Modify 20130306 Spreadst of 133678 the app name is wrong start -->
+    <string name="app_name">engineering mode</string>
+    <!-- Modify 20130306 Spreadst of 133678 the app name is wrong end -->
+    <string name="thirdverinfo">third version info</string>
 	<string name="verinfo">version info</string>
 	<string name="layer1monitor">Layer1 Monitor</string>
 	<string name="version">version</string>
