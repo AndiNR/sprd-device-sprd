@@ -364,9 +364,7 @@ static int SetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
     }else if(pga_gain_nv->devices & AUDIO_DEVICE_OUT_FM_SPEAKER){
         audio_pga_apply(adev->pga,pga_gain_nv->fm_pga_gain_l,"linein-spk-l");
         audio_pga_apply(adev->pga,pga_gain_nv->fm_pga_gain_r,"linein-spk-r");
-    }
-    
-    if((pga_gain_nv->devices & AUDIO_DEVICE_IN_BUILTIN_MIC) || (pga_gain_nv->devices & AUDIO_DEVICE_IN_BACK_MIC) || (pga_gain_nv->devices & AUDIO_DEVICE_IN_WIRED_HEADSET)){
+    }else if((pga_gain_nv->devices & AUDIO_DEVICE_IN_BUILTIN_MIC) || (pga_gain_nv->devices & AUDIO_DEVICE_IN_BACK_MIC) || (pga_gain_nv->devices & AUDIO_DEVICE_IN_WIRED_HEADSET)){
         audio_pga_apply(adev->pga,pga_gain_nv->adc_pga_gain_l,"capture-l");
 	    audio_pga_apply(adev->pga,pga_gain_nv->adc_pga_gain_r,"capture-r");
     }
