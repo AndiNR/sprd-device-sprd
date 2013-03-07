@@ -71,6 +71,7 @@ PRODUCT_COPY_FILES := \
 $(call inherit-product, frameworks/native/build/phone-hdpi-256-dalvik-heap.mk)
 
 # include classified configs
+$(call inherit-product, vendor/sprd/operator/cucc/specA/res/apn/apn_res.mk)
 $(call inherit-product, $(BOARDDIR)/base.mk)
 $(call inherit-product, $(BOARDDIR)/proprietories.mk)
 $(call inherit-product, vendor/sprd/operator/cucc/specA/res/boot/boot_res.mk)
