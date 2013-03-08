@@ -7,3 +7,6 @@ debug.hwui.render_dirty_regions=false
 
 # delay for ConnectivityChange broadcast (ms)
 conn.connectivity_change_delay = 0
+
+#if our product support single link version
+ro.system.property.singleconn=true

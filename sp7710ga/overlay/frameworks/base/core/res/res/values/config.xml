@@ -67,4 +67,7 @@
         <item>"mobile1_dm,114,0,3,60000,true"</item>
         <item>"mobile1_wap,135,0,4,60000,true"</item>
     </string-array>
+    <!-- Boolean indicating if current platform supports quick switch-on/off of
+         Bluetooth Module -->
+    <bool name="config_bluetooth_adapter_quick_switch">false</bool>
 </resources>

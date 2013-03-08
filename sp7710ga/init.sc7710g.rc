@@ -116,7 +116,6 @@ service engmodemclient /system/bin/engmodemclient
 service engsetmacaddr /system/bin/engsetmacaddr
     class main
     oneshot
-
 service phoneserver /system/bin/phoneserver
     class main
     disabled
@@ -210,9 +209,7 @@ service akmd /system/bin/akmd8975 -m 3
     class main
     oneshot
 
-service hciattach /system/bin/brcm_patchram_plus --enable_hci --enable_lpm --no2bytes \
-    --tosleep 50000 --baudrate 3000000 --use_baudrate_for_download  \
-    --patchram /system/bin/bcm4330.hcd /dev/ttyS0
+service hciattach /system/bin/logwrapper /system/bin/hciattach -n /dev/ttyS0 bk3211 921600
     class main
     user bluetooth
     group bluetooth net_bt_admin
