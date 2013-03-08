@@ -536,7 +536,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
         _ov7675_GetExifInfo,
         PNULL,
         set_ov7675_anti_flicker,
-        set_ov7675_video_mode,
+        PNULL,//set_ov7675_video_mode,
         PNULL,
 	PNULL,  //meter_mode
 	PNULL, //get_status
@@ -983,6 +983,7 @@ LOCAL uint32_t set_ov7675_video_mode(uint32_t mode)
         uint8_t data1=0x00;
         uint16_t i;
         SENSOR_REG_T* sensor_reg_ptr = PNULL;
+
         if(mode>1)
                 return 0;
         
