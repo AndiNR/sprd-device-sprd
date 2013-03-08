@@ -44,7 +44,7 @@ BOARD_HAVE_FM_BCM := true
 BOARD_USE_SPRD_FMAPP := true
 # board specific modules
 BOARD_USES_TINYALSA_AUDIO := true
-BOARD_USES_LINE_CALL := true
+BOARD_USES_LINE_CALL := false
 BOARD_USE_VETH := true
 BOARD_SPRD_RIL := true
 BOARD_SAMSUNG_RIL := false
