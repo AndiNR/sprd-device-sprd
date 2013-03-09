@@ -7,12 +7,14 @@ LOCAL_C_INCLUDES    +=  $(LOCAL_PATH) \
 			$(LOCAL_PATH)/common \
 			device/sprd/common/apps/engineeringmodel/engcs
 LOCAL_SRC_FILES:= \
-	nvitem_nandless.c \
-	package.c \
-	log.c \
-	nandless.c \
-	save.c
- 
+	nvitem_buf.c \
+	nvitem_channel.c \
+	nvitem_fs.c \
+	nvitem_os.c \
+	nvitem_packet.c \
+	nvitem_server.c \
+	nvitem_sync.c
+
 LOCAL_SHARED_LIBRARIES := \
     libhardware_legacy \
     libc \

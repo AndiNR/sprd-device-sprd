@@ -92,6 +92,7 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/fstab.sp8810:root/fstab.sp8810 \
 	$(BOARDDIR)/vold.fstab:system/etc/vold.fstab \
 	$(BOARDDIR)/modem_images.info:root/modem_images.info \
+	$(BOARDDIR)/nvitem.cfg:root/nvitem.cfg \
 	device/sprd/common/res/CDROM/adb.iso:system/etc/adb.iso \
 	device/sprd/common/libs/audio/apm/devicevolume.xml:system/etc/devicevolume.xml \
 	device/sprd/common/libs/audio/apm/formatvolume.xml:system/etc/formatvolume.xml \
