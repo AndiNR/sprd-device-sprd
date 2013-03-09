@@ -12,6 +12,7 @@ on early-init
     symlink /storage/sdcard0 /sdcard
     symlink /storage/sdcard0 /mnt/sdcard
     symlink /dev/ts0710mux22  /dev/vbpipe0
+    symlink /dev/ts0710mux23  /dev/vbpipe6
 # radio pipe
     mkdir /dev/rpipe 0550 radio radio
     pipe 666 /dev/rpipe/ril.vt.0
