@@ -53,6 +53,7 @@ PRODUCT_PACKAGES := \
 
 # prebuild files
 PRODUCT_PACKAGES += \
+	moffice_5.3.3_1033_cn00353_multidex_135897.apk
 
 # packages files
 PRODUCT_PACKAGES += \
