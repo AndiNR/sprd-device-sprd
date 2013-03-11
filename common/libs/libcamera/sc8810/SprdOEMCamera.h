@@ -45,6 +45,19 @@ typedef enum
 	SENSOR_IMAGE_FORMAT_MAX
 }SENSOR_IMAGE_FORMAT_E;
 
+typedef enum {
+	SENSOR_MODE_COMMON_INIT = 0,
+	SENSOR_MODE_PREVIEW_ONE,
+	SENSOR_MODE_SNAPSHOT_ONE_FIRST,
+	SENSOR_MODE_SNAPSHOT_ONE_SECOND,
+	SENSOR_MODE_SNAPSHOT_ONE_THIRD,
+	SENSOR_MODE_PREVIEW_TWO,
+	SENSOR_MODE_SNAPSHOT_TWO_FIRST,
+	SENSOR_MODE_SNAPSHOT_TWO_SECOND,
+	SENSOR_MODE_SNAPSHOT_TWO_THIRD,
+	SENSOR_MODE_MAX
+} SENSOR_MODE_E;
+
 typedef struct
 {
 	uint16_t mode;
@@ -136,6 +149,7 @@ void camera_alloc_swap_buffer(uint32_t phy_addr, uint32_t buf_size);
 void camera_get_sensor_max_size(uint32_t *width_ptr,uint32_t *height_ptr);
 void camera_get_sensor_mode(void);
 SENSOR_IMAGE_FORMAT_E camera_get_capture_format(uint32_t width);
+void camera_get_sensor_output_size(uint32_t *sensor_w, uint32_t *sensor_h);
 int camera_start_af_thread(camera_focus_e_type focus,
         									      camera_cb_f_type callback,
        									       void *client_data);

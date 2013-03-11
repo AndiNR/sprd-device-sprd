@@ -413,6 +413,7 @@ bool SprdCameraHardware::initRaw(bool initJpegHeap)
         uint32_t page_size, buffer_size;
         uint32_t sensor_max_width,sensor_max_height;
         SENSOR_IMAGE_FORMAT_E cap_format = SENSOR_IMAGE_FORMAT_MAX;
+        uint32_t sensor_output_w = 0, sensor_output_h = 0, is_need_scaledown = 0;
 
         ALOGV("initRaw E");
         if(true != startCameraIfNecessary())
@@ -427,9 +428,19 @@ bool SprdCameraHardware::initRaw(bool initJpegHeap)
         setCameraDimensions();
         camera_get_sensor_mode();
         cap_format = camera_get_capture_format(mRawWidth);
-        ALOGV("initRaw: picture size=%dx%d,sensor output format = %d.\n", mRawWidth, mRawHeight,cap_format);
-
-        mRawSize = mRawWidth * mRawHeight * 2;
+        camera_get_sensor_output_size(&sensor_output_w, &sensor_output_h);
+        if(sensor_output_w * sensor_output_h > mRawWidth * mRawHeight)
+                is_need_scaledown = 1;
+        ALOGV("initRaw: picture size=%dx%d, sensor output size=%dx%d, sensor output format = %d.\n",
+                mRawWidth, mRawHeight, sensor_output_w, sensor_output_h, cap_format);
+        if(is_need_scaledown)
+        {
+                mRawSize = (sensor_output_w * sensor_output_h) * 2;
+        }
+        else
+        {
+                mRawSize = mRawWidth * mRawHeight * 2;
+        }
         mJpegMaxSize = mRawSize;
         buffer_size = mJpegMaxSize;
         mJpegHeap = NULL;
@@ -456,7 +467,7 @@ bool SprdCameraHardware::initRaw(bool initJpegHeap)
 
         camera_get_sensor_max_size(&sensor_max_width,&sensor_max_height);
 
-        if(mRawWidth > sensor_max_width )
+        if(mRawWidth > sensor_max_width || is_need_scaledown)
         {
                 interpoation_flag = 1;
         }
