@@ -188,6 +188,9 @@ int chip_probe(void)
     else if (chip_id == 0x8820) {
         ana_reg_addr_start = 0x42000040;
     }
+    else if (chip_id == 0x7710) {
+        ana_reg_addr_start = 0x82000040;
+    }
     else {
         perror("unknown chip!");
         exit(EXIT_FAILURE);
