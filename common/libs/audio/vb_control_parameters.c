@@ -779,6 +779,16 @@ RESTART:
             continue;
         }else if (ret == 0) {   //cp something wrong
             ALOGE("Error, %s read head failed(%s), need to reopen vbpipe ",__func__,strerror(errno));
+            if(adev->call_start){                  //cp crash during call
+                mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);  //switch to arm
+                pthread_mutex_lock(&adev->lock);
+                force_all_standby(adev);
+                pcm_close(adev->pcm_modem_ul);
+                pcm_close(adev->pcm_modem_dl);
+                adev->call_start = 0;
+                adev->call_connected = 0;
+                pthread_mutex_unlock(&adev->lock);
+            }
 	        sleep(1);
             close(s_vbpipe_fd);
             s_vbpipe_fd = -1;
