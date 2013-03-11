@@ -72,7 +72,7 @@ public class DMTransaction implements Runnable {
     private byte[] senddata = null;
 
     private String mServerUri = null;
-	
+    private int mInet;
     public DMTransaction(Context context, Handler handler) {
         // mprefs = DMPreferences.getPreferences(context);
         // mPIMGlobalInf = PIMInf;
@@ -197,7 +197,14 @@ public class DMTransaction implements Runnable {
         if(replaceserver == null )
             DmService.getInstance().getServerAddr();
         Log.d(TAG, "sendData replaceserver == " + replaceserver);
+	InetAddress myinetaddr = NetworkUtils.intToInetAddress(mInet);
+	
+          Uri serverUri = Uri.parse(mServerUri);
+        Log.d(TAG, "sendData replaceserver host" + serverUri.getHost() + "new"+myinetaddr.toString());
 
+	String newserver = mServerUri.replaceFirst(serverUri.getHost(), myinetaddr.toString().substring(1));
+        Log.d(TAG, "sendData newserver == " + newserver);
+	
         try {
             if (isProxySet == true) {
                 return mPIMHttpUtils.httpConnection(mContext, 
@@ -215,7 +222,7 @@ public class DMTransaction implements Runnable {
             } else {
                 return mPIMHttpUtils.httpConnection(mContext, 
                         /* mprefs.getServerAdress(), */
-                        replaceserver,
+                        newserver, //replaceserver,
                         /*Integer.valueOf(DmService.getInstance().getServerPort())*/
                         7001, // liuhongxing Use proxy port, need address port
                         data, 
@@ -265,13 +272,15 @@ public class DMTransaction implements Runnable {
 // 	.getSystemService(PhoneFactory.getServiceName(Context.CONNECTIVITY_SERVICE, DmService.getInstance().getCurrentPhoneID()));
 		Log.v(TAG,"ensureRouteToHost, Connectivitymanager ok in phoneid :"+DmService.getInstance().getCurrentPhoneID());
         String serverUrl = DmService.getInstance().getServerAddr();
-        int inetAddr;
+//        int inetAddr;
         if (DmService.getInstance().getProxy(mContext) == null
                 || (DmService.getInstance().getProxy(mContext) != null && DmService.getInstance()
                         .getProxy(mContext).equals(""))) {
             Uri serverUri = Uri.parse(serverUrl);
-            inetAddr = NetworkUtils.lookupHost(serverUri.getHost());
-            if (inetAddr == -1) {
+            mInet = NetworkUtils.lookupHost(serverUri.getHost());
+            Log.i(TAG, "ensureRouteToHost mInet: " + mInet);
+			
+            if (mInet == -1) {
                 throw new IOException("Cannot establish route for " + serverUrl + ": Unknown host");
             } else {
                 /*
@@ -288,17 +297,17 @@ public class DMTransaction implements Runnable {
                  */
                 if (!connMgr.requestRouteToHost(
                   ConnectivityManager.getNetworkTypeByPhoneId(DmService.getInstance().getCurrentPhoneID(), ConnectivityManager.TYPE_MOBILE_DM),
-					inetAddr)) {
-                    throw new IOException("Cannot establish route to proxy " + inetAddr);
+					mInet)) {
+                    throw new IOException("Cannot establish route to proxy " + mInet);
                 }
             }
         } else {
             String proxyUrl = DmService.getInstance().getProxy(mContext);
             Log.i(TAG, "ensureRouteToHost proxyUrl: " + proxyUrl);
             //Uri proxyUri = Uri.parse(proxyUrl);
-            inetAddr = NetworkUtils.lookupHost(proxyUrl/*proxyUri.getHost()*/);
-            Log.i(TAG, "ensureRouteToHost inetAddr: " + inetAddr);
-            if (inetAddr == -1) {
+            mInet = NetworkUtils.lookupHost(proxyUrl/*proxyUri.getHost()*/);
+            Log.i(TAG, "ensureRouteToHost mInet: " + mInet);
+            if (mInet == -1) {
                 throw new IOException("Cannot establish route for " + proxyUrl + ": Unknown host");
             } else {
                 /*
@@ -315,8 +324,8 @@ public class DMTransaction implements Runnable {
                  */
                 if (!connMgr.requestRouteToHost(
                   ConnectivityManager.getNetworkTypeByPhoneId(DmService.getInstance().getCurrentPhoneID(), ConnectivityManager.TYPE_MOBILE_DM),
-					inetAddr)) {
-                    throw new IOException("Cannot establish route to proxy " + inetAddr);
+					mInet)) {
+                    throw new IOException("Cannot establish route to proxy " + mInet);
                 }
             }
         }

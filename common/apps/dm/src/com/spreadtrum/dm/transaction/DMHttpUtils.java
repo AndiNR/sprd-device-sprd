@@ -172,6 +172,10 @@ public class DMHttpUtils {
                                                                                 * )
                                                                                 */, proxyPort));
             }
+            else
+                ConnRouteParams.setDefaultProxy(params, 
+                new HttpHost(Uri.parse(url).getHost(), port));
+			
             req.setParams(params);
 
             // Set necessary HTTP headers for pim transmission.
