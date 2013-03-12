@@ -11,13 +11,39 @@
         android:layout_height="wrap_content"
         android:orientation="vertical" >
 
-        <CheckBox
-            android:id="@+id/chk_general"
+        <TextView
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:paddingTop="10dip"
             android:text="@string/chk_general_switch" />
 
+        <RadioGroup
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="3dip"
+            android:orientation="horizontal" >
+            
+            <RadioButton
+                android:id="@+id/rdo_general_on"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/rdo_general_on" />
+
+            <RadioButton
+                android:id="@+id/rdo_general_off"
+                android:layout_width="fill_parent"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/rdo_general_off" />
+            <RadioButton
+                android:id="@+id/rdo_general_lowpower"
+                android:layout_width="fill_parent"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/rdo_general_lowpower" />
+
+        </RadioGroup>
+        
         <CheckBox
             android:id="@+id/chk_general_android_switch"
             android:layout_width="fill_parent"

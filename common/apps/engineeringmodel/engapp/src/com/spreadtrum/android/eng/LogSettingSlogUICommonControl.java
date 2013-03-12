@@ -5,10 +5,14 @@ import com.spreadtrum.android.eng.R;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.Configuration;
+import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.os.Message;
 import android.util.Log;
 import android.view.View;
@@ -19,10 +23,14 @@ import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.Toast;
 
+import com.android.internal.app.IMediaContainerService;
+
 public class LogSettingSlogUICommonControl extends Activity {
     private Button btnClear;
     private Button btnDump;
-    private CheckBox chkGeneral;
+    private RadioButton rdoGeneralOn;
+    private RadioButton rdoGeneralOff;
+    private RadioButton rdoGeneralLowPower;
     private CheckBox chkAndroid;
     private CheckBox chkModem;
     private CheckBox chkAlwaysRun;
@@ -32,14 +40,32 @@ public class LogSettingSlogUICommonControl extends Activity {
     private RadioButton rdoSDCard;
     private Intent intentSvc;
     private Intent intentSnap;
+    private Intent intentMedia;
+    private IMediaContainerService mMediaContainer;
+    private static final ComponentName DEFAULT_CONTAINER_COMPONENT = new ComponentName(
+            "com.android.defcontainer", "com.android.defcontainer.DefaultContainerService");
+    // Only to prepare to get freespace from sdcard because engmode is a system process.     
+    final private ServiceConnection mMediaContainerConn = new ServiceConnection() {
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            final IMediaContainerService imcs = IMediaContainerService.Stub
+            .asInterface(service);
+            Log.e("SlogUI","has this connection worked?");
+            mMediaContainer = imcs;
+        }
 
+        public void onServiceDisconnected(ComponentName name) {
+        }
+    };
+    
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_general_commoncontrol);
 
         // Init views
-        chkGeneral = (CheckBox) findViewById(R.id.chk_general);
+        rdoGeneralOn = (RadioButton) findViewById(R.id.rdo_general_on);
+        rdoGeneralOff = (RadioButton) findViewById(R.id.rdo_general_off);
+        rdoGeneralLowPower = (RadioButton) findViewById(R.id.rdo_general_lowpower);
         chkAndroid = (CheckBox) findViewById(R.id.chk_general_android_switch);
         chkModem = (CheckBox) findViewById(R.id.chk_general_modem_switch);
         chkAlwaysRun = (CheckBox) findViewById(R.id.chk_general_alwaysrun);
@@ -56,7 +82,9 @@ public class LogSettingSlogUICommonControl extends Activity {
         intentSnap = new Intent("svcSnap");
         intentSnap.setClass(LogSettingSlogUICommonControl.this,
                 SlogUISnapService.class);
-
+        intentMedia = new Intent().setComponent(DEFAULT_CONTAINER_COMPONENT);
+        boolean a = getApplicationContext().bindService(intentMedia, mMediaContainerConn, Context.BIND_AUTO_CREATE);
+        Log.e("SlogUI","bindService is " + String.valueOf(a) );
         // Sync view's status
         SyncState();
 
@@ -73,7 +101,9 @@ public class LogSettingSlogUICommonControl extends Activity {
 
         // Fetch onclick listenner
         ClkListenner clickListen = new ClkListenner();
-        chkGeneral.setOnClickListener(clickListen);
+        rdoGeneralOn.setOnClickListener(clickListen);
+        rdoGeneralOff.setOnClickListener(clickListen);
+        rdoGeneralLowPower.setOnClickListener(clickListen);
         chkAndroid.setOnClickListener(clickListen);
         chkModem.setOnClickListener(clickListen);
         rdoNAND.setOnClickListener(clickListen);
@@ -94,9 +124,17 @@ public class LogSettingSlogUICommonControl extends Activity {
 
     protected void SyncState() {
         // Set checkbox status
-        boolean tempHost = SlogAction.GetState(SlogAction.GENERALKEY);
-        chkGeneral.setChecked(tempHost);
-
+        boolean tempHostOn = SlogAction.GetState(SlogAction.GENERALKEY, true).equals(SlogAction.GENERALON);
+        boolean tempHostLowPower = SlogAction.GetState(SlogAction.GENERALKEY, true).equals(SlogAction.GENERALLOWPOWER);
+//        Log.e("test","tempHostOn=" + String.valueOf(tempHostOn) + "  \ttempHostLowPower" + String.valueOf(tempHostLowPower));
+        if (tempHostOn) {
+            rdoGeneralOn.setChecked(true);
+        } else if (tempHostLowPower) {
+            rdoGeneralLowPower.setChecked(true);
+        } else {
+            rdoGeneralOff.setChecked(true);
+        }
+        boolean tempHost = tempHostOn || tempHostLowPower;
         SlogAction.SetCheckBoxBranchState(chkAndroid, tempHost,
                 SlogAction.GetState(SlogAction.ANDROIDKEY));
 
@@ -121,7 +159,7 @@ public class LogSettingSlogUICommonControl extends Activity {
         rdoSDCard.setEnabled(SlogAction.IsHaveSDCard() ? true : false);
 
         // set clear all logs
-        if (chkGeneral.isChecked()) {
+        if (tempHost) {
             btnClear.setEnabled(false);
         } else {
             btnClear.setEnabled(true);
@@ -134,17 +172,27 @@ public class LogSettingSlogUICommonControl extends Activity {
         public void onClick(View v) {
 
             switch (v.getId()) {
-            case R.id.chk_general:
-
+            case R.id.rdo_general_on:
                 SlogAction.SetState(SlogAction.GENERALKEY,
-                        chkGeneral.isChecked(), true);
+                        SlogAction.GENERALON, true);
                 SyncState();
-                if (!chkGeneral.isChecked()) {
+                if (rdoGeneralOff.isChecked()) {
                     requestDumpLog();
                 }
-
                 break;
-
+                
+            case R.id.rdo_general_off:
+                SlogAction.SetState(SlogAction.GENERALKEY,
+                        SlogAction.GENERALOFF, true);
+                SyncState();
+            break;
+            
+            case R.id.rdo_general_lowpower:
+                SlogAction.SetState(SlogAction.GENERALKEY,
+                        SlogAction.GENERALLOWPOWER, true);
+                SyncState();
+            break;
+            
             case R.id.chk_general_android_switch:
                 SlogAction.SetState(SlogAction.ANDROIDKEY,
                         chkAndroid.isChecked());
@@ -211,7 +259,7 @@ public class LogSettingSlogUICommonControl extends Activity {
                         LogSettingSlogUICommonControl.this,
                         getText(R.string.toast_freespace_nand)
                                 + String.valueOf(SlogAction
-                                        .GetFreeSpace(SlogAction.STORAGENAND))
+                                        .GetFreeSpace(mMediaContainer, SlogAction.STORAGENAND))
                                 + "MB", Toast.LENGTH_SHORT).show();
                 SlogAction.SetState(SlogAction.STORAGEKEY,
                         rdoSDCard.isChecked(), true);
@@ -223,7 +271,7 @@ public class LogSettingSlogUICommonControl extends Activity {
                             LogSettingSlogUICommonControl.this,
                             getText(R.string.toast_freespace_sdcard)
                                     + String.valueOf(SlogAction
-                                            .GetFreeSpace(SlogAction.STORAGESDCARD))
+                                            .GetFreeSpace(mMediaContainer, SlogAction.STORAGESDCARD))
                                     + "MB", Toast.LENGTH_SHORT).show();
                 }
                 SlogAction.SetState(SlogAction.STORAGEKEY,
