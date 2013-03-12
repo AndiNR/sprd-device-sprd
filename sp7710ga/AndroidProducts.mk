@@ -15,5 +15,5 @@
 #
 
 PRODUCT_MAKEFILES := $(LOCAL_DIR)/prod_sp7710ga.mk
-PRODUCT_MAKEFILES := $(LOCAL_DIR)/prod_sp7710gatri.mk
+PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_sp7710gatri.mk
 
