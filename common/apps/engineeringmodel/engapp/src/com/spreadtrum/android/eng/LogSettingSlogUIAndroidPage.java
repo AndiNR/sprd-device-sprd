@@ -96,8 +96,10 @@ public class LogSettingSlogUIAndroidPage extends Activity {
 	private void SyncState() {
 		boolean tempHost = SlogAction.GetState(SlogAction.ANDROIDKEY);
 		chkGeneral.setEnabled(true);
-
-		if (!SlogAction.GetState(SlogAction.GENERALKEY)) {
+        boolean tempHostOn = SlogAction.GetState(SlogAction.GENERALKEY, true).equals(SlogAction.GENERALON);
+        boolean tempHostLowPower = SlogAction.GetState(SlogAction.GENERALKEY, true).equals(SlogAction.GENERALLOWPOWER);
+        boolean tempHostGen = tempHostOn || tempHostLowPower;
+		if (!tempHostGen) {
 			chkGeneral.setEnabled(false);
 			tempHost = false;
 		}

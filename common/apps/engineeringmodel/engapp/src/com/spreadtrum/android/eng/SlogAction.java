@@ -16,7 +16,8 @@ import android.widget.CheckBox;
 import android.widget.RadioButton;
 
 import android.os.storage.IMountService;
-import android.os.storage.StorageVolume;
+import com.android.internal.app.IMediaContainerService;
+//import android.os.storage.StorageVolume;
 
 public class SlogAction {
     // =========================Const=============================================================================
@@ -50,9 +51,10 @@ public class SlogAction {
     public static final String STORAGESDCARD = "external";
 
     /** keyName->General **/
-    public static final String GENERALKEY = "#control: enable/disable\n";
+    public static final String GENERALKEY = "\n";
     public static final String GENERALON = "enable";
     public static final String GENERALOFF = "disable";
+    public static final String GENERALLOWPOWER = "low_power";
 
     /** keyName->Options **/
     public static final String KERNELKEY = "stream\tkernel\t";
@@ -448,7 +450,7 @@ public class SlogAction {
     }
 
     /** Get free space **/
-    public static long GetFreeSpace(String storageLocation) {
+    public static long GetFreeSpace(IMediaContainerService imcs, String storageLocation) {
         // Judge null==========
         final String MethodName = "GetFreeSpace(String):long";
         if (android.os.Environment.getExternalStorageDirectory() == null
@@ -464,30 +466,32 @@ public class SlogAction {
         // ========Judge Complete
 
         File path;
+        long size = 0;
         // give location=========
         if (storageLocation.equals(STORAGESDCARD)) {
             path =  EXTERNAL_STORAGE_DIRECTORY;
+            if (path != null) {
+                try {
+                    size = imcs.getFileSystemStats(path.getPath())[1];
+                } catch (Exception e) {
+                    if (imcs == null) {
+                        Log.e("SlogUI","mediaContainerService is null");
+                    } else {
+                        Log.e("SlogUI","failed calculateDirectorySize(\""+path.getPath()+"\")");
+                    }
+                }
+            }
         } else {
             path = android.os.Environment.getDataDirectory();
+            if (path != null) {
+                StatFs statFs = new StatFs(path.getPath());
+                long blockSize = statFs.getBlockSize();
+                long availableBlocks = statFs.getAvailableBlocks();
+                size = availableBlocks * blockSize;
+            }
         }
-        // =======================
-        // Judge null=============
-        if (path == null) {
-            Log.e(MethodName, "Init path failed");
-            return 0;
-        }
-        // =======================
-        StatFs stat = new StatFs(path.getPath());
-        // if(stat == null){
-        // Log.e(MethodName, "StatFs init failed");
-        // return 0;
-        // }
 
-        long blockSize = stat.getBlockSize();
-        long availableBlocks = stat.getAvailableBlocks();
-
-        return (availableBlocks * blockSize) / 1024 / 1024;
-
+        return size / 1024 / 1024;
     }
 
     public static void SetCheckBoxBranchState(CheckBox tempCheckBox,

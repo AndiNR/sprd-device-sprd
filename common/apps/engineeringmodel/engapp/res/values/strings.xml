@@ -134,6 +134,9 @@
 
 	<!-- SlogUI add by Yuntao.xiao -->
     <string name="label_slogui">SlogUI</string>
+    <string name="rdo_general_on">On</string>
+    <string name="rdo_general_off">Off</string>
+    <string name="rdo_general_lowpower">Silent</string>
     <string name="chk_general_switch">General switch</string>
     <string name="chk_general_android">Record Android log</string>
     <string name="chk_general_modem">Record modem log</string>

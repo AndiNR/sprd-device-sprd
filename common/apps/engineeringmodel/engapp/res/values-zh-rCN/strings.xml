@@ -4,6 +4,9 @@
     <string name="no_sim_card_prompt">请插入usim卡重试</string>
 	<!-- SlogUI add by Yuntao.xiao -->
     <string name="label_slogui">SlogUI</string>
+    <string name="rdo_general_on">开</string>
+    <string name="rdo_general_off">关</string>
+    <string name="rdo_general_lowpower">低功耗</string>
     <string name="chk_general_switch">总开关</string>
     <string name="chk_general_android">Android Log开关</string>
     <string name="chk_general_modem">Modem Log开关</string>

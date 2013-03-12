@@ -63,7 +63,9 @@ public class LogSettingSlogUIModemPage extends Activity {
 	}
 
 	private void SyncState() {
-		boolean tempHost = SlogAction.GetState(SlogAction.GENERALKEY);
+        boolean tempHostOn = SlogAction.GetState(SlogAction.GENERALKEY, true).equals(SlogAction.GENERALON);
+        boolean tempHostLowPower = SlogAction.GetState(SlogAction.GENERALKEY, true).equals(SlogAction.GENERALLOWPOWER);
+        boolean tempHost = tempHostOn || tempHostLowPower;
 		SlogAction.SetCheckBoxBranchState(chkModem, tempHost,
 				SlogAction.GetState(SlogAction.MODEMKEY));
 		SlogAction.SetCheckBoxBranchState(chkBuleTooth, tempHost,
