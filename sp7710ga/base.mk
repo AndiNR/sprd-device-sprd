@@ -85,6 +85,7 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/fstab.sc7710g:root/fstab.sc7710g \
 	$(BOARDDIR)/vold.fstab:system/etc/vold.fstab \
 	$(BOARDDIR)/modem_images.info:root/modem_images.info \
+	$(BOARDDIR)/nvitem.cfg:root/nvitem.cfg \
 	device/sprd/common/res/CDROM/adb.iso:system/etc/adb.iso \
 	device/sprd/common/libs/audio/apm/devicevolume.xml:system/etc/devicevolume.xml \
 	device/sprd/common/libs/audio/apm/formatvolume.xml:system/etc/formatvolume.xml \
