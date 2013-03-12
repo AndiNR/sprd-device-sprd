@@ -5,10 +5,9 @@
 #file length download address are 0x00
 
 /dev/block/mmcblk0p1           0x3000          0x40000000
-/dev/block/mmcblk0p4           0x1E000         0x400
-/dev/block/mmcblk0p4           0x1E000         0x2100000
+/dev/block/mmcblk0p4           0x20000         0x2100000
 /dev/block/mmcblk0p3           0x200000        0x20000
 /dev/block/mmcblk0p19          0x9f8000        0x400000
-/dev/block/mmcblk0p6           0x20000         0x2120000
+/dev/block/mmcblk0p6           0x40000         0x2120000
 
 /dev/ttyS3			0x00		0x00
