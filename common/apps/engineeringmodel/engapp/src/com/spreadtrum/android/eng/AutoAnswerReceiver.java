@@ -1,3 +1,4 @@
+
 package com.spreadtrum.android.eng;
 
 import java.io.ByteArrayOutputStream;
@@ -14,55 +15,53 @@ import android.util.Log;
 import android.widget.Toast;
 
 public class AutoAnswerReceiver extends BroadcastReceiver {
-	private final String TAG = "AutoAnswerReceiver";
+    private final String TAG = "AutoAnswerReceiver";
 
-	public static final String PREFS_NAME = "ENGINEERINGMODEL";
+    public static final String PREFS_NAME = "ENGINEERINGMODEL";
 
     private int mSocketID = 0;
     private engfetch mEf;
     private String mATline;
     private String mATResponse;
 
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        if (intent.getAction().equals(Intent.ACTION_BOOT_COMPLETED)) {
+            SharedPreferences settings = context.getSharedPreferences(PREFS_NAME, 0);
+            boolean is_answer = settings.getBoolean("autoanswer_call", false);
 
-	@Override
-	public void onReceive(Context context, Intent intent) {
-		if (intent.getAction().equals(Intent.ACTION_BOOT_COMPLETED)) {
-			SharedPreferences settings = context.getSharedPreferences(
-					PREFS_NAME, 0);
-			boolean is_answer = settings.getBoolean("autoanswer_call", false);
+            Log.e(TAG, "start AutoAnswerService being" + is_answer);
 
-			Log.e(TAG, "start AutoAnswerService being" + is_answer);
+            if (is_answer) {
+                Log.e(TAG, "start AutoAnswerService");
+                context.startService(new Intent(context, AutoAnswerService.class));
+            }
+            // add by wangxiaobin 11-9 for cmmb set begin
+            SharedPreferences defaultSettings = PreferenceManager
+                    .getDefaultSharedPreferences(context);
+            boolean testIsOn = defaultSettings.getBoolean(CMMBSettings.TEST_MODE, false);
+            boolean wireTestIsOn = defaultSettings.getBoolean(CMMBSettings.WIRE_TEST_MODE, false);
+            if (testIsOn) {
+                SystemProperties.set("ro.hisense.cmcc.test", "1");
+            } else {
+                SystemProperties.set("ro.hisense.cmcc.test", "0");
+            }
+            if (wireTestIsOn) {
+                SystemProperties.set("ro.hisense.cmcc.test.cmmb.wire", "1");
+            } else {
+                SystemProperties.set("ro.hisense.cmcc.test.cmmb.wire", "0");
+            }
+            // add by wangxiaobin 11-9 cmmb set end
+            /* Modify 20130311 Spreadst of 127737 start the slog when boot start */
+            String mode = SystemProperties.get("ro.product.hardware");
+            if(mode!=null && mode.contains("77")){
+                atSlog(context);
+            }
+            /* Modify 20130311 Spreadst of 127737 start the slog when boot end */
+        }
+    }
 
-			if (is_answer) {
-				Log.e(TAG, "start AutoAnswerService");
-				context.startService(new Intent(context,
-						AutoAnswerService.class));
-			}
-			// add by wangxiaobin 11-9 for cmmb set begin
-			SharedPreferences defaultSettings = PreferenceManager
-					.getDefaultSharedPreferences(context);
-			boolean testIsOn = defaultSettings.getBoolean(
-					CMMBSettings.TEST_MODE, false);
-			boolean wireTestIsOn = defaultSettings.getBoolean(
-					CMMBSettings.WIRE_TEST_MODE, false);
-			if (testIsOn) {
-				SystemProperties.set("ro.hisense.cmcc.test", "1");
-			} else {
-				SystemProperties.set("ro.hisense.cmcc.test", "0");
-			}
-			if (wireTestIsOn) {
-				SystemProperties.set("ro.hisense.cmcc.test.cmmb.wire", "1");
-			} else {
-				SystemProperties.set("ro.hisense.cmcc.test.cmmb.wire", "0");
-			}
-			// add by wangxiaobin 11-9 cmmb set end
-            /*Delete 20130201 Spreadst of 124470 have a fail toast  start*/
-          //  atSlog(context);
-            /*Delete 20130201 Spreadst of 124470 have a fail toast  end*/
-		}
-	}
-
-    private void atSlog (Context context){
+    private void atSlog(Context context) {
         mEf = new engfetch();
         mSocketID = mEf.engopen();
         mATline = new String();
@@ -75,18 +74,17 @@ public class AutoAnswerReceiver extends BroadcastReceiver {
         Log.e(TAG, "Engmode socket open, id:" + mSocketID);
 
         if (state == 1) {
-            mATline = String.format("%d,%d,%s",engconstents.ENG_AT_NOHANDLE_CMD, 1, "AT+SLOG=2");
-        }else {
-            mATline = String.format("%d,%d,%s",engconstents.ENG_AT_NOHANDLE_CMD, 1, "AT+SLOG=3");
+            mATline = String.format("%d,%d,%s", engconstents.ENG_AT_NOHANDLE_CMD, 1, "AT+SLOG=2");
+        } else {
+            mATline = String.format("%d,%d,%s", engconstents.ENG_AT_NOHANDLE_CMD, 1, "AT+SLOG=3");
         }
-        try{
+        try {
             outputBufferStream.writeBytes(mATline);
-        }catch (IOException e) {
+        } catch (IOException e) {
             Log.e(TAG, "writeBytes() error!");
-            return ;
+            return;
         }
-        mEf.engwrite(mSocketID, outputBuffer.toByteArray(),
-                outputBuffer.toByteArray().length);
+        mEf.engwrite(mSocketID, outputBuffer.toByteArray(), outputBuffer.toByteArray().length);
 
         int dataSize = 128;
         byte[] inputBytes = new byte[dataSize];
@@ -95,14 +93,13 @@ public class AutoAnswerReceiver extends BroadcastReceiver {
         mATResponse = new String(inputBytes, 0, showlen);
 
         Log.d(TAG, "AT response:" + mATResponse);
-        if (mATResponse.contains("OK")) {
-            Toast.makeText(context, "Success!",
-                    Toast.LENGTH_SHORT).show();
-        }else {
-            Toast.makeText(context, "Fail!",
-                    Toast.LENGTH_SHORT).show();
-        }
-
+        /* Modify 20130311 Spreadst of 127737 start the slog when boot start */
+//        if (mATResponse.contains("OK")) {
+//            Toast.makeText(context, "Success!", Toast.LENGTH_SHORT).show();
+//        } else {
+//            Toast.makeText(context, "Fail!", Toast.LENGTH_SHORT).show();
+//        }
         mEf.engclose(mSocketID);
-	}
+        /* Modify 20130311 Spreadst of 127737 start the slog when boot end  */
+    }
 }
