@@ -36,6 +36,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
 
     private CheckBoxPreference androidLogPrefs;
     private ListPreference DspPrefs;
+    private Preference slogPreference;
 
     private int mSocketID = 0;
     private engfetch mEf;
@@ -61,9 +62,17 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
 
 	mATline = new String();
 
-	//register preference change listener
-	SharedPreferences defaultPrefs = PreferenceManager.getDefaultSharedPreferences(this);
-	defaultPrefs.registerOnSharedPreferenceChangeListener(this);
+        // register preference change listener
+        SharedPreferences defaultPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        defaultPrefs.registerOnSharedPreferenceChangeListener(this);
+        /*Add 20130311 Spreadst of 135491 remove slog item when the phone is not 77xx start*/
+        slogPreference = (CheckBoxPreference)findPreference("modem_slog_enable");
+        String mode = SystemProperties.get("ro.product.hardware");
+        if(mode==null || !mode.contains("77")){
+            getPreferenceScreen().removePreference(slogPreference);
+            Log.d(LOG_TAG, "remove the preference");
+        }
+        /*Add 20130311 Spreadst of 135491 remove slog item when the phone is not 77xx end*/
     }
 
     @Override
