@@ -36,13 +36,17 @@ on post-fs-data
 on boot
     chown system system /sys/class/backlight/sprd_backlight/brightness
 
-    chown system system /sys/class/compass/akm8975/enable_acc
-    chown system system /sys/class/compass/akm8975/enable_mag
-    chown system system /sys/class/compass/akm8975/enable_ori
-    chown system system /sys/class/compass/akm8975/delay_acc
-    chown system system /sys/class/compass/akm8975/delay_mag
-    chown system system /sys/class/compass/akm8975/delay_ori
-    chown system system /sys/class/compass/akm8975/accel
+    chown system system /sys/class/compass/akm8963/enable_acc
+    chown system system /sys/class/compass/akm8963/enable_mag
+    chown system system /sys/class/compass/akm8963/enable_ori
+    chown system system /sys/class/compass/akm8963/delay_acc
+    chown system system /sys/class/compass/akm8963/delay_mag
+    chown system system /sys/class/compass/akm8963/delay_ori
+    chown system system /sys/class/compass/akm8963/accel
+
+#   insmod /system/lib/modules/ltr_558als.ko
+    chown system system /dev/ltr_558als
+    chmod 0664 /dev/ltr_558als
 
     chmod 666 /dev/ttyS0
     chmod 666 /proc/bluetooth/sleep/proto
@@ -205,7 +209,7 @@ service pbap /system/bin/sdptool add --channel=19 PBAP
     disabled
     oneshot
 
-service akmd /system/bin/akmd8975 -m 3
+service akmd /system/bin/akmd8963 -m 4
     class main
     oneshot
 
