@@ -70,4 +70,3 @@ WIFI_DRIVER_FW_PATH_AP      := "/etc/wifi/fw_bcmdhd_apsta.bin"
 USE_CAMERA_STUB := true
 
 BOARD_USES_GENERIC_AUDIO := false
-HAVE_WLAN_CU_FEATURE := true

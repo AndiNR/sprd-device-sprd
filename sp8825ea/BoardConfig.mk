@@ -63,8 +63,6 @@ BOARD_USES_ALSA_AUDIO := false
 BUILD_WITH_ALSA_UTILS := false
 BOARD_USE_VETH := true
 BOARD_SPRD_RIL := true
-# wlan cu feature toggles
-HAVE_WLAN_CU_FEATURE := true
 
 TARGET_RECOVERY_UI_LIB := librecovery_ui_sp8825
 TARGET_RECOVERY_PIXEL_FORMAT := "RGBA_8888"

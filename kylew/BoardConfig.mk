@@ -75,5 +75,4 @@ WIFI_DRIVER_FW_PATH_STA     := "/etc/wifi/fw_bcmdhd.bin"
 WIFI_DRIVER_FW_PATH_P2P     := "/etc/wifi/fw_bcmdhd_p2p.bin"
 WIFI_DRIVER_FW_PATH_AP      := "/etc/wifi/fw_bcmdhd_apsta.bin"
 
-HAVE_WLAN_CU_FEATURE := true
 USE_BOOT_AT_DIAG := true

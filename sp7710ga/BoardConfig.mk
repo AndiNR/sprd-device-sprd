@@ -68,4 +68,3 @@ BOARD_GPS := ublox
 
 BOARD_USES_GENERIC_AUDIO := false
 USE_BOOT_AT_DIAG := true
-HAVE_WLAN_CU_FEATURE := true
