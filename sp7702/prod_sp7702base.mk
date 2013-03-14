@@ -28,6 +28,7 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.com.android.dataroaming=false \
 	persist.msms.phone_count=1 \
     lmk.autocalc=false \
+    ksm.support=true   \
     zram.support=true \
     ro.build.product.lowmem=1    
 
