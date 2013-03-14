@@ -1,0 +1,79 @@
+set print pretty on
+set print null-stop on
+
+printf "\n\n SPRD SYSDUMP --- occured on cpu %d, caused by %s\n\n", sprd_sysdump_extra.enter_cpu, sprd_sysdump_extra.reason
+
+define dmesg
+    set $start = log_start - logged_chars
+    set $end = log_end
+    set $buf = log_buf
+    set $mask = log_buf_len - 1
+    while ($start != $end)
+        set $c = $buf[$start & $mask]
+        set $start = $start + 1
+        printf "%c", $c
+    end
+    printf "\n"
+end
+
+
+define ps
+	set $task = &init_task
+	set $count = 0
+
+	printf "COMM \t\t\t PID \t TASK_STRUCT \t THREAD_INFO \t CPU_CONTEXT \t STAT \t ON_CPU\n"
+
+	while (1)
+		if ( $task == &init_task )
+			set $count = $count + 1
+		end
+		if ( $count == 2 )
+			loop_break
+		end
+
+		printf "%-20s \t %d \t 0x%x \t 0x%x \t 0x%x \t %d \t %d\n", $task->comm, $task->pid, $task, $task->stack, &((*(struct thread_info *)$task->stack).cpu_context), $task->state, $task->on_cpu
+
+		set $task = (struct task_struct *)((char *)($task->tasks->next) - (int)&(((struct task_struct *)0)->tasks))
+	end
+end
+
+
+define btp
+	set $task = &init_task
+	set $count = 0
+
+	while (1)
+		if ( $task == &init_task )
+			set $count = $count + 1
+		end
+		if ( $count == 2 )
+			loop_break
+		end
+
+		if ( $task->pid == $arg0 )
+			loop_break
+		end
+
+		set $task = (struct task_struct *)((char *)($task->tasks->next) - (int)&(((struct task_struct *)0)->tasks))
+	end
+
+	if ( $task == &init_task && $arg0 != 0 )
+		printf "pid not found\n"
+	else
+		printf "%s\n", $task->comm
+		set $context = &((*(struct thread_info *)$task->stack).cpu_context)
+		shell ./context_mod $SYSDUMP_COREFILE $context
+		bt
+		shell ./context_mod $SYSDUMP_COREFILE 0xffffffff
+	end
+end
+
+
+define cc
+	set $cpu = 0
+	while ( $cpu < sizeof(sprd_sysdump_extra.cpu_context)/sizeof(sprd_sysdump_extra.cpu_context[0]) )
+		printf "CPU_%d:  0x%x\n", $cpu, &sprd_sysdump_extra.cpu_context[$cpu]
+		set $cpu = $cpu + 1
+	end
+end
+
