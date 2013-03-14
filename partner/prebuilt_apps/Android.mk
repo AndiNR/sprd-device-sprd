@@ -8,7 +8,7 @@ LOCAL_MODULE := ES_File_Explorer.apk
 LOCAL_MODULE_CLASS := APPS
 LOCAL_CERTIFICATE := PRESIGNED
 LOCAL_MODULE_PATH := $(TARGET_OUT)/preloadapp
-LOCAL_SRC_FILES := ES_File_Explorer_V1_6_2_5_Spreadtrum_cmcc_20130125.apk
+LOCAL_SRC_FILES := ES_File_Explorer_V1_6_2_5_Spreadtrum_cmcc_20130306.apk
 
 include $(BUILD_PREBUILT)
 
