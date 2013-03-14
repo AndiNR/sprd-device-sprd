@@ -56,7 +56,7 @@ extern "C" {
 
 int32_t g_camera_id = -1;
 uint32_t g_sprd_zoom_levle = 0;
-int isSettingPreviewWindow = 0;
+
 static inline void print_time()
 {
 #if PRINT_TIME
@@ -139,7 +139,8 @@ gralloc_module_t const* SprdCameraHardware::mGrallocHal;
         mMetadataHeap(NULL),
         mJpegencSwapHeap(NULL),
        mFDHeap(NULL),
-        mIsStoreMetaData(false)
+        mIsStoreMetaData(false),
+        mSettingPreviewWindowState(PREVIEW_WINDOW_SET_IDLE)
     {
         ALOGV("openCameraHardware: call createInstance. cameraId: %d.", cameraId);
 
@@ -649,7 +650,9 @@ status_t SprdCameraHardware::startPreviewInternal()
         }
         else {
                 ALOGE("startPreview failed: sensor error.");
-                mCameraState = QCS_ERROR;           
+                mCameraState = QCS_ERROR;
+		FreePmem(mPreviewHeap);
+		mPreviewHeap = NULL;
         }
         ALOGV("startPreview X,mRecordingMode=%d.",mRecordingMode);
         ALOGV("mLock:startPreview E.\n");
@@ -744,7 +747,9 @@ status_t SprdCameraHardware::startRecording()
                 mCameraState = QCS_INTERNAL_PREVIEW_STOPPING;
                 if(CAMERA_SUCCESS != camera_stop_preview()){
                         mCameraState = QCS_ERROR;
-                        mPreviewHeap = NULL; 
+			FreePmem(mPreviewHeap);
+                        mPreviewHeap = NULL;
+			FreePmem(mFDHeap);
                         mFDHeap = NULL;
                         ALOGE("startRecording: fail to camera_stop_preview().");		
                         return INVALID_OPERATION;
@@ -1040,6 +1045,7 @@ status_t SprdCameraHardware::cancelPicture()
 
             mCameraState = QCS_INTERNAL_CAPTURE_STOPPING;
             camera_stop_capture();
+	    FreeCameraMem();
             while (mCameraState != QCS_IDLE &&
                    mCameraState != QCS_ERROR)  {
                 ALOGV("cancelPicture: waiting for QCS_IDLE");
@@ -1470,6 +1476,7 @@ void SprdCameraHardware::receivePreviewFDFrame(camera_frame_type *frame)
 void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 {
         Mutex::Autolock cbLock(&mCallbackLock);
+	Mutex::Autolock previewLock(&mPreviewLock);
         ssize_t offset = frame->buf_id;
 
         // Ignore the first frame--there is a bug in the VFE pipeline and that
@@ -1481,7 +1488,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
                 return;
         }
 #if 1
-if(0 == isSettingPreviewWindow)
+if(PREVIEW_WINDOW_SET_OK == mSettingPreviewWindowState)
 {
         int width, height, frame_size, offset_size;
 
@@ -1839,6 +1846,8 @@ void SprdCameraHardware::receivePostLpmRawPicture(camera_frame_type *frame)
 
             if(CAMERA_SUCCESS != camera_encode_picture(frame, &camera_handle, camera_cb, this)){
 		mCameraState = QCS_ERROR;
+		FreePmem(mRawHeap);
+		mRawHeap = NULL;
 		ALOGE("receivePostLpmRawPicture: fail to camera_encode_picture().");
 	    }
         }
@@ -3216,18 +3225,17 @@ status_t SprdCameraHardware::storeMetaDataInBuffers(bool enable)
 status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 {
     int min_bufs;
-
+    Mutex::Autolock stateLock(&mStateLock);
+    Mutex::Autolock previewLock(&mPreviewLock);
+    mSettingPreviewWindowState = PREVIEW_WINDOW_SETTIN;
     mPreviewWindow = w;
     ALOGV("%s: mPreviewWindow %p", __func__, mPreviewWindow);
 
     if (!w) {
         ALOGE("preview window is NULL!");
+        mSettingPreviewWindowState = PREVIEW_WINDOW_SET_IDLE;
         return NO_ERROR;
     }
-
-    Mutex::Autolock stateLock(&mStateLock);
-    Mutex::Autolock previewLock(&mPreviewLock);
-    isSettingPreviewWindow = 1;
 /*
     //if (mPreviewRunning && !mPreviewStartDeferred) {
     if (mCameraState == QCS_PREVIEW_IN_PROGRESS){
@@ -3237,6 +3245,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 */
     if (w->get_min_undequeued_buffer_count(w, &min_bufs)) {
         ALOGE("%s: could not retrieve min undequeued buffer count", __func__);
+        mSettingPreviewWindowState = PREVIEW_WINDOW_SET_FAILED;
         return INVALID_OPERATION;
     }
 
@@ -3248,6 +3257,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
     ALOGV("%s: setting buffer count to %d", __func__, kPreviewBufferCount);
     if (w->set_buffer_count(w, kPreviewBufferCount)) {
         ALOGE("%s: could not set buffer count", __func__);
+        mSettingPreviewWindowState = PREVIEW_WINDOW_SET_FAILED;
         return INVALID_OPERATION;
     }
 
@@ -3274,7 +3284,8 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 #endif
 		if (w->set_usage(w, usage )) {
         	ALOGE("%s: could not set usage on gralloc buffer", __func__);
-        	return INVALID_OPERATION;
+                mSettingPreviewWindowState = PREVIEW_WINDOW_SET_FAILED;
+		return INVALID_OPERATION;
     	}		
     } else {
 #ifdef USE_ION_MEM
@@ -3282,7 +3293,8 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 #endif
 		if (w->set_usage(w, usage )) {
         	ALOGE("%s: could not set usage on gralloc buffer", __func__);
-        	return INVALID_OPERATION;
+                mSettingPreviewWindowState = PREVIEW_WINDOW_SET_FAILED;
+		return INVALID_OPERATION;
     	}
     }
 
@@ -3291,6 +3303,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
                                 hal_pixel_format)) {
         ALOGE("%s: could not set buffers geometry to %s",
              __func__, str_preview_format);
+        mSettingPreviewWindowState = PREVIEW_WINDOW_SET_FAILED;
         return INVALID_OPERATION;
     }
 
@@ -3308,8 +3321,8 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
    if (ret != NO_ERROR) {
    	return INVALID_OPERATION;
    }*/
-    isSettingPreviewWindow = 0;
-    return NO_ERROR;
+   mSettingPreviewWindowState = PREVIEW_WINDOW_SET_OK;
+   return NO_ERROR;
 }
 
 int SprdCameraHardware::getCameraId() const

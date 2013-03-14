@@ -380,6 +380,13 @@ sp<RawPmemPool> mJpegencSwapHeap; //for capture zoom scale.
    int32_t             mMsgEnabled;
    //sp<CameraHardwareInterface> mHardware;
    bool mIsStoreMetaData;
+   enum PreviewWindowState{
+        PREVIEW_WINDOW_SET_IDLE,
+        PREVIEW_WINDOW_SETTIN,
+        PREVIEW_WINDOW_SET_OK,
+        PREVIEW_WINDOW_SET_FAILED
+    };
+    PreviewWindowState mSettingPreviewWindowState;
 };
 
 }; // namespace android
