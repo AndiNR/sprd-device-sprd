@@ -682,6 +682,8 @@ status_t SprdCameraHardware::startPreviewInternal()
         else {
                 ALOGE("startPreview failed: sensor error.");
                 mCameraState = QCS_ERROR;
+		FreePmem(mPreviewHeap);
+		mPreviewHeap = NULL;
         }
         ALOGV("startPreview X,mRecordingMode=%d.",mRecordingMode);
         ALOGV("mLock:startPreview E.\n");
@@ -802,7 +804,9 @@ status_t SprdCameraHardware::startRecording()
                 if(CAMERA_SUCCESS != camera_stop_preview()){
                         mCameraState = QCS_ERROR;
                         FreeFdmem();
+			FreePmem(mPreviewHeap);
                         mPreviewHeap = NULL;
+			FreePmem(mFDHeap);
                         mFDHeap = NULL;
                         ALOGE("startRecording: fail to camera_stop_preview().");
                         return INVALID_OPERATION;
@@ -1044,6 +1048,7 @@ status_t SprdCameraHardware::cancelPicture()
 
             mCameraState = QCS_INTERNAL_CAPTURE_STOPPING;
             camera_stop_capture();
+	    FreeCameraMem();
             while (mCameraState != QCS_IDLE &&
                    mCameraState != QCS_ERROR)  {
                 ALOGV("cancelPicture: waiting for QCS_IDLE");
@@ -1547,11 +1552,15 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
 
             if( 0 != camera_get_data_redisplay(tmp_phy_addr, width, height, frame->buffer_phy_addr, frame->buffer_uv_phy_addr, frame->dx, frame->dy)){
                 ALOGE("Fail to camera_get_data_redisplay.");
+		FreePmem(mReDisplayHeap);
+		mReDisplayHeap = NULL;
                 goto callbackraw;
             }
 			timestamp_old = systemTime();
 			if(0 != camera_copy_data_virtual(width, height, tmp_phy_addr, (uint32_t)vaddr)){
 			        ALOGE("fail to camera_copy_data_virtual() in receiveRawPicture.");
+				FreePmem(mReDisplayHeap);
+				mReDisplayHeap = NULL;
 			        goto callbackraw;
 			}
 
@@ -1559,6 +1568,7 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
 			timestamp_new = systemTime();
 			ALOGV("receiveRawPicture: %lld, %lld, time = %lld us \n",timestamp_old, timestamp_new, (timestamp_new-timestamp_old)/1000);
 			FreePmem(mReDisplayHeap);
+			mReDisplayHeap = NULL;
 #endif
 
             mGrallocHal->unlock(mGrallocHal, *buf_handle);
@@ -1673,6 +1683,8 @@ void SprdCameraHardware::receivePostLpmRawPicture(camera_frame_type *frame)
 
             if(CAMERA_SUCCESS != camera_encode_picture(frame, &camera_handle, camera_cb, this)){
 		mCameraState = QCS_ERROR;
+		FreePmem(mRawHeap);
+                mRawHeap = NULL;
 		ALOGE("receivePostLpmRawPicture: fail to camera_encode_picture().");
 	    }
         }
