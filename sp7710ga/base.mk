@@ -67,7 +67,7 @@ PRODUCT_PACKAGES += \
 	audio.primary.$(TARGET_PLATFORM) \
 	audio_policy.$(TARGET_PLATFORM) \
 	tinymix \
-	sensors.$(TARGET_BOARD) \
+	sensors.$(TARGET_PLATFORM) \
 	libmbbms_tel_jni.so \
 	$(MALI) \
 	zram.sh \

@@ -13,7 +13,7 @@ PRODUCT_PACKAGES := \
 	sprd_monitor \
 	phoneserver \
 	phoneserver_2sim \
-	akmd8975
+	akmd8963
 
 else
 # for spreadtrum customer proprietories modules: only support direct copy
