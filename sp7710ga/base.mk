@@ -104,7 +104,6 @@ PRODUCT_COPY_FILES := \
 
 $(call inherit-product, $(BOARDDIR)/../common/apps/engineeringmodel/module.mk)
 $(call inherit-product, $(BOARDDIR)/../common/apps/modemassert/module.mk)
-BOARD_WLAN_DEVICE_REV       := bcm4330_b1
-$(call inherit-product, hardware/broadcom/wlan/bcmdhd/firmware/bcm4330/device-bcm.mk)
+$(call inherit-product, hardware/broadcom/wlan/bcmdhd/firmware/bcm40181/device-bcm.mk)
 $(call inherit-product, $(BOARDDIR)/../common/apps/modemassert/module.mk)
 $(call inherit-product, device/sprd/partner/ublox/device-ublox-gps.mk)
