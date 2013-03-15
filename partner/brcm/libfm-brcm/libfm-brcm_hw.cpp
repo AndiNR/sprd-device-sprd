@@ -280,14 +280,7 @@ cancelSearch(struct fm_device_t* dev)
 
     LOGD("%s\n", __FUNCTION__);
 
-    searchAbortNative();
-
-    if(gMutex.wait(0, 3))
-	{
-        return FM_FAILURE;
-	}
-
-    if(gfm_params.chnl_info.status == BTA_FM_OK)
+    if( searchAbortNative())
     {
        return FM_SUCCESS;
     }
