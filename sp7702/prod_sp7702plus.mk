@@ -50,6 +50,7 @@ PRODUCT_PACKAGES := \
 	MsmsStk \
 	Stk1 \
 	framework2 \
+	sprdcudm \
 	Launcher2
 
 # prebuild files

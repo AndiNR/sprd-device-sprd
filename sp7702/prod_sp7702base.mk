@@ -48,6 +48,7 @@ PRODUCT_PACKAGES := \
 	framework2 \
 	Settings \
 	Stk \
+	sprdcudm \
 	Launcher2
 
 # prebuild files
