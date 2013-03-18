@@ -1,11 +1,12 @@
 
 /*----------------------------------------------------------------------------*
- **                          Dependencies                                     *
+ **				Dependencies					*
  **---------------------------------------------------------------------------*/
 #include "isp_param_tune_com.h"
 #include "isp_param_tune_v0000.h"
+#include "isp_app.h"
 /**---------------------------------------------------------------------------*
- **                          Compiler Flag                                    *
+ **				Compiler Flag					*
  **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
 extern   "C"
@@ -13,7 +14,7 @@ extern   "C"
 #endif
 
 /**---------------------------------------------------------------------------*
-**                               Micro Define                                **
+**				Micro Define					*
 **----------------------------------------------------------------------------*/
 #define ISP_SIZE_NUM 0x08
 struct isp_size_info s_isp_size_info[ISP_SIZE_NUM]={
@@ -28,7 +29,7 @@ struct isp_size_info s_isp_size_info[ISP_SIZE_NUM]={
 };
 
 /**---------------------------------------------------------------------------*
-**                               Data Prototype                              **
+*				Data Prototype					*
 **----------------------------------------------------------------------------*/
 static int32_t _ispParamVerify(void* in_param_ptr)
 {
@@ -37,8 +38,6 @@ static int32_t _ispParamVerify(void* in_param_ptr)
 	uint32_t verify_id=param_ptr[0];
 	uint32_t packet_size=param_ptr[2];
 	uint32_t end_id=param_ptr[(packet_size/4)-1];
-
-	CMR_LOGE("ISP_TOOL:_ispParamVerify param: 0x%x, 0x%x, 0x%x\n", param_ptr[0], param_ptr[1], param_ptr[2]);
 
 	if(ISP_PACKET_VERIFY_ID!=verify_id)
 	{
@@ -61,9 +60,9 @@ static uint32_t _ispParserGetType(void* in_param_ptr)
 	return type;
 }
 
-enum isp_tune_level _ispLevelConvert(uint32_t module_id)
+enum isp_tune_param_level _ispLevelConvert(uint32_t module_id)
 {
-	enum isp_tune_level cmd=ISP_TUNE_MAX;
+	enum isp_tune_param_level cmd=ISP_TUNE_MAX;
 
 	switch(module_id)
 	{
@@ -146,60 +145,12 @@ enum isp_tune_level _ispLevelConvert(uint32_t module_id)
 	return cmd;
 }
 
-static int32_t _ispParserDownCmd(void* in_param_ptr, void* rtn_param_ptr)
-{
-	int32_t rtn=0x00;
-	uint32_t* param_ptr=(uint32_t*)in_param_ptr+0x03;
-	struct isp_parser_cmd_param* rtn_ptr=(struct isp_parser_cmd_param*)rtn_param_ptr;
-	uint32_t cmd=param_ptr[0];
-	uint32_t i=0x00;
-
-	rtn_ptr->cmd=cmd;
-
-	CMR_LOGE("ISP_TOOL:_ispParserDownCmd type: 0x%x, 0x%x\n", param_ptr[0], param_ptr[1]);
-
-	switch(cmd)
-	{
-		case ISP_CAPTURE:
-		{
-			rtn_ptr->param[0]=param_ptr[2];//format
-			for(i=0x00; i<ISP_SIZE_NUM; i++)
-			{
-				if(s_isp_size_info[i].size_id==param_ptr[3])
-				{
-					rtn_ptr->param[1]=s_isp_size_info[i].width;//width
-					rtn_ptr->param[2]=s_isp_size_info[i].height;//height
-					break ;
-				}
-			}
-
-			break;
-		}
-		case ISP_PREVIEW:
-		case ISP_STOP_PREVIEW:
-		case ISP_UP_PREVIEW_DATA:
-		case ISP_UP_PARAM:
-		case ISP_CAPTURE_SIZE:
-		case ISP_MAIN_INFO:
-		{
-			break;
-		}
-		default :
-		{
-			break;
-		}
-	}
-
-	return rtn;
-}
-
 static int32_t _ispParserDownParam(void* in_param_ptr)
 {
 	uint32_t rtn=0x00;
 	uint32_t* param_ptr=(uint32_t*)((uint8_t*)in_param_ptr+0x0c);// packet data
 	uint32_t version_id=param_ptr[0];
 	uint32_t module_id=param_ptr[1];
-	uint32_t* data_ptr=(uint32_t*)((uint8_t*)param_ptr+0x0c); // packet data sub_data
 	isp_fun fun_ptr=NULL;
 
 	switch(version_id)
@@ -217,7 +168,7 @@ static int32_t _ispParserDownParam(void* in_param_ptr)
 
 	if(NULL!=fun_ptr)
 	{
-		rtn=fun_ptr(data_ptr);
+		rtn=fun_ptr(param_ptr);
 	}
 	else
 	{
@@ -231,13 +182,35 @@ static int32_t _ispParserDownLevel(void* in_param_ptr)
 {
 	int32_t rtn=0x00;
 	uint32_t* param_ptr=(uint32_t*)((uint8_t*)in_param_ptr+0x0c);// packet data
-	uint32_t module_id=param_ptr[1];
+	uint32_t module_id=param_ptr[0];
 	enum isp_ctrl_cmd cmd=ISP_CTRL_MAX;
-	uint32_t level=param_ptr[3];
+	uint32_t level=param_ptr[2];
+	struct isp_af_win af_param;
+	void* ioctl_param_ptr=NULL;
+	uint32_t i=0x00;
+	uint32_t start_ndex=0x00;
 
 	cmd=_ispLevelConvert(module_id);
 
-	//rtn=isp_ioctl(cmd, void* param_ptr, PNULL);
+	if(ISP_CTRL_AF==cmd)
+	{
+		//param_ptr[3]; num
+		//param_ptr[4]; win start
+		af_param.valid_win=param_ptr[3];
+		for(i=0x00; i<af_param.valid_win; i++)
+		{
+			start_ndex=0x04*i;
+			af_param.win[i].start_x=param_ptr[start_ndex+4];
+			af_param.win[i].start_y=param_ptr[start_ndex+5];
+			af_param.win[i].end_x=param_ptr[start_ndex+4]+param_ptr[start_ndex+6]-0x01;
+			af_param.win[i].end_y=param_ptr[start_ndex+5]+param_ptr[start_ndex+7]-0x01;
+		}
+		ioctl_param_ptr=(void*)&af_param;
+	}else{
+		ioctl_param_ptr=(void*)&level;
+	}
+
+	rtn=isp_ioctl(cmd, ioctl_param_ptr);
 
 	return rtn;
 }
@@ -291,13 +264,13 @@ static int32_t _ispParserUpMainInfo(void* rtn_param_ptr)
 			}
 		}
 
-		param_ptr->preview_format = ISP_DATA_YUV420_2FRAME;
-		param_ptr->capture_format = ISP_DATA_YUV420_2FRAME|ISP_DATA_JPG;
+		param_ptr->preview_format = ISP_VIDEO_YUV420_2FRAME;
+		param_ptr->capture_format = ISP_VIDEO_YUV420_2FRAME|ISP_VIDEO_JPG;
 
 		if(0x00==sensor_info_ptr->sensor_interface.is_loose){
-			param_ptr->capture_format |= ISP_DATA_MIPI_RAW10;
+			param_ptr->capture_format |= ISP_VIDEO_MIPI_RAW10;
 		} else {
-			param_ptr->capture_format |= ISP_DATA_NORMAL_RAW10;
+			param_ptr->capture_format |= ISP_VIDEO_NORMAL_RAW10;
 		}
 
 	} else {
@@ -316,8 +289,6 @@ static int32_t _ispParserUpParam(void* rtn_param_ptr)
 	SENSOR_EXP_INFO_T_PTR sensor_info_ptr=Sensor_GetInfo();
 	uint32_t version_id=sensor_info_ptr->raw_info_ptr->version_info->version_id;
 
-	CMR_LOGE("ISP_TOOL:_ispParserUpParam %d, %d\n", version_id, ISP_VERSION_0000_ID);
-
 	switch(version_id)
 	{
 		case ISP_VERSION_0000_ID:
@@ -327,6 +298,7 @@ static int32_t _ispParserUpParam(void* rtn_param_ptr)
 		}
 		default :
 		{
+			CMR_LOGE("ISP_TOOL:_ispParserUpParam version_id:0x%08x error \n", version_id);
 			break;
 		}
 	}
@@ -387,6 +359,125 @@ static int32_t _ispParserCapturesize(void* in_param_ptr, void* rtn_param_ptr)
 	return rtn;
 }
 
+static int32_t _ispParserReadSensorReg(void* in_param_ptr, void* rtn_param_ptr)
+{
+	int32_t rtn=0x00;
+	struct isp_parser_cmd_param* in_ptr=(struct isp_parser_cmd_param*)in_param_ptr;
+	struct isp_parser_buf_rtn* rtn_ptr=(struct isp_parser_buf_rtn*)rtn_param_ptr;
+	SENSOR_EXP_INFO_T_PTR sensor_info_ptr=Sensor_GetInfo();
+	uint32_t* data_addr=NULL;
+	uint32_t data_len=0x0c;
+	uint32_t reg_num=in_ptr->param[0];
+	uint16_t reg_addr=(uint16_t)in_ptr->param[1];
+	uint16_t reg_data=0x00;
+	uint32_t i=0x00;
+
+	rtn_ptr->buf_addr=NULL;
+	rtn_ptr->buf_len=0x00;
+
+	data_len+=reg_num*0x08;
+	data_addr=ispParserAlloc(data_len);
+
+	if(NULL!=data_addr)
+	{
+		data_addr[0]=in_ptr->cmd;
+		data_addr[1]=data_len;
+		data_addr[2]=reg_num;
+
+		for(i=0x00; i<reg_num; i++)
+		{
+			reg_data=Sensor_ReadReg(reg_addr);
+			data_addr[3+i*2]=(uint32_t)reg_addr;
+			data_addr[4+i*2]=(uint32_t)reg_data;
+			reg_addr++;
+		}
+
+		// rtn sesult
+		rtn_ptr->buf_addr=data_addr;
+		rtn_ptr->buf_len=data_len;
+	}
+
+	return rtn;
+}
+
+static int32_t _ispParserWriteSensorReg(void* in_param_ptr)
+{
+	int32_t rtn=0x00;
+	// cmd|packet_len|reg_num|reg_addr|reg_data|...
+	struct isp_parser_cmd_param* in_ptr=(struct isp_parser_cmd_param*)in_param_ptr;
+	uint32_t reg_num=in_ptr->param[1];
+	uint16_t reg_addr=0x00;
+	uint16_t reg_data=0x00;
+	uint32_t i=0x00;
+
+	for(i=0x00; i<reg_num; i++)
+	{
+		reg_addr=(uint16_t)in_ptr->param[2+i*2];
+		reg_data=(uint16_t)in_ptr->param[3+i*2];
+		Sensor_WriteReg(reg_addr, reg_data);
+	}
+
+	return rtn;
+}
+
+static int32_t _ispParserDownCmd(void* in_param_ptr, void* rtn_param_ptr)
+{
+	int32_t rtn=0x00;
+	uint32_t* param_ptr=(uint32_t*)in_param_ptr+0x03;
+	struct isp_parser_cmd_param* rtn_ptr=(struct isp_parser_cmd_param*)rtn_param_ptr;
+	uint32_t cmd=param_ptr[0];
+	uint32_t i=0x00;
+
+	rtn_ptr->cmd=cmd;
+
+	CMR_LOGE("ISP_TOOL:_ispParserDownCmd type: 0x%x, 0x%x\n", param_ptr[0], param_ptr[1]);
+
+	switch(cmd)
+	{
+		case ISP_CAPTURE:
+		{
+			rtn_ptr->param[0]=param_ptr[2];//format
+			for(i=0x00; i<ISP_SIZE_NUM; i++)
+			{
+				if(s_isp_size_info[i].size_id==param_ptr[3])
+				{
+					rtn_ptr->param[1]=s_isp_size_info[i].width;//width
+					rtn_ptr->param[2]=s_isp_size_info[i].height;//height
+					break ;
+				}
+			}
+
+			break;
+		}
+		case ISP_READ_SENSOR_REG:
+		{
+			rtn_ptr->param[0]=param_ptr[2];//addr num
+			rtn_ptr->param[1]=param_ptr[3];//start addr
+			break;
+		}
+		case ISP_WRITE_SENSOR_REG:
+		{
+			_ispParserWriteSensorReg((void*)param_ptr);
+			break;
+		}
+		case ISP_PREVIEW:
+		case ISP_STOP_PREVIEW:
+		case ISP_UP_PREVIEW_DATA:
+		case ISP_UP_PARAM:
+		case ISP_TAKE_PICTURE_SIZE:
+		case ISP_MAIN_INFO:
+		{
+			break;
+		}
+		default :
+		{
+			break;
+		}
+	}
+
+	return rtn;
+}
+
 static int32_t _ispParserDownHnadle(void* in_param_ptr, void* rtn_param_ptr)
 {
 	int32_t rtn=0x00;
@@ -394,8 +485,6 @@ static int32_t _ispParserDownHnadle(void* in_param_ptr, void* rtn_param_ptr)
 	uint32_t type=param_ptr[1];
 
 	rtn=_ispParamVerify(in_param_ptr);
-
-	//    type=_ispParserGetType(in_param_ptr);
 
 	CMR_LOGE("ISP_TOOL:_ispParserDownHnadle param: 0x%x, 0x%x, 0x%x\n", param_ptr[0], param_ptr[1], param_ptr[2]);
 
@@ -460,6 +549,11 @@ static int32_t _ispParserUpHnadle(uint32_t cmd, void* in_param_ptr, void* rtn_pa
 			rtn=_ispParserCapturesize(in_param_ptr, rtn_param_ptr);
 			break;
 		}
+		case ISP_PARSER_UP_SENSOR_REG:
+		{
+			rtn=_ispParserReadSensorReg(in_param_ptr, rtn_param_ptr);
+			break;
+		}
 		default :
 		{
 			break;
@@ -500,6 +594,11 @@ static int32_t _ispParserUpHnadle(uint32_t cmd, void* in_param_ptr, void* rtn_pa
 				case ISP_PARSER_UP_MAIN_INFO:
 				{
 					data_addr[1]=ISP_TYPE_MAIN_INFO;
+					break;
+				}
+				case ISP_PARSER_UP_SENSOR_REG:
+				{
+					data_addr[1]=ISP_TYPE_SENSOR_REG;
 					break;
 				}
 				default :
@@ -556,6 +655,7 @@ int32_t ispParser(uint32_t cmd, void* in_param_ptr, void* rtn_param_ptr)
 		case ISP_PARSER_UP_PRV_DATA:
 		case ISP_PARSER_UP_CAP_DATA:
 		case ISP_PARSER_UP_CAP_SIZE:
+		case ISP_PARSER_UP_SENSOR_REG:
 		{
 			rtn=_ispParserUpHnadle(cmd, in_param_ptr, rtn_param_ptr);
 			break;
@@ -600,7 +700,7 @@ int32_t ispParserFree(void* addr)
 	return rtn;
 }
 /**----------------------------------------------------------------------------*
-**                         Compiler Flag                                      **
+**				Compiler Flag					*
 **----------------------------------------------------------------------------*/
 #ifdef   __cplusplus
 }

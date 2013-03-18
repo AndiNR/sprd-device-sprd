@@ -2913,11 +2913,10 @@ LOCAL JPEG_RET_E JPEG_AddExifToMemory(JINF_WEXIF_IN_PARAM_T *in_param_ptr,
     *target_buf_ptr++ = M_SOI;
     JPEG_PRINT_LOW("target buf:0x%x,app1_buf_ptr 0x%x ,app1_size %d.",
 		(uint32_t)target_buf_ptr,(uint32_t)app1_buf_ptr,app1_size);
-   // memcpy(target_buf_ptr, app1_buf_ptr, app1_size);
-   for(i=0;i<app1_size;i++) {
+    memcpy(target_buf_ptr, app1_buf_ptr, app1_size);
+/*   for(i=0;i<app1_size;i++) {
 		*target_buf_ptr++ = *app1_buf_ptr++;
-/*		JPEG_PRINT_LOW("i=%d.",i);*/
-   }
+   }*/
 
 	JPEG_PRINT_LOW("end.");
 

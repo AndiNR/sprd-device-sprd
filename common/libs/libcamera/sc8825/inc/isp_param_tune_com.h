@@ -1,7 +1,7 @@
 #ifndef _ISP_PARAM_TUNE_COM_H_
 #define _ISP_PARAM_TUNE_COM_H_
 /*----------------------------------------------------------------------------*
- **                          Dependencies                                     *
+ **				Dependencies					*
  **---------------------------------------------------------------------------*/
 #include <sys/types.h>
 //#include "isp_com.h"
@@ -9,7 +9,7 @@
 #include "sensor_raw.h"
 
 /**---------------------------------------------------------------------------*
- **                          Compiler Flag                                    *
+ **				Compiler Flag					*
  **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
 extern   "C"
@@ -17,7 +17,7 @@ extern   "C"
 #endif
 
 /**---------------------------------------------------------------------------*
-**                               Micro Define                                **
+**				Micro Define					*
 **----------------------------------------------------------------------------*/
 typedef int32_t (*isp_fun)(void* param_ptr);
 
@@ -48,6 +48,7 @@ typedef int32_t (*isp_fun)(void* param_ptr);
 #define ISP_TYPE_PRV_DATA  0x0003
 #define ISP_TYPE_CAP_DATA  0x0004
 #define ISP_TYPE_MAIN_INFO 0x0005
+#define ISP_TYPE_SENSOR_REG 0x0006
 
 #define ISP_PACKET_ALL 0x0000
 #define ISP_PACKET_BLC 0x0001
@@ -77,11 +78,11 @@ typedef int32_t (*isp_fun)(void* param_ptr);
 #define ISP_PACKET_CHN 0x0019
 #define ISP_PACKET_MAX 0xFFFF
 
-#define ISP_DATA_YUV422_2FRAME (1<<0)
-#define ISP_DATA_YUV420_2FRAME (1<<1)
-#define ISP_DATA_NORMAL_RAW10 (1<<2)
-#define ISP_DATA_MIPI_RAW10 (1<<3)
-#define ISP_DATA_JPG (1<<4)
+#define ISP_VIDEO_YUV422_2FRAME (1<<0)
+#define ISP_VIDEO_YUV420_2FRAME (1<<1)
+#define ISP_VIDEO_NORMAL_RAW10 (1<<2)
+#define ISP_VIDEO_MIPI_RAW10 (1<<3)
+#define ISP_VIDEO_JPG (1<<4)
 
 #define ISP_SIZE_640x480   (1<<0)
 #define ISP_SIZE_800x600   (1<<1)
@@ -101,21 +102,23 @@ typedef int32_t (*isp_fun)(void* param_ptr);
 #define ISP_INT32 0x04
 
 /**---------------------------------------------------------------------------*
-**                               Data Prototype                              **
+**				Data Prototype					*
 **----------------------------------------------------------------------------*/
 
 enum isp_parser_cmd{
-    ISP_PREVIEW=0x00,
-    ISP_STOP_PREVIEW,
-    ISP_CAPTURE,
-    ISP_UP_PREVIEW_DATA,
-    ISP_UP_PARAM,
-    ISP_CAPTURE_SIZE,
-    ISP_MAIN_INFO,
+	ISP_PREVIEW=0x00,
+	ISP_STOP_PREVIEW,
+	ISP_CAPTURE,
+	ISP_UP_PREVIEW_DATA,
+	ISP_UP_PARAM,
+	ISP_TAKE_PICTURE_SIZE,
+	ISP_MAIN_INFO,
+	ISP_READ_SENSOR_REG,
+	ISP_WRITE_SENSOR_REG,
     ISP_PARSER_CMD_MAX
 };
 
-enum isp_tune_level{
+enum isp_tune_param_level{
     ISP_TUNE_AWB_MODE,
     ISP_TUNE_AE_MODE,
     ISP_TUNE_AE_MEASURE_LUM,
@@ -132,7 +135,7 @@ enum isp_tune_level{
     ISP_TUNE_ISO,
     ISP_TUNE_MAX
 };
-
+#if 0
 enum isp_ctrl_cmd{
     ISP_CTRL_AWB_MODE,
     ISP_CTRL_AE_MODE,
@@ -154,6 +157,7 @@ enum isp_ctrl_cmd{
     ISP_CTRL_ISO,
     ISP_CTRL_MAX
 };
+#endif
 
 struct isp_main_info{
     char sensor_id[32];
@@ -206,7 +210,7 @@ struct isp_parser_buf_rtn{
 
 struct isp_parser_cmd_param{
     enum isp_parser_cmd cmd;
-    uint32_t param[16]; // capture param format/width/height
+    uint32_t param[48]; // capture param format/width/height
 };
 
 struct isp_param_fun{
@@ -220,7 +224,7 @@ uint32_t* ispParserAlloc(uint32_t size);
 int32_t ispParserFree(void* addr);
 
 /**----------------------------------------------------------------------------*
-**                         Compiler Flag                                      **
+**				Compiler Flag					*
 **----------------------------------------------------------------------------*/
 #ifdef   __cplusplus
 }

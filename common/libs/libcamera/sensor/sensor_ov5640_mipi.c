@@ -63,6 +63,7 @@ LOCAL uint32_t _ov5640_StreamOn(uint32_t param);
 LOCAL uint32_t _ov5640_StreamOff(uint32_t param);
 LOCAL uint32_t _ov5640_set_iso(uint32_t mode);
 LOCAL uint32_t _ov5640_ReadGain(uint32_t param);
+LOCAL uint32_t _ov5640_flash(uint32_t param);
 
 LOCAL const SENSOR_REG_T ov5640_common_init[] = {
 	{0x3103, 0x11},		/* sysclk from pad*/
@@ -1139,7 +1140,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5640_ioctl_func_tab = {
 
 	_ov5640_BeforeSnapshot,
 	_ov5640_after_snapshot,
-	PNULL,/*_ov540_flash,*/
+	_ov5640_flash,/*_ov540_flash,*/
 	PNULL,
 	PNULL,
 	PNULL,
@@ -2404,6 +2405,10 @@ int OV5640_capture(uint32_t param)
 
 LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param)
 {
+	uint32_t cap_mode = (param>>CAP_MODE_BITS);
+
+	param = param&0xffff;
+	SENSOR_PRINT("%d,%d.",cap_mode,param);
 	if (SENSOR_MODE_PREVIEW_ONE >= param) {
 		s_capture_shutter = OV5640_get_shutter();
 		s_capture_VTS = OV5640_get_VTS();
@@ -7192,3 +7197,27 @@ LOCAL uint32_t _ov5640_set_iso(uint32_t mode)
 	SENSOR_PRINT("read 0x%x,0x%x", Sensor_ReadReg(0x3a18),Sensor_ReadReg(0x3a19));
 	return 0;
 }
+
+LOCAL uint32_t _ov5640_flash(uint32_t param)
+{
+	uint16_t value = 0;
+	uint32_t *autoflash;
+
+	autoflash = (uint32_t *) param;
+	if(autoflash){
+		//usleep(1000);
+		value = Sensor_ReadReg(0x56a1);
+		if(value < 18) {
+			*autoflash = 1;
+		}else {
+			*autoflash = 0;
+		}
+	}else {
+		SENSOR_PRINT("  NULL pointer error! ");
+		return SENSOR_FAIL;
+	}
+
+	SENSOR_PRINT(" value = %d, autoflash = 0x%x, auto_flash_mode",  value, autoflash);
+	return SENSOR_SUCCESS;
+}
+

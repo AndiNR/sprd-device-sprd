@@ -1172,9 +1172,14 @@ LOCAL void OV2640_CalculateExposureGain(SENSOR_MODE_E sensor_preview_mode,
 
 LOCAL uint32_t OV2640_BeforeSnapshot(uint32_t param)
 {
-	uint32_t preview_mode = (param >= SENSOR_MODE_PREVIEW_TWO) ?
-	    SENSOR_MODE_PREVIEW_TWO : SENSOR_MODE_PREVIEW_ONE;
+	uint32_t preview_mode;
+	uint32_t cap_mode = (param>>CAP_MODE_BITS);
 
+	param = param&0xffff;
+	SENSOR_PRINT("%d,%d.",cap_mode,param);
+
+	preview_mode = (param >= SENSOR_MODE_PREVIEW_TWO) ?
+	    SENSOR_MODE_PREVIEW_TWO : SENSOR_MODE_PREVIEW_ONE;
 	if (param > SENSOR_MODE_PREVIEW_ONE) {
 		OV2640_CalculateExposureGain(preview_mode, param);
 	}

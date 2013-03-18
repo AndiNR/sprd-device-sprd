@@ -46,6 +46,7 @@ int cmr_msg_queue_create(unsigned int count, unsigned int *queue_handle)
 	}
 	msg_cxt->msg_magic = CMR_MSG_MAGIC_CODE;
 	msg_cxt->msg_count = count;
+	msg_cxt->msg_number= 0;
 	msg_cxt->msg_read  = msg_cxt->msg_head;
 	msg_cxt->msg_write = msg_cxt->msg_head;
 	pthread_mutex_init(&msg_cxt->mutex, NULL);
@@ -70,11 +71,19 @@ int cmr_msg_get(unsigned int queue_handle, struct cmr_msg *message)
 	
 	pthread_mutex_lock(&msg_cxt->mutex);
 
-	if (msg_cxt->msg_read != msg_cxt->msg_write) {
-		*message = *msg_cxt->msg_read++;
-		if (msg_cxt->msg_read > msg_cxt->msg_head + msg_cxt->msg_count - 1) {
-			msg_cxt->msg_read = msg_cxt->msg_head;
+	if (msg_cxt->msg_number == 0) {
+		pthread_mutex_unlock(&msg_cxt->mutex);
+		CMR_LOGE("MSG underflow");
+		return CMR_MSG_UNDERFLOW;
+	} else {
+		
+		if (msg_cxt->msg_read != msg_cxt->msg_write) {
+			*message = *msg_cxt->msg_read++;
+			if (msg_cxt->msg_read > msg_cxt->msg_head + msg_cxt->msg_count - 1) {
+				msg_cxt->msg_read = msg_cxt->msg_head;
+			}
 		}
+		msg_cxt->msg_number --;
 	}
 
 	pthread_mutex_unlock(&msg_cxt->mutex);
@@ -97,13 +106,20 @@ int cmr_msg_post(unsigned int queue_handle, struct cmr_msg *message)
 
 	pthread_mutex_lock(&msg_cxt->mutex);
 
-	*msg_cxt->msg_write++ = *message;
-	if (msg_cxt->msg_write > msg_cxt->msg_head + msg_cxt->msg_count - 1) {
-		msg_cxt->msg_write = msg_cxt->msg_head;
-	}
+	if (msg_cxt->msg_number >= msg_cxt->msg_count) {
+		pthread_mutex_unlock(&msg_cxt->mutex);
+		CMR_LOGE("MSG Overflow");
+		return CMR_MSG_OVERFLOW;
+	} else {
+		*msg_cxt->msg_write++ = *message;
+		if (msg_cxt->msg_write > msg_cxt->msg_head + msg_cxt->msg_count - 1) {
+			msg_cxt->msg_write = msg_cxt->msg_head;
+		}
 
-	if (msg_cxt->msg_write == msg_cxt->msg_read) {
-		msg_cxt->msg_write = ori_node;
+		if (msg_cxt->msg_write == msg_cxt->msg_read) {
+			msg_cxt->msg_write = ori_node;
+		}
+		msg_cxt->msg_number ++;
 	}
 
 	pthread_mutex_unlock(&msg_cxt->mutex);
@@ -134,6 +150,7 @@ int cmr_msg_peak(uint32_t queue_handle, struct cmr_msg *message)
 		if (msg_cxt->msg_read > msg_cxt->msg_head + msg_cxt->msg_count - 1) {
 			msg_cxt->msg_read = msg_cxt->msg_head;
 		}
+		msg_cxt->msg_number --;
 	} else {
 		CMR_LOGV("No more unread msg");
 		return -CMR_MSG_NO_OTHER_MSG;

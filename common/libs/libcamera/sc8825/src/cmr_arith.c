@@ -110,7 +110,7 @@ void *arithmetic_fd_thread_proc(void *data)
 			if( 0 != FaceSolid_Function((uint8_t*)s_arith_cxt->addr,
 				                         &face_rect_ptr,
 				                         (int*)&face_num,
-				                         1,p_format)) {
+				                         0,p_format)) {
 				CMR_LOGE("FaceSolid_Function fail.");
 			} else {
 				frame_type.face_ptr = face_rect_ptr;

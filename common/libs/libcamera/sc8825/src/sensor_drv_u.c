@@ -124,6 +124,7 @@ LOCAL volatile uint32_t           s_exit_monitor_flag = 0;
 #define SENSOR_IO_I2C_WRITE_REGS	_IOW(SENSOR_IOC_MAGIC, 14, SENSOR_REG_TAB_T)
 #define SENSOR_IO_SET_CAMMOT		_IOW(SENSOR_IOC_MAGIC, 15,  uint32_t)
 #define SENSOR_IO_SET_I2CCLOCK		_IOW(SENSOR_IOC_MAGIC, 16,  uint32_t)
+#define SENSOR_IO_I2C_WRITE_EXT		_IOW(SENSOR_IOC_MAGIC, 17,  SENSOR_I2C_T)
 
 #define SENSOR_MSG_QUEUE_SIZE           10
 
@@ -461,6 +462,38 @@ LOCAL int Sensor_SetI2CClock(void)
 	SENSOR_PRINT("Sensor_SetI2CClock: clock = %d \n", clock);
 
 	ret = _Sensor_Device_SetI2CClock(clock);
+
+	return ret;
+}
+
+LOCAL int _Sensor_Device_I2CWrite(SENSOR_I2C_T_PTR i2c_tab)
+{
+	int ret = SENSOR_SUCCESS;
+
+	ret = xioctl(g_fd_sensor, SENSOR_IO_I2C_WRITE_EXT, i2c_tab);
+	if (0 != ret)
+	{
+		SENSOR_PRINT_ERR("_Sensor_Device_I2CWrite failed, slave_addr=0x%x, ptr=0x%x, count=%d\n",
+			i2c_tab->slave_addr, (uint32_t)i2c_tab->i2c_data, i2c_tab->i2c_count);
+		ret = -1;
+	}
+
+	return ret;
+}
+
+int Sensor_WriteI2C(uint16_t slave_addr, uint8_t *cmd, uint16_t cmd_length)
+{
+	SENSOR_I2C_T i2c_tab;
+	int ret = SENSOR_SUCCESS;
+
+	i2c_tab.slave_addr 	= slave_addr;
+	i2c_tab.i2c_data	= cmd;
+	i2c_tab.i2c_count	= cmd_length;
+
+	SENSOR_PRINT("Sensor_WriteI2C, slave_addr=0x%x, ptr=0x%x, count=%d\n",
+		i2c_tab.slave_addr, (uint32_t)i2c_tab.i2c_data, i2c_tab.i2c_count);
+
+	ret = _Sensor_Device_I2CWrite(&i2c_tab);
 
 	return ret;
 }

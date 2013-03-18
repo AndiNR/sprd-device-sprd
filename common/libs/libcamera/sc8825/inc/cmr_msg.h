@@ -36,6 +36,8 @@ enum {
 	CMR_MSG_INVALID_HANDLE,
 	CMR_MSG_NO_OTHER_MSG,
 	CMR_MSG_NO_MEM,
+	CMR_MSG_OVERFLOW,
+	CMR_MSG_UNDERFLOW,
 };
 
 struct cmr_msg
@@ -51,6 +53,7 @@ struct cmr_msg_cxt
 	pthread_mutex_t            mutex;
 	sem_t                      msg_sem;
 	uint32_t                   msg_count;
+	uint32_t                   msg_number;
 	uint32_t                   msg_magic;
 	struct cmr_msg             *msg_head;
 	struct cmr_msg             *msg_write;

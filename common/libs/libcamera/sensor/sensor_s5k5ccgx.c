@@ -968,6 +968,10 @@ LOCAL uint32_t s5k5ccgx_set_FPS(uint32_t fps_mode)
 LOCAL uint32_t s5k5ccgx_BeforeSnapshot(uint32_t param)
 {
 	uint32_t sensorlight;
+	uint32_t cap_mode = (param>>CAP_MODE_BITS);
+
+	param = param&0xffff;
+	SENSOR_PRINT("%d,%d.",cap_mode,param);
 
 	CAM_DEBUG("s5k5ccgx_BeforeSnapsho: mode = %d", param);
 	

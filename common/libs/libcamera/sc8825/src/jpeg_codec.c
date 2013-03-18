@@ -23,7 +23,7 @@
 
 #define JPEG_MSG_QUEUE_SIZE		  40
 #define JPEG_EXIT_THREAD_FLAG	  1
-#define JPEG_SLICE_HEIGHT         128
+#define JPEG_SLICE_HEIGHT         512
 #define JPEG_BUF_RES_SIZE         256
 #define JPEG_DECODE_FW_BUF_SIZE   (20*1024)
 #define JPEG_EVT_ENC_START	      (1 << 16)
@@ -202,17 +202,18 @@ static uint32_t _format_covert(uint32_t format)
 static uint32_t _quality_covert(uint32_t quality)
 {
 	uint32_t jq = JPEGENC_QUALITY_HIGH;
-	if (quality <= 60) {
+	if (quality <= 70) {
 		jq = JPEGENC_QUALITY_LOW;
-	} else if (quality <= 70) {
-		jq = JPEGENC_QUALITY_MIDDLE_LOW;
 	} else if (quality <= 80) {
+		jq = JPEGENC_QUALITY_MIDDLE_LOW;
+	} else if (quality <= 85) {
 		jq = JPEGENC_QUALITY_MIDDLE;
-	} else if (quality < 90) {
+	} else if (quality <= 90) {
 		jq = JPEGENC_QUALITY_MIDDLE_HIGH;
 	} else {
 		jq = JPEGENC_QUALITY_HIGH;
 	}
+
 	return jq;
 }
 
@@ -781,7 +782,7 @@ static void* _thread_proc(void* data)
 				}
 			} else{
 				if (NULL != jcontext.event_cb) {
-					jcontext.event_cb(CMR_JPEG_ERR, NULL );
+					jcontext.event_cb(CMR_JPEG_ENC_ERR, NULL );
 				} else {
 					CMR_LOGE("even cb is NULL.");
 				}
@@ -815,7 +816,7 @@ static void* _thread_proc(void* data)
 					}
 				} else {
 					if (NULL != jcontext.event_cb) {
-						jcontext.event_cb(CMR_JPEG_ERR, NULL );
+						jcontext.event_cb(CMR_JPEG_ENC_ERR, NULL );
 					} else {
 						CMR_LOGE("even cb is NULL.");
 					}
@@ -830,7 +831,7 @@ static void* _thread_proc(void* data)
 				_dec_callback(0,0,0);
 			} else{
 				if (NULL != jcontext.event_cb) {
-					jcontext.event_cb(CMR_JPEG_ERR, NULL );
+					jcontext.event_cb(CMR_JPEG_DEC_ERR, NULL );
 				} else {
 					CMR_LOGE("even cb is NULL.");
 				}
@@ -852,7 +853,7 @@ static void* _thread_proc(void* data)
 				_dec_callback(0,0,0);
 			} else {
 				if (NULL != jcontext.event_cb) {
-					jcontext.event_cb(CMR_JPEG_ERR, NULL );
+					jcontext.event_cb(CMR_JPEG_DEC_ERR, NULL );
 				} else {
 					CMR_LOGE("even cb is NULL.");
 				}
@@ -877,7 +878,7 @@ static void* _thread_proc(void* data)
 				s_exif_output.output_buf_size = 0;
 			}
 			sem_post(&jcontext.sync_sem);
-			CMR_LOGI("write exif done,ret = %d.",ret);
+/*			CMR_LOGI("write exif done,ret = %d.",ret);*/
 			#if 0
 			if(JPEG_CODEC_SUCCESS == ret){
 				JPEG_WEXIF_CB_PARAM_T param;

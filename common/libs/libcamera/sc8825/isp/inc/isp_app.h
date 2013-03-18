@@ -93,7 +93,7 @@ enum isp_tune_level{
 	ISP_LEVEL_13,
 	ISP_LEVEL_14,
 	ISP_LEVEL_15,
-	ISP_TUNE_MAX
+	ISP_TUNE_LEVEL_MAX
 };
 
 enum isp_ae_frame_mode{
@@ -133,7 +133,8 @@ enum isp_ae_mode{
 };
 
 enum isp_iso{
-	ISP_ISO_100=0x00,
+	ISP_ISO_AUTO=0x00,
+	ISP_ISO_100,
 	ISP_ISO_200,
 	ISP_ISO_400,
 	ISP_ISO_800,
@@ -193,6 +194,7 @@ enum isp_ctrl_cmd{
 	ISP_CTRL_EXIF,
 	ISP_CTRL_ISO,
 	ISP_CTRL_WB_TRIM,
+	ISP_CTRL_PARAM_UPDATE,
 	ISP_CTRL_MAX
 };
 

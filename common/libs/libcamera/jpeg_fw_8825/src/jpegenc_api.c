@@ -1156,6 +1156,18 @@ uint32_t JPEGENC_Slice_Next(JPEGENC_SLICE_NEXT_T *update_parm_ptr, JPEGENC_SLICE
 	memset(out_ptr, 0, sizeof(JPEGENC_SLICE_OUT_T));
 
 	slice_num = jpeg_fw_codec->slice_num;
+
+	if (2 == ret) {
+		munmap(vsp_addr,SPRD_VSP_MAP_SIZE);
+		ioctl(vsp_fd,VSP_DISABLE,NULL);
+	   	ioctl(vsp_fd,VSP_RELEASE,NULL);
+		ioctl(vsp_fd,VSP_UNREG_IRQ,NULL);
+		if(vsp_fd >= 0){
+			close(vsp_fd);
+		}
+		SCI_TRACE_LOW("stream buf overflow.");
+		return ret;
+	}
 	if(0 == (slice_num) || (0 != ret&& 1 != ret) ) {
 		SCI_TRACE_LOW("hansen: final.");
 		if(ret != 4) 
@@ -1163,7 +1175,7 @@ uint32_t JPEGENC_Slice_Next(JPEGENC_SLICE_NEXT_T *update_parm_ptr, JPEGENC_SLICE
 			ret = JPEGENC_Poll_VLC_BSM_Slice(0xFFF);
 		}
 
-		ret = (ret == 4) ? 0 : ret;
+		ret = ((ret == 4)||(ret == 1)) ? 0 : ret;
 				
 		if(JPEG_SUCCESS != JPEGENC_stop_encode_ext(&stream_size)) {
 			SCI_TRACE_LOW("JPEGENC fail to JPEGENC_stop_encode.");

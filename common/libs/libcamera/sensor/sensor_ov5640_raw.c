@@ -360,40 +360,40 @@ static const uint8_t s_ov5640_lnc_08[]=
 
 static const uint8_t s_ov5640_ae_weight_customer[]=
 {
-#include "sensor_ov5640_ae_weight_customer.dat"
+	0x00
 };
 
 /* 00: 0x->50hz 1x->60hz x0->normal x1->night*/
 static const uint16_t s_ov5640_aes_00[SENSOR_AE_NUM]={
-#include "sensor_ov5640_aes_00.dat"
+	0x00
 };
 
 static const uint16_t s_ov5640_aeg_00[SENSOR_AE_NUM]={
-#include "sensor_ov5640_aeg_00.dat"
+	0x00
 };
 
 static const uint16_t s_ov5640_aes_10[SENSOR_AE_NUM]={
-#include "sensor_ov5640_aes_10.dat"
+	0x00
 };
 
 static const uint16_t s_ov5640_aeg_10[SENSOR_AE_NUM]={
-#include "sensor_ov5640_aeg_10.dat"
+	0x00
 };
 
 static const uint16_t s_ov5640_aes_01[SENSOR_AE_NUM]={
-#include "sensor_ov5640_aes_01.dat"
+	0x00
 };
 
 static const uint16_t s_ov5640_aeg_01[SENSOR_AE_NUM]={
-#include "sensor_ov5640_aeg_01.dat"
+	0x00
 };
 
 static const uint16_t s_ov5640_aes_11[SENSOR_AE_NUM]={
-#include "sensor_ov5640_aes_11.dat"
+	0x00
 };
 
 static const uint16_t s_ov5640_aeg_11[SENSOR_AE_NUM]={
-#include "sensor_ov5640_aeg_11.dat"
+	0x00
 };
 #if 0
 static const uint8_t s_ov5640_tune_info[sizeof(struct sensor_raw_tune_info)]={
@@ -779,6 +779,10 @@ LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param)
 	uint8_t ret_l, ret_m, ret_h, Gain, Lines_10ms;
 	uint16_t ulCapture_Exposure, Preview_Maxlines;
 	uint32_t Capture_MaxLines, g_preview_exposure;
+	uint32_t cap_mode = (param>>CAP_MODE_BITS);
+
+	param = param&0xffff;
+	SENSOR_PRINT("%d,%d.",cap_mode,param);
 
 	if (SENSOR_MODE_PREVIEW_ONE >= param) {
 		return SENSOR_SUCCESS;

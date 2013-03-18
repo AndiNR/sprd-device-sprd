@@ -111,16 +111,20 @@ struct sensor_ae_index{
 };
 
 struct sensor_ae_tab_info{
-	uint16_t* e_ptr;
+	uint32_t* e_ptr;
 	uint16_t* g_ptr;
 	struct sensor_ae_index index[SENSOR_ISO_NUM];
 };
 
 struct sensor_ae_param{
 	uint8_t skip_frame;
-	uint8_t fix_fps;
+	uint8_t normal_fix_fps;
+	uint8_t night_fix_fps;
 	uint8_t target_lum;
 	uint8_t target_zone;
+	uint8_t smart;
+	uint8_t quick_mode;
+	uint8_t reserved0;
 	int8_t ev[16];
 };
 
@@ -153,6 +157,8 @@ struct sensor_awb_param{
 	uint16_t reserved0;
 	uint32_t cali_zone;
 	uint32_t target_zone;
+	uint32_t smart;
+	uint32_t quick_mode;
 };
 
 struct sensor_bpc_param{
@@ -245,6 +251,7 @@ struct sensor_saturation_param{
 };
 
 struct sensor_af_param{
+	uint32_t total_step;
 	uint32_t max_step;
 	uint32_t stab_period;
 };
@@ -290,6 +297,7 @@ struct sensor_version_info{
 };
 
 struct sensor_raw_tune_info{
+	uint32_t version_id;
 	uint32_t blc_bypass;
 	uint32_t nlc_bypass;
 	uint32_t lnc_bypass;

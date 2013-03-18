@@ -1,11 +1,11 @@
 #ifndef _ISP_PARAM_TUNE_V0000_H_
 #define _ISP_PARAM_TUNE_V0000_H_
 /*----------------------------------------------------------------------------*
- **                          Dependencies                                     *
+ **				Dependencies					*
  **---------------------------------------------------------------------------*/
 #include <sys/types.h>
 /**---------------------------------------------------------------------------*
- **                          Compiler Flag                                    *
+ **				Compiler Flag					*
  **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
 extern   "C"
@@ -13,51 +13,52 @@ extern   "C"
 #endif
 
 /**---------------------------------------------------------------------------*
-**                               Micro Define                                **
+**				Micro Define					*
 **----------------------------------------------------------------------------*/
 
 /**---------------------------------------------------------------------------*
-**                               Data Prototype                              **
+**				Data Prototype					*
 **----------------------------------------------------------------------------*/
+#if 0
 struct isp_blc_param_v0000{
-    uint32_t mode;
-    uint32_t r;
-    uint32_t gr;
-    uint32_t gb;
-    uint32_t b;
+	uint32_t mode;
+	uint32_t r;
+	uint32_t gr;
+	uint32_t gb;
+	uint32_t b;
 };
 
 struct isp_nlc_param_v0000{
-    uint32_t r_node[29];
-    uint32_t g_node[29];
-    uint32_t b_node[29];
-    uint32_t l_node[29];
+	uint32_t r_node[29];
+	uint32_t g_node[29];
+	uint32_t b_node[29];
+	uint32_t l_node[29];
 };
 
 struct isp_lnc_map_v0000{
-    uint32_t grid;
-    uint32_t param_tab[2048];
-    uint32_t max_index;
+	uint32_t grid;
+	uint32_t param_tab[2048];
+	uint32_t max_index;
 };
 
 struct isp_lnc_param_v0000{
-    struct isp_lnc_map_v0000 map[ISP_MAP_NUM][ISP_AWB_NUM];
+	struct isp_lnc_map_v0000 map[ISP_MAP_NUM][ISP_AWB_NUM];
 };
 
 struct isp_awb_param_v0000{
-    uint32_t win_start_x;
-    uint32_t win_start_y;
-    uint32_t win_size_w;
-    uint32_t win_size_h;
-    uint32_t cali_r[20];
-    uint32_t cali_g[20];
-    uint32_t cali_b[20];
-    uint32_t cali_num;
-    uint32_t cali_zone;
-    uint32_t r_gain[ISP_AWB_NUM];
-    uint32_t g_gain[ISP_AWB_NUM];
-    uint32_t b_gain[ISP_AWB_NUM];
-    uint32_t gain_num;
+	uint32_t win_start_x;
+	uint32_t win_start_y;
+	uint32_t win_size_w;
+	uint32_t win_size_h;
+	uint32_t cali_r[20];
+	uint32_t cali_g[20];
+	uint32_t cali_b[20];
+	uint32_t cali_num;
+	uint32_t cali_zone;
+	uint32_t r_gain[ISP_AWB_NUM];
+	uint32_t g_gain[ISP_AWB_NUM];
+	uint32_t b_gain[ISP_AWB_NUM];
+	uint32_t gain_num;
 };
 
 struct isp_ae_tab_info_v0000{
@@ -395,7 +396,7 @@ struct isp_edge_packet_param_v0000{
     struct isp_edge_param_v0000 edge;
     uint32_t end_id;
 };
-#if 0
+
 struct isp_special_effect_packet_param_v0000{
     uint32_t verify_id;
     uint32_t version_id;

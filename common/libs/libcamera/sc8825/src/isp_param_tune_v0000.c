@@ -3,7 +3,7 @@
 **---------------------------------------------------------------------------*/
 #include "isp_param_tune_com.h"
 #include "isp_param_tune_v0000.h"
-//#include "tiger_isp_sensor.h"
+#include "isp_app.h"
 #include "cmr_common.h"
 #include "sensor_raw.h"
 
@@ -43,12 +43,21 @@ static int32_t _ispSetAllParamV0000(void* in_param_ptr)
 	uint32_t module_bypass=param_ptr[3];
 	void* data_addr=(void*)&param_ptr[4];
 	uint32_t data_len =packet_len-0x10;
-	SENSOR_INFO_T* sensor_info_ptr=Sensor_GetInfo();
+	SENSOR_EXP_INFO_T* sensor_info_ptr=Sensor_GetInfo();
 	void* raw_tune_ptr=(void*)sensor_info_ptr->raw_info_ptr->tune_ptr;
+
+	struct sensor_raw_tune_info* raw_ptr=sensor_info_ptr->raw_info_ptr->tune_ptr;
+	struct sensor_raw_tune_info* tune_ptr=(struct sensor_raw_tune_info*)data_addr;
+
+	CMR_LOGE("ISP_TOOL:--raw_ptr-- detail_thr:0x%x,smooth_thr: 0x%x, strength:0x%x",raw_ptr->edge.detail_thr,raw_ptr->edge.smooth_thr,raw_ptr->edge.strength);
+	CMR_LOGE("ISP_TOOL:--tune_ptr-- detail_thr:0x%x,smooth_thr: 0x%x, strength:0x%x",tune_ptr->edge.detail_thr,tune_ptr->edge.smooth_thr,tune_ptr->edge.strength);
 
 	if((NULL!=raw_tune_ptr)&&(NULL!=data_addr)&&(0x00!=data_len))
 	{
+		CMR_LOGE("ISP_TOOL:_ispSetAllParamV0000:raw_tune_ptr:0x%x, data_addr:0x%x, data_len:0x%x tune_len:0x%x\n", raw_tune_ptr, data_addr, data_len, sizeof(struct sensor_raw_tune_info));
 		memcpy(raw_tune_ptr, data_addr, data_len);
+
+		isp_ioctl(ISP_CTRL_PARAM_UPDATE, NULL);
 	} else {
 		rtn = 0x01;
 	}
@@ -175,7 +184,7 @@ int32_t ispGetParamSizeV0000(uint32_t* param_len)
 }
 
 /**----------------------------------------------------------------------------*
-**                         Compiler Flag                                      **
+**				Compiler Flag					*
 **----------------------------------------------------------------------------*/
 #ifdef   __cplusplus
 }

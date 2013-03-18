@@ -15,6 +15,7 @@
 #include "jpeg_exif_header.h"
 #include "sensor_drv_u.h"
 #include "sensor_raw.h"
+#include "sensor_ov5640_raw_param.c"
 
 
 #define ov5640_I2C_ADDR_W        0x3c
@@ -281,242 +282,6 @@ LOCAL SENSOR_TRIM_T s_ov5640_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0}
 };
 
-static const uint16_t s_ov5640_lnc_00[]=
-{
-#include "sensor_ov5640_lnc_00.dat"
-};
-static const uint16_t s_ov5640_lnc_01[]=
-{
-	0x00
-};
-static const uint16_t s_ov5640_lnc_02[]=
-{
-	0x00
-};
-static const uint16_t s_ov5640_lnc_03[]=
-{
-	0x00
-};
-static const uint16_t s_ov5640_lnc_04[]=
-{
-	0x00
-};
-static const uint8_t s_ov5640_lnc_05[]=
-{
-	0x00
-};
-static const uint16_t s_ov5640_lnc_06[]=
-{
-	0x00
-};
-static const uint16_t s_ov5640_lnc_07[]=
-{
-	0x00
-};
-static const uint16_t s_ov5640_lnc_08[]=
-{
-	0x00
-};
-
-static const uint16_t s_ov5640_lnc_10[]=
-{
-#include "sensor_ov5640_lnc_10.dat"
-};
-static const uint16_t s_ov5640_lnc_11[]=
-{
-	0x00
-};
-static const uint16_t s_ov5640_lnc_12[]=
-{
-	0x00
-};
-static const uint16_t s_ov5640_lnc_13[]=
-{
-	0x00
-};
-static const uint16_t s_ov5640_lnc_14[]=
-{
-	0x00
-};
-static const uint16_t s_ov5640_lnc_15[]=
-{
-	0x00
-};
-static const uint16_t s_ov5640_lnc_16[]=
-{
-	0x00
-};
-static const uint16_t s_ov5640_lnc_17[]=
-{
-	0x00
-};
-static const uint16_t s_ov5640_lnc_18[]=
-{
-	0x00
-};
-
-static const uint8_t s_ov5640_ae_weight_customer[]=
-{
-#include "sensor_ov5640_ae_weight_customer.dat"
-};
-
-/* 00: 0x->50hz 1x->60hz x0->normal x1->night*/
-static const uint16_t s_ov5640_aes_00[250]={
-#include "sensor_ov5640_aes_00.dat"
-};
-
-static const uint16_t s_ov5640_aeg_00[250]={
-#include "sensor_ov5640_aeg_00.dat"
-};
-
-static const uint16_t s_ov5640_aes_10[250]={
-#include "sensor_ov5640_aes_10.dat"
-};
-
-static const uint16_t s_ov5640_aeg_10[250]={
-#include "sensor_ov5640_aeg_10.dat"
-};
-
-static const uint16_t s_ov5640_aes_01[250]={
-#include "sensor_ov5640_aes_01.dat"
-};
-
-static const uint16_t s_ov5640_aeg_01[250]={
-#include "sensor_ov5640_aeg_01.dat"
-};
-
-static const uint16_t s_ov5640_aes_11[250]={
-#include "sensor_ov5640_aes_11.dat"
-};
-
-static const uint16_t s_ov5640_aeg_11[250]={
-#include "sensor_ov5640_aeg_11.dat"
-};
-#if 0
-static const uint8_t s_ov5640_tune_info[sizeof(struct sensor_raw_tune_info)]={
-#include "sensor_ov5640_tune_info.dat"
-};
-#else
-static struct sensor_raw_tune_info s_ov5640_tune_info;
-#endif
-
-static struct sensor_raw_fix_info s_ov5640_fix_info={
-	{
-		(uint8_t*)s_ov5640_ae_weight_customer,
-
-		(uint16_t*)s_ov5640_aes_00,
-		(uint16_t*)s_ov5640_aeg_00,
-		100,
-		144,
-		128,
-		250,
-		128,
-		250,
-		128,
-		250,
-		128,
-		250,
-
-		(uint16_t*)s_ov5640_aes_01,
-		(uint16_t*)s_ov5640_aeg_01,
-		128,
-		250,
-		128,
-		250,
-		128,
-		250,
-		128,
-		250,
-		128,
-		250,
-
-		(uint16_t*)s_ov5640_aes_10,
-		(uint16_t*)s_ov5640_aeg_10,
-		128,
-		250,
-		128,
-		250,
-		128,
-		250,
-		128,
-		250,
-		128,
-		250,
-
-		(uint16_t*)s_ov5640_aes_11,
-		(uint16_t*)s_ov5640_aeg_11,
-		128,
-		250,
-		128,
-		250,
-		128,
-		250,
-		128,
-		250,
-		128,
-		250,
-	},
-	{
-		/***********0*************/
-		0x20,
-		(uint16_t*)s_ov5640_lnc_00,
-		sizeof(s_ov5640_lnc_00),
-		0x00,
-		(uint16_t*)s_ov5640_lnc_01,
-		sizeof(s_ov5640_lnc_01),
-		0x00,
-		(uint16_t*)s_ov5640_lnc_02,
-		sizeof(s_ov5640_lnc_02),
-		0x00,
-		(uint16_t*)s_ov5640_lnc_03,
-		sizeof(s_ov5640_lnc_03),
-		0x00,
-		(uint16_t*)s_ov5640_lnc_04,
-		sizeof(s_ov5640_lnc_04),
-		0x00,
-		(uint16_t*)s_ov5640_lnc_05,
-		sizeof(s_ov5640_lnc_05),
-		0x00,
-		(uint16_t*)s_ov5640_lnc_06,
-		sizeof(s_ov5640_lnc_06),
-		0x00,
-		(uint16_t*)s_ov5640_lnc_07,
-		sizeof(s_ov5640_lnc_07),
-		0x00,
-		(uint16_t*)s_ov5640_lnc_08,
-		sizeof(s_ov5640_lnc_08),
-		/***********1*************/
-		0x20,
-		(uint16_t*)s_ov5640_lnc_10,
-		sizeof(s_ov5640_lnc_10),
-		0x00,
-		(uint16_t*)s_ov5640_lnc_11,
-		sizeof(s_ov5640_lnc_11),
-		0x00,
-		(uint16_t*)s_ov5640_lnc_12,
-		sizeof(s_ov5640_lnc_12),
-		0x00,
-		(uint16_t*)s_ov5640_lnc_13,
-		sizeof(s_ov5640_lnc_13),
-		0x00,
-		(uint16_t*)s_ov5640_lnc_14,
-		sizeof(s_ov5640_lnc_14),
-		0x00,
-		(uint16_t*)s_ov5640_lnc_15,
-		sizeof(s_ov5640_lnc_15),
-		0x00,
-		(uint16_t*)s_ov5640_lnc_16,
-		sizeof(s_ov5640_lnc_16),
-		0x00,
-		(uint16_t*)s_ov5640_lnc_17,
-		sizeof(s_ov5640_lnc_17),
-		0x00,
-		(uint16_t*)s_ov5640_lnc_18,
-		sizeof(s_ov5640_lnc_18),
-		0x00
-	}
-};
-
 static struct sensor_version_info s_ov5640_version_info={
 	SENSOR_RAW_VERSION_ID,
 	sizeof(struct sensor_raw_info),
@@ -669,13 +434,14 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);
 
 	//bypass
+	sensor_ptr->version_id=0x00000000;
 	sensor_ptr->blc_bypass=0x00;
 	sensor_ptr->nlc_bypass=0x01;
 	sensor_ptr->lnc_bypass=0x00;
 	sensor_ptr->ae_bypass=0x00;
 	sensor_ptr->awb_bypass=0x00;
 	sensor_ptr->bpc_bypass=0x01;
-	sensor_ptr->denoise_bypass=0x01;
+	sensor_ptr->denoise_bypass=0x00;
 	sensor_ptr->grgb_bypass=0x01;
 	sensor_ptr->cmc_bypass=0x00;
 	sensor_ptr->gamma_bypass=0x00;
@@ -823,9 +589,11 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 
 	//ae
 	sensor_ptr->ae.skip_frame=0x01;
-	sensor_ptr->ae.fix_fps=0x00;
+	sensor_ptr->ae.normal_fix_fps=0x1e;
+	sensor_ptr->ae.night_fix_fps=0x1e;
 	sensor_ptr->ae.target_lum=60;
 	sensor_ptr->ae.target_zone=8;
+	sensor_ptr->ae.quick_mode=1;
 	sensor_ptr->ae.ev[0]=0xe8;
 	sensor_ptr->ae.ev[1]=0xf0;
 	sensor_ptr->ae.ev[2]=0xf8;
@@ -848,27 +616,27 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->awb.win_start.y=0x00;
 	sensor_ptr->awb.win_size.w=40;
 	sensor_ptr->awb.win_size.h=30;
-	sensor_ptr->awb.r_gain[0]=0xff;
+	sensor_ptr->awb.r_gain[0]=0x1b0;
 	sensor_ptr->awb.g_gain[0]=0xff;
-	sensor_ptr->awb.b_gain[0]=0xff;
-	sensor_ptr->awb.r_gain[1]=0xff;
+	sensor_ptr->awb.b_gain[0]=0x180;
+	sensor_ptr->awb.r_gain[1]=0x120;
 	sensor_ptr->awb.g_gain[1]=0xff;
-	sensor_ptr->awb.b_gain[1]=0xff;
+	sensor_ptr->awb.b_gain[1]=0x300;
 	sensor_ptr->awb.r_gain[2]=0xff;
 	sensor_ptr->awb.g_gain[2]=0xff;
 	sensor_ptr->awb.b_gain[2]=0xff;
 	sensor_ptr->awb.r_gain[3]=0xff;
 	sensor_ptr->awb.g_gain[3]=0xff;
 	sensor_ptr->awb.b_gain[3]=0xff;
-	sensor_ptr->awb.r_gain[4]=0xff;
+	sensor_ptr->awb.r_gain[4]=0x120;
 	sensor_ptr->awb.g_gain[4]=0xff;
-	sensor_ptr->awb.b_gain[4]=0xff;
-	sensor_ptr->awb.r_gain[5]=0xff;
+	sensor_ptr->awb.b_gain[4]=0x200;
+	sensor_ptr->awb.r_gain[5]=0x1c0;
 	sensor_ptr->awb.g_gain[5]=0xff;
-	sensor_ptr->awb.b_gain[5]=0xff;
-	sensor_ptr->awb.r_gain[6]=0xff;
+	sensor_ptr->awb.b_gain[5]=0x140;
+	sensor_ptr->awb.r_gain[6]=0x280;
 	sensor_ptr->awb.g_gain[6]=0xff;
-	sensor_ptr->awb.b_gain[6]=0xff;
+	sensor_ptr->awb.b_gain[6]=0x130;
 	sensor_ptr->awb.r_gain[7]=0xff;
 	sensor_ptr->awb.g_gain[7]=0xff;
 	sensor_ptr->awb.b_gain[7]=0xff;
@@ -879,7 +647,8 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->awb.target_zone=0x40;
 
 	/*awb cali*/
-	sensor_ptr->awb.cali_num=20;
+	sensor_ptr->awb.quick_mode=1;
+	sensor_ptr->awb.cali_num=9;
 
 	sensor_ptr->awb.cali[0].x=140;
 	sensor_ptr->awb.cali[0].yt=241;
@@ -1395,13 +1164,16 @@ LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param)
 
 LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param)
 {
+	uint32_t cap_mode = (param>>CAP_MODE_BITS);
 	uint8_t ret_l, ret_m, ret_h;
 	uint32_t capture_exposure, preview_maxline;
 	uint32_t capture_maxline, preview_exposure;
 	uint32_t prv_linetime=s_ov5640_Resolution_Trim_Tab[SENSOR_MODE_PREVIEW_ONE].line_time;
-	uint32_t cap_linetime = s_ov5640_Resolution_Trim_Tab[param].line_time;
-
-	SENSOR_PRINT("SENSOR_OV5640: BeforeSnapshot moe: %d",param);
+	uint32_t cap_linetime;
+	
+	param = param&0xffff;
+	SENSOR_PRINT("%d,%d.",cap_mode,param);
+	cap_linetime = s_ov5640_Resolution_Trim_Tab[param].line_time;
 
 	if (SENSOR_MODE_PREVIEW_ONE >= param){
 		_ov5640_ReadGain(0x00);

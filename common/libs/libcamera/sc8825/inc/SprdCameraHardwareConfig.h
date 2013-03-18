@@ -63,6 +63,13 @@ typedef enum{
 	CAMERA_CAMERA_ID_MAX
 }camera_id_type;
 
+typedef enum
+{
+    CAMERA_DC_MODE = 0,
+    CAMERA_DV_MODE,
+    CAMERA_DCDV_MODE_MAX
+} camera_dcdv_mode_type;
+
   typedef enum
  {
  	CAMERA_ZOOM_1X = 0,
@@ -181,6 +188,13 @@ struct str_map {
         { "front_camera", CAMERA_CAMERA_ID_FRONT},
         { NULL, 0 }
    };
+
+   const struct str_map camera_dcdv_mode[] = {
+        { "true", CAMERA_DV_MODE },
+        { "false", CAMERA_DC_MODE },
+        { NULL, 0 }
+   };
+
 
    const struct str_map zoom_map[] = {
         { "0", CAMERA_ZOOM_1X },

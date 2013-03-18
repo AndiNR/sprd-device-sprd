@@ -78,6 +78,7 @@ public:
                                     jpeg_callback,
                                     void* user);*/
    virtual status_t    takePicture();                                  
+   virtual status_t    setTakePictureSize(uint32_t width, uint32_t height);
     /*virtual status_t    cancelPicture(bool cancel_shutter,
                                       bool cancel_raw, bool cancel_jpeg);*/
     virtual status_t    cancelPicture();                                      
@@ -287,6 +288,7 @@ private:
     void receivePostLpmRawPicture(camera_frame_type *frame);
     void receiveRawPicture(camera_frame_type *frame);
     void receiveJpegPicture(void);
+	void receiveJpegPictureError(void);
    bool  allocSwapBufferForCap(uint32_t swap_size);
 
     Mutex mLock; // API lock -- all public methods

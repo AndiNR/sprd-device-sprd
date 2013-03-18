@@ -43,8 +43,21 @@ extern "C"
 #define CMR_EVT_AF_START                            (CMR_EVT_OEM_BASE + 10)
 #define CMR_EVT_AF_EXIT                             (CMR_EVT_OEM_BASE + 11)
 #define CMR_EVT_AF_INIT                             (CMR_EVT_OEM_BASE + 12)
+
+#define CMR_EVT_PREV_BASE        (CMR_EVT_OEM_BASE + 0x100)
+#define CMR_EVT_PREV_INIT          (CMR_EVT_OEM_BASE + 0x0)
+#define CMR_EVT_PREV_EXIT          (CMR_EVT_OEM_BASE + 0xF)
+#define CMR_EVT_PREV_V4L2_BASE          (CMR_EVT_PREV_BASE + 0x10)
+#define CMR_EVT_PREV_V4L2_TX_DONE        (CMR_EVT_PREV_V4L2_BASE + CMR_V4L2_TX_DONE - CMR_EVT_V4L2_BASE)
+#define CMR_EVT_PREV_V4L2_TX_NO_MEM       (CMR_EVT_PREV_V4L2_BASE +  CMR_V4L2_TX_NO_MEM - CMR_EVT_V4L2_BASE)
+#define CMR_EVT_PREV_V4L2_TX_ERR             (CMR_EVT_PREV_V4L2_BASE + CMR_V4L2_TX_ERROR - CMR_EVT_V4L2_BASE)
+#define CMR_EVT_PREV_V4L2_CSI2_ERR             (CMR_EVT_PREV_V4L2_BASE + CMR_V4L2_CSI2_ERR - CMR_EVT_V4L2_BASE)
+#define CMR_EVT_PREV_CVT_BASE                 (CMR_EVT_PREV_BASE + 0x20)
+#define CMR_EVT_PREV_CVT_ROT_DONE     (CMR_EVT_PREV_CVT_BASE + CMR_IMG_CVT_ROT_DONE - CMR_EVT_CVT_BASE)
+
 #define CAMERA_OEM_MSG_QUEUE_SIZE                    50
 #define CAMERA_AF_MSG_QUEUE_SIZE                     5
+#define CAMERA_PREV_MSG_QUEUE_SIZE                     20
 #define CAMERA_PREV_ID_BASE                          0x1000
 #define CAMERA_CAP0_ID_BASE                          0x2000
 #define CAMERA_CAP1_ID_BASE                          0x4000
@@ -209,6 +222,8 @@ struct camera_settings {
 	pthread_mutex_t          set_mutex;
 	sem_t                    isp_af_sem;
 	uint32_t                 isp_af_win_val;
+	uint32_t                 auto_flash;
+	uint8_t                   bflash;
 };
 
 struct camera_context {
@@ -250,6 +265,12 @@ struct camera_context {
 	sem_t                    stop_sem;
 	uint32_t                 err_code;
 	uint32_t                 camera_id;
+	pthread_t              prev_thread;
+	uint32_t                 prev_msg_que_handle;
+	uint32_t                prev_inited;
+	sem_t                    prev_sync_sem;
+	int32_t                set_flag;
+	sem_t                    set_sem;
 
 	/*for preview*/
 	struct img_size          display_size;
@@ -265,6 +286,7 @@ struct camera_context {
 	uint32_t                 prev_mem_szie;
 	uint32_t                 wait_for_start;
 	uint32_t                 wait_for_stop;
+	uint32_t                 is_dv_mode;
 
 	/*for capture*/
 	struct img_size          picture_size;
@@ -304,6 +326,8 @@ int camera_sync_var_init(struct camera_context *p_cxt);
 int camera_sync_var_deinit(struct camera_context *p_cxt);
 int camera_wait_start(struct camera_context *p_cxt);
 int camera_start_done(struct camera_context *p_cxt);
+int camera_wait_set(struct camera_context *p_cxt);
+int camera_set_done(struct camera_context *p_cxt);
 int camera_wait_stop(struct camera_context *p_cxt);
 int camera_stop_done(struct camera_context *p_cxt);
 int camera_wait_init(struct camera_context *p_cxt);

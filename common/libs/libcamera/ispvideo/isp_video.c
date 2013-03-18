@@ -73,13 +73,13 @@ typedef struct {
 }ISP_IMAGE_HEADER_T;
 
 struct camera_func{
-	int32_t(*start_preview) (void);
-	int32_t(*stop_preview) (void);
-	int32_t(*take_picture) (void);
-	int32_t(*set_param) (uint32_t param);
+	int32_t(*start_preview) (uint32_t param1, uint32_t param2);
+	int32_t(*stop_preview) (uint32_t param1, uint32_t param2);
+	int32_t(*take_picture) (uint32_t param1, uint32_t param2);
+	int32_t(*set_capture_size) (uint32_t width, uint32_t height);
 };
 
-#define CMD_BUF_SIZE  1024 // 1k
+#define CMD_BUF_SIZE  4096 // 1k
 #define SEND_IMAGE_SIZE 64512 // 63k
 #define DATA_BUF_SIZE 65536 //64k
 #define PORT_NUM 16666        /* Port number for server */
@@ -97,8 +97,13 @@ struct camera_func{
 static unsigned char diag_cmd_buf[CMD_BUF_SIZE];
 static unsigned char eng_rsp_diag[DATA_BUF_SIZE];
 static int preview_flag = 0; // 1: start preview
+static int preview_img_end_flag = 1; // 1: start preview
+static int capture_img_end_flag = 1; // 1: start preview
+static int capture_format = 1; // 1: start preview
+static int capture_flag = 0; // 1: call get pic
 static int getpic_flag = 0; // 1: call get pic
-static sem_t thread_sem_lock;
+static sem_t preview_sem_lock;
+static sem_t capture_sem_lock;
 static int wire_connected = 0;
 static int sockfd = 0;
 int sequence_num = 0;
@@ -154,9 +159,11 @@ uint32_t ispvideo_SetIspParamToSt(unsigned char* dig_ptr, struct isp_parser_buf_
 	return buf_len;
 }
 
-static int handle_img_data(uint32_t format, uint32_t width,uint32_t height,char *imgptr, int imagelen)
+static int handle_img_data(uint32_t format, uint32_t width,uint32_t height, char *ch0_ptr, int ch0_len,char *ch1_ptr, int ch1_len,char *ch2_ptr, int ch2_len)
 {
-	int i,  res, number;
+	int i,  res, total_number;
+	int send_number=0;
+	int chn0_number, chn1_number, chn2_number;
 	int len = 0, rlen = 0, rsp_len = 0, extra_len = 0;
 	MSG_HEAD_T *msg_ret;
 	ISP_IMAGE_HEADER_T isp_msg;
@@ -164,38 +171,135 @@ static int handle_img_data(uint32_t format, uint32_t width,uint32_t height,char 
 
 	size_id=ispParserGetSizeID(width,height);
 
-	number = (imagelen + SEND_IMAGE_SIZE - 1) /SEND_IMAGE_SIZE;
-	msg_ret = (MSG_HEAD_T *)(eng_rsp_diag+1);
-	DBG("%s: imagelen[%d] number[%d]\n",__FUNCTION__, imagelen, number);
+	chn0_number = (ch0_len + SEND_IMAGE_SIZE - 1) /SEND_IMAGE_SIZE;
+	chn1_number = (ch1_len + SEND_IMAGE_SIZE - 1) /SEND_IMAGE_SIZE;
+	chn2_number = (ch2_len + SEND_IMAGE_SIZE - 1) /SEND_IMAGE_SIZE;
 
-	for (i=0; i<number; i++)
+	total_number = chn0_number + chn1_number + chn2_number;
+	//total_number = (ch0_len + SEND_IMAGE_SIZE - 1) /SEND_IMAGE_SIZE;
+
+	msg_ret = (MSG_HEAD_T *)(eng_rsp_diag+1);
+
+	if(8==format)
 	{
-		if (i < number-1)
+		DBG("%s:ISP_TOOL: imagelen[%d] number[%d]\n",__FUNCTION__, ch0_len, total_number);
+	}
+
+	for (i=0; i<chn0_number; i++, send_number++)
+	{// chn0
+		if (i < chn0_number-1)
 			len = SEND_IMAGE_SIZE;
 		else
-			len = imagelen-SEND_IMAGE_SIZE*i;
+			len = ch0_len-SEND_IMAGE_SIZE*i;
 		rsp_len = sizeof(MSG_HEAD_T)+1;
 
 		// combine data
 		isp_msg.headlen = 12;
 		isp_msg.img_format = format;
 		isp_msg.img_size = size_id;
-		isp_msg.totalpacket = number;
-		isp_msg.packetsn = i+1;
-		DBG("%s: request rsp_len[%d] index[%d] len[%d]\n",__FUNCTION__, rsp_len, i, len);
+		isp_msg.totalpacket = total_number;
+		isp_msg.packetsn = send_number+1;
+		if(8==format)
+		{
+			DBG("%s:ISP_TOOL: request rsp_len[%d] index[%d] len[%d]\n",__FUNCTION__, rsp_len, i, len);
+		}
+
 		memcpy(eng_rsp_diag+rsp_len, (char *)&isp_msg, sizeof(ISP_IMAGE_HEADER_T));
 		rsp_len += sizeof(ISP_IMAGE_HEADER_T);
 
-		DBG("%s: request rsp_len[%d]\n",__FUNCTION__, rsp_len);
-		memcpy(eng_rsp_diag+rsp_len, (char *)imgptr+i*SEND_IMAGE_SIZE, len);
+		//DBG("%s:ISP_TOOL: request rsp_len[%d]\n",__FUNCTION__, rsp_len);
+		memcpy(eng_rsp_diag+rsp_len, (char *)ch0_ptr+i*SEND_IMAGE_SIZE, len);
 		rsp_len += len;
 
 		eng_rsp_diag[rsp_len] = 0x7e;
 		msg_ret->len = rsp_len-1;
 		msg_ret->seq_num = sequence_num++;
-		DBG("%s: request rsp_len[%d]\n",__FUNCTION__, rsp_len);
+		//DBG("%s:ISP_TOOL: request rsp_len[%d]\n",__FUNCTION__, rsp_len);
 		res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
-		DBG("%s: send success. res: %d, rsp_len: %d.\n",__FUNCTION__, res, rsp_len + 1);
+		if(8==format)
+		{
+			DBG("%s:ISP_TOOL: send success. res: %d, rsp_len: %d.\n",__FUNCTION__, res, rsp_len + 1);
+		}
+	}
+
+	for (i=0; i<chn1_number; i++, send_number++)
+	{// chn1
+		if (i < chn1_number-1)
+			len = SEND_IMAGE_SIZE;
+		else
+			len = ch1_len-SEND_IMAGE_SIZE*i;
+		rsp_len = sizeof(MSG_HEAD_T)+1;
+
+		// combine data
+		isp_msg.headlen = 12;
+		isp_msg.img_format = format;
+		isp_msg.img_size = size_id;
+		isp_msg.totalpacket = total_number;
+		isp_msg.packetsn = send_number+1;
+		if(8==format)
+		{
+			DBG("%s:ISP_TOOL: request rsp_len[%d] index[%d] len[%d]\n",__FUNCTION__, rsp_len, i, len);
+		}
+
+		memcpy(eng_rsp_diag+rsp_len, (char *)&isp_msg, sizeof(ISP_IMAGE_HEADER_T));
+		rsp_len += sizeof(ISP_IMAGE_HEADER_T);
+
+		//DBG("%s:ISP_TOOL: request rsp_len[%d]\n",__FUNCTION__, rsp_len);
+		memcpy(eng_rsp_diag+rsp_len, (char *)ch1_ptr+i*SEND_IMAGE_SIZE, len);
+		rsp_len += len;
+
+		eng_rsp_diag[rsp_len] = 0x7e;
+		msg_ret->len = rsp_len-1;
+		msg_ret->seq_num = sequence_num++;
+		//DBG("%s:ISP_TOOL: request rsp_len[%d]\n",__FUNCTION__, rsp_len);
+		res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
+		if(8==format)
+		{
+			DBG("%s:ISP_TOOL: send success. res: %d, rsp_len: %d.\n",__FUNCTION__, res, rsp_len + 1);
+		}
+	}
+
+	for (i=0; i<chn2_number; i++, send_number++)
+	{// chn2
+		if (i < chn2_number-1)
+			len = SEND_IMAGE_SIZE;
+		else
+			len = ch2_len-SEND_IMAGE_SIZE*i;
+		rsp_len = sizeof(MSG_HEAD_T)+1;
+
+		// combine data
+		isp_msg.headlen = 12;
+		isp_msg.img_format = format;
+		isp_msg.img_size = size_id;
+		isp_msg.totalpacket = total_number;
+		isp_msg.packetsn = send_number+1;
+		if(8==format)
+		{
+			DBG("%s:ISP_TOOL: request rsp_len[%d] index[%d] len[%d]\n",__FUNCTION__, rsp_len, i, len);
+		}
+
+		memcpy(eng_rsp_diag+rsp_len, (char *)&isp_msg, sizeof(ISP_IMAGE_HEADER_T));
+		rsp_len += sizeof(ISP_IMAGE_HEADER_T);
+
+		//DBG("%s:ISP_TOOL: request rsp_len[%d]\n",__FUNCTION__, rsp_len);
+		memcpy(eng_rsp_diag+rsp_len, (char *)ch2_ptr+i*SEND_IMAGE_SIZE, len);
+		rsp_len += len;
+
+		eng_rsp_diag[rsp_len] = 0x7e;
+		msg_ret->len = rsp_len-1;
+		msg_ret->seq_num = sequence_num++;
+		//DBG("%s:ISP_TOOL: request rsp_len[%d]\n",__FUNCTION__, rsp_len);
+		res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
+		if(8==format)
+		{
+			DBG("%s:ISP_TOOL: send success. res: %d, rsp_len: %d.\n",__FUNCTION__, res, rsp_len + 1);
+		}
+	}
+
+
+	if(8==format)
+	{
+		DBG("%s:ISP_TOOL:send data to sk end\n",__FUNCTION__);
 	}
 	return 0;
 }
@@ -209,7 +313,7 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 	struct camera_func* fun_ptr=ispvideo_GetCameraFunc();
 
 	if (len < sizeof(MSG_HEAD_T)+2){
-		DBG("the formal cmd is 0x7e + diag + 0x7e,which is 10Bytes,but the cmd has less than 10 bytes\n");
+		DBG("ISP_TOOL:the formal cmd is 0x7e + diag + 0x7e,which is 10Bytes,but the cmd has less than 10 bytes\n");
 		return -1;
 	}
 
@@ -228,110 +332,80 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 
 	switch ( msg->subtype ) {
 		case CMD_START_PREVIEW:
+		{// ok
 			DBG("ISP_TOOL:CMD_START_PREVIEW \n");
-			preview_flag = 1;
-
 			eng_rsp_diag[rsp_len] = ISP_CMD_SUCCESS;
 			rsp_len++;
 			eng_rsp_diag[rsp_len] = 0x7e;
 			msg_ret->len = rsp_len-1;
 			res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
+			preview_flag = 1;
 			break;
-
+		}
 		case CMD_STOP_PREVIEW:
+		{// ok
 			DBG("ISP_TOOL:CMD_STOP_PREVIEW \n");
 			preview_flag = 0;
-
 			eng_rsp_diag[rsp_len] = ISP_CMD_SUCCESS;
 			rsp_len++;
 			eng_rsp_diag[rsp_len] = 0x7e;
 			msg_ret->len = rsp_len-1;
 			res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
 			break;
-
+		}
+		case CMD_GET_PREVIEW_PICTURE:
+		{ // ok
+			//DBG("ISP_TOOL:CMD_GET_PREVIEW_PICTURE \n");
+			if(1==preview_flag)
+			{
+				preview_img_end_flag = 0;
+				sem_wait(&preview_sem_lock);
+				preview_img_end_flag = 1;
+			} else {
+				rsp_len += rlen;
+				eng_rsp_diag[rsp_len] = 0x7e;
+				msg_ret->len = rsp_len-1;
+				res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
+			}
+			break;
+		}
 		case CMD_READ_ISP_PARAM:
 		{
 			DBG("ISP_TOOL:CMD_READ_ISP_PARAM \n");
 			/* TODO:read isp param operation */
 			// rlen is the size of isp_param
 			// pass eng_rsp_diag+rsp_len
-#if 1
 			struct isp_parser_buf_in in_param={0x00};
 			struct isp_parser_buf_rtn rtn_param={0x00};
 			struct isp_parser_cmd_param rtn_cmd={0x00};
 			uint8_t* dig_ptr=buf;
 			uint8_t* isp_ptr=buf+sizeof(MSG_HEAD_T)+1;
-			uint8_t i=0x00;
-			uint32_t* addr=(uint32_t*)isp_ptr;
-
-			DBG("ISP_TOOL: dig_ptr:0x%x \n",dig_ptr[0]);
-			DBG("ISP_TOOL: seq_num:0x%x \n",msg_ret->seq_num);
-			DBG("ISP_TOOL: len:0x%x \n",msg_ret->len);
-			DBG("ISP_TOOL: type:0x%x \n",msg_ret->type);
-			DBG("ISP_TOOL: subtype:0x%x \n",msg_ret->subtype);
 
 			in_param.buf_len=ispvideo_GetIspParamLenFromSt(dig_ptr);
 			in_param.buf_addr=(uint32_t)ispParserAlloc(in_param.buf_len);
-
-			for(i=0x00; i<in_param.buf_len; i+=4)
-			{
-				DBG("ISP_TOOL: isp_param:0x%x \n",addr[0]);
-				addr++;
-			}
-
-			DBG("ISP_TOOL:isp packet addr:0x%x ,len:0x%x \n",in_param.buf_addr,in_param.buf_len);
-
 
 			if((0x00!=in_param.buf_len)
 				&&(0x00!=in_param.buf_addr))
 			{
 				ret=ispvideo_GetIspParamFromSt(isp_ptr, (struct isp_parser_buf_rtn*)&in_param);
 				ret=ispParser(ISP_PARSER_DOWN, (void*)in_param.buf_addr, (void*)&rtn_cmd);
-
-				addr=(uint32_t*)in_param.buf_addr;
-
-				for(i=0x00; i<in_param.buf_len; i+=4)
-				{
-					DBG("ISP_TOOL: isp_param:0x%x \n",addr[0]);
-					addr++;
-				}
 				ret=ispParserFree((void*)in_param.buf_addr);
 
 				if(ISP_UP_PARAM==rtn_cmd.cmd)
 				{
 					ret=ispParser(ISP_PARSER_UP_PARAM, (void*)in_param.buf_addr, (void*)&rtn_param);
-					DBG("ISP_TOOL:isp packet addr:0x%x ,len:0x%x \n",rtn_param.buf_addr,rtn_param.buf_len);
-					/*
-					addr=(uint32_t*)rtn_param.buf_addr;
-					for(i=0x00; i<rtn_param.buf_len; i+=4)
-					{
-						DBG("ISP_TOOL: isp_param:0x%x \n",addr[0]);
-						addr++;
-					}
-					*/
 					if(0x00==ret)
 					{
 						isp_ptr=eng_rsp_diag+sizeof(MSG_HEAD_T)+1;
 						rlen=ispvideo_SetIspParamToSt(isp_ptr, (struct isp_parser_buf_in*)&rtn_param);
-						/*
-						addr=(uint32_t*)isp_ptr;
-						for(i=0x00; i<rtn_param.buf_len; i+=4)
-						{
-							DBG("ISP_TOOL: isp_final_param:0x%x \n",addr[0]);
-							addr++;
-						}
-						*/
 						ret=ispParserFree((void*)rtn_param.buf_addr);
 					}
-
-					DBG("ISP_TOOL:isp ret:0x%x ,len:0x%x \n",ret,rlen);
 				}
 			}
-#endif
+
 			rsp_len += rlen;
 			eng_rsp_diag[rsp_len] = 0x7e;
 			msg_ret->len = rsp_len-1;
-			DBG("ISP_TOOL:isp ret:0x%x ,len:0x%x \n",ret,msg_ret->len);
 			res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
 			break;
 		}
@@ -343,15 +417,15 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 			struct isp_parser_buf_in in_param={0x00};
 			uint8_t* dig_ptr=buf;
 			uint8_t* isp_ptr=buf+sizeof(MSG_HEAD_T)+1;
-			
 
 			in_param.buf_len=ispvideo_GetIspParamLenFromSt(dig_ptr);
 			in_param.buf_addr=(uint32_t)ispParserAlloc(in_param.buf_len);
+
 			if((0x00!=in_param.buf_len)
 				&&(0x00!=in_param.buf_addr))
 			{
 				if(NULL!=fun_ptr->stop_preview){
-				//	fun_ptr->stop_preview();
+					fun_ptr->stop_preview(0, 0);
 				}
 
 				ret=ispvideo_GetIspParamFromSt(isp_ptr, (struct isp_parser_buf_rtn*)&in_param);
@@ -359,10 +433,9 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 				ret=ispParserFree((void*)in_param.buf_addr);
 
 				if(NULL!=fun_ptr->start_preview){
-				//	fun_ptr->start_preview();
+					fun_ptr->start_preview(0, 0);
 				}
 			}
-			
 
 			eng_rsp_diag[rsp_len] = ret;
 			rsp_len++;
@@ -371,22 +444,13 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 			res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
 			break;
 		}
-		case CMD_GET_PREVIEW_PICTURE:
-		{
-			DBG("ISP_TOOL:CMD_GET_PREVIEW_PICTURE \n");
-			image_type = *(buf+rsp_len);
-			getpic_flag = 1;
-			sem_wait(&thread_sem_lock);
-			getpic_flag = 0;
-			break;
-		}
 		case CMD_UPLOAD_MAIN_INFO:
-		{
+		{ // ok
 			DBG("ISP_TOOL:CMD_UPLOAD_MAIN_INFO \n");
 			/* TODO:read isp param operation */
 			// rlen is the size of isp_param
 			// pass eng_rsp_diag+rsp_len
-#if 1
+
 			struct isp_parser_buf_in in_param={0x00};
 			struct isp_parser_buf_rtn rtn_param={0x00};
 			struct isp_parser_cmd_param rtn_cmd={0x00};
@@ -394,12 +458,6 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 			uint8_t* isp_ptr=buf+sizeof(MSG_HEAD_T)+1;
 			uint8_t i=0x00;
 			uint32_t* addr=(uint32_t*)isp_ptr;
-
-			DBG("ISP_TOOL: dig_ptr:0x%x \n",dig_ptr[0]);
-			DBG("ISP_TOOL: seq_num:0x%x \n",msg_ret->seq_num);
-			DBG("ISP_TOOL: len:0x%x \n",msg_ret->len);
-			DBG("ISP_TOOL: type:0x%x \n",msg_ret->type);
-			DBG("ISP_TOOL: subtype:0x%x \n",msg_ret->subtype);
 
 			in_param.buf_len=ispvideo_GetIspParamLenFromSt(dig_ptr);
 			in_param.buf_addr=(uint32_t)ispParserAlloc(in_param.buf_len);
@@ -419,16 +477,10 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 						isp_ptr=eng_rsp_diag+sizeof(MSG_HEAD_T)+1;
 						rlen=ispvideo_SetIspParamToSt(isp_ptr, (struct isp_parser_buf_in*)&rtn_param);
 						ret=ispParserFree((void*)rtn_param.buf_addr);
-						addr=(uint32_t*)isp_ptr;
-						for(i=0x00; i<rtn_param.buf_len; i+=4)
-						{
-							DBG("ISP_TOOL: isp_final_param:0x%x \n",addr[0]);
-							addr++;
-						}
 					}
 				}
 			}
-#endif
+
 			rsp_len += rlen;
 			eng_rsp_diag[rsp_len] = 0x7e;
 			msg_ret->len = rsp_len-1;
@@ -437,60 +489,10 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 		}
 		case CMD_TAKE_PICTURE:
 		{
-			DBG("ISP_TOOL:CMD_TAKE_PICTURE \n");
-#if 1
+			DBG("ISP_TOOL:CMD_TAKE_PICTURE\n");
 			struct isp_parser_buf_in in_param={0x00};
 			struct isp_parser_buf_rtn rtn_param={0x00};
 			struct isp_parser_cmd_param rtn_cmd={0x00};
-			uint8_t* dig_ptr=buf;
-			uint8_t* isp_ptr=buf+sizeof(MSG_HEAD_T)+1;
-			uint8_t i=0x00;
-			uint32_t* addr=(uint32_t*)isp_ptr;
-
-			DBG("ISP_TOOL: dig_ptr:0x%x \n",dig_ptr[0]);
-			DBG("ISP_TOOL: seq_num:0x%x \n",msg_ret->seq_num);
-			DBG("ISP_TOOL: len:0x%x \n",msg_ret->len);
-			DBG("ISP_TOOL: type:0x%x \n",msg_ret->type);
-			DBG("ISP_TOOL: subtype:0x%x \n",msg_ret->subtype);
-
-			in_param.buf_len=ispvideo_GetIspParamLenFromSt(dig_ptr);
-			in_param.buf_addr=(uint32_t)ispParserAlloc(in_param.buf_len);
-
-			for(i=0x00; i<in_param.buf_len; i+=4)
-			{
-				DBG("ISP_TOOL: isp_param:0x%x \n",addr[0]);
-				addr++;
-			}
-
-			DBG("ISP_TOOL:isp packet addr:0x%x ,len:0x%x \n",in_param.buf_addr,in_param.buf_len);
-
-			if((0x00!=in_param.buf_len)
-				&&(0x00!=in_param.buf_addr))
-			{
-				ret=ispParser(ISP_PARSER_DOWN, (void*)&in_param, (void*)&rtn_cmd);
-				ret=ispParserFree((void*)in_param.buf_addr);
-
-				DBG("ISP_TOOL:rtn_cmd.cmd:0x%x \n",rtn_cmd.cmd);
-
-				if(ISP_CAPTURE==rtn_cmd.cmd)
-				{
-					if(NULL!=fun_ptr->take_picture){
-					//	fun_ptr->take_picture();
-					}
-				}
-			}
-#endif
-			image_type = *(buf+rsp_len);
-			getpic_flag = 1;
-			sem_wait(&thread_sem_lock);
-			getpic_flag = 0;
-			break;
-		}
-		case CMD_ISP_LEVEL:
-		{
-			DBG("ISP_TOOL:CMD_ISP_LEVEL \n");
-			struct isp_parser_buf_in in_param={0x00};
-			struct isp_parser_buf_rtn rtn_param={0x00};
 			uint8_t* dig_ptr=buf;
 			uint8_t* isp_ptr=buf+sizeof(MSG_HEAD_T)+1;
 
@@ -501,7 +503,58 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 				&&(0x00!=in_param.buf_addr))
 			{
 				ret=ispvideo_GetIspParamFromSt(isp_ptr, (struct isp_parser_buf_rtn*)&in_param);
-				ret=ispParser(ISP_PARSER_DOWN, (void*)in_param.buf_addr, NULL);
+				ret=ispParser(ISP_PARSER_DOWN, (void*)in_param.buf_addr, (void*)&rtn_cmd);
+				ret=ispParserFree((void*)in_param.buf_addr);
+
+				if((ISP_CAPTURE==rtn_cmd.cmd)
+					&&(NULL!=fun_ptr->take_picture)) {
+
+					capture_img_end_flag=0;
+					capture_flag=1;
+
+					capture_format=rtn_cmd.param[0];// capture format
+
+					if(NULL!=fun_ptr->set_capture_size)
+					{
+						fun_ptr->set_capture_size(rtn_cmd.param[1], rtn_cmd.param[2]);
+					}
+
+					fun_ptr->take_picture(0, 0);
+					sem_wait(&capture_sem_lock);
+
+					usleep(1000*10);
+
+					if(NULL!=fun_ptr->stop_preview){
+						fun_ptr->stop_preview(0, 0);
+					}
+
+					usleep(1000*10);
+
+					if(NULL!=fun_ptr->start_preview){
+						fun_ptr->start_preview(0, 0);
+					}
+				}
+			}
+
+			capture_flag = 0;
+			break;
+		}
+		case CMD_ISP_LEVEL:
+		{ // ok need test
+			DBG("ISP_TOOL:CMD_ISP_LEVEL \n");
+			struct isp_parser_buf_in in_param={0x00};
+			struct isp_parser_cmd_param rtn_cmd={0x00};
+			uint8_t* dig_ptr=buf;
+			uint8_t* isp_ptr=buf+sizeof(MSG_HEAD_T)+1;
+
+			in_param.buf_len=ispvideo_GetIspParamLenFromSt(dig_ptr);
+			in_param.buf_addr=(uint32_t)ispParserAlloc(in_param.buf_len);
+
+			if((0x00!=in_param.buf_len)
+				&&(0x00!=in_param.buf_addr))
+			{
+				ret=ispvideo_GetIspParamFromSt(isp_ptr, (struct isp_parser_buf_rtn*)&in_param);
+				ret=ispParser(ISP_PARSER_DOWN, (void*)in_param.buf_addr, (void*)&rtn_cmd);
 				ret=ispParserFree((void*)in_param.buf_addr);
 			}
 
@@ -514,45 +567,10 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 		}
 
 		case CMD_READ_SENSOR_REG:
-		{// ISSUE
+		{// ok need test
 			DBG("ISP_TOOL:CMD_READ_SENSOR_REG \n");
 			struct isp_parser_buf_in in_param={0x00};
 			struct isp_parser_cmd_param rtn_cmd={0x00};
-			struct isp_parser_buf_rtn rtn_param={0x00};
-			uint8_t* dig_ptr=buf;
-			uint8_t* isp_ptr=buf+sizeof(MSG_HEAD_T)+1;
-#if 1
-			in_param.buf_len=ispvideo_GetIspParamLenFromSt(dig_ptr);
-			in_param.buf_addr=(uint32_t)ispParserAlloc(in_param.buf_len);
-
-			if((0x00!=in_param.buf_len)
-				&&(0x00!=in_param.buf_addr))
-			{
-				ret=ispParser(ISP_PARSER_DOWN, (void*)&in_param, (void*)&rtn_param);
-				ret=ispParserFree((void*)in_param.buf_addr);
-
-				ret=ispParser(ISP_PARSER_UP_SENSOR_REG, (void*)&in_param, (void*)&rtn_param);
-				if(0x00==ret)
-				{
-					isp_ptr=eng_rsp_diag+sizeof(MSG_HEAD_T)+1;
-					rlen=ispvideo_SetIspParamToSt(isp_ptr, (struct isp_parser_buf_in*)&rtn_param);
-					ret=ispParserFree((void*)rtn_param.buf_addr);
-				}
-
-				
-			}
-#endif
-			eng_rsp_diag[rsp_len] = ISP_CMD_SUCCESS;
-			rsp_len++;
-			eng_rsp_diag[rsp_len] = 0x7e;
-			msg_ret->len = rsp_len-1;
-			res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
-			break;
-		}
-		case CMD_WRITE_SENSOR_REG:
-		{
-			DBG("ISP_TOOL:CMD_WRITE_SENSOR_REG \n");
-			struct isp_parser_buf_in in_param={0x00};
 			struct isp_parser_buf_rtn rtn_param={0x00};
 			uint8_t* dig_ptr=buf;
 			uint8_t* isp_ptr=buf+sizeof(MSG_HEAD_T)+1;
@@ -564,7 +582,43 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 				&&(0x00!=in_param.buf_addr))
 			{
 				ret=ispvideo_GetIspParamFromSt(isp_ptr, (struct isp_parser_buf_rtn*)&in_param);
-				ret=ispParser(ISP_PARSER_DOWN, (void*)&in_param, (void*)&rtn_param);
+				ret=ispParser(ISP_PARSER_DOWN, (void*)in_param.buf_addr, (void*)&rtn_cmd);
+				ret=ispParserFree((void*)in_param.buf_addr);
+
+				if(ISP_READ_SENSOR_REG==rtn_cmd.cmd)
+				{
+					ret=ispParser(ISP_READ_SENSOR_REG, (void*)&rtn_cmd, (void*)&rtn_param);
+					if(0x00==ret)
+					{
+						isp_ptr=eng_rsp_diag+sizeof(MSG_HEAD_T)+1;
+						rlen=ispvideo_SetIspParamToSt(isp_ptr, (struct isp_parser_buf_in*)&rtn_param);
+						ret=ispParserFree((void*)rtn_param.buf_addr);
+					}
+				}
+			}
+
+			rsp_len += rlen;
+			eng_rsp_diag[rsp_len] = 0x7e;
+			msg_ret->len = rsp_len-1;
+			res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
+			break;
+		}
+		case CMD_WRITE_SENSOR_REG:
+		{ // ok need test
+			DBG("ISP_TOOL:CMD_WRITE_SENSOR_REG \n");
+			struct isp_parser_buf_in in_param={0x00};
+			struct isp_parser_cmd_param rtn_cmd={0x00};
+			uint8_t* dig_ptr=buf;
+			uint8_t* isp_ptr=buf+sizeof(MSG_HEAD_T)+1;
+
+			in_param.buf_len=ispvideo_GetIspParamLenFromSt(dig_ptr);
+			in_param.buf_addr=(uint32_t)ispParserAlloc(in_param.buf_len);
+
+			if((0x00!=in_param.buf_len)
+				&&(0x00!=in_param.buf_addr))
+			{
+				ret=ispvideo_GetIspParamFromSt(isp_ptr, (struct isp_parser_buf_rtn*)&in_param);
+				ret=ispParser(ISP_PARSER_DOWN, (void*)in_param.buf_addr, (void*)&rtn_cmd);
 				ret=ispParserFree((void*)in_param.buf_addr);
 			}
 
@@ -594,20 +648,49 @@ void send_img_data(uint32_t format, uint32_t width, uint32_t height, char *imgpt
 {
 	int ret;
 
-	if (( (preview_flag == 1) && (getpic_flag == 1)) ||
-		( (preview_flag == 0) && (getpic_flag == 1)))
+	if (0==preview_img_end_flag)
 	{
-		DBG("%s: preview_flag: %d, getpic_flag: %d, imagelen: %d.\n", __FUNCTION__, preview_flag, getpic_flag, imagelen);
-		getpic_flag = 0;
-		ret = handle_img_data(format, width, height, imgptr, imagelen);
-		sem_post(&thread_sem_lock);
+	//	DBG("ISP_TOOL:ISP_TOOL:%s: preview_flag: %d, getpic_flag: %d, imagelen: %d.\n", __FUNCTION__, preview_flag, getpic_flag, imagelen);
+		ret = handle_img_data(format, width, height, imgptr, imagelen, 0, 0, 0, 0);
+		sem_post(&preview_sem_lock);
 		if (ret != 0) {
-			DBG("%s: Fail to handle_img_data(). ret = %d.", __FUNCTION__, ret);
+			DBG("ISP_TOOL:%s: Fail to handle_img_data(). ret = %d.", __FUNCTION__, ret);
 		}
 	}
-	else {
-		DBG("%s: no data. preview_flag: %d, getpic_flag: %d.\n", __FUNCTION__, preview_flag, getpic_flag);
+}
+
+void send_capture_data_end(uint32_t format)
+{
+	int ret;
+
+	if ((capture_flag == 1) && (1 == capture_img_end_flag) && (ISP_VIDEO_JPG == format))
+	{
+		DBG("ISP_TOOL:%s:----------end-------- format: %d \n", __FUNCTION__, format);
+		sem_post(&capture_sem_lock);
+		capture_flag = 0;
+		if (ret != 0) {
+			DBG("ISP_TOOL:%s: Fail to handle_img_data(). ret = %d.", __FUNCTION__, ret);
+		}
 	}
+}
+
+void send_capture_data(uint32_t format, uint32_t width, uint32_t height, char *ch0_ptr, int ch0_len,char *ch1_ptr, int ch1_len,char *ch2_ptr, int ch2_len)
+{
+	int ret;
+
+	DBG("ISP_TOOL:%s: format: %d, width: %d, height: %d.\n", __FUNCTION__, format, width, height);
+
+	if ((0 == capture_img_end_flag)&&(format == capture_format))
+	{
+		DBG("ISP_TOOL:%s: capture_flag: %d, capture_img_end_flag: %d,\n", __FUNCTION__, capture_flag, capture_img_end_flag);
+		ret = handle_img_data(format, width, height, ch0_ptr, ch0_len, ch1_ptr, ch1_len, ch2_ptr, ch2_len);
+		capture_img_end_flag=1;
+		if (ret != 0) {
+			DBG("ISP_TOOL:%s: Fail to handle_img_data(). ret = %d.", __FUNCTION__, ret);
+		}
+	}
+
+	send_capture_data_end(format);
 }
 
 static void * isp_diag_handler(void *args)
@@ -630,7 +713,7 @@ static void * isp_diag_handler(void *args)
 		FD_SET(from, &rfds);
 		res = select(from + 1, &rfds, NULL, NULL, &tv);
 		if (res <= 0) { //timeout or other error
-			DBG("No data within five seconds. res:%d\n", res);
+			DBG("ISP_TOOL:No data within five seconds. res:%d\n", res);
 			continue;
 		}
 		//cnt = read(diag->from, diag_cmd_buf, DATA_BUF_SIZE);
@@ -638,14 +721,15 @@ static void * isp_diag_handler(void *args)
 				MSG_DONTWAIT);
 		//DBG("read from socket %d\n", cnt);
 		if (cnt <= 0) {
-			DBG("read socket error %s\n", strerror(errno));
+			DBG("ISP_TOOL:read socket error %s\n", strerror(errno));
 			break;
 		}
-		DBG("%s: request buffer[%d]\n",__FUNCTION__, cnt);
+#if 0
+		DBG("ISP_TOOL:%s: request buffer[%d]\n",__FUNCTION__, cnt);
 		for(i=0; i<cnt; i++)
 			DBG("%x,",diag_cmd_buf[i]);
 		DBG("\n");
-
+#endif
 		handle_isp_data(diag_cmd_buf, cnt);
 	}
 	return code;
@@ -667,7 +751,7 @@ static void * ispserver_thread(void *args)
 	pthread_t tdiag;
 	pthread_attr_t attr;
 
-	DBG("isp-video server version 1.0\n");
+	DBG("ISP_TOOL:isp-video server version 1.0\n");
 
 	memset(&sock_addr, 0, sizeof (struct sockaddr_in));
 	sock_addr.sin_family = AF_INET;        /* Allows IPv4*/
@@ -676,39 +760,35 @@ static void * ispserver_thread(void *args)
 
 	lfd = socket(sock_addr.sin_family, SOCK_STREAM, 0);
 	if (lfd == -1) {
-		 DBG("socket error\n");
+		 DBG("ISP_TOOL:socket error\n");
 		 return NULL;
 	}
 
 	optval = 1;
 	if (setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0) {
-		 DBG("setsockopt error\n");
-		 if (close(lfd) == -1)           /* Close connection */
-				DBG("close socket lfd error\n");
+		 DBG("ISP_TOOL:setsockopt error\n");
 		 return NULL;
 	}
 
 	if (bind(lfd, (struct sockaddr *)&sock_addr, sizeof (struct sockaddr_in)) != 0) {
-		DBG("bind error %s\n", strerror(errno));
-		if (close(lfd) == -1)           /* Close connection */
-			DBG("close socket lfd error\n");
+		DBG("ISP_TOOL:bind error %s\n", strerror(errno));
 		 return NULL;
 	}
 
 	if (listen(lfd, BACKLOG) == -1){
-		DBG("listen error\n");
-		if (close(lfd) == -1)           /* Close connection */
-			DBG("close socket lfd error\n");
+		DBG("ISP_TOOL:listen error\n");
 		 return NULL;
 	}
 
-	sem_init(&thread_sem_lock, 0, 0);
+	sem_init(&preview_sem_lock, 0, 0);
+	sem_init(&capture_sem_lock, 0, 0);
+
 	pthread_attr_init(&attr);
 	for (;;) {                  /* Handle clients iteratively */
 		void * res;
 		int ret;
 
-		DBG("log server waiting client dail in...\n");
+		DBG("ISP_TOOL:log server waiting client dail in...\n");
 		/* Accept a client connection, obtaining client's address */
 		addrlen = sizeof(struct sockaddr);
 		cfd = accept(lfd, &claddr, &addrlen);
@@ -716,14 +796,14 @@ static void * ispserver_thread(void *args)
 			DBG("accept error %s\n", strerror(errno));
 			break;
 		}
-		DBG("log server connected with client\n");
+		DBG("ISP_TOOL:log server connected with client\n");
 		wire_connected = 1;
 		sequence_num = 0;
 		/* Ignore the SIGPIPE signal, so that we find out about broken
 		 * connection errors via a failure from write().
 		 */
 		if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
-			DBG("signal error\n");
+			DBG("ISP_TOOL:signal error\n");
 #ifdef CLIENT_DEBUG
 		addrlen = sizeof(struct sockaddr);
 		if (getnameinfo(&claddr, addrlen, host, 50, service,
@@ -731,29 +811,29 @@ static void * ispserver_thread(void *args)
 			snprintf(addrStr, ADDRSTRLEN, "(%s, %s)", host, service);
 		else
 			snprintf(addrStr, ADDRSTRLEN, "(?UNKNOWN?)");
-		DBG("Connection from %s\n", addrStr);
+		DBG("ISP_TOOL:Connection from %s\n", addrStr);
 #endif
 
 		//create a thread for recv cmd
 		ret = pthread_create(&tdiag, &attr, isp_diag_handler, &cfd);
 		if (ret != 0) {
-			DBG("diag thread create success\n");
+			DBG("ISP_TOOL:diag thread create success\n");
 			break;
 		}
 
 		pthread_join(tdiag, &res);
-		DBG("diag thread exit success %s\n", (char *)res);
+		DBG("ISP_TOOL:diag thread exit success %s\n", (char *)res);
 		if (close(cfd) == -1)           /* Close connection */
-			DBG("close socket cfd error\n");
+			DBG("ISP_TOOL:close socket cfd error\n");
 	}
 	pthread_attr_destroy(&attr);
 	if (close(lfd) == -1)           /* Close connection */
-		DBG("close socket lfd error\n");
+		DBG("ISP_TOOL:close socket lfd error\n");
 
 	 return NULL;
 }
 
-int ispvideo_RegCameraFunc(uint32_t cmd, int(*func)())
+int ispvideo_RegCameraFunc(uint32_t cmd, int(*func)(uint32_t, uint32_t))
 {
 	struct camera_func* fun_ptr=ispvideo_GetCameraFunc();
 	
@@ -776,7 +856,7 @@ int ispvideo_RegCameraFunc(uint32_t cmd, int(*func)())
 		}
 		case REG_SET_PARAM:
 		{
-			fun_ptr->set_param=func;
+			fun_ptr->set_capture_size=func;
 			break;
 		}
 		default :
@@ -798,6 +878,10 @@ void stopispserver()
 		close(serverfd);
 	flag = 0;
 	*/
+	preview_flag = 0;
+	capture_flag = 0;
+	preview_img_end_flag=1;
+	capture_img_end_flag=1;
 }
 
 void startispserver()
@@ -806,17 +890,21 @@ void startispserver()
 	pthread_attr_t attr;
 	int ret;
 	static int flag = 0; // confirm called only once
+	preview_flag = 0;
+	capture_flag = 0;
+	preview_img_end_flag=1;
+	capture_img_end_flag=1;
 
 	if (flag == 1)
 		return;
 
-	DBG("startispserver\n");
+	DBG("ISP_TOOL:startispserver\n");
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	ret = pthread_create(&tdiag, &attr, ispserver_thread, NULL);
 	pthread_attr_destroy(&attr);
 	if (ret < 0) {
-		DBG("pthread_create fail\n");
+		DBG("ISP_TOOL:pthread_create fail\n");
 		return;
 	}
 	flag = 1;

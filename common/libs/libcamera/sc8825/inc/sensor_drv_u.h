@@ -64,6 +64,7 @@
 
 
 #define SENSOR_IDENTIFY_CODE_COUNT			0x02
+#define CAP_MODE_BITS                       16
 
 /* bit define */
 #define S_BIT_0               0x00000001
@@ -484,6 +485,7 @@ typedef struct sensor_ioctl_func_tab_tag {
 	uint32_t(*set_preview_mode) (uint32_t param);
 
 	uint32_t(*set_image_effect) (uint32_t param);
+	//low 16bits is resolution table index,hight 16bits is cap mode containing normal and HDR.
 	uint32_t(*before_snapshort) (uint32_t param);
 	uint32_t(*after_snapshort) (uint32_t param);
 	uint32_t(*flash) (uint32_t param);
@@ -513,6 +515,12 @@ typedef struct sensor_ioctl_func_tab_tag {
 	uint32_t(*stream_on) (uint32_t param);
 	uint32_t(*stream_off) (uint32_t param);
 } SENSOR_IOCTL_FUNC_TAB_T, *SENSOR_IOCTL_FUNC_TAB_T_PTR;
+
+typedef struct sensor_i2c_tag {
+	uint8_t  *i2c_data;
+	uint16_t i2c_count;
+	uint16_t slave_addr;
+} SENSOR_I2C_T, *SENSOR_I2C_T_PTR;
 
 typedef struct sensor_reg_tag {
 	uint16_t reg_addr;
@@ -756,5 +764,6 @@ int Sensor_SetMark(uint8_t *buf);
 int Sensor_GetMark(uint8_t *buf,uint8_t *is_saved_ptr);
 int _Sensor_Device_WriteRegTab(SENSOR_REG_TAB_PTR reg_tab);
 int Sensor_AutoFocusInit(void);
+int Sensor_WriteI2C(uint16_t slave_addr, uint8_t *cmd, uint16_t cmd_length);
 
 #endif

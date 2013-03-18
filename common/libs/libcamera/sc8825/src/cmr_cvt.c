@@ -903,7 +903,8 @@ int cmr_scale_deinit(void)
 		pthread_cond_signal(&scaler_cond);
 	}
 	pthread_mutex_unlock(&scaler_cb_mutex);
-
+	sem_wait(&scaler_sem);
+	sem_post(&scaler_sem);
 	ioctl(scaler_fd, SCALE_IO_STOP, NULL);
 	/* thread should be killed before fd deinited */
 	ret = cmr_scale_kill_thread();
