@@ -271,7 +271,7 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 	}
 
 	time(&timep);
-	p = gmtime(&timep);
+	p = localtime(&timep);
 	sprintf(datetime_buf,
 			"%4d:%02d:%02d %02d:%02d:%02d",
 			(1900+p->tm_year),
