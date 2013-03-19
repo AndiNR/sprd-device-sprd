@@ -1,0 +1,9 @@
+This directory contains little tools for sysdump.
+
+1.  ".gdbinit" is a gdb script that for analyze sysdump,
+	put is in $HOME/ or $PWD/
+2.  "corebt" is a executable file for showing backtrace of
+    	cpu and process, that can't be done in gdb scritp.
+    	it runs on x86, make sure arm-eabi-gdb is in $PATH.
+3.  "corebt.c" is source code for corebt, just to type
+	"make corebt" to generate corebt executable.
