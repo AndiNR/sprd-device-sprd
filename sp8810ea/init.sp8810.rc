@@ -267,4 +267,5 @@ service iprenew_p2p /system/bin/dhcpcd -n
 
 service slog /system/bin/slog
     class main
-    user root
+    user system
+    group shell
