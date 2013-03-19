@@ -143,6 +143,7 @@ service phoneserver_2sim /system/bin/phoneserver_2sim
 service vcharged /bin/vcharged
     class core
     user root
+    disabled
     oneshot
 
 service charge /bin/charge

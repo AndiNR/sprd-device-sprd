@@ -71,6 +71,7 @@ service rawdatad /bin/rawdatad
 service vcharged /bin/vcharged
     class core
     user root
+    disabled
     oneshot
 
 service charge /bin/charge

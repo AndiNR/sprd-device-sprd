@@ -144,6 +144,7 @@ service calibrationinit /system/bin/calibration_init
 service vcharged /bin/vcharged
     class core
     user system
+    disabled
     oneshot
 
 service charge /bin/charge
