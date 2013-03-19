@@ -13,16 +13,33 @@
 #include <ctype.h>
 #include "cutils/properties.h"
 #include "private/android_filesystem_config.h"
+#include <termios.h>
 
 #define DATA_BUF_SIZE (4096*2)
-static char log_data[DATA_BUF_SIZE];
+#define MAX_OPEN_TIMES  10
 #define DATA_EXT_DIAG_SIZE (4096*2)
+
+static char log_data[DATA_BUF_SIZE];
 static char ext_data_buf[DATA_EXT_DIAG_SIZE];
 static int ext_buf_len;
 //referrenced by eng_diag.c
 int audio_fd;
 AUDIO_TOTAL_T audio_total[4];
 
+static char* s_connect_ser_path[]={
+	"/dev/ttyS1", //uart
+	"/dev/vser", //usb
+	NULL
+};
+static char* s_cp_pipe[]={
+	"/dev/vbpipe0", //cp_td
+	NULL
+};
+
+static int s_speed_arr[] = {B921600,B115200, B38400, B19200, B9600, B4800, B2400, B1200, B300,
+	B921600,B115200, B38400, B19200, B9600, B4800, B2400, B1200, B300, };
+static int s_name_arr[] = {921600,115200,38400,  19200, 9600,  4800,  2400,  1200,  300,
+	921600, 115200,38400,  19200,  9600, 4800, 2400, 1200,  300, };
 
 static void print_log_data(int cnt)
 {
@@ -31,12 +48,12 @@ static void print_log_data(int cnt)
 	if (cnt > DATA_BUF_SIZE/2)
 		cnt = DATA_BUF_SIZE/2;
 
-	ENG_LOG("vser receive:\n");
+	ENG_LOG("eng_vdiag vser receive:\n");
 	for(i = 0; i < cnt; i++) {
 		if (isalnum(log_data[i])){
-			ENG_LOG("%c ", log_data[i]);
+			ENG_LOG("eng_vdiag %c ", log_data[i]);
 		}else{
-			ENG_LOG("%2x ", log_data[i]);
+			ENG_LOG("eng_vdiag %2x ", log_data[i]);
 		}
 	}
 	ENG_LOG("\n");
@@ -52,28 +69,26 @@ int get_user_diag_buf(char* buf,int len)
 {
 	int i;
 	int is_find = 0;
-	for(i=0;i<len;i++){
-		ENG_LOG("%s: %x\n",__FUNCTION__, buf[i]);
+
+	for(i = 0; i< len; i++){
+		ENG_LOG("eng_vdiag %s: %x\n",__FUNCTION__, buf[i]);
 		
 		if (buf[i] == 0x7e && ext_buf_len ==0){ //start
-			ext_data_buf[ext_buf_len]=buf[i];
-			ext_buf_len ++;
-		}
-		else if (ext_buf_len >0 && ext_buf_len < DATA_EXT_DIAG_SIZE){
+			ext_data_buf[ext_buf_len++] = buf[i];
+		}else if (ext_buf_len > 0 && ext_buf_len < DATA_EXT_DIAG_SIZE){
 			ext_data_buf[ext_buf_len]=buf[i];
 			if ( buf[i] == 0x7e ){
 				is_find = 1;
 				break;
-			}
-			else {
-				ext_buf_len ++;
+			}else {
+				ext_buf_len++;
 			}
 		}
 	}
 
 	if ( is_find ) {
-		for(i=0; i<ext_buf_len; i++) {
-			ENG_LOG("0x%x, ",ext_data_buf[i]);
+		for(i = 0; i < ext_buf_len; i++) {
+			ENG_LOG("eng_vdiag 0x%x, ",ext_data_buf[i]);
 		}
 	}
 	return is_find;
@@ -93,31 +108,31 @@ int ensure_audio_para_file_exists(char *config_file)
     if ((ret == 0) || (errno == EACCES)) {
         if ((ret != 0) &&
             (chmod(config_file, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP) != 0)) {
-            ALOGE("Cannot set RW to \"%s\": %s", config_file, strerror(errno));
+            ALOGE("eng_vdiag Cannot set RW to \"%s\": %s", config_file, strerror(errno));
             return -1;
         }
 	return 0;
     } else if (errno != ENOENT) {
-        ALOGE("Cannot access \"%s\": %s", config_file, strerror(errno));
+        ALOGE("eng_vdiag Cannot access \"%s\": %s", config_file, strerror(errno));
         return -1;
     }
 
     srcfd = open((char *)(ENG_AUDIO_PARA), O_RDONLY);
     if (srcfd < 0) {
-        ALOGE("Cannot open \"%s\": %s", (char *)(ENG_AUDIO_PARA), strerror(errno));
+        ALOGE("eng_vdiag Cannot open \"%s\": %s", (char *)(ENG_AUDIO_PARA), strerror(errno));
         return -1;
     }
 
     destfd = open(config_file, O_CREAT|O_RDWR, 0660);
     if (destfd < 0) {
         close(srcfd);
-        ALOGE("Cannot create \"%s\": %s", config_file, strerror(errno));
+        ALOGE("eng_vdiag Cannot create \"%s\": %s", config_file, strerror(errno));
         return -1;
     }
 
     while ((nread = read(srcfd, buf, sizeof(buf))) != 0) {
         if (nread < 0) {
-            ALOGE("Error reading \"%s\": %s",(char *)(ENG_AUDIO_PARA) , strerror(errno));
+            ALOGE("eng_vdiag Error reading \"%s\": %s",(char *)(ENG_AUDIO_PARA) , strerror(errno));
             close(srcfd);
             close(destfd);
             unlink(config_file);
@@ -131,14 +146,14 @@ int ensure_audio_para_file_exists(char *config_file)
 
     /* chmod is needed because open() didn't set permisions properly */
     if (chmod(config_file, 0660) < 0) {
-        ALOGE("Error changing permissions of %s to 0660: %s",
+        ALOGE("eng_vdiag Error changing permissions of %s to 0660: %s",
              config_file, strerror(errno));
         unlink(config_file);
         return -1;
     }
 
     if (chown(config_file, AID_SYSTEM, AID_SYSTEM) < 0) {
-        ALOGE("Error changing group ownership of %s to %d: %s",
+        ALOGE("eng_vdiag Error changing group ownership of %s to %d: %s",
              config_file, AID_SYSTEM, strerror(errno));
         unlink(config_file);
         return -1;
@@ -147,87 +162,121 @@ int ensure_audio_para_file_exists(char *config_file)
 }
 
 
-#define MAX_OPEN_TIMES  10	
-//int main(int argc, char **argv)
+static void set_raw_data_speed(int fd, int speed)
+{
+	unsigned long i = 0;
+	int   status = 0;
+	struct termios Opt;
+
+	tcflush(fd,TCIOFLUSH);
+	tcgetattr(fd, &Opt);
+	for ( i= 0;  i  < sizeof(s_speed_arr) / sizeof(int);  i++){
+		if  (speed == s_name_arr[i])  {
+			/*set raw data mode */
+			Opt.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+			Opt.c_oflag &= ~OPOST;
+			Opt.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+			Opt.c_cflag &= ~(CSIZE | PARENB);
+			Opt.c_cflag |= CS8;
+			Opt.c_iflag = ~(ICANON|ECHO|ECHOE|ISIG);
+			Opt.c_oflag = ~OPOST;
+			cfmakeraw(&Opt);
+			/* set baudrate*/
+			cfsetispeed(&Opt, s_speed_arr[i]);
+			cfsetospeed(&Opt, s_speed_arr[i]);
+			status = tcsetattr(fd, TCSANOW, &Opt);
+			if  (status != 0)
+				perror("tcsetattr fd1");
+			break;
+		}
+	}
+ }
+
 void *eng_vdiag_thread(void *x)
 {
 	int pipe_fd;
 	int ser_fd;
-	ssize_t r_cnt, w_cnt;
+	int r_cnt, w_cnt;
 	int res, ret=0;
-    int wait_cnt = 0;
+	int wait_cnt = 0;
+	struct eng_param * param = (struct eng_param *)x;
 
-	ser_fd = open("/dev/vser",O_RDONLY);
-	if(ser_fd < 0) {
-		ENG_LOG("cannot open general serial\n");
-//		exit(1);
-        return NULL;
+	if(param == NULL){
+		ALOGE("eng_vdiag invalid input\n");
+		return NULL;
 	}
-    do
-    {
-	    pipe_fd = open("/dev/vbpipe0",O_WRONLY);
-	    if(pipe_fd < 0) {
-		    ENG_LOG("vdiag cannot open vpipe0, times:%d\n", wait_cnt);
-            if(wait_cnt++ >= MAX_OPEN_TIMES)
-            {
-                return NULL;
-            }
-            sleep(5);
-	    }
-    }while(pipe_fd < 0);
-	
-	memset(&audio_total,0,sizeof(audio_total));
+	/*open usb/usart*/
+	ser_fd = open( s_connect_ser_path[param->connect_type], O_RDONLY);
+	if(ser_fd > 0){
+		if(param->connect_type == CONNECT_UART){
+			set_raw_data_speed(ser_fd, 115200);
+	}
+	}else{
+		ALOGE("eng_vdiag cannot open general serial\n");
+		return NULL;
+	}
+
+	/*open vpipe/spipe*/
+	do{
+		pipe_fd = open(s_cp_pipe[param->cp_type], O_WRONLY);
+		if(pipe_fd < 0) {
+			ENG_LOG("eng_vdiag cannot open vpipe(spipe), times:%d\n", wait_cnt);
+			if(wait_cnt++ >= MAX_OPEN_TIMES){
+				ALOGE("eng_vdiag cannot open vpipe(spipe)\n");
+				return NULL;
+			}
+			sleep(5);
+		}
+	}while(pipe_fd < 0);
+
+	memset(&audio_total, 0, sizeof(audio_total));
 	if(0 == ensure_audio_para_file_exists((char *)(ENG_AUDIO_PARA_DEBUG))){
 		audio_fd = open(ENG_AUDIO_PARA_DEBUG,O_RDWR);
 	}
-	if(audio_fd>0)read(audio_fd,&audio_total,sizeof(audio_total));
+	if(audio_fd > 0)
+		read(audio_fd, &audio_total, sizeof(audio_total));
 
 	ENG_LOG("put diag data from serial to pipe\n");
 
 	init_user_diag_buf();
 	
 	while(1) {
-        ENG_LOG("DIAGLOG\n");
 		r_cnt = read(ser_fd, log_data, DATA_BUF_SIZE/2);
-        ENG_LOG("DIAGLOG::1r_cnt=%d\n", r_cnt);
-        if (r_cnt == DATA_BUF_SIZE/2) {
-    		r_cnt += read(ser_fd, log_data+r_cnt, DATA_BUF_SIZE/2);
-            ENG_LOG("DIAGLOG::r_cnt=%d\n", r_cnt);
-        }
+		if (r_cnt == DATA_BUF_SIZE/2) {
+			r_cnt += read(ser_fd, log_data+r_cnt, DATA_BUF_SIZE/2);
+		}
 		if (r_cnt < 0) {
-			ENG_LOG("no log data from serial:%d %s\n", r_cnt,
-					strerror(errno));
-			ENG_LOG("close serial\n");
+			ENG_LOG("eng_vdiag read log data error  from serial: %s\n", strerror(errno));
 			close(ser_fd);
-
-			ENG_LOG("reopen serial\n");
-			ser_fd = open("/dev/vser",O_RDONLY);
+			ENG_LOG("eng_vdiag reopen serial\n");
+			ser_fd = open(s_connect_ser_path[param->connect_type], O_RDONLY);
 			if(ser_fd < 0) {
-				ENG_LOG("cannot open vendor serial\n");
-//				exit(1);
-                return NULL;
+				ALOGE("eng_vdiag cannot open vendor serial\n");
+				return NULL;
 			}
-
 		}
 		ret=0;
 		
 		if (get_user_diag_buf(log_data,r_cnt)){
-			ret=eng_diag(ext_data_buf,ext_buf_len);
+			ret = eng_diag(ext_data_buf,ext_buf_len);
 			init_user_diag_buf();
 		}
 
 		if(ret == 1)
 			continue;
 		
-		ENG_LOG("read from diag %d\n", r_cnt);
+		ENG_LOG("eng_vdiag DIAGLOG:: read length =%d\n", r_cnt);
 		//print_log_data(r_cnt);
-		w_cnt = write(pipe_fd, log_data, r_cnt);
-		if (w_cnt < 0) {
-			ENG_LOG("no log data write:%d ,%s\n", w_cnt,
-					strerror(errno));
-			continue;
-		}
-		ENG_LOG("read from diag %d, write to pipe%d\n", r_cnt, w_cnt);
+		do{
+			w_cnt = write(pipe_fd, log_data, r_cnt);
+			if (w_cnt < 0) {
+				ENG_LOG("eng_vdiag no log data write:%d ,%s\n", w_cnt, strerror(errno));
+				continue;
+			}else{
+				r_cnt -= w_cnt;
+			}
+		}while(r_cnt >0);
+		ENG_LOG("eng_vdiag read from diag %d, write to pipe%d\n", r_cnt, w_cnt);
 	}
 out:
 	close(audio_fd);

@@ -39,6 +39,13 @@ static const char* TO_MULTI_SIM_CMDS[] = {
 	"AT+SFUN=4",
 	"AT+SFUN=5"
 };
+static struct eng_param cmdparam = {
+	.califlag = 0,
+	.engtest = 0,
+	.cp_type = CP_TD,
+	.connect_type = CONNECT_USB,
+	.nativeflag = 0
+};
 
 static int eng_pcclient_init(void)
 {
@@ -60,7 +67,7 @@ static int eng_pcclient_init(void)
 	for ( i=0;i<MAX_CS_SIMS;i++ ){
 		cs_sim_fds[i] = -1;
 		while((cs_sim_fds[i] = eng_at_open(i)) < 0){
-			ENG_LOG("%s: open server socket failed!, error[%d][%s]\n",\
+			ENG_LOG(" %s: open server socket failed!, error[%d][%s]\n",\
 					__FUNCTION__, errno, strerror(errno));
 			usleep(500*1000);
 		}
@@ -551,7 +558,6 @@ void eng_check_factorymode_fornand(void)
 	char status_buf[8];
 	char config_property[64];
 
-
 #ifdef USE_BOOT_AT_DIAG
 	ENG_LOG("%s: status=%x\n",__func__, status);
 	property_get("persist.sys.usb.config", config_property, "");
@@ -649,6 +655,105 @@ void eng_ctpcali(void)
 
 }
 
+/* Parse one parameter which is before a special char for string.
+  * buf:[IN], string data to be parsed.
+  * gap:[IN], char, get value before this charater.
+  * value:[OUT] parameter value
+  * return length of parameter
+ */
+static int cali_parse_one_para(char * buf, char gap, int* value)
+{
+	int len = 0;
+	char *ch = NULL;
+	char str[10] = {0};
+
+	if(buf != NULL && value  != NULL){
+		ch = strchr(buf, gap);
+		if(ch != NULL){
+			len = ch - buf ;
+			strncpy(str, buf, len);
+			*value = atoi(str);
+		}
+	}
+	return len;
+}
+
+static int eng_parse_cmdline(struct eng_param * cmdvalue)
+{
+	int fd = 0;
+	char cmdline[ENG_CMDLINE_LEN] = {0};
+	char *str = NULL;
+	int mode =  0;
+	int freq = 0;
+	int device = 0;
+	int len = -1;
+
+	if(cmdvalue == NULL)
+		return -1;
+
+          fd = open("/proc/cmdline", O_RDONLY);
+	if (fd > 0) {
+		if (read(fd, cmdline, sizeof(cmdline)) > 0){
+			ALOGD("eng_pcclient: cmdline %s\n",cmdline);
+			/*calibration*/
+			str = strstr(cmdline, "calibration");
+			if ( str  != NULL){
+				cmdvalue->califlag = 1;
+				/*calibration= mode,freq, device. Example: calibration=8,10096,146*/
+				str = strchr(str, '=');
+				if(str != NULL){
+					str++;
+					/*get calibration mode*/
+					len = cali_parse_one_para(str, ',', &mode);
+					if(len > 0){
+						str = str + len +1;
+						/*get calibration freq*/
+						len = cali_parse_one_para(str, ',', &freq);
+						/*get calibration device*/
+						str = str + len +1;
+						len = cali_parse_one_para(str, ' ', &device);
+					}
+					switch(mode){
+						case 1:
+						case 5:
+						case 7:
+						case 8:
+							cmdvalue->cp_type = CP_TD;
+							break;
+						case 11:
+						case 12:
+						case 14:
+						case 15:
+							cmdvalue->cp_type = CP_WCDMA;
+							break;
+						default:
+							break;
+					}
+
+					/*Device[4:6] : device that AP uses;  0: UART 1:USB  2:SPIPE*/
+					cmdvalue->connect_type = (device >> 4) & 0x3;
+
+					if(device >>7)
+						cmdvalue->nativeflag = 1;
+					else
+						cmdvalue->nativeflag = 0;
+
+					ALOGD("eng_pcclient: cp_type=%d, connent_type(AP) =%d, is_native=%d\n",
+						cmdvalue->cp_type, cmdvalue->connect_type, cmdvalue->nativeflag );
+				}
+			}else{
+				/*if not in calibration mode, use default */
+				cmdvalue->cp_type = CP_TD;
+				cmdvalue->connect_type = CONNECT_USB;
+			}
+			/*engtest*/
+			if(strstr(cmdline,"engtest") != NULL)
+				cmdvalue->engtest = 1;
+			close(fd);
+		}
+	}
+	return 0;
+}
 
 int main(void)
 {
@@ -673,25 +778,14 @@ int main(void)
 #endif
 	eng_sqlite_create();
 
-	memset(cmdline, 0, ENG_CMDLINE_LEN);
-	fd = open("/proc/cmdline", O_RDONLY);
-	if(fd > 0) {
-		rc = read(fd, cmdline, sizeof(cmdline));
-		ENG_LOG("ENGTEST_MODE: cmdline=%s\n", cmdline);
-		if(rc > 0) {
-			if(strstr(cmdline,ENG_CALISTR) != NULL)
-				califlag = 1;
-			if(strstr(cmdline,"engtest") != NULL)
-				engtest = 1;
-		}
-	}
-	ALOGD("eng_pcclient califlag=%d, engtest=%d\n",califlag, engtest);
+	eng_parse_cmdline(&cmdparam);
+	ENG_LOG("eng_pcclient califlag=%d, engtest=%d\n", cmdparam.califlag, cmdparam.engtest);
 
-	if(engtest == 1) {
+	if(cmdparam.engtest == 1) {
 		eng_ctpcali();
 	}
 
-	if(califlag == 1){ //at handler in calibration mode
+	if(cmdparam.califlag == 1 && cmdparam.nativeflag == 0){ //at handler in calibration mode
 		eng_atcali_thread();
 		return 0;
 	}
@@ -704,11 +798,11 @@ int main(void)
 
 	set_vlog_priority();
 	
-	if (0 != eng_thread_create( &t1, eng_vlog_thread, NULL)){
+	if (0 != eng_thread_create( &t1, eng_vlog_thread, &cmdparam)){
 		ENG_LOG("vlog thread start error");
 	}
 
-	if (0 != eng_thread_create( &t2, eng_vdiag_thread, NULL)){
+	if (0 != eng_thread_create( &t2, eng_vdiag_thread, &cmdparam)){
 		ENG_LOG("vdiag thread start error");
 	}
 
@@ -720,22 +814,27 @@ int main(void)
 		ENG_LOG("sd log thread start error");
 	}
 
+	if(cmdparam.califlag  != 1  || cmdparam.nativeflag  != 1)
+	{
+		rc = eng_pcclient_init();
 
-	rc = eng_pcclient_init();
+		if(rc == -1) {
+			ENG_LOG("%s: init fail, exit\n",__func__);
+			return -1;
+		}
 
-	if(rc == -1) {
-		ENG_LOG("%s: init fail, exit\n",__func__);
-		return -1;
+		if (0 != eng_thread_create( &t5, eng_atauto_thread, NULL)){
+			ENG_LOG("atauto thread start error");
+		}
+
+		eng_pcclient_hdlr(NULL);
+	}else{
+		/*calibration mode for native (AP dirrectily  communicates with PC tool)
+		    keep eng_pcclient thread alive*/
+		while(1){
+			sleep(10000);
+		}
 	}
 
-	if (0 != eng_thread_create( &t5, eng_atauto_thread, NULL)){
-		ENG_LOG("atauto thread start error");
-	}	
-
-	eng_pcclient_hdlr(NULL);
-
 	return 0;
-
 }
-
-

@@ -232,13 +232,13 @@ int update_fixnvfile(const char *src, unsigned long size)
 	ret = write(srcfd, fixnv_buffer, size + 4);
 	if (ret != (size + 4)) {
 		memset(gbuffer, 0, BUFFER_LEN);
-		sprintf(gbuffer, "write %s error size = %d  ret = %d\n", src, (size + 4), ret);
+		sprintf(gbuffer, "write %s error size = %ld  ret = %ld\n", src, (size + 4), ret);
 		log2file();
 	} else {
 		if (req_head_info_count < REQHEADINFOCOUNT) {
 			req_head_info_count++;
 			memset(gbuffer, 0, BUFFER_LEN);
-			sprintf(gbuffer, "write %s right size = %d  ret = %d\n", src, (size + 4), ret);
+			sprintf(gbuffer, "write %s right size = %ld  ret = %ld\n", src, (size + 4), ret);
 			log2file();
 		}
 	}
@@ -256,7 +256,7 @@ int update_backupfile(const char *dst, unsigned long size)
 	if (req_head_info_count < REQHEADINFOCOUNT) {
 		req_head_info_count++;
 		memset(gbuffer, 0, BUFFER_LEN);
-		sprintf(gbuffer, "update bkupfixnv = %s  size = %d\n", dst, size);
+		sprintf(gbuffer, "update bkupfixnv = %s  size = %ld\n", dst, size);
 		log2file();
 	}
 
@@ -275,13 +275,13 @@ int update_backupfile(const char *dst, unsigned long size)
 	ret = write(dstfd, fixnv_buffer, size + 4);
 	if (ret != (size + 4)) {
 		memset(gbuffer, 0, BUFFER_LEN);
-		sprintf(gbuffer, "write %s error size = %d  ret = %d\n", dst, (size + 4), ret);
+		sprintf(gbuffer, "write %s error size = %ld  ret = %ld\n", dst, (size + 4), ret);
 		log2file();
 	} else {
 		if (req_head_info_count < REQHEADINFOCOUNT) {
 			req_head_info_count++;
 			memset(gbuffer, 0, BUFFER_LEN);
-			sprintf(gbuffer, "write %s right size = %d  ret = %d\n", dst, (size + 4), ret);
+			sprintf(gbuffer, "write %s right size = %ld  ret = %ld\n", dst, (size + 4), ret);
 			log2file();
 		}
 	}
@@ -327,13 +327,13 @@ int update_productinfofile_emmc(const char *src, const char *dst, unsigned long 
 	fsync(srcfd);
 	if (ret != (size + 8)) {
 		memset(gbuffer, 0, BUFFER_LEN);
-		sprintf(gbuffer, "write %s error size = %d  ret = %d\n", src, (size + 8), ret);
+		sprintf(gbuffer, "write %s error size = %ld  ret = %ld\n", src, (size + 8), ret);
 		log2file();
 	} else {
 		if (req_head_info_count < REQHEADINFOCOUNT) {
 			req_head_info_count++;
 			memset(gbuffer, 0, BUFFER_LEN);
-			sprintf(gbuffer, "write %s right size = %d  ret = %d\n", src, (size + 8), ret);
+			sprintf(gbuffer, "write %s right size = %ld  ret = %ld\n", src, (size + 8), ret);
 			log2file();
 		}
 	}
@@ -351,13 +351,13 @@ int update_productinfofile_emmc(const char *src, const char *dst, unsigned long 
 	fsync(dstfd);
 	if (ret != (size + 4)) {
 		memset(gbuffer, 0, BUFFER_LEN);
-		sprintf(gbuffer, "write %s error size = %d  ret = %d\n", dst, (size + 4), ret);
+		sprintf(gbuffer, "write %s error size = %ld  ret = %ld\n", dst, (size + 4), ret);
 		log2file();
 	} else {
 		if (req_head_info_count < REQHEADINFOCOUNT) {
 			req_head_info_count++;
 			memset(gbuffer, 0, BUFFER_LEN);
-			sprintf(gbuffer, "write %s right size = %d  ret = %d\n", dst, (size + 4), ret);
+			sprintf(gbuffer, "write %s right size = %ld  ret = %ld\n", dst, (size + 4), ret);
 			log2file();
 		}
 	}
