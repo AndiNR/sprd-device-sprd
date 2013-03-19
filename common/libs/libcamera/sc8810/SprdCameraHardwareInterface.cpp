@@ -1126,17 +1126,16 @@ status_t SprdCameraHardware::setParameters(const CameraParameters& params)
         // libqcamera only supports certain size/aspect ratios
         // find closest match that doesn't exceed app's request
         int width, height;
+	int rawWidth , rawHeight;
         params.getPreviewSize(&width, &height);
+	params.getPictureSize(&rawWidth, &rawHeight);
         ALOGV("requested size %d x %d", width, height);
-
-        mParameters.getPreviewSize(&mPreviewWidth, &mPreviewHeight);
-        mParameters.getPictureSize(&mRawWidth, &mRawHeight);
+	mPreviewWidth = (width + 1) & ~1;
+        mPreviewHeight = (height + 1) & ~1;
+        mRawHeight = (rawHeight + 1) & ~1;
+        mRawWidth = (rawWidth + 1) & ~1;
         ALOGV("requested picture size %d x %d", mRawWidth, mRawHeight);
         ALOGV("requested preview size %d x %d", mPreviewWidth, mPreviewHeight);
-        mPreviewWidth = (mPreviewWidth + 1) & ~1;
-        mPreviewHeight = (mPreviewHeight + 1) & ~1;
-        mRawHeight = (mRawHeight + 1) & ~1;
-        mRawWidth = (mRawWidth + 1) & ~1;
 
         if(CAMERA_ZOOM_MAX <= atoi(mParameters.get("zoom")) ){
                 mParameters.set("zoom", mParameters.get("max-zoom"));
