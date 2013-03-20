@@ -88,6 +88,11 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
     private void updataDSPOption(int selectedId) {
         // TODO Auto-generated method stub
         Log.d(LOG_TAG, "updataDSPOption selectedId=["+selectedId+"]");
+        /*Add 20130320 Spreadst of 139908 check the selected ID start */
+        if(selectedId == -1){
+            return;
+        }
+        /*Add 20130320 Spreadst of 139908 check the selected ID end */
         DspPrefs.setValueIndex(selectedId);
         DspPrefs.setSummary(DspPrefs.getEntry());
     }
