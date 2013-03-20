@@ -7,3 +7,5 @@ This directory contains little tools for sysdump.
     	it runs on x86, make sure arm-eabi-gdb is in $PATH.
 3.  "corebt.c" is source code for corebt, just to type
 	"make corebt" to generate corebt executable.
+4.  "CortexA5MP2_attach.cmm" is a script for Trace32 to
+	attach Tiger phone.
