@@ -99,11 +99,15 @@
    	android:targetClass="com.spreadtrum.android.eng.LogSetting"/>
    </Preference>
 
-   <Preference android:key="misc" android:title="Misc" android:summary="misc">
-   	<intent android:action="android.intent.action.MAIN"
-   		android:targetPackage="com.spreadtrum.android.eng"
-   		android:targetClass="com.spreadtrum.android.eng.Misc" />
-   </Preference>
+    <!-- Modify 20130320 Spreadst of 140023 remove the summary start -->
+    <!-- <Preference android:key="misc" android:summary="misc" android:title="Misc" > -->
+    <Preference android:key="misc" android:title="Misc" >
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetClass="com.spreadtrum.android.eng.Misc"
+            android:targetPackage="com.spreadtrum.android.eng" />
+    </Preference>
+    <!-- Modify 20130320 Spreadst of 140023 remove the summary end -->
 
    	<CheckBoxPreference android:key="accelerometer_rotation"
 			android:title="Accelerometer Rotation"
