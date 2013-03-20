@@ -13,12 +13,14 @@
 /dev/al3006_pls         0666     system      system
 /dev/lis3dh_acc         0660     system      system
 /dev/akm8963_dev        0660     system      system
-/dev/ts0710mux*         0660     radio       radio
+/dev/ts0710mux*         0660     radio       system
 /dev/BEKEN_FM           0666     system      audio
 /dev/mdtv*              0600     system  system
 /dev/mxdspidev          0666     system  system
-/dev/vbpipe1            0660     system  system
-/dev/vbpipe0            0660     system  system
 /dev/ttyS2              0660     system      system
 /dev/gpsctl             0660     system      system
 /dev/ts0710mux23        0660     media   audio
+/dev/ttyGS0             0660     system  system
+/dev/vser               0660     system  system
+/dev/ttyS1              0660     system  system
+

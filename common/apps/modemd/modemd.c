@@ -6,6 +6,7 @@
 #include <cutils/sockets.h>
 #include <pthread.h>
 #include <utils/Log.h>
+#include <signal.h>
 
 #define LOG_TAG 	"MODEMD"
 #define MODEM_SOCKET_NAME	"modemd"
@@ -38,7 +39,7 @@ static void *modemd_listenaccept_thread(void *par)
 		client_fd[i]=-1;
 
 	sfd = socket_local_server(MODEM_SOCKET_NAME,
-		0/*ANDROID_SOCKET_NAMESPACE_RESERVED*/, SOCK_STREAM);
+		ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
 	if (sfd < 0) {
 		ALOGE("%s: cannot create local socket server", __FUNCTION__);
 		exit(-1);
@@ -70,7 +71,17 @@ int main(int argc, char *argv[])
 	ssize_t numRead;
 	char buf[DATA_BUF_SIZE];
 	pthread_t t1;
+	struct sigaction action;
 
+	memset(&action, 0x00, sizeof(action));
+	action.sa_handler = SIG_IGN;
+	action.sa_flags = 0;
+	sigemptyset(&action.sa_mask);
+	ret = sigaction (SIGPIPE, &action, NULL);
+	if (ret < 0) {
+		ALOGE("sigaction() failed!\n");
+		exit(1);
+	}
 
 	modemfd = open(MODEM_PATH, O_RDONLY);
 

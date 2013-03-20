@@ -37,6 +37,17 @@ on boot
     chown system system /sys/class/compass/akm8975/delay_ori
     chown system system /sys/class/compass/akm8975/accel
 
+    chmod 660 /proc/nk/resume
+    chmod 660 /proc/nk/restart
+    chmod 660 /proc/nk/guest-02/dsp_bank
+    chmod 660 /proc/nk/guest-02/guestOS_2_bank
+    chown system root /proc/nk/resume
+    chown system root /proc/nk/restart
+    chown system root /proc/nk/guest-02/dsp_bank
+    chown system root /proc/nk/guest-02/guestOS_2_bank
+
+    chown system system /sys/class/power_supply/*
+
     chmod 666 /dev/ttyS0
     chmod 660 /proc/bluetooth/sleep/proto
     chmod 660 /sys/class/rfkill/rfkill0/state
@@ -51,6 +62,7 @@ on boot
     mkdir /data/misc/dhcp 0770 dhcp dhcp
     chown dhcp dhcp /data/misc/dhcp
     setprop wifi.interface wlan0
+    chown system system /proc/sys/kernel/printk
 
 on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
@@ -63,56 +75,73 @@ service mfserial /system/bin/mfserial ts0710mux9 ttyS1 1
 #start rawdata daemon.
 service rawdatad /bin/rawdatad
     class core
-    user root
+    user system
     oneshot
 
 #start nvitem daemon.
 service nvm_daemon /system/bin/nvm_daemon
     class main
-    user root
+    user system
+    group system radio shell
     oneshot
 
 #telephony service
 service sprd_monitor /system/bin/sprd_monitor
-    class main
-    user root
+    class core
+    user system
+    group system radio shell
     oneshot
 
 service modemd /system/bin/modemd
     class main
+    user system
+    group system radio
     oneshot
 
 service engpcclient /system/bin/engpcclient
     class main
+    user system
+    group system shell
     disabled
     oneshot
 
 service engservice /system/bin/engservice
     class main
+    user system
+    group system
     disabled
     oneshot
 
 service engmodemclient /system/bin/engmodemclient
     class main
+    user system
+    group system radio
     disabled
     oneshot
 
 service engsetmacaddr /system/bin/engsetmacaddr
     class main
+    user system
     oneshot
 
 service phoneserver /system/bin/phoneserver
-    class main
+    class core
+    user system
+    group system radio shell
     disabled
     oneshot
 
 service phoneserver_2sim /system/bin/phoneserver_2sim
-    class main
+    class core
+    user system
+    group system radio shell
     disabled
     oneshot
+
 service vcharged /bin/vcharged
     class core
-    user root
+    user system
+    group system
     disabled
     oneshot
 
@@ -243,4 +272,41 @@ service iprenew_p2p /system/bin/dhcpcd -n
 
 service slog /system/bin/slog
     class main
+    user system
+    group shell
+
+#create symlink
+service pty_symlink /system/bin/ext_symlink.sh -p
     user root
+    disabled
+    oneshot
+
+service smd_symlink /system/bin/ext_symlink.sh -u
+    user root
+    disabled
+    oneshot
+
+#data on
+service data_on /system/bin/ext_data.sh  -u
+    user root
+    disabled
+    oneshot
+
+#data off
+service data_off /system/bin/ext_data.sh  -d
+    user root
+    disabled
+    oneshot
+
+#kill app
+service kill_phone /system/bin/ext_kill.sh  -m
+    user root
+    disabled
+    oneshot
+
+#change owner
+service chown_service /system/bin/ext_chown.sh  -c
+    class main
+    user root
+    oneshot
+

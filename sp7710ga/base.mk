@@ -92,6 +92,9 @@ PRODUCT_COPY_FILES := \
         $(BOARDDIR)/hw_params/tiny_hw.xml:system/etc/tiny_hw.xml \
         $(BOARDDIR)/hw_params/codec_pga.xml:system/etc/codec_pga.xml \
         $(BOARDDIR)/hw_params/audio_para:system/etc/audio_para \
+	$(BOARDDIR)/scripts/ext_symlink.sh:system/bin/ext_symlink.sh \
+	$(BOARDDIR)/scripts/ext_data.sh:system/bin/ext_data.sh \
+	$(BOARDDIR)/scripts/ext_kill.sh:system/bin/ext_kill.sh \
 	device/sprd/common/libs/mali/egl.cfg:system/lib/egl/egl.cfg \
 	device/sprd/common/libs/audio/audio_policy.conf:system/etc/audio_policy.conf \
 	device/sprd/common/res/media/media_codecs.xml:system/etc/media_codecs.xml \
