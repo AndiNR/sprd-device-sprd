@@ -19,15 +19,17 @@
 
 /dev/mdtv*              0600     system  system
 /dev/mxdspidev          0666     system  system
+
 /dev/vbpipe0            0666     system  system
 /dev/vbpipe1            0660     system  system
 /dev/vbpipe2            0666     system  system
 /dev/vbpipe3            0666     system  system
 /dev/vbpipe6            0660     media   audio
 /dev/ttyNK3             0660     radio   system
-/dev/ttyVUART0          0660     system  system
+/dev/ttyVUART0          0660     radio   system
 /dev/ttyGS0             0660     system  system
 /dev/vser               0660     system  system
+/dev/ttyS1              0660     system  system
 
 /dev/block/mmcblk0p2    0660     system  system
 /dev/block/mmcblk0p3    0660     system  system
@@ -38,4 +40,3 @@
 /dev/block/mmcblk0p8    0660     system  system
 /dev/block/mmcblk0p9    0660     system  system
 
-/dev/pts/*              0660     system  system

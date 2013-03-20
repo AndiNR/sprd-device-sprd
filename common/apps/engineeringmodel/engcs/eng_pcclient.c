@@ -17,6 +17,7 @@
 #include <sys/ioctl.h>
 #include "cutils/sockets.h"
 #include "cutils/properties.h"
+#include <private/android_filesystem_config.h>
 
 //only support 2 sims now!!!!
 #define MAX_CS_SIMS 2
@@ -47,13 +48,143 @@ static struct eng_param cmdparam = {
 	.nativeflag = 0
 };
 
+#if PC_DATA_FROM_AT_ROUTER
+int create_pty(char *path)
+{
+	int fdm;
+	char *slavename;
+	char property[64] = {0};
+	extern char *ptsname();
+	fdm = open("/dev/ptmx", O_RDWR);
+	grantpt(fdm);
+	unlockpt(fdm);
+	slavename = ptsname(fdm);
+	unlink(path);
+	ALOGD("[%d]%s --> %s\n", fdm, path, slavename);
+	chmod(slavename, 0664);
+	chown(slavename, AID_SYSTEM, AID_RADIO);
+	sprintf(property, "%s  %s", slavename, path);
+
+	/* set the property */
+	property_set("sys.symlink.umts_router", property);
+	property_set("ctl.stop", "smd_symlink");
+	property_set("ctl.start", "smd_symlink");
+
+	return fdm;
+}
+#endif
+
+#ifdef CONFIG_ENG_UART_USB_AUTO
+static int printk_fd = -1;
+
+void eng_enable_kmsg(int enable)
+{
+	char log_level;
+
+	printk_fd = open("/proc/sys/kernel/printk", O_RDWR);
+	if (printk_fd == -1) {
+		ALOGE("Open sysfs printk error. %s", strerror(errno));
+		return;
+	}
+
+	log_level = (enable ? '8' : '0');
+
+	write(printk_fd, &log_level, 1);
+
+	close(printk_fd);
+}
+
+
+static int eng_pcclient_open_uart_device(void)
+{
+        struct termios termio;
+	int uart_fd = -1;
+	const char* uart_devname = "/dev/ttyS1";
+
+        /* uart device */
+        uart_fd = open(uart_devname, O_RDWR);
+        if(uart_fd < 0){
+                ALOGE("%s: open %s failed [%s]\n", __func__, uart_devname, strerror(errno));
+                return -1;
+        }
+
+        /* set uart parameters: 115200n8n1 */
+        tcgetattr(uart_fd, &termio);
+        cfsetispeed(&termio, (speed_t)B115200);
+        cfsetospeed(&termio, (speed_t)B115200);
+        termio.c_cflag &= ~PARENB;
+        termio.c_cflag &= ~CSIZE;
+        termio.c_cflag |= CS8;
+        termio.c_cflag &= ~CSTOPB;
+        tcsetattr(uart_fd, TCSAFLUSH, &termio);
+
+	dup2(uart_fd, 0);
+	dup2(uart_fd, 1);
+	dup2(uart_fd, 2);
+
+	return uart_fd;
+}
+
+
+static int eng_pcclient_open_device()
+{
+	int usb_state_fd;
+	int port_fd;
+
+	int ret;
+	char state[32] = {0};
+	struct termios ser_settings;
+
+	usb_state_fd = open(ENG_USBIN, O_RDONLY);
+	if (usb_state_fd == -1) {
+		ALOGE("open sysfs failed");
+		exit(1);
+	}
+	memset(state, 0, sizeof(state));
+	lseek(usb_state_fd, 0, SEEK_SET);
+
+	ret = read(usb_state_fd, state, sizeof(state));
+	if (ret > 0 && strncmp(state, ENG_USBCONNECTD, strlen(ENG_USBCONNECTD)) == 0) {
+		ALOGD("USB connected, open gser device");
+		port_fd = open(PC_GSER_DEV, O_RDWR);
+
+		tcgetattr(port_fd, &ser_settings);
+		cfmakeraw(&ser_settings);
+
+		//tcsetattr(port_fd, TCSANOW, &ser_settings);
+	}
+	else{
+		ALOGD("USB disconnected, open uart device");
+
+		eng_enable_kmsg(0);
+
+		port_fd = eng_pcclient_open_uart_device();
+	}
+
+	if(port_fd < 0){
+		ENG_LOG("%s: open device fail [%s]\n",__FUNCTION__,  strerror(errno));
+		return -1;
+	}
+
+	return port_fd;
+}
+
+#endif
+
 static int eng_pcclient_init(void)
 {
 	int i;
 	struct termios ser_settings;
 
-	pc_client_fd = open(PC_GSER_DEV, O_RDWR); 
-	
+#ifdef CONFIG_ENG_UART_USB_AUTO
+	pc_client_fd = eng_pcclient_open_device();
+#else
+
+#if PC_DATA_FROM_AT_ROUTER
+	pc_client_fd =  create_pty("/dev/umts_router");
+#else
+	pc_client_fd = open(PC_GSER_DEV, O_RDWR);
+#endif
 	if(pc_client_fd < 0){
 		ENG_LOG("%s: open %s fail [%s]\n",__FUNCTION__, PC_GSER_DEV, strerror(errno));
 		return -1;
@@ -63,7 +194,7 @@ static int eng_pcclient_init(void)
 	cfmakeraw(&ser_settings);
 
 	//tcsetattr(pc_client_fd, TCSANOW, &ser_settings);
-	
+#endif
 	for ( i=0;i<MAX_CS_SIMS;i++ ){
 		cs_sim_fds[i] = -1;
 		while((cs_sim_fds[i] = eng_at_open(i)) < 0){
@@ -521,13 +652,13 @@ static void *eng_modemreset_thread(void *par)
 	}
 	
     soc_fd = socket_local_client( MODEM_SOCKET_NAME,
-                         0/*ANDROID_SOCKET_NAMESPACE_RESERVED*/, SOCK_STREAM);
+                         ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
 
 	while(soc_fd < 0) {
 		ALOGD("%s: Unable bind server %s, waiting...\n",__func__, MODEM_SOCKET_NAME);
 		usleep(10*1000);
     	soc_fd = socket_local_client( MODEM_SOCKET_NAME,
-                         0/*ANDROID_SOCKET_NAMESPACE_RESERVED*/, SOCK_STREAM);		
+                         ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
 	}
 
 	ALOGD("%s, fd=%d, pipe_fd=%d\n",__func__, soc_fd, pipe_fd);

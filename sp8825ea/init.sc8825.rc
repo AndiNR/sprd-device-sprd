@@ -36,6 +36,18 @@ on post-fs-data
 
 on boot
     chown system system /sys/class/backlight/sprd_backlight/brightness
+
+    chmod 660 /proc/nk/resume
+    chmod 660 /proc/nk/restart
+    chmod 660 /proc/nk/guest-02/dsp_bank
+    chmod 660 /proc/nk/guest-02/guestOS_2_bank
+    chown system root /proc/nk/resume
+    chown system root /proc/nk/restart
+    chown system root /proc/nk/guest-02/dsp_bank
+    chown system root /proc/nk/guest-02/guestOS_2_bank
+
+    chown system system /sys/class/power_supply/*
+
     insmod /system/lib/modules/ft5306_ts.ko
     insmod /system/lib/modules/bcmdhd.ko
 
@@ -53,6 +65,7 @@ on boot
     mkdir /data/misc/dhcp 0770 dhcp dhcp
     chown dhcp dhcp /data/misc/dhcp
     setprop wifi.interface wlan0
+    chown system system /proc/sys/kernel/printk
 
     write /sys/class/gpio/export 167
     write /sys/class/gpio/gpio167/direction out
@@ -78,50 +91,77 @@ on property:ro.debuggable=1
 #start rawdata daemon.
 service rawdatad /bin/rawdatad
     class core
-    user root
+    user system
+    oneshot
+
+#start nvitem daemon.
+service nvm_daemon /system/bin/nvm_daemon
+    class main
+    user system
+    group system radio shell
     oneshot
 
 #telephony service
 service sprd_monitor /system/bin/sprd_monitor
-    class main
-    user root
+    class core
+    user system
+    group system radio shell
     oneshot
 
 service modemd /system/bin/modemd
     class main
+    user system
+    group system radio
     oneshot
 
 service engpcclient /system/bin/engpcclient
     class main
+    user system
+    group system shell
     disabled
     oneshot
 
 service engservice /system/bin/engservice
     class main
+    user system
+    group system
     disabled
     oneshot
 
 service engmodemclient /system/bin/engmodemclient
     class main
+    user system
+    group system radio
     disabled
     oneshot
 
 service engsetmacaddr /system/bin/engsetmacaddr
     class main
+    user system
     oneshot
 
 service phoneserver /system/bin/phoneserver
-    class main
+    class core
+    user system
+    group system radio shell
     disabled
     oneshot
 
 service phoneserver_2sim /system/bin/phoneserver_2sim
-    class main
+    class core
+    user system
+    group system radio shell
     disabled
     oneshot
+
+service calibrationinit /system/bin/calibration_init
+    class main
+    oneshot
+
 service vcharged /bin/vcharged
     class core
-    user root
+    user system
+    group system
     disabled
     oneshot
 
@@ -129,9 +169,7 @@ service charge /bin/charge
     class charger
     user root
     oneshot
-service engtest /system/bin/engtest
-    user root
-    oneshot
+
 #rild service
 service ril-daemon /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -- -n 0
     class main
@@ -150,23 +188,6 @@ service ril-daemon1 /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -
 
 on property:persist.msms.phone_count=2
     start ril-daemon1
-
-on property:ro.nativemodem=true
-    symlink /dev/slog_td /dev/vbpipe0
-    symlink /dev/spipe_td1 /dev/vbpipe1
-    symlink /dev/spipe_td2 /dev/vbpipe2
-    symlink /dev/spipe_td3 /dev/vbpipe3
-    symlink /dev/spipe_td6 /dev/vbpipe6
-
-#start nvitem daemon.
-service nvm_daemon /system/bin/nvm_daemon
-    class main
-    user root
-    oneshot
-
-service calibrationinit /system/bin/calibration_init
-    class main
-    oneshot
 
 service bootsound /system/bin/mplayer /system/media/bootsound
     user media
@@ -287,7 +308,8 @@ service iprenew_bnep0 /system/bin/dhcpcd -n
 
 service slog /system/bin/slog
     class main
-    user root
+    user system
+    group shell
 
 on boot
     chown system system /dev/iio:device0
@@ -407,3 +429,39 @@ on boot
     insmod /system/lib/modules/ltr_558als.ko
     chown system system /dev/ltr_558als
     chmod 0664 /dev/ltr_558als
+
+#create symlink
+service pty_symlink /system/bin/ext_symlink.sh -p
+    user root
+    disabled
+    oneshot
+
+service smd_symlink /system/bin/ext_symlink.sh -u
+    user root
+    disabled
+    oneshot
+
+#data on
+service data_on /system/bin/ext_data.sh  -u
+    user root
+    disabled
+    oneshot
+
+#data off
+service data_off /system/bin/ext_data.sh  -d
+    user root
+    disabled
+    oneshot
+
+#kill app
+service kill_phone /system/bin/ext_kill.sh  -m
+    user root
+    disabled
+    oneshot
+
+#change owner
+service chown_service /system/bin/ext_chown.sh  -c
+    class main
+    user root
+    oneshot
+
