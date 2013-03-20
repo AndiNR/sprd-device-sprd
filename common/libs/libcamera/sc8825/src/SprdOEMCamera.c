@@ -1628,6 +1628,7 @@ camera_ret_code_type camera_cancel_autofocus(void)
 
 uint32_t camera_get_size_align_page(uint32_t size)
 {
+	return size;
 	uint32_t buffer_size, page_size;
 
 	page_size = getpagesize();
