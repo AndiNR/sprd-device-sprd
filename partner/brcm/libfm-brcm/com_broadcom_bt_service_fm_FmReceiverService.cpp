@@ -203,9 +203,9 @@ static void decodePendingEvent(tCTRL_HANDLE handle, tBTLIF_CTRL_MSG_ID id, tBTL_
             fm_params->chnl_info.freq = gfm_context.cur_freq = (UINT16)(params->fm_IIII_param.i3);
             fm_params->chnl_info.snr = (INT8)(params->fm_IIII_param.i4);
 
-            LOGI("%s: Event ID: %d, Frequence:%d\n",__FUNCTION__,id, fm_params->chnl_info.freq);
             enqueuePendingEvent(BTA_FM_SEARCH_CMPL_EVT, fm_params);
             gMutex.signal();
+            LOGI("BTLIF_FM_SEARCH_CMPL_EVT: %d, %d, %d, %d",fm_params->chnl_info.status, fm_params->chnl_info.rssi, fm_params->chnl_info.freq, fm_params->chnl_info.snr);
             break;
         case BTLIF_FM_SEARCH_ABORT:
             //fm_params = (tBTA_FM*)malloc(sizeof(tBTA_FM));
@@ -214,6 +214,7 @@ static void decodePendingEvent(tCTRL_HANDLE handle, tBTLIF_CTRL_MSG_ID id, tBTL_
             fm_params->chnl_info.freq = gfm_context.cur_freq = (UINT16)(params->fm_III_param.i3);
             enqueuePendingEvent(BTA_FM_SEARCH_CMPL_EVT, fm_params);
             gMutex.signal();
+            LOGI("BTLIF_FM_SEARCH_ABORT: %d, %d, %d",fm_params->chnl_info.status, fm_params->chnl_info.rssi, fm_params->chnl_info.freq);
             break;
         case BTLIF_FM_SET_RDS_MODE:
             LOGI("%s: RDS MODE EVENT",__FUNCTION__);
@@ -298,6 +299,7 @@ static void decodePendingEvent(tCTRL_HANDLE handle, tBTLIF_CTRL_MSG_ID id, tBTL_
             fm_params->volume.volume= (UINT16)(params->fm_II_param.i2);
             enqueuePendingEvent(BTA_FM_VOLUME_EVT, fm_params);
             gMutex.signal();
+            LOGI("BTLIF_FM_SET_VOLUME_EVT: volume %d, %d",fm_params->volume.status, fm_params->volume.volume);
             break;
 
         default: gCurrentEventID = BTLIF_FM_CMD_BASE ; break;

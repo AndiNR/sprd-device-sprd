@@ -78,6 +78,7 @@ static int FUNC_REGION_JP = 0x02;
 static int FUNC_REGION_JP_II = 0x03;
 
 static int gVolume = 0;
+static int volumeTbl[16] = {0, 1, 2, 4, 8, 16, 32, 48, 64, 80, 108, 128, 150, 180, 210, 256};
 
 /* native interface */
 const int APP_SCAN_MODE_DOWN = 0x00;
@@ -160,10 +161,20 @@ setControl(struct fm_device_t* dev,int id, int value)
 
         case V4L2_CID_AUDIO_VOLUME:
         {
+                  if( value < 0 )
+                  {
+                      gVolume = 0;
+                  }
+                  else if( value > 15 )
+                  {
+                      gVolume = 256;
+                  }
+                  else
+                      gVolume = volumeTbl[value];
 
-                  gVolume = value;
+                  LOGD("Set Volume : %d, %d\n", value, gVolume);
 
-	          setFMVolumeNative(value*17);
+	          setFMVolumeNative( gVolume );
 
 	          if(gMutex.wait(0, 3))
 	              return FM_FAILURE;
@@ -277,17 +288,33 @@ static int
 cancelSearch(struct fm_device_t* dev)
 {
     struct bcm4330_fm_device_t *device = (struct bcm4330_fm_device_t *)dev;
+    unsigned long long last_time, cur_time;
+    timeval tv;
+    unsigned   elapse_time = 0;
 
-    LOGD("%s\n", __FUNCTION__);
+    gettimeofday( &tv, NULL);
+    last_time = ( tv.tv_sec*1000*1000 + tv.tv_usec )/1000;
+    LOGD("%s  ==>\n", __FUNCTION__);
 
     if( searchAbortNative())
     {
+       gettimeofday( &tv, NULL);
+       cur_time = ( tv.tv_sec*1000*1000 + tv.tv_usec )/1000;
+       elapse_time = cur_time - last_time;
+
+       LOGD("%s  <== Tag1, elapse time is %d ms\n", __FUNCTION__ , elapse_time);
        return FM_SUCCESS;
     }
     else
     {
+       gettimeofday( &tv, NULL);
+       cur_time = ( tv.tv_sec*1000*1000 + tv.tv_usec )/1000;
+       elapse_time = cur_time - last_time;
+
+       LOGD("%s  <== Tag2, elapse time is %d ms\n", __FUNCTION__ , elapse_time);
        return FM_FAILURE;
     }
+    
 
 }
 
