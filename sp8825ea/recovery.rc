@@ -51,7 +51,7 @@ service ueventd /sbin/ueventd
 service recovery /sbin/recovery
 
 service adbd /sbin/adbd recovery
-   
+  disabled
 
 # Always start adbd on userdebug and eng builds
 on property:ro.debuggable=1
