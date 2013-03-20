@@ -21,6 +21,17 @@ static int vser_fd = 0;
 int is_sdcard_exist=1;
 int pipe_fd;
 
+static int s_connect_type = 0;
+static char* s_connect_ser_path[]={
+	"/dev/ttyS1", //uart
+	"/dev/vser", //usb
+	NULL
+};
+static char* s_cp_pipe[]={
+	"/dev/vbpipe0", //cp_td
+	NULL
+};
+
 int get_vser_fd(void)
 {
 	return vser_fd;
@@ -28,17 +39,16 @@ int get_vser_fd(void)
 
 int restart_vser(void)
 {
-	ENG_LOG("close usb serial:%d\n", vser_fd);
+	ENG_LOG("eng_vlog close usb serial:%d\n", vser_fd);
 	close(vser_fd);
 
-	vser_fd = open("/dev/vser",O_WRONLY);
+	vser_fd = open(s_connect_ser_path[s_connect_type],O_WRONLY);
 	if(vser_fd < 0) {
-		ENG_LOG("cannot open general serial\n");
-//		exit(1);
-        return NULL;
+		ALOGE("eng_vlog cannot open general serial\n");
+		return 0;
 	}
-	ENG_LOG("reopen usb serial:%d\n", vser_fd);
-    return 0;
+	ENG_LOG("eng_vlog reopen usb serial:%d\n", vser_fd);
+	return 0;
 }
 
 #define MAX_OPEN_TIMES  10
@@ -48,49 +58,56 @@ void *eng_vlog_thread(void *x)
 	int ser_fd;
 	int sdcard_fd;
 	int card_log_fd = -1;
-	ssize_t r_cnt, w_cnt;
+	int r_cnt, w_cnt;
 	int res,n;
 	char cardlog_property[8];
 	char log_name[40];
 	time_t now;
-    int wait_cnt = 0;
+	int wait_cnt = 0;
 	struct tm *timenow;
+	struct eng_param * param = (struct eng_param *)x;
+	int i = 0;
 
-	ENG_LOG("open usb serial\n");
-	ser_fd = open("/dev/vser",O_WRONLY);
+	if(param == NULL){
+		ALOGE("eng_vlog invalid input\n");
+		return NULL;
+	}
+	/*open usb/uart*/
+	ENG_LOG("eng_vlog  open  serial...\n");
+	s_connect_type = param->connect_type;
+	ser_fd = open(s_connect_ser_path[s_connect_type], O_WRONLY);
 	if(ser_fd < 0) {
-		ALOGE("cannot open general serial:%s\n",strerror(errno));
-//		exit(1);
-        return NULL;
+		ALOGE("eng_vlog cannot open general serial:%s\n",strerror(errno));
+		return NULL;
 	}
 	vser_fd = ser_fd;
+
 	
-	ENG_LOG("open vitual pipe\n");
-    do
-    {
-	    pipe_fd = open("/dev/vbpipe0",O_RDONLY);
-	    if(pipe_fd < 0) {
-		    ALOGE("vlog cannot open vpipe0, times:%d\n", wait_cnt);
-            if(wait_cnt++ >= MAX_OPEN_TIMES)
-            {
-                return NULL;
-            }
-            sleep(5);
-	    }
-    }while(pipe_fd < 0);
+	ENG_LOG("eng_vlog open vitual pipe...\n");
+	/*open vbpipe/spipe*/
+	 do{
+		pipe_fd = open(s_cp_pipe[param->cp_type], O_RDONLY);
+		if(pipe_fd < 0) {
+			ALOGE("eng_vlog cannot open vpipe0, times:%d\n", wait_cnt);
+			if(wait_cnt++ >= MAX_OPEN_TIMES){
+				close(ser_fd);
+				return NULL;
+			}
+			sleep(5);
+		}
+	}while(pipe_fd < 0);
 
 	sdcard_fd = open("/dev/block/mmcblk0",O_RDONLY);
 	if ( sdcard_fd < 0 ) {
 		is_sdcard_exist = 0;
-		ENG_LOG("No sd card!!!");
+		ENG_LOG("eng_vlog No sd card!!!");
 	}else{
 		is_sdcard_exist = 1;
 	}
 	close(sdcard_fd);
 
-	ENG_LOG("put log data from pipe to serial\n");
+	ENG_LOG("eng_vlog put log data from pipe to serial\n");
 	while(1) {
-
 		if ( is_sdcard_exist ) {
 			memset(cardlog_property, 0, sizeof(cardlog_property));
 			property_get(ENG_CARDLOG_PROPERTY, cardlog_property, "");
@@ -104,37 +121,29 @@ void *eng_vlog_thread(void *x)
 
 		r_cnt = read(pipe_fd, log_data, DATA_BUF_SIZE);
 		if (r_cnt < 0) {
-			ENG_LOG("no log data :%d\n", r_cnt);
+			ENG_LOG("eng_vlog read no log data : r_cnt=%d, %s\n",  r_cnt, strerror(errno));
 			continue;
 		}
 
-		
-		//ENG_LOG("read %d\n", r_cnt);
+		ENG_LOG("eng_vlog read %d\n", r_cnt);
 		w_cnt = write(ser_fd, log_data, r_cnt);
 		if (w_cnt < 0) {
-			ENG_LOG("no log data write:%d ,%s\n", w_cnt,
-					strerror(errno));
-
-
-			ENG_LOG("close usb serial:%d\n", ser_fd);
+			ENG_LOG("eng_vlog no log data write:%d ,%s\n", w_cnt, strerror(errno));
 			close(ser_fd);
 
-			ser_fd = open("/dev/vser",O_WRONLY);
+			ser_fd = open(s_connect_ser_path[s_connect_type], O_WRONLY);
 			if(ser_fd < 0) {
-				ALOGE("cannot open general serial\n");
-//				exit(1);
-                return NULL;
+				ALOGE("eng_vlog cannot open general serial\n");
+				close(pipe_fd);
+				return NULL;
 			}
 			vser_fd = ser_fd;
-			ENG_LOG("reopen usb serial:%d\n", ser_fd);
+			ENG_LOG("eng_vlog reopen usb serial:%d\n", ser_fd);
 		}
-		//ENG_LOG("read %d, write %d\n", r_cnt, w_cnt);
+		ENG_LOG("eng_vlog read %d, write %d\n", r_cnt, w_cnt);
 	}
 out:
 	close(pipe_fd);
 	close(ser_fd);
 	return 0;
 }
-
-
-
