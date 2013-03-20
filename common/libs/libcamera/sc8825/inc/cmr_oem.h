@@ -259,6 +259,7 @@ struct camera_context {
 	uint32_t                 pre_frm_cnt;
 	pthread_mutex_t          prev_mutex;
 	sem_t                    af_sync_sem;
+	sem_t                   af_start_sync_sem;
 	sem_t                    init_sem;
 	sem_t                    exit_sem;
 	sem_t                    start_sem;

@@ -1658,7 +1658,7 @@ int camera_start_autofocus(camera_focus_e_type focus,
 		CMR_LOGE("Faile to send one msg to camera main thread");
 	}
 	CMR_PRINT_TIME;
-
+	sem_wait(&g_cxt->af_start_sync_sem);
 	return ret;
 }
 
@@ -1677,6 +1677,8 @@ int camera_af_init(void)
 			CMR_LOGE("NO Memory, Frailed to create message queue");
 		}
 		sem_init(&g_cxt->af_sync_sem, 0, 0);
+		sem_init(&g_cxt->af_start_sync_sem, 0, 0);
+
 		pthread_attr_init(&attr);
 		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 		ret = pthread_create(&g_cxt->af_thread, &attr, camera_af_thread_proc, NULL);
@@ -1705,10 +1707,11 @@ int camera_af_deinit(void)
 		ret = cmr_msg_post(g_cxt->af_msg_que_handle, &message);
 		if (ret) {
 			free(message.data);
-			CMR_LOGE("Faile to send one msg to camera main thread");
+			CMR_LOGE("Faile to send one msg to camera af thread");
 		}
 		sem_wait(&g_cxt->af_sync_sem);
 		sem_destroy(&g_cxt->af_sync_sem);
+		sem_destroy(&g_cxt->af_start_sync_sem);
 		cmr_msg_queue_destroy(g_cxt->af_msg_que_handle);
 		g_cxt->af_msg_que_handle = 0;
 		g_cxt->af_inited = 0;
@@ -2731,6 +2734,9 @@ void *camera_af_thread_proc(void *data)
 		}
 
 		CMR_LOGE("message.msg_type 0x%x, data 0x%x", message.msg_type, (uint32_t)message.data);
+		if(CMR_EVT_AF_START == message.msg_type){
+			sem_post(&g_cxt->af_start_sync_sem);
+		}
 
 		switch (message.msg_type) {
 		case CMR_EVT_AF_INIT:
