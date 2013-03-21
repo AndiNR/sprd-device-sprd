@@ -50,8 +50,7 @@ PRODUCT_PACKAGES := \
 	MsmsStk \
 	Stk1 \
 	Stk2 \
-	framework2 \
-	Launcher2
+	framework2 
 
 # prebuild files
 PRODUCT_PACKAGES += \
