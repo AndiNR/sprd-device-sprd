@@ -70,7 +70,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
 	
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \
-	$(BOARDDIR)/ft5x0x_ts.idc:system/usr/idc/ft5x0x_ts.idc
+	$(BOARDDIR)/ft5x0x_ts.idc:system/usr/idc/ft5x0x_ts.idc \
+	$(BOARDDIR)/headset-keyboard.kl:system/usr/keylayout/headset-keyboard.kl
 
 $(call inherit-product, frameworks/native/build/phone-hdpi-dalvik-heap.mk)
 
