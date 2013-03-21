@@ -1,4 +1,4 @@
 key 116   POWER             WAKE
-key 8     VOLUME_DOWN       WAKE
-key 24    VOLUME_UP         WAKE
-key 9     CAMERA
+key 114   VOLUME_DOWN
+key 115   VOLUME_UP
+key 212     CAMERA
