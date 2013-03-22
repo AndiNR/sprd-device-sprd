@@ -2499,6 +2499,7 @@ static int init_rec_process(int rec_mode, int sample_rate)
     int audio_fd;
     int ret0 = 0; //failed
     int ret1 = 0;
+    off_t offset = 0;
     AUDIO_TOTAL_T *aud_params_ptr = NULL;
     DP_CONTROL_PARAM_T *ctrl_param_ptr = 0;
     RECORDEQ_CONTROL_PARAM_T *eq_param_ptr = 0;
@@ -2512,6 +2513,18 @@ static int init_rec_process(int rec_mode, int sample_rate)
         if(-1 == audio_fd){
             ALOGE("file %s open error:%s\n",ENG_AUDIO_PARA,strerror(errno));
             return 0;
+        }
+    }else{
+    //check the size of /data/local/tmp/audio_para
+        offset = lseek(audio_fd,-1,SEEK_END);
+        if((offset+1) != 4*sizeof(AUDIO_TOTAL_T)){
+            ALOGE("%s, file %s size (%d) error \n",__func__,ENG_AUDIO_PARA_DEBUG,offset+1);
+            close(audio_fd);
+            audio_fd = open(ENG_AUDIO_PARA,O_RDONLY);
+            if(-1 == audio_fd){
+                ALOGE("%s, file %s open error:%s\n",__func__,ENG_AUDIO_PARA,strerror(errno));
+                return 0;
+            }
         }
     }
     aud_params_ptr = (AUDIO_TOTAL_T *)mmap(0, 4*sizeof(AUDIO_TOTAL_T),PROT_READ,MAP_SHARED,audio_fd,0);
