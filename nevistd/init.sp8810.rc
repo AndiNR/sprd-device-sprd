@@ -123,15 +123,15 @@ service engsetmacaddr /system/bin/engsetmacaddr
 
 service phoneserver /system/bin/phoneserver
     class core
-    user system
-    group system radio shell
+    user root
+    group radio system shell
     disabled
     oneshot
 
 service phoneserver_2sim /system/bin/phoneserver_2sim
     class core
-    user system
-    group system radio shell
+    user root
+    group radio system shell
     disabled
     oneshot
 
@@ -262,11 +262,6 @@ service slog /system/bin/slog
     group shell
 
 #create symlink
-service pty_symlink /system/bin/ext_symlink.sh -p
-    user root
-    disabled
-    oneshot
-
 service smd_symlink /system/bin/ext_symlink.sh -u
     user root
     disabled
