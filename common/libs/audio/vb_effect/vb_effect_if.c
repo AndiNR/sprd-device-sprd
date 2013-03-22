@@ -242,6 +242,7 @@ int create_vb_effect_params(void)
 
 static AUDIO_TOTAL_T *get_aud_paras()
 {
+    off_t offset = 0;
     AUDIO_TOTAL_T * aud_params_ptr = NULL;
 
     fd_src_paras = open(ENG_AUDIO_PARA_DEBUG, O_RDONLY);
@@ -252,11 +253,24 @@ static AUDIO_TOTAL_T *get_aud_paras()
             ALOGE("file %s open error:%s\n",ENG_AUDIO_PARA,strerror(errno));
             return NULL;
         }
+    }else{
+    //check the size of /data/local/tmp/audio_para
+        offset = lseek(fd_src_paras,-1,SEEK_END);
+        if((offset+1) != 4*sizeof(AUDIO_TOTAL_T)){
+            ALOGE("%s, file %s size (%d) error \n",__func__,ENG_AUDIO_PARA_DEBUG,offset+1);
+            close(fd_src_paras);
+            fd_src_paras = open(ENG_AUDIO_PARA,O_RDONLY);
+            if(-1 == fd_src_paras){
+                ALOGE("%s, file %s open error:%s\n",__func__,ENG_AUDIO_PARA,strerror(errno));
+                return NULL;
+            }
+        }
     }
 
     aud_params_ptr = (AUDIO_TOTAL_T *)mmap(0, 4*sizeof(AUDIO_TOTAL_T),PROT_READ,MAP_SHARED,fd_src_paras,0);
     if ( NULL == aud_params_ptr ) {
         close(fd_src_paras);
+        fd_src_paras = -1;
         ALOGE("mmap failed %s",strerror(errno));
         return NULL;
     }

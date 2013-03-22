@@ -37,7 +37,6 @@ static pthread_t s_vbc_ctrl_thread = 0;
 static int s_vbpipe_fd = -1;
 static int s_is_exit = 0;
 static int s_is_active = 0;
-static int fd_audio_para = -1;
 static int android_sim_num = 0;
 
 
@@ -267,25 +266,33 @@ static int32_t GetAudio_mode_number_from_device(struct tiny_audio_device *adev)
     return lmode;
 }
 
-static AUDIO_TOTAL_T *GetAudio_total_para_from_nv()
+static int GetAudio_fd_from_nv()
 {
-    AUDIO_TOTAL_T * aud_params_ptr = NULL;
+    int fd = -1;
+    off_t offset = 0;
 
-    fd_audio_para = open(ENG_AUDIO_PARA_DEBUG, O_RDONLY);
-    if (-1 == fd_audio_para) {
+    fd = open(ENG_AUDIO_PARA_DEBUG, O_RDONLY);
+    if (-1 == fd) {
         ALOGW("%s, file %s open failed:%s\n",__func__,ENG_AUDIO_PARA_DEBUG,strerror(errno));
-        fd_audio_para = open(ENG_AUDIO_PARA,O_RDONLY);
-        if(-1 == fd_audio_para){
+        fd = open(ENG_AUDIO_PARA,O_RDONLY);
+        if(-1 == fd){
             ALOGE("%s, file %s open error:%s\n",__func__,ENG_AUDIO_PARA,strerror(errno));
-            return NULL;
+            return -1;
+        }
+    }else{
+    //check the size of /data/local/tmp/audio_para
+        offset = lseek(fd,-1,SEEK_END);
+        if((offset+1) != 4*sizeof(AUDIO_TOTAL_T)){
+            ALOGE("%s, file %s size (%d) error \n",__func__,ENG_AUDIO_PARA_DEBUG,offset+1);
+            close(fd);
+            fd = open(ENG_AUDIO_PARA,O_RDONLY);
+            if(-1 == fd){
+                ALOGE("%s, file %s open error:%s\n",__func__,ENG_AUDIO_PARA,strerror(errno));
+                return -1;
+            }
         }
     }
-    aud_params_ptr = (AUDIO_TOTAL_T *)mmap(0, 4*sizeof(AUDIO_TOTAL_T),PROT_READ,MAP_SHARED,fd_audio_para,0);
-    if ( NULL == aud_params_ptr ) {
-        ALOGE("%s, mmap failed %s",__func__,strerror(errno));
-        return NULL;
-    }
-    return aud_params_ptr;
+    return fd;
 }
 
 static int  GetAudio_pga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *aud_params_ptr, pga_gain_nv_t *pga_gain_nv, uint32_t vol_level)
@@ -314,25 +321,32 @@ static int  GetAudio_pga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *aud_p
 static int GetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_t *pga_gain_nv, uint32_t vol_level)
 {
     int ret = 0;
+    int fd = -1;
     int32_t lmode = 0;
     AUDIO_TOTAL_T * aud_params_ptr = NULL;
     char * dev_name = NULL;
     lmode = GetAudio_mode_number_from_device(adev);
-    aud_params_ptr = GetAudio_total_para_from_nv();
-    if(NULL == aud_params_ptr){
-        close(fd_audio_para);
+    fd = GetAudio_fd_from_nv();
+    if(fd < 0) {
+        ALOGE("%s, get audio fd(%d) error ",__func__,fd);
+        return -1;
+    }
+    aud_params_ptr = (AUDIO_TOTAL_T *)mmap(0, 4*sizeof(AUDIO_TOTAL_T),PROT_READ,MAP_SHARED,fd,0);
+    if ( NULL == aud_params_ptr ) {
+        ALOGE("%s, mmap failed %s",__func__,strerror(errno));
+        close(fd);
         return -1;
     }
     //get music gain from nv
     ret = GetAudio_pga_nv(adev, &aud_params_ptr[lmode], pga_gain_nv, vol_level);
     if(ret < 0){
         munmap((void *)aud_params_ptr, 4*sizeof(AUDIO_TOTAL_T));
-        close(fd_audio_para);
+        close(fd);
         return -1;
     }
     //close fd
     munmap((void *)aud_params_ptr, 4*sizeof(AUDIO_TOTAL_T));
-    close(fd_audio_para);
+    close(fd);
     return 0;
 }
 
