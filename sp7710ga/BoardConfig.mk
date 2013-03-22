@@ -38,6 +38,9 @@ BOARD_SP7710GA        := true
 # use default init.rc
 TARGET_PROVIDES_INIT_RC := true
 
+#select 2M,3M or 5M
+CAMERA_SUPPORT_SIZE := 5M
+
 BOARD_HAVE_BLUETOOTH := true
 BOARD_HAVE_FM_BCM := true
 BOARD_USE_SPRD_FMAPP := true
