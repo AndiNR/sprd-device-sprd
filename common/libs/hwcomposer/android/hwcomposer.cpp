@@ -28,6 +28,9 @@
 /*****************************************************************************/
 
 
+extern void dump_layers(hwc_layer_list_t *list);
+extern int g_randNum;
+extern bool g_ResetDumpIndexFlag;
 
 static int hwc_device_open(const struct hw_module_t* module, const char* name,
         struct hw_device_t** device);
@@ -69,6 +72,10 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
             //dump_layer(&list->hwLayers[i]);
             list->hwLayers[i].compositionType = HWC_FRAMEBUFFER;
         }
+        //reset dump index flag and recalculate the random number
+	  g_ResetDumpIndexFlag = true;
+        srand(g_randNum);
+        g_randNum = rand();
     }
     return 0;
 }
@@ -81,7 +88,10 @@ static int hwc_set(hwc_composer_device_t *dev,
     //for (size_t i=0 ; i<list->numHwLayers ; i++) {
     //    dump_layer(&list->hwLayers[i]);
     //}
-
+    //add for dump layer to file, need set property dump.hwcomposer.path & dump.hwcomposer.flag
+    dump_layers(list);
+    g_ResetDumpIndexFlag = false;
+    //add for dump layer end
     EGLBoolean sucess = eglSwapBuffers((EGLDisplay)dpy, (EGLSurface)sur);
     if (!sucess) {
         return HWC_EGL_ERROR;

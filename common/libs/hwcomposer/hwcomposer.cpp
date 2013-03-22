@@ -40,6 +40,9 @@
 #define SPRD_ION_DEV "/dev/ion"
 
 #define OVERLAY_BUF_NUM 2
+extern void dump_layers(hwc_layer_list_t *list);
+extern int g_randNum;
+extern bool g_ResetDumpIndexFlag;
 inline unsigned int round_up_to_page_size(unsigned int x)
 {
     return (x + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1);
@@ -521,7 +524,10 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 
 	if( !list || (!(list->flags & HWC_GEOMETRY_CHANGED)))
 		return 0;
-
+	//reset dump index and recalculate random number
+	g_ResetDumpIndexFlag = true;
+	srand(g_randNum);
+	g_randNum = rand();
 	ALOGI("hwc_prepare %d b", list->numHwLayers);
 	ctx->fb_layer_count = 0;
 	ctx->osd_overlay_flag = 0;
@@ -632,6 +638,12 @@ static int hwc_set(hwc_composer_device_t *dev,
     for (size_t i=0 ; i<list->numHwLayers ; i++) {
         //dump_layer(&list->hwLayers[i]);
     }
+
+    //add for dump layer to file, need set property dump.hwcomposer.path & dump.hwcomposer.flag
+    dump_layers(list);
+    g_ResetDumpIndexFlag = true;
+    //add for dump layer end
+
     //ALOGI("hwc_set %d e", list->numHwLayers);
 
 	//ALOGI("set overlay layer begin-----------------");

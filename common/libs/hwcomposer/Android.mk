@@ -21,9 +21,10 @@ include $(CLEAR_VARS)
 ifeq ($(strip $(USE_SPRD_HWCOMPOSER)),true)
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
-LOCAL_SHARED_LIBRARIES := liblog libEGL libbinder libutils
+LOCAL_SHARED_LIBRARIES := liblog libEGL libbinder libutils libcutils
 LOCAL_SRC_FILES := hwcomposer.cpp \
-		   vsync/vsync.cpp
+		   vsync/vsync.cpp \
+                   dump_bmp.cpp
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/../gralloc \
 	$(LOCAL_PATH)/../mali/src/ump/include \
@@ -58,13 +59,16 @@ endif
 else #android hwcomposer
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
-LOCAL_SHARED_LIBRARIES := liblog libEGL libutils
+LOCAL_SHARED_LIBRARIES := liblog libEGL libutils libcutils
 LOCAL_SRC_FILES := vsync/vsync.cpp \
-                   android/hwcomposer.cpp
+                   android/hwcomposer.cpp \
+                   dump_bmp.cpp
 LOCAL_MODULE := hwcomposer.$(TARGET_BOARD_PLATFORM)
 LOCAL_C_INCLUDES := $(TOP)/frameworks/native/include/utils \
 		    $(LOCAL_PATH)/vsync \
-	            $(LOCAL_PATH)/android
+	            $(LOCAL_PATH)/android \
+                    $(LOCAL_PATH)/../gralloc \
+                    $(LOCAL_PATH)/../mali/src/ump/include
 LOCAL_CFLAGS:= -DLOG_TAG=\"hwcomposer\"
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
