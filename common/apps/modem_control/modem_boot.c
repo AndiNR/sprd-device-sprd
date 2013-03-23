@@ -14,8 +14,9 @@
 
 struct image_info {
 	char *image_path;
-	int image_size;
-	unsigned long address;
+	char *image_path_bak;
+	unsigned int image_size;
+	unsigned int address;
 };
 //#define __TEST_SPI_ONLY__
 #define	MODEM_POWER_PATH	"/sys/devices/platform/modem_interface/modempower"
@@ -39,42 +40,49 @@ static char *uart_dev = UART_DEVICE_NAME;
 static int need_shutdown = 0;
 static int fdl_cp_poweron_delay = FDL_CP_PWRON_DLY;
 	
-struct image_info download_image_info[]={
-        { //fixvn
-                "/dev/mtd/mtd3",
-                0x3000,
-                0x40000000,
-        },
-        { //fixvn
-                "/fixnv/fixnv.bin",
-                0x1E000,
-                0x400,
-        },
-        { //fixvn
-                "/fixnv/fixnv.bin",
-                0x1E000,
-                0x02100000,
-        },
-        { //DSP code
-                "/dev/mtd/mtd7",
-                0x200000,
-                0x00020000,
-        },
-        { //ARM code
-                "/dev/mtd/mtd19",
-                0x009F8000,
-                0x00400000,
-        },
-        { //running nv
-                "/runtimenv/runtimenv.bin",
-                0x20000,
-                0x02120000,
-        },
-        { //running nv
-                NULL,
-                0,
-                0,
-        },
+struct image_info download_image_info[] = {
+	{ //fixvn
+		"/dev/mtd/mtd3",
+		"/dev/mtd/mtd3",
+		0x3000,
+		0x40000000,
+	},
+	{ //fixvn
+		"/fixnv/fixnv.bin",
+		"/backupfixnv/fixnv.bin",
+		0x1E000,
+		0x400,
+	},
+	{ //fixvn
+		"/fixnv/fixnv.bin",
+		"/backupfixnv/fixnv.bin",
+		0x1E000,
+		0x02100000,
+	},
+	{ //DSP code
+		"/dev/mtd/mtd7",
+		"/dev/mtd/mtd7",
+		0x200000,
+		0x00020000,
+	},
+	{ //ARM code
+		"/dev/mtd/mtd19",
+		"/dev/mtd/mtd19",
+		0x009F8000,
+		0x00400000,
+		},
+	{ //running nv
+		"/runtimenv/runtimenv.bin",
+		"/runtimenv/runtimenv.bin",
+		0x20000,
+		0x02120000,
+	},
+	{
+		NULL,
+		NULL,
+		0,
+		0,
+	},
 };
 static int modem_interface_fd = -1;
 static int boot_status = 0;
@@ -83,7 +91,7 @@ int speed_arr[] = {B921600,B115200, B38400, B19200, B9600, B4800, B2400, B1200, 
 int name_arr[] = {921600,115200,38400,  19200, 9600,  4800,  2400,  1200,  300,
         921600, 115200,38400,  19200,  9600, 4800, 2400, 1200,  300, };
 
-int get_modem_images_info(void)
+int get_modem_images_info_bak(void)
 {
     FILE *fp;
     int images_count = 0;
@@ -146,6 +154,157 @@ int get_modem_images_info(void)
     modem_images_count = images_count;
     return images_count;
 }
+
+
+static unsigned short calc_checksum(unsigned char *dat, unsigned long len)
+{
+	unsigned long checksum = 0;
+	unsigned short *pstart, *pend;
+	if (0 == (unsigned long)dat % 2)  {
+		pstart = (unsigned short *)dat;
+		pend = pstart + len / 2;
+		while (pstart < pend) {
+			checksum += *pstart;
+			pstart ++;
+		}
+		if (len % 2)
+			checksum += *(unsigned char *)pstart;
+		} else {
+		pstart = (unsigned char *)dat;
+		while (len > 1) {
+			checksum += ((*pstart) | ((*(pstart + 1)) << 8));
+			len -= 2;
+			pstart += 2;
+		}
+		if (len)
+			checksum += *pstart;
+	}
+	checksum = (checksum >> 16) + (checksum & 0xffff);
+	checksum += (checksum >> 16);
+	return (~checksum);
+}
+
+/*
+	TRUE(1): pass
+	FALSE(0): fail
+*/
+static int _chkEcc(unsigned char* buf, int size)
+{
+	unsigned short crc,crcOri;
+//	crc = __crc_16_l_calc(buf, size-2);
+//	crcOri = (uint16)((((uint16)buf[size-2])<<8) | ((uint16)buf[size-1]) );
+
+	crc = calc_checksum(buf,size-4);
+	crcOri = (unsigned short)((((unsigned short)buf[size-3])<<8) | ((unsigned short)buf[size-4]) );
+
+	return (crc == crcOri);
+}
+int _chkImg(char *fileName, int size)
+{
+	unsigned char* buf;
+	int fileHandle = 0;;
+	int ret=0;
+
+	buf = malloc(size);
+	memset(buf,0xFF,size);
+	fileHandle = open(fileName, O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
+	ret = read(fileHandle, buf, size);
+	close(fileHandle);
+	// check IO
+	if(ret != size){
+		free(buf);
+		return 0;
+	}
+	//check crc
+	if(_chkEcc(buf, size)){
+		free(buf);
+		return 1;
+	}
+	free(buf);
+	return 0;
+}
+
+int get_modem_images_info(void)
+{
+	FILE *fp;
+	char line[512];
+	int cnt;
+	unsigned int address,size;
+	char originPath[100],bakPath[100];
+	 int max_item =( sizeof(download_image_info)/sizeof(download_image_info[0]))-1;
+
+// 1 get image info from config file
+	if (!(fp = fopen("/modem_images.info", "r"))) {
+		return 0;
+	}
+	printf("start parase modem images file\n");
+
+	cnt = 0;
+	memset(download_image_info,0,sizeof(download_image_info));
+	modem_images_count = 0;
+	printf("\toriginImage\t\tbackupImage\t\tlength\taddress\n");
+	while(fgets(line, sizeof(line), fp)) {
+		line[strlen(line)-1] = '\0';
+		if (line[0] == '#' || line[0] == '\0'){
+			continue;
+		}
+		if(-1 == sscanf(
+				line,"%s %s %x %x",
+				originPath,
+				bakPath,
+				&download_image_info[cnt].image_size,
+				&download_image_info[cnt].address
+			)
+		){
+			continue;
+		}
+		download_image_info[cnt].image_path = strdup(originPath);
+		download_image_info[cnt].image_path_bak = strdup(bakPath);
+
+		printf("\t%32s\t%32s\t0x%8x\t0x%8x\n",download_image_info[cnt].image_path,download_image_info[cnt].image_path_bak,download_image_info[cnt].image_size,download_image_info[cnt].address);
+
+		if((0 == download_image_info[cnt].address) || 0 == (download_image_info[cnt].image_size)){
+			/*get tty device number from modem_images.info*/
+			uart_dev = download_image_info[cnt].image_path;
+			printf("UART Device = %s",uart_dev);
+			if(download_image_info[cnt].image_size != 0){
+			/*get cp power delay param from modem_images.info*/
+			fdl_cp_poweron_delay = download_image_info[cnt].image_size;
+			}
+		}else {
+			cnt++;
+		}
+		if(max_item <= cnt){
+			printf("Max support %d item, this config has too many item!!!\n",max_item);
+			break;
+		}
+	}
+	fclose(fp);
+	download_image_info[cnt].image_path		= 0;
+	download_image_info[cnt].image_path_bak	= 0;
+	download_image_info[cnt].image_size		= 0;
+	download_image_info[cnt].address			= 0;
+	printf("end parase %d!\n",cnt);
+	modem_images_count = cnt;
+
+// 2 check image file
+	for(cnt = 0;  cnt < modem_images_count; cnt++){
+		if(!strcmp(download_image_info[cnt].image_path,download_image_info[cnt].image_path_bak)){
+			continue;
+		}
+		if(_chkImg(download_image_info[cnt].image_path, download_image_info[cnt].image_size)){
+			continue;
+		}
+		if(!_chkImg(download_image_info[cnt].image_path_bak, download_image_info[cnt].image_size)){
+			continue;
+		}
+		strcpy(download_image_info[cnt].image_path,download_image_info[cnt].image_path_bak);
+	}
+// 3 return
+	return cnt;
+}
+
+
 void print_modem_image_info(void)
 {
         int i;

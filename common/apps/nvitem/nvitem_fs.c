@@ -6,7 +6,7 @@
 #define CRC_16_L_SEED			0x80
 #define CRC_16_L_POLYNOMIAL	0x8000
 #define CRC_16_POLYNOMIAL		0x1021
-unsigned short __crc_16_l_calc (uint8 *buf_ptr,uint32 len)
+static unsigned short __crc_16_l_calc (uint8 *buf_ptr,uint32 len)
 {
 	unsigned int i;
 	unsigned short crc = 0;
@@ -63,7 +63,7 @@ static unsigned short calc_checksum(unsigned char *dat, unsigned long len)
 	TRUE(1): pass
 	FALSE(0): fail
 */
-BOOLEAN _chkEcc(uint8* buf, uint32 size)
+static BOOLEAN _chkEcc(uint8* buf, uint32 size)
 {
 	uint16 crc,crcOri;
 //	crc = __crc_16_l_calc(buf, size-2);
@@ -76,7 +76,7 @@ BOOLEAN _chkEcc(uint8* buf, uint32 size)
 }
 
 
-void _makEcc(uint8* buf, uint32 size)
+static void _makEcc(uint8* buf, uint32 size)
 {
 	uint16 crc;
 	//crc = __crc_16_l_calc(buf, size-2);
