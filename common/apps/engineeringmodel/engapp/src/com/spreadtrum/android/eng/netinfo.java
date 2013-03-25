@@ -101,9 +101,11 @@ public class netinfo extends Activity {
 //                        s += String.format("        %s,%s,%s,%s\n",
 //                                strs[i * 7], strs[i * 7 + 1],
 //                                strs[i * 7 + 5], strs[i * 7 + 6]);
+                        /*Modify 20130325 Spreadst of 141672 change the display method start */
                         s +=new StringBuilder().append("        ").append(strs[i * 7]).append(",")
                             .append(strs[i * 7 + 1]).append(",").append(strs[i * 7 + 5]).append(",")
-                            .append(strs[i * 7 + 6]).toString();
+                            .append(strs[i * 7 + 6]).append("\n").toString();
+                        /*Modify 20130325 Spreadst of 141672 change the display method end */
     /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
 					}
 					updateUi(tv2_2, s);
