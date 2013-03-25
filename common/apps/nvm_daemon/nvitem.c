@@ -652,15 +652,18 @@ reopen_vbpipe:
 	memset(gbuffer, 0, BUFFER_LEN);
 	sprintf(gbuffer, "reopen vbpipe\n");
 	log2file();
-	
-    pipe_fd = open("/dev/vbpipe1", O_RDWR);
-	if (pipe_fd < 0) {
-		memset(gbuffer, 0, BUFFER_LEN);
-		sprintf(gbuffer, "cannot open vbpipe1\n");
-		log2file();
-		exit(1);
+    while(1) {	
+	    pipe_fd = open("/dev/vbpipe1", O_RDWR);
+		if (pipe_fd < 0) {
+			memset(gbuffer, 0, BUFFER_LEN);
+			sprintf(gbuffer, "cannot open vbpipe1\n");
+			log2file();
+			usleep(10000);
+		}
+	    else {
+		break;
+	    }
 	}
-
     while (1) {
 		r_cnt = read(pipe_fd, &req_header, sizeof(request_header_t));
 		acquire_wake_lock(PARTIAL_WAKE_LOCK, "NvItemdLock");

@@ -89,10 +89,7 @@ void *eng_vlog_thread(void *x)
 		pipe_fd = open(s_cp_pipe[param->cp_type], O_RDONLY);
 		if(pipe_fd < 0) {
 			ALOGE("eng_vlog cannot open vpipe0, times:%d\n", wait_cnt);
-			if(wait_cnt++ >= MAX_OPEN_TIMES){
-				close(ser_fd);
-				return NULL;
-			}
+			
 			sleep(5);
 		}
 	}while(pipe_fd < 0);
@@ -125,7 +122,7 @@ void *eng_vlog_thread(void *x)
 			continue;
 		}
 
-		ENG_LOG("eng_vlog read %d\n", r_cnt);
+		ENG_LOG("peter:eng_vlog read %d\n", r_cnt);
 		w_cnt = write(ser_fd, log_data, r_cnt);
 		if (w_cnt < 0) {
 			ENG_LOG("eng_vlog no log data write:%d ,%s\n", w_cnt, strerror(errno));
