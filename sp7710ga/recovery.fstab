@@ -1,6 +1,6 @@
 # mount point	fstype		device
 
-/sdcard		vfat		/dev/block/platform/sprd-sdhci.0/mmcblk1p1
+/sdcard		vfat		/dev/block/platform/sprd-sdhci.0/mmcblk0p1
 /system		yaffs2		system
 /data		yaffs2		userdata
 /cache		yaffs2		cache
