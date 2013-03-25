@@ -109,6 +109,7 @@ int check_audio_para_file_size(char *config_file)
     fileSize = lseek(tmpFd, 0, SEEK_END);
     if (fileSize <= 0) {
         ENG_LOG("%s: file size error",__FUNCTION__);
+        close(tmpFd);
         return -1;
     }
     close(tmpFd);
