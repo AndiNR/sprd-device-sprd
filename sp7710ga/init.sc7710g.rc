@@ -44,7 +44,7 @@ on boot
     chown system system /sys/class/compass/akm8963/delay_ori
     chown system system /sys/class/compass/akm8963/accel
 
-#   insmod /system/lib/modules/ltr_558als.ko
+    insmod /system/lib/modules/ltr_558als.ko
     chown system system /dev/ltr_558als
     chmod 0664 /dev/ltr_558als
 
