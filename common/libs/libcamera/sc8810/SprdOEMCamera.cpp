@@ -357,7 +357,11 @@ void camera_set_rot_angle(uint32_t *is_set_orientation,uint32_t *angle)
 		return;
 	switch(temp){
 	case 0:
+		#ifdef CONFIG_CAMERA_SP7710_FEATURE
+			*angle = 270;
+		#else
 			*angle = 90;
+		#endif
 			*is_set_orientation = 1;
 			break;
 	case 90:
