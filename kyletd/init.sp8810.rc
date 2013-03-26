@@ -285,8 +285,7 @@ service iprenew_p2p /system/bin/dhcpcd -n
 
 service slog /system/bin/slog
     class main
-    user system
-    group shell
+    user root
 
 #create symlink
 service smd_symlink /system/bin/ext_symlink.sh -u

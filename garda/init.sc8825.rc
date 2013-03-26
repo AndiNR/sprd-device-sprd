@@ -280,8 +280,7 @@ service iprenew_p2p /system/bin/dhcpcd -n
 
 service slog /system/bin/slog
     class main
-    user system
-    group shell
+    user root
 
 service mfserial /system/bin/mfserial ts0710mux9 ttyS1 1
     class main

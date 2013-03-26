@@ -317,8 +317,7 @@ service iprenew_bnep0 /system/bin/dhcpcd -n
 
 service slog /system/bin/slog
     class main
-    user system
-    group shell
+    user root
 
 on boot
     chown system system /dev/iio:device0
