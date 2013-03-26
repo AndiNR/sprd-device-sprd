@@ -74,8 +74,14 @@ struct image_info download_image_info[] = {
 	{ //running nv
 		"/runtimenv/runtimenv.bin",
 		"/runtimenv/runtimenv.bin",
-		0x20000,
+		0x40000,
 		0x02120000,
+	},
+	{ //productinfo
+		"/productinfo/productinfo.bin",
+		"/productinfo/productinfobkup.bin",
+		0x4000,
+		0x02160000,
 	},
 	{
 		NULL,
