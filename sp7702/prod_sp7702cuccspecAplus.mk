@@ -29,10 +29,11 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	persist.msms.phone_count=2 \
 	persist.msms.phone_default=0 \
 	lmk.autocalc=false \
-    ksm.support=true   \
+        ksm.support=true   \
 	zram.support=true \
 	ro.build.product.lowmem=1 \
-        universe_ui_support=true
+        universe_ui_support=true \
+        ro.callfirewall.disabled=true 
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1

@@ -28,11 +28,13 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.com.android.dataroaming=false \
 	persist.msms.phone_count=3 \
 	persist.msms.phone_default=0 \
-    lmk.autocalc=false \
-    ksm.support=true    \
-    zram.support=true \
-    ro.build.product.lowmem=1 \
-    universe_ui_support=true
+        lmk.autocalc=false \
+        ksm.support=true    \
+        zram.support=true \
+        ro.build.product.lowmem=1 \
+        universe_ui_support=true \
+        ro.callfirewall.disabled=true 
+
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1
 else
