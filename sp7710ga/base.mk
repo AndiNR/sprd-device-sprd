@@ -5,10 +5,6 @@ MALI := libUMP libEGL_mali.so libGLESv1_CM_mali.so libGLESv2_mali.so libMali.so 
 
 SPRD_FM_APP := FMPlayer
 
-BRCM_FM := \
-    fm.$(TARGET_PLATFORM) \
-    FmDaemon \
-    FmTest
 
 PRODUCT_PROPERTY_OVERRIDES :=
 
@@ -72,10 +68,10 @@ PRODUCT_PACKAGES += \
 	$(MALI) \
 	zram.sh \
 	libsprdstreamrecoder \
-	libvtmanager
+	libvtmanager\
+   fm.$(TARGET_PLATFORM)
 
 PRODUCT_PACKAGES += \
-            $(BRCM_FM) \
             $(SPRD_FM_APP)
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/init.rc:root/init.rc \
