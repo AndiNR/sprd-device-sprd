@@ -43,9 +43,15 @@ LOCAL_C_INCLUDES += \
 	device/sprd/common/libs/audio/vb_pga \
 	device/sprd/common/libs/audio/record_process
 
+
 LOCAL_SRC_FILES := audio_hw.c tinyalsa_util.c audio_pga.c \
 			record_process/aud_proc_config.c \
 			record_process/aud_filter_calc.c
+
+ifeq ($(strip $(AUDIO_MUX_PIPE)), true)
+LOCAL_SRC_FILES  += audio_mux_pcm.c
+LOCAL_CFLAGS += -DAUDIO_MUX_PCM
+endif
 
 LOCAL_SHARED_LIBRARIES := \
 	liblog libcutils libtinyalsa libaudioutils \

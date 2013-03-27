@@ -48,6 +48,10 @@
 #include "eng_audio.h"
 #include "aud_proc.h"
 
+#ifdef AUDIO_MUX_PCM
+#include "audio_mux_pcm.h"
+#endif
+
 //#define XRUN_DEBUG
 
 #ifdef XRUN_DEBUG
@@ -249,6 +253,7 @@ struct tiny_stream_in {
     pthread_mutex_t lock;       /* see note below on mutex acquisition order */
     struct pcm_config config;
     struct pcm *pcm;
+    struct pcm * mux_pcm;
     int device;
     struct resampler_itfe *resampler;
     struct resampler_buffer_provider buf_provider;
@@ -630,6 +635,101 @@ static void select_mode(struct tiny_audio_device *adev)
     }
 }
 
+static int start_vaudio_output_stream(struct tiny_stream_out *out)
+{
+    unsigned int card = 0;
+    unsigned int port = PORT_MM;
+    struct pcm_config old_pcm_config;
+    int ret=0;
+    card = s_vaudio;
+    old_pcm_config=out->config;
+    out->config = pcm_config_vplayback;
+    out->buffer_vplayback = malloc(RESAMPLER_BUFFER_SIZE);
+    if(!out->buffer_vplayback){
+        goto error;
+    }
+    out->pcm_vplayback= pcm_open(card, port, PCM_OUT, &out->config);
+
+    if (!pcm_is_ready(out->pcm_vplayback)) {
+        goto error;
+    }
+    else {
+        ret = create_resampler( DEFAULT_OUT_SAMPLING_RATE,
+                                out->config .rate,
+                                out->config.channels,
+                                RESAMPLER_QUALITY_DEFAULT,
+                                NULL,
+                                &out->resampler_vplayback);
+        if (ret != 0) {
+            goto error;
+        }
+    }
+    return 0;
+    
+error:
+    out->config = old_pcm_config ;
+    if(out->buffer_vplayback){
+        free(out->buffer_vplayback);
+        out->buffer_vplayback=NULL;
+    }
+    if(out->pcm_vplayback){
+        ALOGE("start_vaudio_output_stream error: %s", pcm_get_error(out->pcm_vplayback));
+        pcm_close(out->pcm_vplayback);
+        out->pcm_vplayback=NULL;
+        ALOGE("start_vaudio_output_stream: out\n");
+    }
+    return -1;
+}
+
+
+#ifdef AUDIO_MUX_PCM
+static int start_mux_output_stream(struct tiny_stream_out *out)
+{
+    unsigned int card = 0;
+    unsigned int port = PORT_MM;
+    struct pcm_config old_pcm_config;
+    int ret=0;
+    card = s_vaudio;
+    old_pcm_config=out->config;
+    out->config = pcm_config_vplayback;
+    out->buffer_vplayback = malloc(RESAMPLER_BUFFER_SIZE);
+    if(!out->buffer_vplayback){
+        goto error;
+    }
+    out->pcm_vplayback= mux_pcm_open(card, port, PCM_OUT, &out->config);
+    if (!pcm_is_ready(out->pcm_vplayback)) {
+        goto error;
+    }
+    else {
+        ret = create_resampler( DEFAULT_OUT_SAMPLING_RATE,
+                                out->config .rate,
+                                out->config.channels,
+                                RESAMPLER_QUALITY_DEFAULT,
+                                NULL,
+                                &out->resampler_vplayback);
+        if (ret != 0) {
+            goto error;
+        }
+    }
+    return 0;
+    
+error:
+    out->config = old_pcm_config ;
+    if(out->buffer_vplayback){
+        free(out->buffer_vplayback);
+        out->buffer_vplayback=NULL;
+    }
+    if(out->pcm_vplayback){
+        ALOGE("start_vaudio_output_stream error: %s", pcm_get_error(out->pcm_vplayback));
+        mux_pcm_close(out->pcm_vplayback);
+        out->pcm_vplayback=NULL;
+        ALOGE("start_vaudio_output_stream: out\n");
+    }
+    return -1;
+}
+#endif
+
+
 /* must be called with hw device and output stream mutexes locked */
 static int start_output_stream(struct tiny_stream_out *out)
 {
@@ -649,38 +749,11 @@ static int start_output_stream(struct tiny_stream_out *out)
      * tinyalsa.
      */
     if(adev->call_connected && ( !out->pcm_vplayback)) {
-        BLUE_TRACE("open pcm vplayback in");
-        card = s_vaudio;
-        old_pcm_config=out->config;
-        out->config = pcm_config_vplayback;
-        out->buffer_vplayback = malloc(RESAMPLER_BUFFER_SIZE);
-        out->pcm_vplayback = pcm_open(card, port, PCM_OUT|PCM_MMAP , &out->config);
-
-        if (!pcm_is_ready(out->pcm_vplayback)) {
-            out->config = old_pcm_config ;
-            ALOGE("cannot open pcm_out driver: %s", pcm_get_error(out->pcm_vplayback));
-            pcm_close(out->pcm_vplayback);
-            out->pcm_vplayback=NULL;
-            free(out->buffer_vplayback);
-            out->buffer_vplayback=NULL;
-            ALOGE("cannot open pcm_out driver: out\n");
-            return 0;
-        }
-        else {
-            ret = create_resampler( DEFAULT_OUT_SAMPLING_RATE,
-                                    out->config .rate,
-                                    out->config.channels,
-                                    RESAMPLER_QUALITY_DEFAULT,
-                                    NULL,
-                                    &out->resampler_vplayback);
-            if (ret != 0) {
-                ALOGE("can't  create_resampler");
-                pcm_close(out->pcm_vplayback);
-                out->pcm_vplayback=NULL;
-                free(out->buffer_vplayback);
-                out->buffer_vplayback=NULL;
-            }
-        }
+ #ifdef AUDIO_MUX_PCM
+        ret=start_mux_output_stream(out);
+ #else
+        ret=start_vaudio_output_stream(out);
+   #endif     
     }
     else {
         BLUE_TRACE("open s_tinycard in");
@@ -889,8 +962,13 @@ static int do_output_standby(struct tiny_stream_out *out)
         BLUE_TRACE("do_output_standby.mode:%d ",adev->mode);
         adev->active_output = 0;
 
-        if(out->pcm_vplayback) {
-            pcm_close(out->pcm_vplayback);
+        if(out->pcm_vplayback) {         
+#ifdef AUDIO_MUX_PCM
+                        mux_pcm_close(out->pcm_vplayback);
+#else
+                        pcm_close(out->pcm_vplayback);
+#endif            
+            
             out->pcm_vplayback = NULL;
             if(out->buffer_vplayback) {
                 free(out->buffer_vplayback);
@@ -1025,6 +1103,69 @@ static bool out_bypass_data(struct tiny_audio_device *adev,uint32_t frame_size, 
     }
 }
 
+
+#ifdef AUDIO_MUX_PCM
+static ssize_t out_write_mux(struct tiny_stream_out *out, const void* buffer,
+                         size_t bytes)
+{
+    void *buf;
+    int ret;
+    size_t frame_size = 0;
+    size_t in_frames = 0;
+    size_t out_frames =0; 
+     BLUE_TRACE("mux_playback out_write call_start(%d) call_connected(%d) ...in....",out->dev->call_start,out->dev->call_connected);
+    frame_size = audio_stream_frame_size(&out->stream.common);
+    ALOGE(":out_write_mux in frame_size is %d",frame_size);
+    in_frames = bytes / frame_size;
+    out_frames = RESAMPLER_BUFFER_SIZE / frame_size;
+
+    if(out->pcm_vplayback) {
+        out->resampler_vplayback->resample_from_input(out->resampler_vplayback,
+                                                            (int16_t *)buffer,
+                                                            &in_frames,
+                                                            (int16_t *)out->buffer_vplayback,
+                                                            &out_frames);
+        buf = out->buffer_vplayback;
+        ret = mux_pcm_write(out->pcm_vplayback, (void *)buf, out_frames*frame_size);
+        ALOGE(": mux_pcm_write out ret is %d",ret);
+    }
+    else
+        usleep(out_frames*1000*1000/out->config.rate);
+    BLUE_TRACE("muxplayback write over result is %d,frame_size is %d in frames %d, out frames %d",ret,frame_size,in_frames,out_frames);
+    return 0;
+}
+
+#endif
+
+
+static ssize_t out_write_vaudio(struct tiny_stream_out *out, const void* buffer,
+                         size_t bytes)
+{
+    void *buf;
+    int ret;
+    size_t frame_size = 0;
+    size_t in_frames = 0;
+    size_t out_frames =0; 
+    frame_size = audio_stream_frame_size(&out->stream.common);
+    in_frames = bytes / frame_size;
+    out_frames = RESAMPLER_BUFFER_SIZE / frame_size;
+
+    if(out->pcm_vplayback) {
+        out->resampler_vplayback->resample_from_input(out->resampler_vplayback,
+                                                            (int16_t *)buffer,
+                                                            &in_frames,
+                                                            (int16_t *)out->buffer_vplayback,
+                                                            &out_frames);
+        buf = out->buffer_vplayback;
+        ret = pcm_write(out->pcm_vplayback, (void *)buf, out_frames*frame_size);
+    }
+    else
+        usleep(out_frames*1000*1000/out->config.rate);
+
+    return 0;
+}
+
+
 static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
                          size_t bytes)
 {
@@ -1064,27 +1205,14 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
     low_power = adev->low_power && !adev->active_input;
     pthread_mutex_unlock(&adev->lock);
 
-    if (adev->call_connected) {
-        BLUE_TRACE("vplayback out_write call_start(%d) call_connected(%d) ...in....",adev->call_start,adev->call_connected);
-        frame_size = audio_stream_frame_size(&out->stream.common);
-        in_frames = bytes / frame_size;
-        out_frames = RESAMPLER_BUFFER_SIZE / frame_size;
-
-        if(out->pcm_vplayback) {
-            out->resampler_vplayback->resample_from_input(out->resampler_vplayback,
-                                                                (int16_t *)buffer,
-                                                                &in_frames,
-                                                                (int16_t *)out->buffer_vplayback,
-                                                                &out_frames);
-            buf = out->buffer_vplayback;
-            ret = pcm_mmap_write(out->pcm_vplayback, (void *)buf, out_frames*frame_size);
-        }
-        else
-            usleep(out_frames*1000*1000/out->config.rate);
-
-        BLUE_TRACE("vplayback write over result is %d,frame_size is %d in frames %d, out frames %d",ret,frame_size,in_frames,out_frames);
-    }
-     else {
+    if (adev->call_connected) {      
+#ifdef AUDIO_MUX_PCM
+         ret=out_write_mux(out,buffer,bytes);
+#else
+        ret=out_write_vaudio(out,buffer,bytes);
+ #endif
+        
+    }else {
         frame_size = audio_stream_frame_size(&out->stream.common);
         in_frames = bytes / frame_size;
         out_frames = RESAMPLER_BUFFER_SIZE / frame_size;
@@ -1207,13 +1335,24 @@ static int start_input_stream(struct tiny_stream_in *in)
 
     if(adev->call_start) {
         in->active_rec_proc = 0;
-        in->pcm = pcm_open(s_vaudio,PORT_MM,PCM_IN,&pcm_config_vrec_vx);
-        if (!pcm_is_ready(in->pcm)) {
-            ALOGE("voice-call rec cannot open pcm_in driver: %s", pcm_get_error(in->pcm));
-            pcm_close(in->pcm);
-            adev->active_input = NULL;
-            return -ENOMEM;
-        }
+#ifdef AUDIO_MUX_PCM
+                in->mux_pcm = mux_pcm_open(s_vaudio,PORT_MM,PCM_IN,&pcm_config_vrec_vx);
+                 if (!pcm_is_ready(in->mux_pcm)) {
+                    ALOGE("voice-call rec cannot open pcm_in driver: %s", pcm_get_error(in->mux_pcm));
+                    mux_pcm_close(in->mux_pcm);   
+                    adev->active_input = NULL;
+                    return -ENOMEM;
+                }
+#else
+                in->pcm = pcm_open(s_vaudio,PORT_MM,PCM_IN,&pcm_config_vrec_vx);      
+                if (!pcm_is_ready(in->pcm)) {
+                    ALOGE("voice-call rec cannot open pcm_in driver: %s", pcm_get_error(in->pcm));
+                    pcm_close(in->pcm);   
+                    adev->active_input = NULL;
+                    return -ENOMEM;
+                }
+#endif        
+
     } else {
         in->pcm = pcm_open(s_tinycard, PORT_MM, PCM_IN, &in->config);
         if (!pcm_is_ready(in->pcm)) {
@@ -1292,6 +1431,13 @@ static int do_input_standby(struct tiny_stream_in *in)
     struct tiny_audio_device *adev = in->dev;
 
     if (!in->standby) {
+#ifdef AUDIO_MUX_PCM    
+        if (in->mux_pcm) {
+            mux_pcm_close(in->mux_pcm);
+            in->mux_pcm = NULL;
+        }
+#endif
+    
         if (in->pcm) {
             pcm_close(in->pcm);
             in->pcm = NULL;
@@ -1553,10 +1699,26 @@ static int get_next_buffer(struct resampler_buffer_provider *buffer_provider,
     }
 
     if (in->frames_in == 0) {
-        in->read_status = pcm_read(in->pcm,
-                                   (void*)in->buffer,
-                                   in->config.period_size *
-                                       audio_stream_frame_size(&in->stream.common));
+  #ifdef AUDIO_MUX_PCM
+              if(in->mux_pcm){
+                  in->read_status = mux_pcm_read(in->pcm,
+                                 (void*)in->buffer,
+                                 in->config.period_size *
+                                     audio_stream_frame_size(&in->stream.common));
+              }
+              else{
+                  in->read_status = pcm_read(in->pcm,
+                                 (void*)in->buffer,
+                                 in->config.period_size *
+                                     audio_stream_frame_size(&in->stream.common));
+              }        
+  #else
+              in->read_status = pcm_read(in->pcm,
+                                         (void*)in->buffer,
+                                         in->config.period_size *
+                                             audio_stream_frame_size(&in->stream.common));
+#endif                                     
+
         if (in->read_status != 0) {
             ALOGE("get_next_buffer() pcm_read sattus=%d, error: %s",
                                 in->read_status, pcm_get_error(in->pcm));
@@ -1747,6 +1909,17 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
 
     if (ret < 0)
         goto exit;
+
+#ifdef AUDIO_MUX_PCM
+        if(adev->call_connected){
+            if(!in->mux_pcm){
+                usleep(20000);
+                pthread_mutex_unlock(&in->lock);
+                return bytes;
+            }
+        }
+#endif
+        
     /*BLUE_TRACE("in_read start.num_preprocessors=%d, resampler=%d",
                     in->num_preprocessors, in->resampler);*/
     if (in->num_preprocessors != 0)
@@ -1754,7 +1927,15 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
     else if (in->resampler != NULL)
         ret = read_frames(in, buffer, frames_rq);
     else {
-        ret = pcm_read(in->pcm, buffer, bytes);
+#ifdef  AUDIO_MUX_PCM
+                    if(in->mux_pcm){
+                        ret = mux_pcm_read(in->mux_pcm, buffer, bytes);
+                    }
+                    else
+                        ret = pcm_read(in->pcm, buffer, bytes);
+#else
+                    ret = pcm_read(in->pcm, buffer, bytes);
+ #endif
         if (ret == 0 && in->active_rec_proc)
             aud_rec_do_process(buffer, bytes);
     }
