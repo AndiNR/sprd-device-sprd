@@ -168,7 +168,8 @@ static void lower_emc_freq(char flag)
         mFDAddr(0),
         mPreviewStartFlag(0),
         mMetadataHeap(NULL),
-        mIsStoreMetaData(false)
+        mIsStoreMetaData(false),
+        mSettingPreviewWindowState(PREVIEW_WINDOW_SET_IDLE)
     {
         LOGV("openCameraHardware: call createInstance. cameraId: %d.", cameraId);
 
@@ -1085,6 +1086,11 @@ status_t SprdCameraHardware::setParameters(const CameraParameters& params)
         LOGV("mLock:setParameters S.\n");
         Mutex::Autolock l(&mLock);
         Mutex::Autolock lock(&mStateLock);
+        if(strcmp(params.get("null-window") , "1") == 0)
+        {
+                Mutex::Autolock previewLock(&mPreviewLock);
+                mSettingPreviewWindowState = PREVIEW_WINDOW_SET_IDLE;
+        }
 
         // FIXME: verify params
         // yuv422sp is here only for legacy reason. Unfortunately, we release
@@ -1139,6 +1145,11 @@ status_t SprdCameraHardware::setParameters(const CameraParameters& params)
         // FIXME: will this make a deep copy/do the right thing? String8 i
         // should handle it
         mParameters = params;
+         //now we matain null-window state in hal. to ensure the correct state
+        if(strcmp(mParameters.get("null-window") , "1") == 0)
+        {
+                mParameters.set("null-window" , "0");
+        }
 
         // libqcamera only supports certain size/aspect ratios
         // find closest match that doesn't exceed app's request
@@ -1316,6 +1327,7 @@ void SprdCameraHardware::receivePreviewFDFrame(camera_frame_type *frame)
 void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 {
         Mutex::Autolock cbLock(&mCallbackLock);
+        Mutex::Autolock previewLock(&mPreviewLock);
         ssize_t offset = frame->buf_id;
         camera_frame_metadata_t metadata;
         camera_face_t face_info[FACE_DETECT_NUM];
@@ -1331,6 +1343,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
         }
    //     LOGV("receivePreviewFrame\n");
 #if 1
+if(mSettingPreviewWindowState == PREVIEW_WINDOW_SET_OK)
 {
         int width, height, frame_size, offset_size;
 
@@ -3047,18 +3060,19 @@ status_t SprdCameraHardware::storeMetaDataInBuffers(bool enable)
 status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 {
     int min_bufs;
-
+    Mutex::Autolock stateLock(&mStateLock);
+    Mutex::Autolock previewLock(&mPreviewLock);
+    mSettingPreviewWindowState = PREVIEW_WINDOW_SETTING;
     mPreviewWindow = w;
     LOGV("%s: mPreviewWindow %p", __func__, mPreviewWindow);
 
     if (!w) {
         LOGE("preview window is NULL!");
         mPreviewStartFlag = 0;
+        mSettingPreviewWindowState = PREVIEW_WINDOW_SET_IDLE;
         return NO_ERROR;
     }
 
-    Mutex::Autolock stateLock(&mStateLock);
-    Mutex::Autolock previewLock(&mPreviewLock);
 
     mPreviewStartFlag = 1;
     //if (mPreviewRunning && !mPreviewStartDeferred) {
@@ -3069,6 +3083,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 
     if (w->get_min_undequeued_buffer_count(w, &min_bufs)) {
         LOGE("%s: could not retrieve min undequeued buffer count", __func__);
+	  mSettingPreviewWindowState = PREVIEW_WINDOW_SET_FAILED;
         return INVALID_OPERATION;
     }
 
@@ -3080,7 +3095,8 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
     LOGV("%s: setting buffer count to %d", __func__, kPreviewBufferCount);
     if (w->set_buffer_count(w, kPreviewBufferCount)) {
         LOGE("%s: could not set buffer count", __func__);
-        return INVALID_OPERATION;
+       mSettingPreviewWindowState = PREVIEW_WINDOW_SET_FAILED;
+       return INVALID_OPERATION;
     }
 
     int preview_width;
@@ -3106,6 +3122,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 #endif
 		if (w->set_usage(w, usage )) {
         	LOGE("%s: could not set usage on gralloc buffer", __func__);
+             mSettingPreviewWindowState = PREVIEW_WINDOW_SET_FAILED;
         	return INVALID_OPERATION;
     	}
     } else {
@@ -3123,6 +3140,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
                                 hal_pixel_format)) {
         LOGE("%s: could not set buffers geometry to %s",
              __func__, str_preview_format);
+	  mSettingPreviewWindowState = PREVIEW_WINDOW_SET_FAILED;
         return INVALID_OPERATION;
     }
 
@@ -3138,9 +3156,10 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 
    status_t ret = startPreviewInternal();
    if (ret != NO_ERROR) {
+      mSettingPreviewWindowState = PREVIEW_WINDOW_SET_FAILED;
    	return INVALID_OPERATION;
    }
-
+   mSettingPreviewWindowState = PREVIEW_WINDOW_SET_OK;
     return NO_ERROR;
 }
 

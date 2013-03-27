@@ -1068,6 +1068,11 @@ status_t SprdCameraHardware::setParameters(const CameraParameters& params)
         ALOGV("mLock:setParameters S.\n");
         Mutex::Autolock l(&mLock);
         Mutex::Autolock lock(&mStateLock);
+        if(strcmp(params.get("null-window") , "1") == 0)
+        {
+                Mutex::Autolock previewLock(&mPreviewLock);
+                mSettingPreviewWindowState = PREVIEW_WINDOW_SET_IDLE;
+        }
 
         // FIXME: verify params
         // yuv422sp is here only for legacy reason. Unfortunately, we release
@@ -1122,6 +1127,11 @@ status_t SprdCameraHardware::setParameters(const CameraParameters& params)
         // FIXME: will this make a deep copy/do the right thing? String8 i
         // should handle it
         mParameters = params;
+         //now we matain null-window state in hal. to ensure the correct state
+        if(strcmp(mParameters.get("null-window") , "1") == 0)
+        {
+                mParameters.set("null-window" , "0");
+        }
 
         // libqcamera only supports certain size/aspect ratios
         // find closest match that doesn't exceed app's request
