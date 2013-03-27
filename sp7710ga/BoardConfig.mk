@@ -66,6 +66,7 @@ WIFI_DRIVER_FW_PATH_P2P     := "/etc/wifi/fw_bcmdhd_p2p.bin"
 WIFI_DRIVER_FW_PATH_AP      := "/etc/wifi/fw_bcmdhd_apsta.bin"
 USE_CAMERA_STUB := true
 TARGET_BOARD_CAMERA_ROTATION := true
+TARGET_BOARD_SP7710_CAMERA := true
 
 BOARD_GPS := ublox
 
