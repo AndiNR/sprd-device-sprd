@@ -12,6 +12,8 @@
 #include "engapi.h"
 #include "engopt.h"
 #include "cutils/properties.h"
+#include <string.h>
+#include <errno.h>
 
 #ifdef LOG_TAG
 #undef LOG_TAG
@@ -99,12 +101,14 @@ static void write_to_randmacfile(char *btmac, char *wifimac)
 	int fd;
 	char buf[80];
 
-	fd = open(MAC_RAND_FILE, O_CREAT|O_TRUNC|O_RDWR);
+	fd = open(MAC_RAND_FILE, O_RDWR|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR);
 	if( fd >= 0) {
 		memset(buf, 0, sizeof(buf));
 		sprintf(buf, "%s;%s",btmac, wifimac);
 		write(fd, buf, sizeof(buf));
 		close(fd);
+	} else {
+	    ALOGD("%s: errno=%d, errstr=%s",__FUNCTION__, errno, strerror(errno));
 	}
 	ALOGD("%s: %s fd=%d, data=%s",__FUNCTION__, MAC_RAND_FILE, fd,buf);
 }
