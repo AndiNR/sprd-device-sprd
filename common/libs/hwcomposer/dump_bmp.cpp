@@ -296,7 +296,6 @@ void dump_layers(hwc_layer_list_t *list)
     property_get("dump.hwcomposer.path" , value , "0");
     if(strchr(value , '/') == NULL)
     {
-        ALOGE("dump layer path is null, return");
 	  return;
     }
     else
