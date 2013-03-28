@@ -296,7 +296,14 @@ cancelSearch(struct fm_device_t* dev)
     last_time = ( tv.tv_sec*1000*1000 + tv.tv_usec )/1000;
     LOGD("%s  ==>\n", __FUNCTION__);
 
-    if( searchAbortNative())
+    searchAbortNative();
+
+    if(gMutex.wait(0, 3))
+    {
+        return FM_FAILURE;
+    }
+
+    if(gfm_params.chnl_info.status == BTA_FM_OK)
     {
        gettimeofday( &tv, NULL);
        cur_time = ( tv.tv_sec*1000*1000 + tv.tv_usec )/1000;
