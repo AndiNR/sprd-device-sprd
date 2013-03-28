@@ -57,12 +57,15 @@ PRODUCT_PACKAGES += \
 	moffice_5.3.3_1033_cn00353_multidex_135897.apk \
 	Weibo3.3.0_300_ZhanXun_0308.apk \
 	20130308_iFlyIME_v3.0.1265_Spreadtrum_01430228.apk \
+	SohuNewsClient_v3.3_zhanxun \
 	Wostore.apk \
 	UnicomClient.apk \
 	116114.apk
 
 # packages files
 PRODUCT_PACKAGES += \
+	Wo3G \
+	WoReader
 	
 # add  system properties
 PRODUCT_PROPERTY_OVERRIDES += \
