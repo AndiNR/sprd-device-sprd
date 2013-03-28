@@ -72,6 +72,8 @@ on boot
     setprop wifi.interface wlan0
     chown system system /proc/sys/kernel/printk
 
+    copy /dev/sprd-watchdog /dev/null
+
 on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
 
