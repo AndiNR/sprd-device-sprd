@@ -76,6 +76,7 @@
 
 <profile name="capture-l">
 	<pga name="ADCL Capture Volume" bit="0" />
+	<pga name="MIC Boost" bit="6" />
 	<pga name="VBC ADCL DG Set" bit="8" />
 	<pga name="VBC ADCL DG Switch" bit="15" />
 </profile>
@@ -122,11 +123,15 @@
 	</mixer>
 
 	<mixer name="ADCL Capture Volume">
-		<attr max="15" inverse="0" />
+		<attr max="63" inverse="0" />
 	</mixer>
 
 	<mixer name="ADCR Capture Volume">
-		<attr max="15" inverse="0" />
+		<attr max="63" inverse="0" />
+	</mixer>
+
+	<mixer name="MIC Boost">
+		<attr max="3" inverse="0" />
 	</mixer>
 
 	<mixer name="VBC DACL DG Set">
