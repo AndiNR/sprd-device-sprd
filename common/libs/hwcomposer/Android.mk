@@ -31,7 +31,8 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/vsync \
 	$(LOCAL_PATH)/android \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL/usr/include/video \
-        $(TOP)/frameworks/native/include/utils
+        $(TOP)/frameworks/native/include/utils \
+	$(TOP)/system/core/include/system
 LOCAL_MODULE := hwcomposer.$(TARGET_BOARD_PLATFORM)
 LOCAL_CFLAGS:= -DLOG_TAG=\"SPRDhwcomposer\"
 LOCAL_CFLAGS += -D_USE_SPRD_HWCOMPOSER
@@ -41,7 +42,6 @@ ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
 	LOCAL_C_INCLUDES += $(LOCAL_PATH)/../libcamera/sc8825/inc
 
 	LOCAL_SRC_FILES += sc8825/scale_rotate.c
-
 	LOCAL_CFLAGS += -D_PROC_OSD_WITH_THREAD
 
 	LOCAL_CFLAGS += -D_DMA_COPY_OSD_LAYER
@@ -51,11 +51,18 @@ endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
 	LOCAL_SRC_FILES += sc8810/scale_rotate.c
-
 	LOCAL_CFLAGS += -D_SUPPORT_SYNC_DISP
 	LOCAL_CFLAGS += -D_VSYNC_USE_SOFT_TIMER
 endif
 
+ifeq ($(strip $(USE_GPU_PROCESS_VIDEO)) , true)
+	LOCAL_CFLAGS += -DUSE_GPU_PROCESS_VIDEO
+#        LOCAL_SRC_FILES += gpu/gpu.c
+endif
+
+ifeq ($(strip $(USE_RGB_VIDEO_LAYER)) , true)
+	LOCAL_CFLAGS += -DVIDEO_LAYER_USE_RGB
+endif
 else #android hwcomposer
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
