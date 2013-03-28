@@ -39,6 +39,7 @@ int ev_get(struct input_event *ev, int dont_wait);
 static pthread_t alarm_t_ShowUi = -1;
 static int alarm_BootSystem;
 unsigned boot_alarm = 0;
+int time_dm;
 
 struct boot_status gs_boot_state = {0};
 struct alarm_db *g_alarm_db_list = NULL;
@@ -114,6 +115,7 @@ char *get_ring_file(void)
 	char *abs_time = strtok(NULL, " \t\n");
 	char *ring_time = strtok(NULL, " \t\n");
 	char *snooze_time = strtok(NULL, " \t\n");
+	char *time_mdm = strtok(NULL, " \t\n");
 	char *file_path = strtok(NULL, " \t\n");
 	if(ring_time != NULL)
 		ring_length = strtoul(ring_time, (char **)NULL, 10);
@@ -177,6 +179,35 @@ int get_poweron_file(void)
 	LOGD("abstime_power=%d\n", abstime_power);
 	return abstime_power;
 }
+void  get_time_dm(void){
+	char *alarm_name = "/productinfo/alarm_flag";
+	int alarm_flag_fd = -1;
+	int ret;
+	alarm_flag_fd = open(alarm_name, O_RDWR);
+	if(alarm_flag_fd < 0){
+		LOGE("%s open error: %s\n", alarm_name, strerror(errno));
+		return 0;
+	}
+
+	ret = read(alarm_flag_fd, read_buf, sizeof(read_buf));
+	if(ret < 0){
+		close(alarm_flag_fd);
+		LOGD("read %s failed\n", alarm_name);
+		return 0;
+	}else{
+		LOGD("%s get: %s\n", alarm_name, read_buf);
+	}
+	char *rel_time = strtok(read_buf, " \t\n");
+	char *abs_time = strtok(NULL, " \t\n");
+	char *ring_time = strtok(NULL, " \t\n");
+	char *snooze_time = strtok(NULL, " \t\n");
+	char *time_mdm = strtok(NULL, " \t\n");
+	char *file_path = strtok(NULL, " \t\n");
+	if(time_mdm != NULL){
+		time_dm = atoi(time_mdm);
+	}
+	close(alarm_flag_fd);
+}
 int update_ring_file(void)
 {
 
@@ -211,6 +242,7 @@ int update_ring_file(void)
 	char *abs_time = strtok(NULL, " \t\n");
 	char *ring_time = strtok(NULL, " \t\n");
 	char *snooze_time = strtok(NULL, " \t\n");
+	char *time_mdm = strtok(NULL, " \t\n");
 	char *file_path = strtok(NULL, " \t\n");
 	if(rel_time != NULL)
 		reltime = strtoul(rel_time, NULL, 10);
@@ -225,7 +257,7 @@ int update_ring_file(void)
 		reltime=abstime -abstime_aralm +reltime;
 		if(abstime < abstime_power || abstime_power <= timenow){
 			LOGD("timenow=%d,abstime=%d,reltime=%d\n", timenow, abstime,reltime);
-			sprintf(buf,"%d\n%d\n%s\n%s\n%s\n", reltime, abstime,ring_time,snooze_time,file_path);
+			sprintf(buf,"%d\n%d\n%s\n%s\n%s\n", reltime, abstime,ring_time,snooze_time,time_mdm,file_path);
 			alarm_flag_fd = open(alarm_name, O_CREAT | O_RDWR,0664);
 			if(alarm_flag_fd < 0){
 				LOGE("%s open error: %s\n", alarm_name, strerror(errno));
@@ -322,6 +354,7 @@ int alarm_init(void)
 
 	gr_init();
 	gr_clean();
+	get_time_dm();
 	add_alarm_db_list();
 	if(creat_alarm_sec_list() == NULL)
 	{
