@@ -613,7 +613,7 @@ int main(void)
 	pid_t pid;
     	eng_thread_t t1,t2;
 	int has_thread = 0;
-	
+#if 0
 	umask(0);
 
 	/*
@@ -627,7 +627,7 @@ int main(void)
 
 	if (chdir("/") < 0)
 		ALOGD("can't change directory to /");
-	
+#endif
 	s = eng_server(ENG_SOCKET_PORT,SOCK_STREAM);
 	if (s == -1)
 	{

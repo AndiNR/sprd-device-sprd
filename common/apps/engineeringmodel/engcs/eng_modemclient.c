@@ -2469,7 +2469,7 @@ int main(int argc, char *argv[])
 	pid_t pid;
 	
 	ENG_LOG("Run Engineer Mode MODEM2SERVER Client!\n");
-	
+#if 0
 	umask(0);
 
 	/*
@@ -2484,7 +2484,7 @@ int main(int argc, char *argv[])
 	if (chdir("/") < 0){
 		ENG_LOG("%s: engclient can't change directory to /", __FILE__);	
 	}
-
+#endif
 	sem_init(&thread_sem_lock, 0, 0);
 
 	eng_monitor_thread();

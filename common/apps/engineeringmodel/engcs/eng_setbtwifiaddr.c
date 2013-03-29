@@ -399,10 +399,10 @@ int main(void)
 	ALOGD("property ro.mac.wifi=%s, ro.mac.bluetooth=%s",wifi_mac,bt_mac);
 	write_mac2file(wifi_mac,bt_mac);
 
-	property_set("ro.mac.wifi" ,wifi_mac);
-	property_set("ro.mac.bluetooth",bt_mac);
-	property_set("ro.bt.bdaddr_path",BT_MAC_FILE);
-
+	property_set("sys.mac.wifi" ,wifi_mac);
+	property_set("sys.mac.bluetooth",bt_mac);
+	property_set("sys.bt.bdaddr_path",BT_MAC_FILE);
+	property_set("ctl.start", "set_mac");
 
 	return 0;
 }

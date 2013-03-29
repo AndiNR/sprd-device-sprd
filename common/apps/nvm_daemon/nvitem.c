@@ -64,7 +64,9 @@ unsigned char data[DATA_BUF_LEN];
 static int req_head_info_count = 0;
 int mcp_size = 512, modem_image_len = 0;
 char gch, modem_mtd[256], dsp_mtd[256];
+#if 0
 FILE * gfp;
+#endif
 char gbuffer[BUFFER_LEN];
 
 /* nand version */
@@ -81,11 +83,14 @@ char *loadFile(char *pathName, int *fileSize);
 
 void log2file(void)
 {
+#if 0
 	if (gfp == NULL)
 		return;
 
 	fputs(gbuffer, gfp);
 	fflush(gfp);
+#endif
+	ALOGD("%s", gbuffer);
 }
 
 void req_head_info(request_header_t head) 
@@ -513,7 +518,7 @@ char *get_proc_mtd(void)
 		buf = 0;
 	} else
 		buf[fileSize] = 0;
-	
+    close(fd);
     return buf;
 }
 
@@ -584,7 +589,7 @@ int main(int argc, char **argv)
 	ret = nice(-16);
 	if ((-1 == ret) && (errno == EACCES))
 		ALOGE("set priority fail\n");
-
+#if 0
     gch = select_log_file();
 	gfp = NULL;
 	if (gch == '1')
@@ -601,7 +606,7 @@ int main(int argc, char **argv)
 		ALOGE("nothing is selected\n");
 	if (gfp == NULL)
 		ALOGE("\nno log file\n");
-	
+#endif
 #ifdef CONFIG_EMMC
 	modem_image_len = EMMC_MODEM_SIZE;
 	memset(gbuffer, 0, BUFFER_LEN);
@@ -967,8 +972,9 @@ reopen_vbpipe:
 	memset(gbuffer, 0, BUFFER_LEN);
 	sprintf(gbuffer, "close pipe_fd fixnv runtimenv\n");
 	log2file();
-	
-    fclose(gfp);
+#if 0
+	fclose(gfp);
+#endif
 	close(pipe_fd);
 	
     return 0;

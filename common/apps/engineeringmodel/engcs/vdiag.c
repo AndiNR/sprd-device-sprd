@@ -263,6 +263,7 @@ void *eng_vdiag_thread(void *x)
 	if(audio_fd > 0)
 		read(audio_fd, &audio_total, sizeof(audio_total));
 
+	close(audio_fd);
 	ENG_LOG("put diag data from serial to pipe\n");
 
 	init_user_diag_buf();
@@ -306,7 +307,6 @@ void *eng_vdiag_thread(void *x)
 		ENG_LOG("eng_vdiag read from diag %d, write to pipe%d\n", r_cnt, w_cnt);
 	}
 out:
-	close(audio_fd);
 	close(pipe_fd);
 	close(ser_fd);
 	return 0;

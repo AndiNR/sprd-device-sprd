@@ -77,7 +77,7 @@ service modem_control /system/bin/logwrapper /modem_control
 #start rawdata daemon.
 service rawdatad /bin/rawdatad
     class core
-    user root
+    user system
     oneshot
     
 #telephony service
@@ -88,27 +88,27 @@ service sprd_monitor /system/bin/sprd_monitor
     oneshot
 
 service modemd /system/bin/modemd
-    class main
+    class core
     user system
     group system radio
     oneshot
 
 service engpcclient /system/bin/engpcclient
-    class main
+    class core
     user system
-    group system shell
+    group system radio shell
     disabled
     oneshot
 
 service engservice /system/bin/engservice
-    class main
+    class core
     user system
     group system
     disabled
     oneshot
 
 service engmodemclient /system/bin/engmodemclient
-    class main
+    class core
     user system
     group system radio
     disabled
@@ -160,12 +160,10 @@ service ril-daemon1 /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -
     user root
     group radio cache inet misc audio sdcard_rw log
 
-on property:persist.msms.phone_count=2
-    start ril-daemon1
 
 #nvitemd
 service nvitemd /system/bin/nvitemd
-    class main
+    class core
     user system
     group system radio shell
     disabled
@@ -300,5 +298,11 @@ service kill_phone /system/bin/ext_kill.sh  -m
 service chown_service /system/bin/ext_chown.sh  -c
     class main
     user root
+    oneshot
+
+#set mac addr
+service set_mac /system/bin/ext_chown.sh  -e
+    user root
+    disabled
     oneshot
 
