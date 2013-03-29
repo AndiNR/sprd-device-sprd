@@ -9,3 +9,6 @@ This directory contains little tools for sysdump.
 	"make corebt" to generate corebt executable.
 4.  "CortexA5MP2_attach.cmm" is a script for Trace32 to
 	attach Tiger phone.
+5.  "elfcompare" is a executable file for showing the text section difference
+	between the vmlinux and the core file
+6.  "elfcompare.c" is source code for elfcompare, this is the version 1;
