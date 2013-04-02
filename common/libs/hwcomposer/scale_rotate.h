@@ -20,19 +20,16 @@
 extern "C"
 {
 #endif
-#ifdef VIDEO_LAYER_USE_RGB
-//may define alligned macro later
 
-#else
-#define SRCRECT_X_ALLIGNED                   7
-#define SRCRECT_Y_ALLIGNED                   7
-#define SRCRECT_WIDTH_ALLIGNED           7
-#define SRCRECT_HEIGHT_ALLIGNED          7
+#define SRCRECT_X_ALLIGNED                   3
+#define SRCRECT_Y_ALLIGNED                   0
+#define SRCRECT_WIDTH_ALLIGNED           3
+#define SRCRECT_HEIGHT_ALLIGNED          0
 #define FB_X_ALLIGNED                            3
-#define FB_Y_ALLIGNED                            3
-#define FB_WIDTH_ALLIGNED                    7
-#define FB_HEIGHT_ALLIGNED                   7
-#endif
+#define FB_Y_ALLIGNED                            0
+#define FB_WIDTH_ALLIGNED                    3
+#define FB_HEIGHT_ALLIGNED                   0
+
 typedef enum {
 	HW_ROTATION_0 = 0,
 	HW_ROTATION_90,
@@ -76,9 +73,9 @@ int camera_rotation_copy_data_from_virtual(uint32_t width, uint32_t height, uint
 
 int camera_rotation(HW_ROTATION_DATA_FORMAT_E rot_format, int degree, uint32_t width, uint32_t height, uint32_t in_addr, uint32_t out_addr);
 
-int transform_layer(uint32_t srcPhy, uint32_t srcVirt, uint32_t srcFormat, 
+int transform_layer(uint32_t srcPhy, uint32_t srcVirt, uint32_t srcFormat,
 	uint32_t transform,uint32_t srcWidth, uint32_t srcHeight , uint32_t dstPhy ,
-	uint32_t dstVirt, uint32_t dstFormat , uint32_t dstWidth, 
+	uint32_t dstVirt, uint32_t dstFormat , uint32_t dstWidth,
 	uint32_t dstHeight , struct sprd_rect *trim_rect ,uint32_t tmp_phy_addr,
 	uint32_t tmp_vir_addr);
 #ifdef __cplusplus

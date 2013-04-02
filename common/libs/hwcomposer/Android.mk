@@ -21,7 +21,7 @@ include $(CLEAR_VARS)
 ifeq ($(strip $(USE_SPRD_HWCOMPOSER)),true)
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
-LOCAL_SHARED_LIBRARIES := liblog libEGL libbinder libutils libcutils
+LOCAL_SHARED_LIBRARIES := liblog libEGL libbinder libutils libcutils libUMP libGLESv1_CM libhardware libui
 LOCAL_SRC_FILES := hwcomposer.cpp \
 		   vsync/vsync.cpp \
                    dump_bmp.cpp
@@ -35,7 +35,7 @@ LOCAL_C_INCLUDES := \
 	$(TOP)/system/core/include/system
 LOCAL_MODULE := hwcomposer.$(TARGET_BOARD_PLATFORM)
 LOCAL_CFLAGS:= -DLOG_TAG=\"SPRDhwcomposer\"
-LOCAL_CFLAGS += -D_USE_SPRD_HWCOMPOSER
+LOCAL_CFLAGS += -D_USE_SPRD_HWCOMPOSER -DGL_GLEXT_PROTOTYPES -DEGL_EGLEXT_PROTOTYPES
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
 	LOCAL_CFLAGS += -DSCAL_ROT_TMP_BUF
 
@@ -50,6 +50,7 @@ ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
 endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
+	LOCAL_CFLAGS += -DSCAL_ROT_TMP_BUF
 	LOCAL_SRC_FILES += sc8810/scale_rotate.c
 	LOCAL_CFLAGS += -D_SUPPORT_SYNC_DISP
 	LOCAL_CFLAGS += -D_VSYNC_USE_SOFT_TIMER
@@ -57,7 +58,7 @@ endif
 
 ifeq ($(strip $(USE_GPU_PROCESS_VIDEO)) , true)
 	LOCAL_CFLAGS += -DUSE_GPU_PROCESS_VIDEO
-#        LOCAL_SRC_FILES += gpu/gpu.c
+	LOCAL_SRC_FILES += gpu_transform.cpp
 endif
 
 ifeq ($(strip $(USE_RGB_VIDEO_LAYER)) , true)

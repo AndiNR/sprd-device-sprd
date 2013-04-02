@@ -22,6 +22,110 @@
 #include "scale_rotate.h"
 #include "graphics.h"
 
+#define SPRD_Y2R_CONTRAST 	74
+#define SPRD_Y2R_SATURATION	73
+#define SPRD_Y2R_BRIGHTNESS	2
+#define SPRD_Y2R_CLIP(_x)	((unsigned char)((_x) < 0 ? 0 : ((_x) > 255 ? 255 : (_x))))
+
+static void sprd_yuv420toargb888(uint32_t argb_data_ptr, uint32_t y_data_ptr, uint32_t uv_data_ptr,
+						uint32_t width, uint32_t height)
+{
+	uint32_t *argb_ptr = (uint32_t *)argb_data_ptr;
+	unsigned char *y_ptr = (unsigned char *)y_data_ptr;
+	unsigned char *uv_ptr = (unsigned char *)uv_data_ptr;
+	uint32_t i, j;
+
+	if ((width & 1) > 0 || (height & 1) > 0)
+		return;
+
+	for (i=0; i<height; i+=2)
+	{
+		for (j=0; j<width; j+=2)
+		{
+			int y, u, v;
+			int r, g, b;
+			int temp_r, temp_g, temp_b;
+
+			u = *uv_ptr++;
+			v = *uv_ptr++;
+
+			u = (u - 128) * SPRD_Y2R_SATURATION / 64 + 128;
+			u = SPRD_Y2R_CLIP(u);
+			v = (v - 128) * SPRD_Y2R_SATURATION / 64 + 128;
+			v= SPRD_Y2R_CLIP(v);
+
+			temp_r = 359 * v / 256 - 180;
+			temp_g = - (88 * u + 183 * v) / 256 + 136;
+			temp_b = 454 * u / 256 - 277;
+
+			/////////////////////////////////////////////////////////////
+			y = *y_ptr;
+			y = (y - 128) * SPRD_Y2R_CONTRAST / 64 + 128 + SPRD_Y2R_BRIGHTNESS;
+			y = SPRD_Y2R_CLIP(y);
+
+			r = y + temp_r;
+			g = y + temp_g;
+			b = y + temp_b;
+
+			r = SPRD_Y2R_CLIP(r);
+			g = SPRD_Y2R_CLIP(g);
+			b = SPRD_Y2R_CLIP(b);
+
+			*argb_ptr = 0xff000000 | (r << 16) | (g << 8) | (b);
+
+			/////////////////////////////////////////////////////////////
+			y = *(y_ptr + 1);
+			y = (y - 128) * SPRD_Y2R_CONTRAST / 64 + 128 + SPRD_Y2R_BRIGHTNESS;
+			y = SPRD_Y2R_CLIP(y);
+
+			r = y + temp_r;
+			g = y + temp_g;
+			b = y + temp_b;
+
+			r = SPRD_Y2R_CLIP(r);
+			g = SPRD_Y2R_CLIP(g);
+			b = SPRD_Y2R_CLIP(b);
+
+			*(argb_ptr + 1) = 0xff000000 | (r << 16) | (g << 8) | (b);
+
+			/////////////////////////////////////////////////////////////
+			y = *(y_ptr + width);
+			y = (y - 128) * SPRD_Y2R_CONTRAST / 64 + 128 + SPRD_Y2R_BRIGHTNESS;
+			y = SPRD_Y2R_CLIP(y);
+
+			r = y + temp_r;
+			g = y + temp_g;
+			b = y + temp_b;
+
+			r = SPRD_Y2R_CLIP(r);
+			g = SPRD_Y2R_CLIP(g);
+			b = SPRD_Y2R_CLIP(b);
+
+			*(argb_ptr + width) = 0xff000000 | (r << 16) | (g << 8) | (b);
+
+			/////////////////////////////////////////////////////////////
+			y = *(y_ptr + width + 1);
+			y = (y - 128) * SPRD_Y2R_CONTRAST / 64 + 128 + SPRD_Y2R_BRIGHTNESS;
+			y = SPRD_Y2R_CLIP(y);
+
+			r = y + temp_r;
+			g = y + temp_g;
+			b = y + temp_b;
+
+			r = SPRD_Y2R_CLIP(r);
+			g = SPRD_Y2R_CLIP(g);
+			b = SPRD_Y2R_CLIP(b);
+
+			*(argb_ptr + width + 1) = 0xff000000 | (r << 16) | (g << 8) | (b);
+
+			argb_ptr += 2;
+			y_ptr += 2;
+		}
+
+		y_ptr += width;
+		argb_ptr += width;
+	}
+}
 
 static ROTATION_DATA_FORMAT_E rotation_data_format_convertion(HW_ROTATION_DATA_FORMAT_E data_format)
 {
@@ -218,6 +322,7 @@ int do_scaling_and_rotaion(HW_SCALE_DATA_FORMAT_E output_fmt,
 	uint32_t slice_height = 0;
 	ISP_ENDIAN_T in_endian;
 	ISP_ENDIAN_T out_endian;
+	uint32_t scaling_mode = rotation;
 	int fd = open("/dev/sprd_scale", O_RDONLY);
 	if(fd < 0)
 	{
@@ -294,10 +399,7 @@ int do_scaling_and_rotaion(HW_SCALE_DATA_FORMAT_E output_fmt,
 	scale_config.id = SCALE_PATH_INPUT_ADDR;
 	scale_address.yaddr = input_yaddr;
 	scale_address.uaddr = intput_uvaddr;
-	if(SCALE_DATA_YUV420_3FRAME == input_fmt)
-		scale_address.vaddr = scale_address.uaddr + input_width*input_height/4;//todo
-	else
-		scale_address.vaddr = scale_address.uaddr;//todo
+	scale_address.vaddr = scale_address.uaddr + input_width*input_height/4;
 	scale_config.param = &scale_address;
 	ALOGV("scale input y addr:0x%x,uv addr:0x%x.",scale_address.yaddr,scale_address.uaddr);
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
@@ -344,7 +446,6 @@ int do_scaling_and_rotaion(HW_SCALE_DATA_FORMAT_E output_fmt,
 
 	//set rotation mode
 	scale_config.id = SCALE_PATH_ROT_MODE;
-	uint32_t scaling_mode = rotation;
 	scale_config.param = &scaling_mode;
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
@@ -375,6 +476,8 @@ int transform_layer(uint32_t srcPhy, uint32_t srcVirt, uint32_t srcFormat, uint3
 	HW_SCALE_DATA_FORMAT_E input_format;
 	int input_endian = 0;
 	int dst_scale_rot_format = 0;
+	uint32_t tmp_dst_phy_addr = 0;
+
 	switch(srcFormat) {
 	case HAL_PIXEL_FORMAT_YCbCr_420_SP:
 		input_format = HW_SCALE_DATA_YUV420;
@@ -390,6 +493,7 @@ int transform_layer(uint32_t srcPhy, uint32_t srcVirt, uint32_t srcFormat, uint3
 	}
 	switch(dstFormat)
 	{
+	case HAL_PIXEL_FORMAT_RGBX_8888:
 	case HAL_PIXEL_FORMAT_YCbCr_420_SP:
 		dst_scale_rot_format = HW_SCALE_DATA_YUV420;
 		break;
@@ -431,25 +535,42 @@ int transform_layer(uint32_t srcPhy, uint32_t srcVirt, uint32_t srcFormat, uint3
 		break;
 	}
 
+	if(HAL_PIXEL_FORMAT_RGBX_8888 == dstFormat){
+		tmp_dst_phy_addr = tmp_phy_addr;
+	}
+	else{
+		tmp_dst_phy_addr = dstPhy;
+	}
+
 	if ((srcFormat != HAL_PIXEL_FORMAT_YV12) && dcam_rot_degree
 		&& (srcWidth == trim_rect->w) && (srcHeight == trim_rect->h)
 		&& (srcWidth == outRealWidth) && (srcHeight == outRealHeight)) {
 		ALOGV("do rotation by rot hw");
-		ret = camera_rotation(HW_ROTATION_DATA_YUV420, dcam_rot_degree, srcWidth, srcHeight, srcPhy, dstPhy);
+
+		ret = camera_rotation(HW_ROTATION_DATA_YUV420, dcam_rot_degree, srcWidth, srcHeight, srcPhy, tmp_dst_phy_addr);
 		if(-1 == ret)
 			ALOGE("do rotaion fail");
+		else{
+			if(HAL_PIXEL_FORMAT_RGBX_8888 == dstFormat)
+				sprd_yuv420toargb888(dstVirt,tmp_vir_addr,tmp_vir_addr+srcWidth*srcHeight,srcWidth, srcHeight);
+		}
 	} else {
 		ret = do_scaling_and_rotaion(dst_scale_rot_format,
 		outRealWidth,outRealHeight,
-		dstPhy,dstPhy + dstHeight*dstWidth,
+		tmp_dst_phy_addr,tmp_dst_phy_addr + outRealWidth*outRealHeight,
 		input_format,input_endian,
 		srcWidth,srcHeight,
 		srcPhy,srcPhy + srcWidth*srcHeight,
 		trim_rect,rot, tmp_phy_addr);
-		if(ret != 0)
+		if(ret != 0){
 			ALOGE("do_scaling_and_rotaion failed");
+		}
+		else{
+			if(HAL_PIXEL_FORMAT_RGBX_8888 == dstFormat)
+				sprd_yuv420toargb888(dstVirt,tmp_vir_addr,tmp_vir_addr+outRealWidth*outRealHeight,outRealWidth, outRealHeight);
+		}
 	}
-	
+
 	return ret;
 
 }
