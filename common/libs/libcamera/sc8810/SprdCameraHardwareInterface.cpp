@@ -1268,12 +1268,12 @@ void* SprdCameraHardware::get_redisplay_mem(uint32_t size, uint32_t count, uint3
         uint32_t i;
         uint32_t real_size = 0;
         int buffer_size = camera_get_size_align_page(size);
-        ALOGV("INTERPOLATION:temp mem size=%d,align size=%d .",size,buffer_size);
+        ALOGV("get_redisplay_mem size=%d,align size=%d .",size,buffer_size);
         mReDisplayHeap = GetPmem("/dev/pmem_adsp", buffer_size, 1);
         if(NULL == mReDisplayHeap)
             return NULL;
         if(NULL == mReDisplayHeap->handle){
-                ALOGE("Fail to GetPmem mTempHWHeap. buffer_size: 0x%x.", buffer_size);
+                ALOGE("get_redisplay_mem Fail to GetPmem mTempHWHeap. buffer_size: 0x%x.", buffer_size);
                 return NULL;
         }
 
@@ -1281,12 +1281,12 @@ void* SprdCameraHardware::get_redisplay_mem(uint32_t size, uint32_t count, uint3
         *phy_addr = (uint32_t)get_physical_address(mReDisplayHeap,&real_size);
         uint32_t vaddr = (uint32_t)mReDisplayHeap->data;
 
-        ALOGV("get_temp_mem_by_HW: MALLOC size: %d, num: %d --> %p",
+        ALOGV("get_redisplay_mem: MALLOC size: %d, num: %d --> %p",
         buffer_size, count, (void *)vaddr);
         return (void *)vaddr;
         }
 
-        ALOGV("get_temp_mem_by_HW: X NULL");
+        ALOGV("get_redisplay_mem: X NULL");
         return NULL;
     }
 
@@ -1553,6 +1553,8 @@ if(PREVIEW_WINDOW_SET_OK == mSettingPreviewWindowState)
 							        goto callbacks;
 							}
 #else
+							ALOGE("receivePreviewFrame cp buf_addr=0x%x,phy_addr=0x%x", \
+								  frame->buffer_phy_addr, vaddr);
 
 							if(0 != camera_rotation_copy_data_virtual(width, height, frame->buffer_phy_addr, (uint32_t)vaddr)){
 							        ALOGE("fail to camera_rotation_copy_data() in receivePreviewFrame.");
@@ -1597,6 +1599,10 @@ callbacks:
                                 ALOGE("Fail to GetPmem tempHeap.");
                                 return;
                         }
+
+                        ALOGE("receivePreviewFrame buf_addr=0x%x,phy_addr=0x%x", \
+                                  frame->buffer_phy_addr, tempHeap->phys_addr);
+
                         if(0 != camera_convert_420_UV_VU(frame->buffer_phy_addr, tempHeap->phys_addr, frame->dx, frame->dy)){
                                 ALOGE("fail to camera_rotation_copy_data() in CAMERA_MSG_PREVIEW_FRAME.");
                                 return;

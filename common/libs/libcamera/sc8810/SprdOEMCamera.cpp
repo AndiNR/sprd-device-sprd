@@ -2712,6 +2712,7 @@ int camera_rotation_copy_data(uint32_t width, uint32_t height, uint32_t in_addr,
 {
 	int fd = -1;
 	ROTATION_PARAM_T rot_params;
+	int ret = 0;
 
 	rot_params.data_format = ROTATION_YUV420;
 	rot_params.img_size.w = width;
@@ -2734,7 +2735,7 @@ int camera_rotation_copy_data(uint32_t width, uint32_t height, uint32_t in_addr,
 	if (-1 == xioctl(fd, SPRD_ROTATION_DATA_COPY, &rot_params))
 	{
 		ALOGE("Fail to SC8800G_ROTATION_DATA_COPY");
-		return -1;
+		ret = -1;
 	}
 
 	if(-1 == close(fd))
@@ -2743,7 +2744,8 @@ int camera_rotation_copy_data(uint32_t width, uint32_t height, uint32_t in_addr,
         		return -1;
    	 }
     	fd = -1;
-	return 0;
+
+	return ret;
 }
 #endif
 
@@ -2753,6 +2755,7 @@ int camera_rotation_copy_data_virtual(uint32_t width, uint32_t height, uint32_t 
 {
 	int fd = -1;
 	ROTATION_PARAM_T rot_params;
+	int ret = 0;
 
 	rot_params.data_format = ROTATION_YUV420;
 	rot_params.img_size.w = width;
@@ -2767,24 +2770,25 @@ int camera_rotation_copy_data_virtual(uint32_t width, uint32_t height, uint32_t 
 	fd = open("/dev/sprd_rotation", O_RDWR /* required */, 0);
 	if (-1 == fd)
 	{
-		ALOGE("Fail to open rotation device.");
+		ALOGE("virt: Fail to open rotation device.");
 		return -1;
 	}
 
 	//done
 	if (-1 == xioctl(fd, SPRD_ROTATION_DATA_COPY_VIRTUAL, &rot_params))
 	{
-		ALOGE("Fail to SC8800G_ROTATION_DATA_COPY");
-		return -1;
+		ALOGE("virt: Fail to SC8800G_ROTATION_DATA_COPY");
+		ret =  -1;
 	}
 
 	if(-1 == close(fd))
 	{
-		ALOGE("Fail to close rotation device.");
+		ALOGE("virt: Fail to close rotation device.");
 		return -1;
 	}
 	fd = -1;
-	return 0;
+
+	return ret;
 }
 #endif
 
