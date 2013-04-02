@@ -31,7 +31,7 @@ PROPMODS := \
 	system/bin/sprd_monitor \
 	system/bin/phoneserver \
 	system/bin/phoneserver_2sim \
-	system/bin/akmd8975
+	system/bin/akmd8963
 
 PRODUCT_COPY_FILES := $(foreach f,$(PROPMODS),vendor/sprd/proprietories/sp7710ga/$(f):$(f))
 
