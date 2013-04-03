@@ -132,15 +132,18 @@ public class ModemAssert extends Service {
         Context context = getApplicationContext();
         CharSequence contentTitle = "modem assert";
         CharSequence contentText = AssertInfo;
-        Intent notificationIntent = new Intent(this, ModemAssert.class);
-        PendingIntent contentIntent =  PendingIntent.getService(context, 0, notificationIntent, 0);
+        /** modify 145779 add show assertinfo page **/
+        Intent notificationIntent = new Intent(this, AssertInfoActivity.class);
+        notificationIntent.putExtra("assertInfo", AssertInfo);
+        PendingIntent contentIntent =  PendingIntent.getActivity(context, 0, notificationIntent, 0);
 
         Log.e(MTAG, "Modem Assert!!!!\n");
         Log.e(MTAG, "" + contentText.toString());
         //notification.defaults |= Notification.DEFAULT_VIBRATE;
         long[] vibrate = {0, 10000};
         notification.vibrate = vibrate;
-
+        notification.flags |= Notification.FLAG_NO_CLEAR;// no clear
+        /** modify 145779 add show assertinfo page **/
         notification.defaults |= Notification.DEFAULT_SOUND;
         //notification.sound = Uri.parse("file:///sdcard/assert.mp3");
 
