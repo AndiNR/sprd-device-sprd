@@ -1715,6 +1715,7 @@ static int camera_cap_zoom_colorformat(SCALE_DATA_FORMAT_E output_fmt, uint32_t 
 	ISP_ENDIAN_T in_endian;
 	ISP_ENDIAN_T out_endian;
          int ret = 0;
+	uint32_t scaling_mode = 0;
 
 	fd = open("/dev/sprd_scale", O_RDONLY);//O_RDWR /* required */, 0);
 	if (-1 == fd)
@@ -1872,6 +1873,15 @@ static int camera_cap_zoom_colorformat(SCALE_DATA_FORMAT_E output_fmt, uint32_t 
 		ret = -1;
                   goto CAP_ZOOM_COLORFORM_END;
 	}
+	//set rotation mode
+	scale_config.id = SCALE_PATH_ROT_MODE;
+	scale_config.param = &scaling_mode;
+	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
+	{
+		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		ret = -1;
+                  goto CAP_ZOOM_COLORFORM_END;
+	}
 
 	//done
 	if (-1 == xioctl(fd, SCALE_IOC_DONE, 0))
@@ -1905,6 +1915,7 @@ static int camera_copy(SCALE_DATA_FORMAT_E output_fmt, uint32_t output_width, ui
 	ISP_ENDIAN_T in_endian;
 	ISP_ENDIAN_T out_endian;
          int ret = 0;
+	uint32_t scaling_mode = 0;
 
 	//ALOGE("[SPRD OEM]:camera_copy %d %d %d %d \n",trim_rect->w ,output_width,trim_rect->h,output_height);
 
@@ -2042,6 +2053,15 @@ static int camera_copy(SCALE_DATA_FORMAT_E output_fmt, uint32_t output_width, ui
 		ret = -1;
                   goto CAMERA_COPY_END;
 	}
+	//set rotation mode
+	scale_config.id = SCALE_PATH_ROT_MODE;
+	scale_config.param = &scaling_mode;
+	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
+	{
+		ALOGE("[SPRD OEM ERR]:camera_format_convert,Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		ret = -1;
+                  goto CAMERA_COPY_END;
+	}
 
 	//done
 	if (-1 == xioctl(fd, SCALE_IOC_DONE, 0))
@@ -2073,6 +2093,7 @@ static int camera_format_convert(SCALE_DATA_FORMAT_E output_fmt, uint32_t output
 	ISP_ENDIAN_T in_endian;
 	ISP_ENDIAN_T out_endian;
          int ret = 0;
+	uint32_t scaling_mode = 0;
 
 	if((trim_rect->w != output_width) || (trim_rect->h != output_height))
 	{
@@ -2208,6 +2229,15 @@ static int camera_format_convert(SCALE_DATA_FORMAT_E output_fmt, uint32_t output
 		ret =  -1;
                   goto CAMERA_FORMAT_CONVERT_END;
 	}
+	//set rotation mode
+	scale_config.id = SCALE_PATH_ROT_MODE;
+	scale_config.param = &scaling_mode;
+	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
+	{
+		ALOGE("[SPRD OEM ERR]:camera_format_convert,Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		ret =  -1;
+                  goto CAMERA_FORMAT_CONVERT_END;
+	}
 
 	//done
 	if (-1 == xioctl(fd, SCALE_IOC_DONE, 0))
@@ -2292,6 +2322,7 @@ static int camera_scale_functions(SCALE_DATA_FORMAT_E output_fmt, uint32_t outpu
 	ISP_ENDIAN_T in_endian;
 	ISP_ENDIAN_T out_endian;
          int ret = 0;
+	uint32_t scaling_mode = 0;
 
 	fd = open("/dev/sprd_scale", O_RDONLY);
 	if (-1 == fd)
@@ -2447,6 +2478,15 @@ static int camera_scale_functions(SCALE_DATA_FORMAT_E output_fmt, uint32_t outpu
 		ret = -1;
                   goto CAMERA_SCALE_FUNCTIONS_END;
 	}
+	//set rotation mode
+	scale_config.id = SCALE_PATH_ROT_MODE;
+	scale_config.param = &scaling_mode;
+	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
+	{
+		ALOGE("[SPRD OEM ERR]:camera_interpolation,Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		ret = -1;
+                  goto CAMERA_SCALE_FUNCTIONS_END;
+	}
 
 	//done
 	if (-1 == xioctl(fd, SCALE_IOC_DONE, 0))
@@ -2481,6 +2521,7 @@ static int camera_crop_interpolation(SCALE_DATA_FORMAT_E output_fmt, uint32_t ou
 	ISP_ENDIAN_T in_endian;
 	ISP_ENDIAN_T out_endian;
          int ret = 0;
+	uint32_t scaling_mode = 0;
 
 	fd = open("/dev/sprd_scale", O_RDONLY);
 	if (-1 == fd)
@@ -2636,6 +2677,15 @@ static int camera_crop_interpolation(SCALE_DATA_FORMAT_E output_fmt, uint32_t ou
 	{
 		ALOGE("[SPRD OEM ERR]:camera_interpolation,Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
                   ret = -1;        
+		goto CROP_INTERPOLATION_END;
+	}
+	//set rotation mode
+	scale_config.id = SCALE_PATH_ROT_MODE;
+	scale_config.param = &scaling_mode;
+	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
+	{
+		ALOGE("[SPRD OEM ERR]:camera_interpolation,Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		ret = -1;
 		goto CROP_INTERPOLATION_END;
 	}
 

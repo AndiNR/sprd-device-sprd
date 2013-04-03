@@ -164,12 +164,13 @@ LOCAL JPEG_RET_E JPEGENC_Scale_For_Thumbnail(SCALE_PARAM_T *scale_param)
 	SCALE_MODE_E scale_mode;
 	uint32_t enable = 0;
 	ISP_ENDIAN_T endian_mode;
+	uint32_t scaling_mode = 0;
 
 	fd = open("/dev/sprd_scale", O_RDONLY);
 	if (-1 == fd) 
 	{   
 		SCI_TRACE_LOW("Fail to open scale device.");
-        	return JPEG_FAILED;   
+		return JPEG_FAILED;
    	 }
     	
 	//set mode
@@ -179,6 +180,7 @@ LOCAL JPEG_RET_E JPEGENC_Scale_For_Thumbnail(SCALE_PARAM_T *scale_param)
 	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return JPEG_FAILED;
 	}
 	//set input data format
@@ -187,6 +189,7 @@ LOCAL JPEG_RET_E JPEGENC_Scale_For_Thumbnail(SCALE_PARAM_T *scale_param)
 	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return JPEG_FAILED;
 	}
 	//set output data format
@@ -195,6 +198,7 @@ LOCAL JPEG_RET_E JPEGENC_Scale_For_Thumbnail(SCALE_PARAM_T *scale_param)
 	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return JPEG_FAILED;
 	}
 	//set input size
@@ -204,6 +208,7 @@ LOCAL JPEG_RET_E JPEGENC_Scale_For_Thumbnail(SCALE_PARAM_T *scale_param)
 	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return JPEG_FAILED;
 	}
 	//set output size
@@ -213,6 +218,7 @@ LOCAL JPEG_RET_E JPEGENC_Scale_For_Thumbnail(SCALE_PARAM_T *scale_param)
 	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return JPEG_FAILED;
 	}	
 	//set input size
@@ -222,6 +228,7 @@ LOCAL JPEG_RET_E JPEGENC_Scale_For_Thumbnail(SCALE_PARAM_T *scale_param)
 	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return JPEG_FAILED;
 	}
 	//set input address
@@ -230,6 +237,7 @@ LOCAL JPEG_RET_E JPEGENC_Scale_For_Thumbnail(SCALE_PARAM_T *scale_param)
 	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return JPEG_FAILED;
 	}
 	//set output address
@@ -238,6 +246,7 @@ LOCAL JPEG_RET_E JPEGENC_Scale_For_Thumbnail(SCALE_PARAM_T *scale_param)
 	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return JPEG_FAILED;
 	}	
 	
@@ -251,6 +260,7 @@ LOCAL JPEG_RET_E JPEGENC_Scale_For_Thumbnail(SCALE_PARAM_T *scale_param)
 	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return JPEG_FAILED;
 	}
 	//set output endian
@@ -263,20 +273,31 @@ LOCAL JPEG_RET_E JPEGENC_Scale_For_Thumbnail(SCALE_PARAM_T *scale_param)
 	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return JPEG_FAILED;
 	}	
+	//set rotation mode
+	scale_config.id = SCALE_PATH_ROT_MODE;
+	scale_config.param = &scaling_mode;
+	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
+	{
+		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
+		return JPEG_FAILED;
+	}
 	
 	//done	 
 	if (-1 == xioctl(fd, SCALE_IOC_DONE, 0))   
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_DONE");
+		close(fd);
 		return JPEG_FAILED;
 	}
 
 	if(-1 == close(fd))   
 	{   
 		SCI_TRACE_LOW("Fail to close scale device.");
-        	return JPEG_FAILED;   
+		return JPEG_FAILED;
    	 } 
     	fd = -1;   
 

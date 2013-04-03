@@ -337,7 +337,7 @@ int do_scaling_and_rotaion(HW_SCALE_DATA_FORMAT_E output_fmt,
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
 		close(fd);
-                return -1;
+		return -1;
 	}
 
 	//set input data format

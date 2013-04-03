@@ -22,13 +22,13 @@ extern "C"
 #endif
 
 #define SRCRECT_X_ALLIGNED                   3
-#define SRCRECT_Y_ALLIGNED                   0
-#define SRCRECT_WIDTH_ALLIGNED           3
-#define SRCRECT_HEIGHT_ALLIGNED          0
-#define FB_X_ALLIGNED                            3
-#define FB_Y_ALLIGNED                            0
+#define SRCRECT_Y_ALLIGNED                   3
+#define SRCRECT_WIDTH_ALLIGNED               3
+#define SRCRECT_HEIGHT_ALLIGNED              3
+#define FB_X_ALLIGNED                        3
+#define FB_Y_ALLIGNED                        3
 #define FB_WIDTH_ALLIGNED                    3
-#define FB_HEIGHT_ALLIGNED                   0
+#define FB_HEIGHT_ALLIGNED                   3
 
 typedef enum {
 	HW_ROTATION_0 = 0,
