@@ -450,7 +450,7 @@ public class DebugParam extends PreferenceActivity {
         byte[] inputBytes = new byte[dataSize];
 
         int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
-        String mATResponse =  new String(inputBytes, 0, showlen,Charset.defaultCharset());
+        String mATResponse =  new String(inputBytes, 0, showlen);
         Log.d(TAG, "setAssertMode result is " + mATResponse);
         if(mATResponse.contains("OK")) {
             return true;
