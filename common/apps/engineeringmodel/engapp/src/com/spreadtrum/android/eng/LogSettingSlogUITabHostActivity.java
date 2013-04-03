@@ -129,4 +129,14 @@ public class LogSettingSlogUITabHostActivity extends TabActivity {
         }
 
     };
+    /*Add 20130320 Spreadst of 136305 engmode crash when close engmode start*/
+    @Override
+    protected void onStop() {
+        // TODO Auto-generated method stub
+        if (mProgressDialog != null && mProgressDialog.isShowing()) {
+            mProgressDialog.dismiss();
+        }
+        super.onStop();
+    }
+    /*Add 20130320 Spreadst of 136305 engmode crash when close engmode end*/
 }
