@@ -16,5 +16,8 @@
            </intent-filter>
         </receiver>
          <service android:name="com.android.modemassert.ModemAssert"></service>
+
+         <activity android:name="AssertInfoActivity"
+             android:icon="@drawable/modem_assert"></activity>
     </application>
 </manifest>
