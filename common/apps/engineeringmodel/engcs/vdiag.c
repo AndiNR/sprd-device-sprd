@@ -23,7 +23,7 @@ static char log_data[DATA_BUF_SIZE];
 static char ext_data_buf[DATA_EXT_DIAG_SIZE];
 static int ext_buf_len;
 //referrenced by eng_diag.c
-int audio_fd;
+//int audio_fd;
 AUDIO_TOTAL_T audio_total[4];
 
 static char* s_connect_ser_path[]={
@@ -225,6 +225,7 @@ void *eng_vdiag_thread(void *x)
 	int ser_fd;
 	int r_cnt, w_cnt;
 	int res, ret=0;
+    int audio_fd;
 	int wait_cnt = 0;
 	struct eng_param * param = (struct eng_param *)x;
 
@@ -260,9 +261,9 @@ void *eng_vdiag_thread(void *x)
 	if(0 == ensure_audio_para_file_exists((char *)(ENG_AUDIO_PARA_DEBUG))){
 		audio_fd = open(ENG_AUDIO_PARA_DEBUG,O_RDWR);
 	}
-	if(audio_fd > 0)
+    if (audio_fd > 0) {
 		read(audio_fd, &audio_total, sizeof(audio_total));
-
+    }
 	close(audio_fd);
 	ENG_LOG("put diag data from serial to pipe\n");
 
