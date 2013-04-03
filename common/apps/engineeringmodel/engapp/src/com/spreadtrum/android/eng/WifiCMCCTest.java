@@ -195,10 +195,12 @@ public class WifiCMCCTest extends PreferenceActivity {
         }*/
 
         if ("run_test".equals(key)) {
-            CheckBoxPreference checkbox = (CheckBoxPreference) preference;
-            if (checkbox.isChecked()) {
-                cmccTest();
-                checkbox.setEnabled(false);
+	    if(preference instanceof CheckBoxPreference){
+                CheckBoxPreference checkbox = (CheckBoxPreference) preference;
+                if (checkbox.isChecked()) {
+                    cmccTest();
+                    checkbox.setEnabled(false);
+                }
             }
         }
         return super.onPreferenceTreeClick(preferenceScreen, preference);

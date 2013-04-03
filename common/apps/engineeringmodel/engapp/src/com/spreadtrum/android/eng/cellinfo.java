@@ -7,6 +7,7 @@ import android.os.Bundle;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import android.util.Log;
 import android.os.Handler;
 import android.os.Looper;
@@ -75,7 +76,7 @@ private class EventHandler extends Handler
 			    int dataSize = 128;
 			    byte[] inputBytes = new byte[dataSize];
 			    int showlen= mEf.engread(sockid,inputBytes,dataSize);
-			    String str =new String(inputBytes,0,showlen); 
+			    String str =new String(inputBytes,0,showlen,Charset.defaultCharset());
 			    tv.setText(	str	);
 			    break;
 		 }
