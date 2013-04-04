@@ -71,27 +71,32 @@ public class ModemAssert extends Service {
         }
     };
 
+    private void connectToServer() {
+        for (;;) {
+            try {
+                mSocket.connect(mSocketAddr);
+                break;
+            } catch (IOException ioe) {
+                Log.w(MTAG, "connect server error\n");
+                SystemClock.sleep(10000);
+                continue;
+            }
+        }
+    }
+
     final private int BUF_SIZE = 128;
     Runnable mTask = new Runnable() {
         public void run() {
             byte[] buf = new byte[BUF_SIZE];
-            for (;;) {
-                try {
-                    mSocket.connect(mSocketAddr);
-                    break;
-                } catch (IOException ioe) {
-                    Log.w(MTAG, "connect server error\n");
-                    SystemClock.sleep(10000);
-                    continue;
-                }
-            }
+            connectToServer();
 
             synchronized (mBinder) {
                 for (;;) {
                     int cnt = 0;
+                    InputStream is = null;
                     try {
                         // mBinder.wait(endtime - System.currentTimeMillis());
-                        InputStream is = mSocket.getInputStream();
+                        is = mSocket.getInputStream();
                         Log.d(MTAG, "read from socket: \n");
                         cnt = is.read(buf, 0, BUF_SIZE);
                         Log.d(MTAG, "read " + cnt + " bytes from socket: \n" );
@@ -116,6 +121,15 @@ public class ModemAssert extends Service {
                             showNotification();
                         }
                         continue;
+                    } else if (cnt < 0) {
+                        try {
+                            is.close();
+                            mSocket.close();
+                        } catch (IOException e) {
+                            Log.w(MTAG, "close exception\n");
+                        }
+                        mSocket = new LocalSocket();
+                        connectToServer();
                     }
                 }
             }

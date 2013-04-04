@@ -671,8 +671,24 @@ static void *eng_modemreset_thread(void *par)
 		ALOGD("%s: get %d bytes %s\n", __func__, n, buffer);
 		if(n>0) {
 			if(strstr(buffer, "Assert") != NULL) {
-				n = write(pipe_fd, cmdrst, 2);
-				ALOGD("%s: write vbpip %d bytes RESET Modem\n",__func__, n);
+write_again:
+                                n = write(pipe_fd, cmdrst, 2);
+                                ALOGD("%s: write vbpipe %d bytes RESET Modem\n",__func__, n);
+                                if (n < 0) {
+                                    if (errno == -EPIPE) {
+                                        ALOGD("peer side of vbpipe is down, reopen it");
+                                        close(pipe_fd);
+                                        sleep(10);
+                                        pipe_fd = open("/dev/vbpipe0",O_WRONLY);
+                                        if(pipe_fd < 0) {
+                                            ALOGD("%s: cannot open vpipe0\n",__func__);
+                                            return NULL;
+                                        }
+                                    }
+                                    ALOGD("num write %d is lower than 0\n", n);
+                                    sleep(1);
+                                    goto write_again;
+                                }
 			}
 		}
 	}
