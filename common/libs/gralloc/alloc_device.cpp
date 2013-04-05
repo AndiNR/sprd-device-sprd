@@ -501,6 +501,11 @@ static int alloc_device_alloc(alloc_device_t* dev, int w, int h, int format, int
 			if (usage &  GRALLOC_USAGE_PRIVATE_1) {
 				hnd->flags |= private_handle_t::PRIV_FLAGS_NOT_OVERLAY;
 			}
+#ifdef DRM_SPECIAL_PROCESS
+                        if (!(usage & GRALLOC_USAGE_PROTECTED)) {
+                                hnd->flags |= private_handle_t::PRIV_FLAGS_NOT_OVERLAY;
+                        }
+#endif
 			if(preferIon)
 			{
 				m->mIonBufNum++;

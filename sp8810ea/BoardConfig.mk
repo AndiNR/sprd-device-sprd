@@ -90,6 +90,9 @@ BOARD_USES_GENERIC_AUDIO := false
 
 USE_BOOT_AT_DIAG := true
 USE_SPRD_HWCOMPOSER :=true
+USE_GPU_PROCESS_VIDEO :=true
+USE_RGB_VIDEO_LAYER :=true
+
 #USE_RGB_VIDEO_LAYER :=true
 #USE_GPU_PROCESS_VIDEO :=true
 ####################!!!! DONT'T FOLLOW THIS WAY TO CUSTOMIZE  !!!###############

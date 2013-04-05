@@ -55,6 +55,12 @@ LOCAL_CFLAGS:= -DLOG_TAG=\"gralloc.$(TARGET_BOARD_PLATFORM)\"
 # -DGRALLOC_32_BITS -DSTANDARD_LINUX_SCREEN
 endif
 
+ifeq ($(strip $(USE_RGB_VIDEO_LAYER)) , true)
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
+        LOCAL_CFLAGS += -DDRM_SPECIAL_PROCESS
+endif
+endif
+
 ifeq ($(strip $(USE_UI_OVERLAY)),true)
         LOCAL_CFLAGS += -DUSE_UI_OVERLAY
 endif
