@@ -30,7 +30,9 @@ LOCAL_CFLAGS += -D_VOICE_CALL_VIA_LINEIN
 endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
-LOCAL_CFLAGS += -D_DSP_CTRL_CODEC
+endif
+
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc7710)
 endif
 
 LOCAL_C_INCLUDES += \

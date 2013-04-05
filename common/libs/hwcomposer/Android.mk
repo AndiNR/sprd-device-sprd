@@ -56,6 +56,13 @@ ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
 	LOCAL_CFLAGS += -D_VSYNC_USE_SOFT_TIMER
 endif
 
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc7710)
+	LOCAL_CFLAGS += -DSCAL_ROT_TMP_BUF
+	LOCAL_SRC_FILES += sc8810/scale_rotate.c
+	LOCAL_CFLAGS += -D_SUPPORT_SYNC_DISP
+	LOCAL_CFLAGS += -D_VSYNC_USE_SOFT_TIMER
+endif
+
 ifeq ($(strip $(USE_GPU_PROCESS_VIDEO)) , true)
 	LOCAL_CFLAGS += -DUSE_GPU_PROCESS_VIDEO
 	LOCAL_SRC_FILES += gpu_transform.cpp
@@ -80,6 +87,10 @@ LOCAL_C_INCLUDES := $(TOP)/frameworks/native/include/utils \
 LOCAL_CFLAGS:= -DLOG_TAG=\"hwcomposer\"
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
+	LOCAL_CFLAGS += -D_VSYNC_USE_SOFT_TIMER
+endif
+
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc7710)
 	LOCAL_CFLAGS += -D_VSYNC_USE_SOFT_TIMER
 endif
 endif

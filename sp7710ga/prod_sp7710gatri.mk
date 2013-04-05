@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-TARGET_PLATFORM := sc8810
+TARGET_PLATFORM := sc7710
 TARGET_BOARD := sp7710ga
 BOARDDIR := device/sprd/$(TARGET_BOARD)
 
