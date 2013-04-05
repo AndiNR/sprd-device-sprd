@@ -7,8 +7,8 @@
      <!-- DAC->Headphone -->
      <ctl name="HPL Playback Volume" val="8" />
      <ctl name="HPR Playback Volume" val="8" />
-     <ctl name="DACL Playback Volume" val="5" />
-     <ctl name="DACR Playback Volume" val="5" />
+     <ctl name="DACL Playback Volume" val="7" />
+     <ctl name="DACR Playback Volume" val="7" />
 
      <!-- DAC->Speaker -->
      <ctl name="SPKL Playback Volume" val="10" />
