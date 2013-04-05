@@ -281,12 +281,12 @@ ifeq ($(strip $(TARGET_BOARD_Z788)),true)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_788
 endif
 
-ifneq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
+else
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc7710)
+else
 LOCAL_CFLAGS += -DCONFIG_CAMERA_ISP
 endif
-
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc7710)
-LOCAL_CFLAGS += -DCONFIG_CAMERA_5M
 endif
 
 ifeq ($(strip $(TARGET_BOARD_FRONT_CAMERA_ROTATION)),true)
