@@ -4948,6 +4948,7 @@ int camera_capture_init(uint32_t mem_size,int32_t capture_fmat)
 	}
 
 	camera_get_sensor_output_size(&sensor_output_w, &sensor_output_h);
+#ifdef CONFIG_SENSOR_OUTPUT_ONLY
 	if((sensor_output_w * sensor_output_h) > (fmt.fmt.pix.width * fmt.fmt.pix.height))
 	{
 		s_camera_info.dcam_out_width = sensor_output_w;
@@ -4958,6 +4959,12 @@ int camera_capture_init(uint32_t mem_size,int32_t capture_fmat)
 		s_camera_info.dcam_out_width = fmt.fmt.pix.width;
 		s_camera_info.dcam_out_height = fmt.fmt.pix.height;
 	}
+#else
+	{
+		s_camera_info.dcam_out_width = fmt.fmt.pix.width;
+		s_camera_info.dcam_out_height = fmt.fmt.pix.height;
+	}
+#endif
 	s_camera_info.cap_mem_size = mem_size;
 
 	ALOGV("camera_capture_init:dcam output,w=%d,h=%d .\n",s_camera_info.dcam_out_width,s_camera_info.dcam_out_height);
