@@ -63,7 +63,8 @@ PRODUCT_PACKAGES += \
 # add  system properties
 PRODUCT_PROPERTY_OVERRIDES += \
 	ro.operator=cmcc \
-	ro.operator.version=specA
+	ro.operator.version=specA \
+	ro.sf.lcd_density=240
 	
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \
