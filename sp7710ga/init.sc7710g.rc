@@ -49,7 +49,7 @@ on boot
     chown system system /dev/ltr_558als
     chmod 0664 /dev/ltr_558als
 
-    chown system system /sys/class/power_supply/*
+    chown system system /sys/class/power_supply
 
     chmod 666 /dev/ttyS0
     chmod 666 /proc/bluetooth/sleep/proto
@@ -128,8 +128,10 @@ on property:ksm.support=true
 on property:zram.support=true
     setprop zram.disksize 180
     setprop sys.vm.swappiness 100
-    service zram /system/xbin/zram.sh
-        class main
+    start zram	
+
+service zram /system/xbin/zram.sh
+        disabled
         oneshot
 
 #telephony service
