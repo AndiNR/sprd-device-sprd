@@ -22,6 +22,11 @@ ARCH_ARM_HAVE_TLS_REGISTER := true
 TARGET_BOARD_PLATFORM := sc7710
 TARGET_BOOTLOADER_BOARD_NAME := sp7710g2
 
+# Enable the optimized DEX
+ifneq ($(filter user, $(TARGET_BUILD_VARIANT)),)
+WITH_DEXPREOPT=true
+endif
+
 # config u-boot
 TARGET_NO_BOOTLOADER := false
 UBOOT_DEFCONFIG := sp7710g2
