@@ -25,7 +25,7 @@
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
 #endif
 
-extern int audio_fd;
+//extern int audio_fd;
 extern AUDIO_TOTAL_T audio_total[4];
 extern void eng_check_factorymode_fornand(void);
 extern void eng_check_factorymode_formmc(void);
@@ -953,6 +953,7 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 	MSG_HEAD_T *head_ptr=NULL;
 	char *ptr = NULL;
 	AUDIO_TOTAL_T *audio_ptr;
+    int audio_fd;
 	
 	sprintf(rsp,"\r\nERROR\r\n");
 
@@ -964,6 +965,7 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 	ENG_LOG("Call %s, subtype=%x\n",__FUNCTION__, head_ptr->subtype);
 	ptr = buf + 1 + sizeof(MSG_HEAD_T);
 
+    audio_fd = open(ENG_AUDIO_PARA_DEBUG,O_RDWR);
 	if(g_is_data){
 		ENG_LOG("HEY,DATA HAS COME!!!!");
 		g_is_data = g_is_data;
@@ -1125,5 +1127,6 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 	
 out:
 
+    close(audio_fd);
 	return strlen(rsp);
 }
