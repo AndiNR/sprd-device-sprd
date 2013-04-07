@@ -26,14 +26,13 @@ PRODUCT_AAPT_CONFIG := hdpi
 PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
 	ro.com.android.dataroaming=false \
-	persist.msms.phone_count=3 \
+	persist.msms.phone_count=2 \
 	persist.msms.phone_default=0 \
         lmk.autocalc=false \
         ksm.support=false    \
         zram.support=true \
         ro.build.product.lowmem=1 \
-        universe_ui_support=true \
-        ro.callfirewall.disabled=true 
+        ro.callfirewall.disabled=true    
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1
@@ -51,8 +50,9 @@ PRODUCT_PACKAGES := \
 	Settings \
 	MsmsStk \
 	Stk1 \
-	Stk2 \
-	framework2 
+	framework2 \
+	sprdcudm \
+	Launcher2
 
 # prebuild files
 PRODUCT_PACKAGES += \
@@ -64,7 +64,7 @@ PRODUCT_PACKAGES += \
 PRODUCT_PROPERTY_OVERRIDES += \
 	ro.operator=cmcc \
 	ro.operator.version=specA \
-	ro.sf.lcd_density=240
+	ro.sf.lcd_density=160
 	
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \
@@ -77,14 +77,13 @@ $(call inherit-product, frameworks/native/build/phone-hdpi-256-dalvik-heap.mk)
 $(call inherit-product, $(BOARDDIR)/base.mk)
 $(call inherit-product, $(BOARDDIR)/proprietories.mk)
 $(call inherit-product, vendor/sprd/operator/cucc/specA/res/boot/boot_res.mk)
-$(call inherit-product, vendor/sprd/UniverseUI/universeui.mk)
 
 # include standard configs
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/telephony.mk)
 
 # Overrides
-PRODUCT_NAME := sp7710gatri
+PRODUCT_NAME := sp7710gahvga
 PRODUCT_DEVICE := $(TARGET_BOARD)
 PRODUCT_MODEL := sp7710ga
 PRODUCT_BRAND := Spreadtrum

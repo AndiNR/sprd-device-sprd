@@ -27,7 +27,11 @@ TARGET_NO_BOOTLOADER := false
 UBOOT_DEFCONFIG := sp7710g2
 
 # config kernel
+ifeq ($(TARGET_PRODUCT), sp7710gahvga)
+KERNEL_DEFCONFIG := sp7710ga-native-hvga_defconfig
+else
 KERNEL_DEFCONFIG := sp7710ga-native_defconfig
+endif
 USES_UNCOMPRESSED_KERNEL := true
 BOARD_KERNEL_BASE := 0x00000000
 BOARD_KERNEL_CMDLINE := console=ttyS1,115200n8
