@@ -40,7 +40,6 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 	persist.sys.usb.config=mtp
 
 PRODUCT_PACKAGES := \
-	VoiceDialer \
 	Phone \
 	framework2 \
 	Settings \

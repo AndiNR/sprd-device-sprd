@@ -45,7 +45,6 @@ PRODUCT_PACKAGES := \
 	Stk1 \
 	SprdDM \
 	framework2 \
-	VoiceDialer \
 	Launcher2
 
 
