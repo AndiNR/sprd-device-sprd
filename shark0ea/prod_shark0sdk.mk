@@ -23,9 +23,7 @@ DEVICE_PACKAGE_OVERLAYS := $(BOARDDIR)/overlay
 PRODUCT_PROPERTY_OVERRIDES := \
     ro.ril.hsxpa=1 \
     ro.ril.gprsclass=10 \
-    ro.adb.qemud=1 \
-    rild.libpath=/system/lib/libreference-ril.so \
-    rild.libargs=-d /dev/ttyS0
+    ro.adb.qemud=1
 
 PRODUCT_COPY_FILES := \
     device/generic/goldfish/data/etc/apns-conf.xml:system/etc/apns-conf.xml \

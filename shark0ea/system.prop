@@ -1,3 +1,6 @@
+#
+# system.prop for shark0ea
+#
 
 ro.sf.lcd_density=160
 #ro.sf.lcd_width = 45
@@ -14,3 +17,7 @@ debug.hwui.render_dirty_regions=false
 
 # delay for ConnectivityChange broadcast (ms)
 conn.connectivity_change_delay = 0
+
+# copy from system.prop for generic sdk
+rild.libpath=/system/lib/libreference-ril.so
+rild.libargs=-d /dev/ttyS0

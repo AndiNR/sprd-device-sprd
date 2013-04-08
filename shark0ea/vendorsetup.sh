@@ -14,5 +14,4 @@
 # limitations under the License.
 #
 
-add_lunch_combo shark0eabase-userdebug
 add_lunch_combo shark0easdk-eng
