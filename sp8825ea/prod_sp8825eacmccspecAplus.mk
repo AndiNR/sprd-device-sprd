@@ -41,7 +41,6 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 	persist.sys.usb.config=mass_storage
 
 PRODUCT_PACKAGES := \
-    VoiceDialer \
     MsmsPhone \
     SprdDM \
     Settings \
