@@ -612,11 +612,14 @@ void *modem_log_handler(void *arg)
 	int buffer_start = 0, buffer_end = 0;
 	int buffer_len[RING_BUFFER_NUM];
 	unsigned char *ring_buffer_table;
-	int old_flags = 0, ret;
+	int ret;
 	int data_fd;
 	char buffer[MAX_NAME_LEN];
 	time_t t;
 	struct tm tm;
+	fd_set readset;
+	int result;
+	struct timeval timeout;
 
 	if(slog_enable == SLOG_DISABLE)
 		return NULL;
@@ -630,13 +633,16 @@ void *modem_log_handler(void *arg)
 			continue;
 		}
 
-		open_device(info, MODEM_LOG_SOURCE);
-		old_flags = fcntl(info->fd_device, F_GETFL);
+		if(info->state == SLOG_STATE_ON) {
+			if(slog_enable == SLOG_ENABLE )
+				info->fd_out = gen_outfd(info);
+			else
+				info->fd_out = -1;
+		} else
+			return NULL;
 
-		if(slog_enable == SLOG_ENABLE && info->state == SLOG_STATE_ON)
-			info->fd_out = gen_outfd(info);
-		else
-			info->fd_out = -1;
+		open_device(info, MODEM_LOG_SOURCE);
+
 		break;
 	}
 
@@ -646,15 +652,29 @@ void *modem_log_handler(void *arg)
 	}
 	modem_log_handler_started = 1;
 	while(slog_enable != SLOG_DISABLE) {
-		memset((char *)ring_buffer_table + buffer_end * SINGLE_BUFFER_SIZE, 0, SINGLE_BUFFER_SIZE);
-		if (fcntl(info->fd_device, F_SETFL, old_flags | O_NONBLOCK) == -1) {
-			err_log("fcntl failed!");
+
+		FD_ZERO(&readset);
+		FD_SET(info->fd_device, &readset);
+		timeout.tv_sec = 3;
+		timeout.tv_usec = 0;
+		result = select(info->fd_device + 1, &readset, NULL, NULL, &timeout);
+
+		if(result == 0)
+			continue;
+
+		if(result < 0) {
 			sleep(1);
 			continue;
 		}
 
+		if(FD_ISSET(info->fd_device, &readset) <= 0){
+			continue;
+                }
+
+		memset((char *)ring_buffer_table + buffer_end * SINGLE_BUFFER_SIZE, 0, SINGLE_BUFFER_SIZE);
+
 		ret = read(info->fd_device, (char *)ring_buffer_table + buffer_end * SINGLE_BUFFER_SIZE, SINGLE_BUFFER_SIZE);
-		if (ret <= 0) {
+		if (ret < 0) {
 			if(errno != EAGAIN) {
 				err_log("read modem log failed.");
 				close(info->fd_device);
@@ -682,8 +702,8 @@ void *modem_log_handler(void *arg)
 		/* add timestamp */
 		t = time(NULL);
 		localtime_r(&t, &tm);
-		sprintf(buffer, "/data/log/modem_%d%02d%02d%02d%02d.log",
-					tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min);
+		sprintf(buffer, "/data/log/modem_%d%02d%02d%02d%02d%02d.log",
+					tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 
 		data_fd = open(buffer, O_WRONLY | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
 		if(data_fd < 0) {
@@ -972,7 +992,7 @@ void *tcp_log_handler(void *arg)
 			current_log_path, top_logdir, tcp->log_path, tcp->log_basename);
 		file_name_rotate(buffer);
 
-		execl("/system/xbin/tcpdump", "tcpdump", "-i", "any", "-p", "-s 0", "-w", buffer, (char *)0);
+		execl("/system/bin/tcp", "tcp", "-i", "any", "-p", "-s 0", "-w", buffer, (char *)0);
 		exit(0);
 	}
 

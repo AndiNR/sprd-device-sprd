@@ -80,7 +80,7 @@ enum {
 #define MAXROLLLOGS			10
 #define TIMEOUT_FOR_SD_MOUNT		5 /* seconds */
 #define MODEM_CIRCULAR_SIZE		(2 * 1024 * 1024) /* 2 MB */
-#define SINGLE_BUFFER_SIZE		2048
+#define SINGLE_BUFFER_SIZE		(16 * 1024) /* 16k */
 #define RING_BUFFER_NUM			(MODEM_CIRCULAR_SIZE / SINGLE_BUFFER_SIZE)
 #define HOOK_MODEM_TARGET_DIR		"/data/log"
 

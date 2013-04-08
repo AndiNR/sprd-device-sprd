@@ -596,6 +596,18 @@ static void handler_internal_log_size()
 }
 
 /*
+ * handle dropbox
+ *
+ */
+static void handle_dropbox()
+{
+	char cmd[MAX_NAME_LEN];
+	sprintf(cmd, "tar czf %s/%s/dropbox.tgz /data/system/dropbox", current_log_path, top_logdir);
+	err_log("%s", cmd);
+	return system(cmd);
+}
+
+/*
  * handle top_logdir
  *
  */
@@ -620,6 +632,7 @@ static void handle_top_logdir()
 		case 0:
 			create_log_dir();
 			capture_snap_for_last(snapshot_log_head);
+			handle_dropbox();
 			property_set("slog.step", "1");
 			break;
 		default:
