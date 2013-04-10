@@ -56,6 +56,13 @@ typedef struct sprd_camera_memory {
 	void *data;
 }sprd_camera_memory_t;
 
+typedef enum
+{
+	CAMERA_FLUSH_RAW_HEAP,
+	CAMERA_FLUSH_RAW_HEAP_ALL,
+	CAMERA_FLUSH_MAX
+}CameraFlushMemTypeEnum;
+
 class SprdCameraHardware : public virtual RefBase {
 public:
     //virtual sp<IMemoryHeap> getPreviewHeap() const;
@@ -131,7 +138,12 @@ public:
     SprdCameraHardware(int cameraId);
     virtual             ~SprdCameraHardware();	
     inline  int         getCameraId() const;
+
+	int flush_buffer(CameraFlushMemTypeEnum  type ,  void *v_addr, void *p_addr, int size);
+
 private:
+
+	sprd_camera_memory_t* GetCachePmem(const char *device_name, int buf_size, int num_bufs);
 
 	sprd_camera_memory_t* GetPmem(const char *device_name, int buf_size, int num_bufs);
 	void FreePmem(sprd_camera_memory_t* camera_memory);

@@ -300,6 +300,52 @@ status_t SprdCameraHardware::dump(int fd) const
         return NO_ERROR;
     }
 
+sprd_camera_memory_t* SprdCameraHardware::GetCachePmem(const char *device_name, int buf_size, int num_bufs)
+{
+	sprd_camera_memory_t *memory = (sprd_camera_memory_t *)malloc(sizeof(*memory));
+	if(NULL == memory) {
+		ALOGE("wxz: Fail to GetCachePmem, memory is NULL.");
+		return NULL;
+	}
+	camera_memory_t *camera_memory;
+	int paddr, psize;
+        int order = 0, acc = 1;
+
+	while(acc < buf_size * num_bufs) {
+		order++;
+		acc = acc*2;
+	}
+	acc = camera_get_size_align_page(acc);
+        MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc ,0 , (1<<31) | ION_HEAP_CARVEOUT_MASK);
+//        MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc ,MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+
+	camera_memory = mGetMemory_cb(pHeapIon->getHeapID(), acc/num_bufs, num_bufs, NULL);
+
+        if(NULL == camera_memory) {
+                   goto getpmem_end;
+        }
+        if(0xFFFFFFFF == (uint32_t)camera_memory->data) {
+                 camera_memory = NULL;
+                 ALOGE("Fail to GetPmem().");
+                 goto getpmem_end;
+       }
+	pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
+	memory->ion_heap = pHeapIon;
+	memory->camera_memory = camera_memory;
+	memory->phys_addr = paddr;
+	memory->phys_size = psize;
+	memory->handle = camera_memory->handle;
+	//memory->data = camera_memory->data;
+	memory->data = pHeapIon->getBase();
+
+       ALOGV("GetCachePmem: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
+                            memory->phys_addr, (uint32_t)camera_memory->data,
+                            camera_memory->size, memory->phys_size);
+
+getpmem_end:
+	return memory;
+}
+
 sprd_camera_memory_t* SprdCameraHardware::GetPmem(const char *device_name, int buf_size, int num_bufs)
 {
 	sprd_camera_memory_t *memory = (sprd_camera_memory_t *)malloc(sizeof(*memory));
@@ -479,7 +525,7 @@ bool SprdCameraHardware::initRaw(bool initJpegHeap)
         buffer_size = camera_get_size_align_page(buffer_size);
         ALOGV("CAMERA HARD:initRaw:mRawHeap align size = %d .",buffer_size);
 
-        mRawHeap = GetPmem("/dev/pmem_adsp", buffer_size, kRawBufferCount);
+        mRawHeap = GetCachePmem("/dev/pmem_adsp", buffer_size, kRawBufferCount);
         if(NULL == mRawHeap)
             return false;	
         if(NULL == mRawHeap->handle){
@@ -3351,6 +3397,40 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 int SprdCameraHardware::getCameraId() const
 {
     return g_camera_id;
+}
+
+int SprdCameraHardware::flush_buffer(CameraFlushMemTypeEnum  type  , void *v_addr, void *p_addr, int size)
+{
+	int ret = 0;
+	sprd_camera_memory_t  *pmem = NULL;
+	MemoryHeapIon *pHeapIon;
+
+
+	switch(type)
+	{
+	case CAMERA_FLUSH_RAW_HEAP:
+		pmem = mRawHeap;
+		break;
+	case CAMERA_FLUSH_RAW_HEAP_ALL:
+		pmem = mRawHeap;
+		v_addr = (void*)pmem->data;
+		p_addr = (void*)pmem->phys_addr;
+		size = (int)pmem->phys_size;
+		break;
+	default:
+		break;
+	}
+
+
+	if (pmem) {
+		pHeapIon = pmem->ion_heap;
+		ret = pHeapIon->flush_ion_buffer(v_addr, p_addr, size);
+		if (!ret) {
+			ALOGV("flush_buffer error ret=%d", ret);
+		}
+	}
+
+	return ret;
 }
 
 
