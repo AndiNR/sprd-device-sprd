@@ -162,5 +162,6 @@ int camera_rotation_copy_data_virtual(uint32_t width, uint32_t height, uint32_t 
 int camera_convert_420_UV_VU(int src_addr,int dst_addr,int width,int height);
 void camera_set_preview_mode(int mode);
 void camera_set_start_facedetect(uint32_t param);
+void close_device(void);
 };
 #endif //ANDROID_HARDWARE_SPRD_OEM_CAMERA_H

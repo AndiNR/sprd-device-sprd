@@ -167,7 +167,10 @@ gralloc_module_t const* SprdCameraHardware::mGrallocHal;
         else{
                 //SprdCameraHardware::createInstance();
                 //createInstance();
-                initDefaultParameters();
+                if (NO_ERROR != initDefaultParameters()) {
+                    close_device();
+                    ALOGE("SprdCameraHardware fail.");
+                }
         }
     }
 
