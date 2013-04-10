@@ -21,10 +21,17 @@ extern "C"
 {
 #endif
 
+#ifdef USE_GPU_PROCESS_VIDEO
+#define SRCRECT_X_ALLIGNED                   0
+#define SRCRECT_Y_ALLIGNED                   0
+#define SRCRECT_WIDTH_ALLIGNED               0
+#define SRCRECT_HEIGHT_ALLIGNED              0
+#else
 #define SRCRECT_X_ALLIGNED                   3
 #define SRCRECT_Y_ALLIGNED                   3
 #define SRCRECT_WIDTH_ALLIGNED               3
 #define SRCRECT_HEIGHT_ALLIGNED              3
+#endif
 #define FB_X_ALLIGNED                        3
 #define FB_Y_ALLIGNED                        3
 #define FB_WIDTH_ALLIGNED                    3

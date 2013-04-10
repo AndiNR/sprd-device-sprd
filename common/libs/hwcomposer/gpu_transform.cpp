@@ -3,6 +3,7 @@
 #include <hardware/gralloc.h>
 #include "gralloc_priv.h"
 #include <ui/GraphicBuffer.h>
+#include "scale_rotate.h"
 
 #define GLES2_TRANSFORM 0
 
@@ -23,10 +24,11 @@
 
 gralloc_module_t const* module;
 
-EGLDisplay	egl_dpy;
-EGLContext	egl_context;
-EGLSurface	egl_surface;
-unsigned int is_init = 0, last_transform = 0xffff;
+static EGLDisplay	egl_dpy;
+static EGLContext	egl_context;
+static EGLSurface	egl_surface;
+static unsigned int is_init = 0;
+static unsigned int last_transform = 0xffff;
 
 #ifdef _DEBUG
 #define GL_CHECK(x) \
@@ -41,8 +43,22 @@ unsigned int is_init = 0, last_transform = 0xffff;
 #define GL_CHECK(x) x
 #endif
 
-GLuint tex_src;
-GLuint tex_dst;
+static GLuint tex_src;
+static GLuint tex_dst;
+
+static GLfloat vertices[] = {
+	-1.0f, -1.0f,
+	1.0f, -1.0f,
+	1.0f,  1.0f,
+	-1.0f,  1.0f
+};
+
+static GLfloat texcoords[] = {
+	0.0f, 0.0f,
+	1.0f, 0.0f,
+	1.0f, 1.0f,
+	0.0f, 1.0f
+};
 
 void install()
 {
@@ -61,20 +77,6 @@ void install()
     glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-
-    static GLfloat vertices[] = {
-		 -1.0f, -1.0f,
-		  1.0f, -1.0f,
-		  1.0f,	 1.0f,
-		 -1.0f,	 1.0f
-	};
-
-    static GLfloat texcoords[] = {
-		  0.0f, 0.0f,
-		  1.0f, 0.0f,
-		  1.0f, 1.0f,
-		  0.0f, 1.0f
-	};
 #if GLES2_TRANSFORM
     const char* vert_src[] =  {
 		"\
@@ -364,19 +366,38 @@ int transform_layer(uint32_t srcPhy, uint32_t srcVirt, uint32_t srcFormat, uint3
 			break;
 		case HAL_TRANSFORM_ROT_180:
 			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
 			glRotatef(180.0, 0.0f, 0.0f, 1.0f);
 			break;
 		case HAL_TRANSFORM_ROT_270:
 			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
 			glRotatef(270.0, 0.0f, 0.0f, 1.0f);
 			break;
 		case HAL_TRANSFORM_FLIP_H:
 			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
 			glRotatef(180.0, 0.0f, 1.0f, 0.0f);
 			break;
 		}
 #endif
 	}
+
+    if(trim_rect)
+    {
+        texcoords[0] = texcoords[6] = trim_rect->x / (float)srcWidth;
+        texcoords[1] = texcoords[3] = trim_rect->y / (float)srcHeight;
+        texcoords[2] = texcoords[4] = (trim_rect->x + trim_rect->w) / (float)srcWidth;
+        texcoords[5] = texcoords[7] = (trim_rect->y + trim_rect->h) / (float)srcHeight;
+    }
+    else
+    {
+        texcoords[0] = texcoords[6] = 0.0f;
+        texcoords[1] = texcoords[3] = 0.0f;
+        texcoords[2] = texcoords[4] = 1.0f;
+        texcoords[5] = texcoords[7] = 1.0f;
+    }
+
 
     static EGLint attribs[] = {
     EGL_IMAGE_PRESERVED_KHR,    EGL_TRUE,
