@@ -98,6 +98,9 @@ Only the three quirks included above are recognized at this point:
         <MediaCodec name="OMX.google.imaadpcm.decoder" type="audio/ima-adpcm" />
         <MediaCodec name="OMX.google.vorbis.decoder" type="audio/vorbis" />
 
+        <MediaCodec name="OMX.sprd.mpeg4.decoder" type="video/mp4v-es" />
+        <MediaCodec name="OMX.sprd.h263.decoder" type="video/3gpp" />
+        <MediaCodec name="OMX.sprd.h264.decoder" type="video/avc" />
         <MediaCodec name="OMX.google.mpeg4.decoder" type="video/mp4v-es" />
         <MediaCodec name="OMX.google.h263.decoder" type="video/3gpp" />
         <MediaCodec name="OMX.google.h264.decoder" type="video/avc" />
