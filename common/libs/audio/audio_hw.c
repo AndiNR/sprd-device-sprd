@@ -1205,7 +1205,7 @@ static ssize_t out_write_mux(struct tiny_stream_out *out, const void* buffer,
                          size_t bytes)
 {
     void *buf;
-    int ret;
+    int ret=0;
     size_t frame_size = 0;
     size_t in_frames = 0;
     size_t out_frames =0; 
@@ -1601,6 +1601,7 @@ static int start_input_stream(struct tiny_stream_in *in)
         in->resampler->reset(in->resampler);
         in->frames_in = 0;
     }
+    ALOGE("start input stream out");
     return 0;
 
 err:
@@ -1968,8 +1969,10 @@ static int get_next_buffer(struct resampler_buffer_provider *buffer_provider,
 #endif                                     
 
         if (in->read_status != 0) {
-            ALOGE("get_next_buffer() pcm_read sattus=%d, error: %s",
+            if(in->pcm) {
+                ALOGE("get_next_buffer() pcm_read sattus=%d, error: %s",
                                 in->read_status, pcm_get_error(in->pcm));
+            }
             buffer->raw = NULL;
             buffer->frame_count = 0;
             return in->read_status;
@@ -2163,6 +2166,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
             in->is_sco=false;
         }
     }
+
     if (in->standby) {
         ret = start_input_stream(in);
         if (ret == 0)
@@ -2176,15 +2180,15 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
         goto exit;
 
 #ifdef AUDIO_MUX_PCM
-        if(adev->call_connected){
-            if(!in->mux_pcm){
+        if(((adev->call_connected) &&(!in->mux_pcm)) 
+            ||((!adev->call_connected) &&(in->mux_pcm))) {
                 usleep(20000);
+                ALOGW("in_read no data read adev->call_connected is %d,in->mux_pcm is %x",adev->call_connected,(unsigned int)in->mux_pcm);
                 pthread_mutex_unlock(&in->lock);
-                return bytes;
-            }
+                return bytes;           
         }
 #endif
-        
+  
     /*BLUE_TRACE("in_read start.num_preprocessors=%d, resampler=%d",
                     in->num_preprocessors, in->resampler);*/
     if (in->num_preprocessors != 0)
@@ -2213,7 +2217,9 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
     /*BLUE_TRACE("in_read OK, bytes=%d", bytes);*/
 exit:
     if (ret < 0) {
-        ALOGW("in_read,warning: ret=%d, (%s)", ret, pcm_get_error(in->pcm));
+        if(in->pcm) {
+            ALOGW("in_read,warning: ret=%d, (%s)", ret, pcm_get_error(in->pcm));
+        }
         do_input_standby(in);
     }
     pthread_mutex_unlock(&in->lock);
