@@ -37,6 +37,8 @@
 
 #include "ion_sprd.h"
 #include "hwcomposer_sprd.h"
+#include <cutils/properties.h>
+
 #define SPRD_ION_DEV "/dev/ion"
 
 #define OVERLAY_BUF_NUM 2
@@ -52,6 +54,7 @@ using namespace android;
 /*****************************************************************************/
 
 
+static int debugenable = 0;
 inline int MIN(int x, int y) {
     return ((x < y) ? x : y);
 }
@@ -317,11 +320,11 @@ static int set_osd_layer(struct hwc_context_t *context, hwc_layer_t * l)
 	if (private_h->flags & private_handle_t::PRIV_FLAGS_USES_PHY) {
 		if (0 == l->transform) {
 #ifdef _SUPPORT_SYNC_DISP
-			ALOGV("osd display directly");
+			ALOGI_IF(debugenable , "osd display directly");
 			context->osd_sync_display = 1;
 			current_overlay_addr  = private_h->phyaddr;
 #else
-			ALOGV("osd display with rot copy");
+			ALOGI_IF(debugenable , "osd display with rot copy");
 			context->osd_sync_display = 0;
 			current_overlay_addr = context->overlay_phy_addr2 + context->overlay_buf_size2*context->overlay_index2;
 			int ret = camera_rotation_copy_data(context->fb_width, context->fb_height,  private_h->phyaddr, current_overlay_addr);
@@ -330,7 +333,7 @@ static int set_osd_layer(struct hwc_context_t *context, hwc_layer_t * l)
 			context->overlay_index2 = (context->overlay_index2 + 1)%OVERLAY_BUF_NUM;
 #endif
 		} else {
-			ALOGV("osd display with rot");
+			ALOGI_IF(debugenable , "osd display with rot");
 			current_overlay_addr = context->overlay_phy_addr2 + context->overlay_buf_size2*context->overlay_index2;
 			int degree;
 			if (HAL_TRANSFORM_ROT_90 == l->transform)
@@ -345,7 +348,7 @@ static int set_osd_layer(struct hwc_context_t *context, hwc_layer_t * l)
 			context->overlay_index2 = (context->overlay_index2 + 1)%OVERLAY_BUF_NUM;
 		}
 	} else {
-		ALOGV("osd display with dma copy");
+		ALOGI_IF(debugenable , "osd display with dma copy");
 		current_overlay_addr = context->overlay_phy_addr2 + context->overlay_buf_size2*context->overlay_index2;
 		camera_rotation_copy_data_from_virtual(context->fb_width, context->fb_height, private_h->base, current_overlay_addr);
 		context->overlay_index2 = (context->overlay_index2 + 1)%OVERLAY_BUF_NUM;
@@ -364,7 +367,7 @@ static int set_osd_layer(struct hwc_context_t *context, hwc_layer_t * l)
 	ov_setting.rect.w = context->fb_width;
 	ov_setting.rect.h = context->fb_height;
 	ov_setting.buffer = (unsigned char*)current_overlay_addr;
-	ALOGV("osd overlay parameter datatype = %d,x=%d,y=%d,w=%d,h=%d,buffer = %x",ov_setting.data_type,ov_setting.rect.x,ov_setting.rect.y,ov_setting.rect.w,ov_setting.rect.h,ov_setting.buffer);
+	ALOGI_IF(debugenable , "osd overlay parameter datatype = %d,x=%d,y=%d,w=%d,h=%d,buffer = %x",ov_setting.data_type,ov_setting.rect.x,ov_setting.rect.y,ov_setting.rect.w,ov_setting.rect.h,ov_setting.buffer);
 	if (ioctl(context->fbfd, SPRD_FB_SET_OVERLAY, &ov_setting) == -1)
 	{
 		ALOGE("fail osd SPRD_FB_SET_OVERLAY");
@@ -408,7 +411,7 @@ static int set_video_layer(struct hwc_context_t *context, hwc_layer_t * l)
 		ov_setting.rect.w = context->fb_rect.w;
 		ov_setting.rect.h = context->fb_rect.h;
 		ov_setting.buffer = (unsigned char*)current_overlay_addr;
-		ALOGV("video overlay parameter datatype = %d,x=%d,y=%d,w=%d,h=%d,buffer = %x",ov_setting.data_type,ov_setting.rect.x,ov_setting.rect.y,ov_setting.rect.w,ov_setting.rect.h,ov_setting.buffer);
+		ALOGI_IF(debugenable , "video overlay parameter datatype = %d,x=%d,y=%d,w=%d,h=%d,buffer = %x",ov_setting.data_type,ov_setting.rect.x,ov_setting.rect.y,ov_setting.rect.w,ov_setting.rect.h,ov_setting.buffer);
 
 		if (ioctl(context->fbfd, SPRD_FB_SET_OVERLAY, &ov_setting) == -1)
 		{
@@ -426,7 +429,7 @@ static int is_overlay_supportted(struct hwc_context_t *context, hwc_layer_t * l)
 	const native_handle_t *pNativeHandle = l->handle;
 	struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
 
-	ALOGV("private_h %x,%d,%d,%x",private_h->format,private_h->width,private_h->height,private_h->phyaddr);
+	ALOGI_IF(debugenable , "private_h %x,%d,%d,%x",private_h->format,private_h->width,private_h->height,private_h->phyaddr);
 
        if(private_h->format == HAL_PIXEL_FORMAT_RGBA_8888) {
 		return verify_osd_layer(context,  l);
@@ -486,7 +489,7 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 		srand(g_randNum);
 		g_randNum = rand();
 	}
-	ALOGI("hwc_prepare %d b", list->numHwLayers);
+	ALOGI_IF(debugenable,"hwc_prepare %d b", list->numHwLayers);
 	ctx->fb_layer_count = 0;
 	ctx->osd_overlay_flag = 0;
 	ctx->video_overlay_flag = 0;
@@ -496,7 +499,7 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 		list->hwLayers[i].compositionType = HWC_FRAMEBUFFER;
 		if((list->hwLayers[i].flags & HWC_SKIP_LAYER)|| !list->hwLayers[i].handle) {
 			ctx->fb_layer_count++;
-			ALOGI("skip_layer %p",list->hwLayers[i].handle);
+			ALOGI_IF(debugenable , "skip_layer %p",list->hwLayers[i].handle);
 			continue;
 		}
 
@@ -506,7 +509,7 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 			list->hwLayers[i].compositionType = HWC_OVERLAY;
 			//list->hwLayers[i].hints = HWC_HINT_CLEAR_FB;//must set it???
 			overlay_video = &list->hwLayers[i];
-			ALOGI("find video overlay %d",list->hwLayers[i].handle);
+			ALOGI_IF(debugenable , "find video overlay %d",list->hwLayers[i].handle);
 		} else if((support_overlay == SPRD_LAYERS_OSD) && (ctx->osd_overlay_flag == 0)) {
 			if ( list->numHwLayers >= 3) {
 				ctx->fb_layer_count++;
@@ -515,7 +518,7 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 				list->hwLayers[i].compositionType = HWC_OVERLAY;
 				//list->hwLayers[i].hints = HWC_HINT_CLEAR_FB;//must set it???
 				overlay_osd = &list->hwLayers[i];
-				ALOGI("find osd overlay %d",list->hwLayers[i].handle);
+				ALOGI_IF(debugenable , "find osd overlay %d",list->hwLayers[i].handle);
 			}
 		}else {
 			ctx->fb_layer_count++;
@@ -526,7 +529,7 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 		overlay_osd->compositionType = HWC_FRAMEBUFFER;
 		ctx->osd_overlay_flag = 0;
 		ctx->fb_layer_count++;
-		ALOGI("no video layer, abandon osd overlay");
+		ALOGI_IF(debugenable , "no video layer, abandon osd overlay");
 	}
 
 	if ((ctx->pre_fb_layer_count != ctx->fb_layer_count) && overlay_video) {
@@ -546,8 +549,8 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 	//}
 
 	ctx->pre_fb_layer_count = ctx->fb_layer_count;
-	ALOGI("fb_layer_count %d",ctx->fb_layer_count);
-	ALOGI("hwc_prepare %d e", list->numHwLayers);
+	ALOGI_IF(debugenable , "fb_layer_count %d",ctx->fb_layer_count);
+	ALOGI_IF(debugenable , "hwc_prepare %d e", list->numHwLayers);
 
 	return 0;
 }
@@ -578,7 +581,12 @@ static int hwc_set(hwc_composer_device_t *dev,
         hwc_layer_list_t* list)
 {
     struct hwc_context_t *ctx = (struct hwc_context_t *)dev;
-
+    char value[PROPERTY_VALUE_MAX];
+    property_get("debug.hwcomposer.info" , value , "0");
+    if(atoi(value) == 1)
+        debugenable = 1;
+    else
+        debugenable = 0;
     if (dpy == NULL && sur == NULL && list == NULL) {
         // release our resources, the screen is turning off
         // in our case, there is nothing to do.
@@ -627,7 +635,7 @@ static int hwc_set(hwc_composer_device_t *dev,
 	}
 #ifdef _PROC_OSD_WITH_THREAD
 	if (osd_layer) {
-		ALOGV("send command to osd proc thread");
+		ALOGI_IF(debugenable , "send command to osd proc thread");
 		ctx->osd_proc_cmd = osd_layer;
 		sem_post(&ctx->cmd_sem);
 	}
@@ -662,13 +670,13 @@ static int hwc_set(hwc_composer_device_t *dev,
 		display_setting.rect.y = 0;
 		display_setting.rect.w = ctx->fb_width;
 		display_setting.rect.h = ctx->fb_height;
-		ALOGV("SPRD_FB_DISPLAY_OVERLAY %d", layer_indexs);
+		ALOGI_IF(debugenable,"SPRD_FB_DISPLAY_OVERLAY %d", layer_indexs);
 		ioctl(ctx->fbfd, SPRD_FB_DISPLAY_OVERLAY, &display_setting);
 	} else {
 		if ((ctx->video_overlay_flag||ctx->osd_overlay_flag)) {
-			ALOGV("eglSwapBuffers video=%d, osd=%d", ctx->video_overlay_flag, ctx->osd_overlay_flag );
+			ALOGI_IF(debugenable , "eglSwapBuffers video=%d, osd=%d", ctx->video_overlay_flag, ctx->osd_overlay_flag );
 		}
-		ALOGV("eglSwapBuffers");
+		ALOGI_IF(debugenable , "eglSwapBuffers");
 		EGLBoolean sucess = eglSwapBuffers((EGLDisplay)dpy, (EGLSurface)sur);
 		if (!sucess) {
 			return HWC_EGL_ERROR;
@@ -702,6 +710,7 @@ static int hwc_device_close(struct hw_device_t *dev)
 {
     struct hwc_context_t* ctx = (struct hwc_context_t*)dev;
     if (ctx) {
+
 	if (ctx->fbfd) {
 	    close(ctx->fbfd);
 	}
