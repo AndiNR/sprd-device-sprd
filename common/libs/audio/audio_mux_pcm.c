@@ -60,6 +60,7 @@ struct pcm {
 struct mux_pcm
 {
     struct pcm dummy_pcm;
+    pthread_mutex_t lock; 
     int  mux_fd;
     int stream_type;
     int state;
@@ -223,6 +224,9 @@ struct pcm * mux_pcm_open(unsigned int card, unsigned int device,
 
     pcm->dummy_pcm.fd=pcm->mux_fd;
     pcm->dummy_pcm.config=*config;
+     pthread_mutex_init(&pcm->lock, NULL);
+    memcpy(pcm->dummy_pcm.error,"unknow error",sizeof("unknow error"));
+    
     ALOGE(": function is mux_pcm_open out");
     return &(pcm->dummy_pcm);
 
@@ -244,13 +248,16 @@ int mux_pcm_write(struct pcm *pcm_in, void *data, unsigned int count)
     }
     if(pcm->mux_fd >0){
         struct cmd_common common={0};
+        pthread_mutex_lock(&pcm->lock);
         if(!pcm->state) {
             pcm->state = 1;
             ret = saudio_send_common_cmd(SAUDIO_CMD_START,pcm->stream_type);
             if(ret){
+                pthread_mutex_unlock(&pcm->lock);
                 return 0;
             }
         }
+        pthread_mutex_unlock(&pcm->lock);
         ALOGE("mux_pcm_write in %d",count);
        bytes= write(pcm->mux_fd,data,count);
        ALOGE("mux_pcm_write out %d",count);
@@ -272,13 +279,16 @@ int mux_pcm_read(struct pcm *pcm_in, void *data, unsigned int count)
         return 0;
     }
     if(pcm->mux_fd > 0){
+        pthread_mutex_lock(&pcm->lock);
         if(!pcm->state) {
             pcm->state = 1;
             ret =saudio_send_common_cmd(SAUDIO_CMD_START,pcm->stream_type);
             if(ret){
+                pthread_mutex_unlock(&pcm->lock);
                 return -1;
             }
         }
+         pthread_mutex_unlock(&pcm->lock);
         ALOGE("mux_pcm_read in %d",count);
         while(bytes){           
            bytes_read= read(pcm->mux_fd,data,bytes);
@@ -300,10 +310,16 @@ int mux_pcm_close(struct pcm *pcm_in)
         return -1;
     }
     if(pcm->mux_fd>0){
-        ret = saudio_send_common_cmd(SAUDIO_CMD_STOP,pcm->stream_type);
-        if(ret){
-            return ret;
+        pthread_mutex_lock(&pcm->lock);
+        if(pcm->state == 1){
+            ret = saudio_send_common_cmd(SAUDIO_CMD_STOP,pcm->stream_type);
+            if(ret){
+                pthread_mutex_unlock(&pcm->lock);
+                return ret;
+            }
+            pcm->state = 0;
         }
+        pthread_mutex_unlock(&pcm->lock);
         ret = saudio_send_common_cmd(SAUDIO_CMD_CLOSE,pcm->stream_type);
         if(ret){
             return ret;
