@@ -244,7 +244,6 @@ LOCAL EXIF_PRI_DESC_T                 		*g_dc_primary_img_desc_ptr;
 LOCAL EXIF_SPEC_PIC_TAKING_COND_T     	*g_dc_spec_pic_taking_cond_ptr;
 
 
-static void close_device(void);
 static int camera_copy(SCALE_DATA_FORMAT_E output_fmt, uint32_t output_width, uint32_t output_height, uint32_t output_y_addr,
 	                                                        uint32_t output_uv_addr,ZOOM_TRIM_RECT_T *trim_rect, uint32_t input_yaddr, uint32_t input_uvaddr,
 	                                                        SCALE_DATA_FORMAT_E input_fmt);
@@ -3794,8 +3793,12 @@ camera_ret_code_type camera_cancel_autofocus (void)
          ALOGV("SPRD OEM:camera_cancel_autofocus!s_af_is_stop=%d, s_af_is_cancel=%d.", s_af_is_stop, s_af_is_cancel);
 	return CAMERA_SUCCESS;
 }
-static void close_device(void)
+void close_device(void)
 {
+    if (-1 == fd) {
+        ALOGV("DCAM: closed device.\n");
+        return;
+    }
 	if (-1 == close(fd))
 		errno_exit("close");
 	fd = -1;
