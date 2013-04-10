@@ -60,7 +60,7 @@ make clean >>/dev/null 2>&1
 
 # do make
 kheader >>$LOG 2>&1
-make $JOBS >>$LOG 2>&1
+make KALLSYMS_EXTRA_PASS=1 $JOBS >>$LOG 2>&1
 # failure handle
 if [ $? -ne 0 ]; then
 	echo "==== ====" >> $LOG
