@@ -65,10 +65,15 @@ ifeq ($(strip $(USE_UI_OVERLAY)),true)
         LOCAL_CFLAGS += -DUSE_UI_OVERLAY
 endif
 
+ifneq ($(strip $(TARGET_BUILD_VARIANT)), user)
+        LOCAL_CFLAGS += -DDUMP_FB
+endif
+
 LOCAL_SRC_FILES := \
 	gralloc_module.cpp \
 	alloc_device.cpp \
-	framebuffer_device.cpp
+	framebuffer_device.cpp \
+	dump_bmp.cpp
 
 #LOCAL_CFLAGS+= -DMALI_VSYNC_EVENT_REPORT_ENABLE
 include $(BUILD_SHARED_LIBRARY)

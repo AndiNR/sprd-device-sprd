@@ -42,6 +42,10 @@
 // numbers of buffers for page flipping
 #define NUM_BUFFERS 2
 
+#ifdef DUMP_FB
+extern void dump_fb(void* addr, struct fb_var_screeninfo * info , int format);
+#endif
+
 enum
 {
 	PAGE_FLIP = 0x00000001,
@@ -100,6 +104,12 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 		int interrupt;
 		m->info.activate = FB_ACTIVATE_VBL;
 		m->info.yoffset = offset / m->finfo.line_length;
+
+#ifdef DUMP_FB
+        {
+            dump_fb((void*)(hnd->base),&m->info,m->fbFormat);
+        }
+#endif
 
 #ifdef STANDARD_LINUX_SCREEN
 #define FBIO_WAITFORVSYNC       _IOW('F', 0x20, __u32)
