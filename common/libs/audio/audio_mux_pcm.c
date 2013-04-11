@@ -20,6 +20,7 @@
 #define SAUDIO_CMD_STOP             0x00000008
 #define SAUDIO_CMD_PREPARE  0x00000010
 #define SAUDIO_CMD_TRIGGER              0x00000020
+#define SAUDIO_CMD_RECEIVE         0x00000040
 
 #define SAUDIO_CMD_OPEN_RET            0x00010000
 #define SAUDIO_CMD_CLOSE_RET         0x00020000
@@ -27,11 +28,13 @@
 #define SAUDIO_CMD_STOP_RET             0x00080000
 #define SAUDIO_CMD_PREPARE_RET  0x00100000
 #define SAUDIO_CMD_TRIGGER_RET  0x00200000
+#define SAUDIO_CMD_RECEIVE_RET         0x00400000
 
 #define AUDIO_PLAYBACK  0
 #define AUDIO_CAPTURE     1
 
 #define PCM_ERROR_MAX 128
+#define AUDIO_PLAYBACK_BUFFER 1200
 
 #define AUDIO_MUX_CTRL_FILE     "/dev/ts0710mux24"
 #define AUDIO_MUX_PLAYBACK_FILE "/dev/ts0710mux25"
@@ -135,7 +138,8 @@ int32_t audio_mux_ctrl_send(uint8_t * data, uint32_t  bytes)
 	if(audio_ctrl_fd <0){
             return -1;
 	}
-        result=read(audio_ctrl_fd,common,sizeof(struct cmd_common));
+	audio_mux_ctrl_lock();
+	result=read(audio_ctrl_fd,common,sizeof(struct cmd_common));
         
 	ALOGE("common->command is %x ,sub cmd %x,\n", common->command, common->sub_cmd);
 	if (subcmd) {
@@ -151,6 +155,7 @@ int32_t audio_mux_ctrl_send(uint8_t * data, uint32_t  bytes)
 			result = -1;
 		}
 	}
+	audio_mux_ctrl_unlock();
 	ALOGE(": function is saudio_wait_common_cmdout,result is %d",result);
 	return result;
 }
@@ -160,20 +165,54 @@ int32_t audio_mux_ctrl_send(uint8_t * data, uint32_t  bytes)
 {
 	int32_t result = -1;
 	struct cmd_common common={0};
-        ALOGE(": function is saudio_send_common_cmd");
+	struct cmd_common cmd_common_buffer={0};
+	struct cmd_common *common_ret = &cmd_common_buffer;
+	uint32_t cmd_ret=cmd<<16;
+	
+	ALOGE(":  saudio_send_common_cmd  E");
 	ALOGE("cmd %x, subcmd %x\n",  cmd, subcmd);
 	common.command=cmd;
 	common.sub_cmd=subcmd;	
-	audio_mux_ctrl_lock();
-	if(audio_ctrl_fd>0){
-	    result=write(audio_ctrl_fd,&common,sizeof(struct cmd_common));
-	    if(result <0) {
-	        audio_mux_ctrl_unlock();
-                return result;
-	    }    
+	if(audio_ctrl_fd <0){
+		return -1;
 	}
-	result=saudio_wait_common_cmd( cmd<<16, 0);
+	audio_mux_ctrl_lock();
+	
+	result=write(audio_ctrl_fd,&common,sizeof(struct cmd_common));
+	if(result <0) 
+	{
+		audio_mux_ctrl_unlock();
+		return result;
+	}    
+
+
+	result=read(audio_ctrl_fd,common_ret,sizeof(struct cmd_common));
+
+	ALOGE(":common->command is %x ,sub cmd %x,\n", common_ret->command, common_ret->sub_cmd);
+	if (subcmd) 
+	{
+		if ((common_ret->command == cmd_ret) && (common_ret->sub_cmd == subcmd))
+		{
+			result = 0;
+		} 
+		else 
+		{
+			result = -1;
+		}
+	}
+	else 
+	{
+		if (common_ret->command == cmd_ret) 
+		{
+			result = 0;
+		} else
+		{
+			result = -1;
+		}
+	}
+	
 	audio_mux_ctrl_unlock();
+	ALOGE(":  saudio_send_common_cmd  X");
 	return result;
 }
 
@@ -206,7 +245,6 @@ struct pcm * mux_pcm_open(unsigned int card, unsigned int device,
     pcm->stream_type = sub_cmd;
     ALOGE(":pcm->stream_type  is %d",pcm->stream_type );
     if(pcm->stream_type == AUDIO_PLAYBACK){
-        goto error;
         pcm->mux_fd=open(AUDIO_MUX_PLAYBACK_FILE, O_RDWR);
      }
      else{
@@ -242,7 +280,11 @@ int mux_pcm_write(struct pcm *pcm_in, void *data, unsigned int count)
     struct mux_pcm  *pcm=(struct mux_pcm  *)pcm_in;
     int ret=0;
     int bytes=0;
-    ALOGE(": function is mux_pcm_write");
+	int left = count;
+	int offset=0;
+	int sendlen=0;
+	
+    ALOGE(": function is mux_pcm_write,count:%d",count);
     if( !pcm){
         return 0;
     }
@@ -258,9 +300,27 @@ int mux_pcm_write(struct pcm *pcm_in, void *data, unsigned int count)
             }
         }
         pthread_mutex_unlock(&pcm->lock);
-        ALOGE("mux_pcm_write in %d",count);
-       bytes= write(pcm->mux_fd,data,count);
-       ALOGE("mux_pcm_write out %d",count);
+		while(left)		
+		{
+			    sendlen = left < AUDIO_PLAYBACK_BUFFER ? left : AUDIO_PLAYBACK_BUFFER;
+
+				ALOGE("mux_pcm_write in %d",sendlen);
+				bytes= write(pcm->mux_fd,data+offset,sendlen);
+				offset += sendlen;
+				left -= sendlen;
+				ALOGE("mux_pcm_write out %d,left :%d",bytes,left);
+				
+				if(bytes)
+				{	
+					ret = saudio_wait_common_cmd(SAUDIO_CMD_RECEIVE<<16 ,pcm->stream_type);
+					if(ret)
+					{
+						return 0;
+					}
+				}	
+
+				
+	   }
     }
     ALOGE(": function is mux_pcm_write out");
     return bytes;
