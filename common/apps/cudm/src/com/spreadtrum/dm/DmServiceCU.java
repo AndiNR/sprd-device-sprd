@@ -139,8 +139,9 @@ public class DmServiceCU extends Service {
     // Real net parameter
     private static final String REAL_SERVER_ADDR = "http://dm.wo.com.cn:6001";
 
-    private static final String REAL_SMS_ADDR = "10655459";
-
+    //private static final String REAL_SMS_ADDR = "10655459";
+    private static final String REAL_SMS_ADDR = "10655464";
+    
     private static final String REAL_SMS_PORT = "26680";
 
     private static final String REAL_APN = APN_CMDM;
@@ -457,20 +458,23 @@ public class DmServiceCU extends Service {
 
         // init debug mode
         mIsDebugMode = sharedPreferences.getBoolean(ITEM_DEBUG_MODE, false);
-
+        Log.d("SmsReg", "mIsDebugMode = " + mIsDebugMode);
+        
         if (mIsDebugMode) {
             // init manufacture
-            mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "Motorola");
-
-            mModel = sharedPreferences.getString(ITEM_MODEL, "A910");
+            //mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "Motorola");
+            mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "sprd");
+            //mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "MTK");
+            mModel = sharedPreferences.getString(ITEM_MODEL, "sp7710ga");
+            //mModel = sharedPreferences.getString(ITEM_MODEL, "6573");
             mSoftVer = sharedPreferences.getString(ITEM_SOFTVER, "EZXBASE_N_00.39.A4I");
 
             for (int i= 0; i<mPhoneCnt;i++)
             mImeiStr[i] = sharedPreferences.getString(ITEM_IMEI, mTelephonyManager[i].getDeviceId());
         } else {
-            mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "Motorola");
-
-            mModel = sharedPreferences.getString(ITEM_MODEL, "A910");
+            //mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "Motorola");
+            mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "sprd");
+            mModel = sharedPreferences.getString(ITEM_MODEL, "sp7710ga");
             mSoftVer = SystemProperties.get("ro.hisense.software.version",
                     "EZXBASE_N_00.39.A4I");
 
@@ -1306,10 +1310,10 @@ public class DmServiceCU extends Service {
         Log.d(TAG, "sendMsgBody: " + smsBody);
         data = smsBody.getBytes();
 		
-        for (int i = 0; i < smsBody.length(); i++) {
+       /* for (int i = 0; i < smsBody.length(); i++) {
 		
             Log.d(TAG, "sendMsgBody: ============= data[" + i + "] = " + data[i] + "hex" + Integer.toHexString(data[i]&0xff) + "\n");
-        }
+        }*/
 
         Log.d(TAG, "sendMsgBody: dest addr = " + destAddr);
         Log.d(TAG, "sendMsgBody: dest port = " + destPort);
@@ -1332,7 +1336,7 @@ public class DmServiceCU extends Service {
          }
         //add for 105942 end
        
-
+	Log.d("SmsReg", "destAddr = "+destAddr + "  destPort = " + destPort + "  srcPort = " + srcPort + " data = " + data);
         smsManager.sendDmDataMessage(destAddr, null, /* use the default SMSC */
         destPort, srcPort, data, null, /* do not need listen to send result */
         null /* do not require delivery report */);
