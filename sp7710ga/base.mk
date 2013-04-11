@@ -43,7 +43,9 @@ PRODUCT_PACKAGES += \
     AudioProfile \
     ValidationTools \
     libvalidationtoolsjni \
-    vtserver
+    vtserver	\
+    libstagefright_soft_mpeg4dec_sprd \
+    libstagefright_soft_h264dec_sprd
 
 # prebuild files
 PRODUCT_PACKAGES += \
