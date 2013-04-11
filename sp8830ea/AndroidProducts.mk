@@ -18,6 +18,7 @@
 PRODUCT_MAKEFILES := $(LOCAL_DIR)/prod_sp7735eacuccspecAplus_UUI.mk
 PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_sp8735eaplus_UUI.mk
 PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_sp8835eacmccspecAplus_UUI.mk
+PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_sp8835eabase.mk
 				      
 
 
