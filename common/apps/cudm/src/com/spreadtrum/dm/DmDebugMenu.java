@@ -114,10 +114,10 @@ public class DmDebugMenu extends Activity {
 
                 case ITEM_CLEAN_SR_FLAG:
                     // Clean selfregiste flag
-                    DmServiceCU.getInstance().saveImsi(mContext,0 , "");
-                    DmServiceCU.getInstance().setSelfRegState(mContext, 0, false);
-                    DmServiceCU.getInstance().saveImsi(mContext,1 , "");
-                    DmServiceCU.getInstance().setSelfRegState(mContext, 1, false);
+                    DmServiceCU.getInstance().saveImsi(mContext, "");
+                    DmServiceCU.getInstance().setRegState(mContext,false);
+                    DmServiceCU.getInstance().saveImsi(mContext, "");
+                    DmServiceCU.getInstance().setRegState(mContext,false);
                     ShowMessage("Clean finished!");
                     break;
 
@@ -261,7 +261,7 @@ public class DmDebugMenu extends Activity {
         message = "Debug Mode : " + DmServiceCU.getInstance().isDebugMode();
         message = message + "\nSend message0 : " + DmServiceCU.getInstance().isHaveSendSelfRegMsg(0);
 //        message = message + "\nSend message1 : " + DmServiceCU.getInstance().isHaveSendSelfRegMsg(1);
-        message = message + "\nSelfReg State : " + DmServiceCU.getInstance().isSelfRegOk(0);
+        message = message + "\nSelfReg State : " + DmServiceCU.getInstance().getRegState();
 //        message = message + "\nSelfReg State : " + DmServiceCU.getInstance().isSelfRegOk(1);
 //        message = message + "\nSession is running : " + Vdmc.getInstance().isVDMRunning();
 //        message = message + "\nLast Session State : " + Vdmc.getLastSessionState();

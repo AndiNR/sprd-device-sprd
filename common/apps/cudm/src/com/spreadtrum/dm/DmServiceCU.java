@@ -1,4 +1,3 @@
-
 package com.spreadtrum.dm;
 
 import android.app.Service;
@@ -53,8 +52,8 @@ public class DmServiceCU extends Service {
     private static boolean mIsHaveSendMsg[] ; // if have send self registe
                                                    // message
 
-    private static boolean mIsSelfRegOk[] ; // if self registe ok
-
+    private static boolean mIsSelfRegOkNew; // if self registe ok
+    //private static boolean mIsSelfRegOk[]; // if self registe ok
     private static boolean mSelfRegSwitch = true; // true: open self registe
                                                   // function false:close self
                                                   // registe function
@@ -181,45 +180,21 @@ public class DmServiceCU extends Service {
             if (action.startsWith(TelephonyIntents.ACTION_IS_SIM_SMS_READY)) {//|| action.equals(TelephonyIntents.ACTION_IS_SIM2_SMS_READY)) {
                 int phoneId = intent.getIntExtra("phoneId", 0);
                 mSmsReady[phoneId] = intent.getBooleanExtra("isReady", false);
-
-                Log.d(TAG, "[sms]onReceive ACTION_IS_SIM_SMS_READY mSmsReady["+ phoneId + "] = " + mSmsReady[phoneId]);
-                if (mSmsReady[phoneId]) {
-                    if (TelephonyManager.SIM_STATE_READY == mTelephonyManager[phoneId].getSimState()
-                            && mInService[phoneId]) {
-                     
-
-                        if (getIsCmccCard(phoneId)) {
-	                    curPhoneId = phoneId;
-                            Log.d(TAG, "[sms]onReceive ACTION_IS_SIM_SMS_READY: is cmcc card!");
-			  //  sendSelfRegMsg(phoneId);
-
-				// send self registe message
-				
-                            if(mPhoneCnt > 1 ){
-                                int otherPhoneId = phoneId == 0 ? 1 : 0;
-                                if(!mTelephonyManager[otherPhoneId].hasIccCard() || mSmsReady[otherPhoneId] && mInService[otherPhoneId]){
-                                    sendSelfRegMsg(curPhoneId);
-                                }
-                            }else{
-                                sendSelfRegMsg(curPhoneId);
-                            }
-			   
-                        } else {
-                            Log.d(TAG, "[sms]onReceive ACTION_IS_SIM_SMS_READY: not cmcc card!");
-                            stopListeningServiceState(phoneId);
-                         
-                        }
-                    } else {
-                        Log.d(TAG, "[sms]onReceive ACTION_IS_SIM_SMS_READY: sim state = "
-                                + mTelephonyManager[phoneId].getSimState());
-                    }
+                boolean isReged = getRegState();
+                boolean isCuPhone = matchOperatorPhone(phoneId);
+                if(!isReged && isCuPhone){
+                	if (mSmsReady[phoneId]) {
+                		if (TelephonyManager.SIM_STATE_READY == mTelephonyManager[phoneId].getSimState()
+                                && mInService[phoneId]) {
+                			 sendSelfRegMsg(phoneId);
+                		}
+                	}
                 }
             }
-
         }
     };
 
-    private boolean getIsCmccCard(int phoneId){
+ /*   private boolean getIsCmccCard(int phoneId){
         String cmccStr1 = "46000";
         String cmccStr2 = "46002";
         String cmccStr3 = "46007";
@@ -234,6 +209,18 @@ public class DmServiceCU extends Service {
         }else{
             return false; 
         }
+    }*/
+   
+    private boolean matchOperatorPhone(int phoneId){
+    	String CUOperatorCode1 = "46001";
+    	String CUOperatorCode2 = "46006";
+    	boolean ret = false;
+    	String curOperatorId = mTelephonyManager[phoneId].getNetworkOperator();
+        Log.d(TAG, "getIsCmccCard  phoneId ="+phoneId+" curOperatorId:"+curOperatorId);
+        if (curOperatorId.equals(CUOperatorCode1) || curOperatorId.equals(CUOperatorCode1) ){
+            ret = true;
+        }
+        return ret;
     }
 
     private PhoneStateListener getPhoneStateListener(final int phoneId) {
@@ -248,43 +235,13 @@ public class DmServiceCU extends Service {
                     Log.d(TAG, "onServiceStateChanged: STATE_IN_SERVICE");
                     mInService[phoneId] = true;
                     // sim card is ready
-                    if (TelephonyManager.SIM_STATE_READY == mTelephonyManager[phoneId].getSimState()
-                            && mSmsReady[phoneId]) {
-	  
-                        if (getIsCmccCard(phoneId)) {
-	                    curPhoneId = phoneId;
-                            Log.d(TAG, "onServiceStateChanged: is cmcc card!");
-//			    if (phoneId >=0 && phoneId < 2)
-//				sendSelfRegMsg(phoneId);
-                           // send self registe message
-                            if(mPhoneCnt > 1){
-                                int otherPhoneId = phoneId == 0 ? 1 : 0;
-                                if(!mTelephonyManager[otherPhoneId].hasIccCard() || mSmsReady[otherPhoneId] && mInService[otherPhoneId]){
-                                    sendSelfRegMsg(curPhoneId);
-                                }
-                            }else{
-                                sendSelfRegMsg(curPhoneId);
-                            }
-							
-                        } else {
-                            Log.d(TAG, "onServiceStateChanged: not CU card!");
-                            stopListeningServiceState(phoneId);
-			/*
-                            if(mPhoneCnt > 1 ){
-                                int otherPhoneId = (phoneId == 0) ? 1 : 0;
-                                curPhoneId = otherPhoneId;
-                                if (mSmsReady[otherPhoneId] && mInService[otherPhoneId] && getIsCmccCard(otherPhoneId)
-                                    && TelephonyManager.SIM_STATE_READY == mTelephonyManager[otherPhoneId].getSimState()){
-                                    Log.d(TAG, "onServiceStateChanged use other sim selfReg PhoneId="+otherPhoneId);
-                                    curPhoneId = otherPhoneId;
-                                    sendSelfRegMsg();
-                                }
-                            }
-			*/							
-                        }
-                    } else {
-                        Log.d(TAG, "onServiceStateChanged: sim state = "
-                                + mTelephonyManager[phoneId].getSimState());
+                    boolean isReged = getRegState();
+                    boolean isCuPhone = matchOperatorPhone(phoneId);
+                    if(!isReged && isCuPhone){
+                    	if (TelephonyManager.SIM_STATE_READY == mTelephonyManager[phoneId].getSimState()
+                                    &&  mSmsReady[phoneId]) {
+                    		 sendSelfRegMsg(phoneId);
+                    	}
                     }
                 }
             }
@@ -302,58 +259,48 @@ public class DmServiceCU extends Service {
 
     @Override
     public void onCreate() {
+    	mContext = getBaseContext();
         mPhoneCnt = TelephonyManager.getPhoneCount();
         mSmsReady = new boolean[mPhoneCnt];
         mInService = new boolean[mPhoneCnt];
-	mIsSelfRegOk = new boolean[mPhoneCnt];
-	mIsHaveSendMsg = new boolean[mPhoneCnt];
-	mImeiStr = new String[mPhoneCnt];
-                                                   // message
-
-	Log.d(TAG, "onCreate: mPhoneCnt "+mPhoneCnt);
-	
+        mIsSelfRegOkNew = false;
+        //mIsSelfRegOk = new boolean[mPhoneCnt];
+        mIsHaveSendMsg = new boolean[mPhoneCnt];
+        mImeiStr = new String[mPhoneCnt];	
         mTelephonyManager = new TelephonyManager[mPhoneCnt];
         mPhoneStateListener = new PhoneStateListener[mPhoneCnt];
-        mContext = getBaseContext();
-
+        setRegState(mContext,mIsSelfRegOkNew);
         for(int phoneId=0; phoneId<mPhoneCnt; phoneId++){
             mTelephonyManager[phoneId] = (TelephonyManager) getSystemService(PhoneFactory.
                     getServiceName(Context.TELEPHONY_SERVICE,phoneId));
             mPhoneStateListener[phoneId] = getPhoneStateListener(phoneId);
             mTelephonyManager[phoneId].listen(mPhoneStateListener[phoneId],
                     PhoneStateListener.LISTEN_SERVICE_STATE);
-    	setIsHaveSendSelfRegMsg(mContext,phoneId, false);
+            setIsHaveSendSelfRegMsg(mContext,phoneId, false);
         }
 
 
         mInstance = this;
-        Log.d(TAG, "OnCreate: mInstance = " + mInstance);
-/**** set foreground **************/
-	Notification notify = new Notification();
-	super.startForeground(0,notify);
-        Log.d(TAG, "OnCreate: setForeground ");
-/**** set foreground **************/
-
+        /**** set foreground **************/
+		Notification notify = new Notification();
+		super.startForeground(0,notify);
+		/**** set foreground **************/
         mHandler = new DMHandler();
         //TODO: to be confirm
-//        mDmNativeInterface = new DmNativeInterface(mContext, mHandler);
-    
+//        mDmNativeInterface = new DmNativeInterface(mContext, mHandler);  
         initParam();
-
         // Listen for broadcast intents that indicate the SMS is ready
-
-	int num;
+        int num;
         IntentFilter filter = new IntentFilter(TelephonyIntents.ACTION_IS_SIM_SMS_READY);
         Intent intent1 = registerReceiver(mReceiver, filter);
 		Log.d(TAG, "onCreate: ACTION_IS_SIM_SMS_READY register ");
-	for (num= 0; num < mPhoneCnt; num++)
-	{
-         filter = new IntentFilter(PhoneFactory.getAction(TelephonyIntents.ACTION_IS_SIM_SMS_READY,num));
-         intent1 = registerReceiver(mReceiver, filter);
-		Log.d(TAG, "onCreate: ACTION_IS_SIM_SMS_READY register "+num);
-	}
+		for (num= 0; num < mPhoneCnt; num++)
+		{
+	         filter = new IntentFilter(PhoneFactory.getAction(TelephonyIntents.ACTION_IS_SIM_SMS_READY,num));
+	         intent1 = registerReceiver(mReceiver, filter);
+			Log.d(TAG, "onCreate: ACTION_IS_SIM_SMS_READY register "+num);
+		}
     }
-
     @Override
     public void onDestroy() {
         // Stop listening for service state
@@ -380,25 +327,26 @@ public class DmServiceCU extends Service {
         if (intent.getAction().equals("com.android.dm.SelfReg")) {
             Log.d(TAG, "onStart: com.android.dm.SelfReg");
             // Start listening to service state
+            boolean isSimMatchCustomerPhone = true;
             if (!isNeedSelfReg())
-            	{
+            {
 	            Log.d(TAG, "onStart: not need to register");
-		    Intent stop = new Intent("com.android.dm.stop"); 
-		    mContext.sendBroadcast(stop);
-            	}
-            if (getSelfRegSwitch()) {
-                for(int phoneId = 0; phoneId < mPhoneCnt; phoneId++){
-//                    mTelephonyManager[phoneId].listen(mPhoneStateListener[phoneId],
-//                            PhoneStateListener.LISTEN_SERVICE_STATE);
-                }
-                /*
-                 * if (isNeedSelfReg()) { setIsHaveSendSelfRegMsg(mContext,
-                 * false); mTelephonyManager.listen(mPhoneStateListener,
-                 * PhoneStateListener.LISTEN_SERVICE_STATE); } else {
-                 * setSelfRegState(mContext, true); //mContext.stopService(new
-                 * Intent("com.android.dm.SelfReg")); }
-                 */
+	            Intent stop = new Intent("com.android.dm.stop"); 
+	            mContext.sendBroadcast(stop);
             }
+            if (getSelfRegSwitch()) {
+            	for (int i= 0; i< mPhoneCnt; i++)
+            	{
+            		if (mTelephonyManager[i].hasIccCard())
+            		{
+            			isSimMatchCustomerPhone = matchOperatorPhone(i);
+            			if(isSimMatchCustomerPhone){
+            				sendSelfRegMsg(i);
+            				break;
+            			}
+            		}//if (mTelephonyManager[i].hasIccCard())
+            	}//for (int i= 0; i< mPhoneCnt; i++)
+            }// if (getSelfRegSwitch())
         } else if (intent.getAction().equals("com.android.dm.NIA")) {
             Log.d(TAG, "onStart: com.android.dm.NIA");
         }
@@ -407,10 +355,7 @@ public class DmServiceCU extends Service {
     public static DmServiceCU getInstance() {
         if (null == mInstance) {
             mInstance = new DmServiceCU();
-            // Log.d("DM ==> DmServiceCU: ",
-            // "getInstance: new DmServiceCU() , mInstance = " + mInstance);
         }
-        // Log.d("DM ==> DmServiceCU: ", "getInstance: mInstance = " + mInstance);
         return mInstance;
     }
 
@@ -428,7 +373,7 @@ public class DmServiceCU extends Service {
     public void stopListeningServiceState() {
         for(int phoneId = 0; phoneId < mPhoneCnt; phoneId++){
             if (null != mTelephonyManager[phoneId]) {
-                mTelephonyManager[phoneId].listen(mPhoneStateListener[phoneId], 0);
+            	mTelephonyManager[phoneId].listen(mPhoneStateListener[phoneId],0);
             }
         }
         Log.d(TAG, "stop listen service state for all phone");
@@ -462,29 +407,23 @@ public class DmServiceCU extends Service {
         
         if (mIsDebugMode) {
             // init manufacture
-            //mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "Motorola");
-            mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "sprd");
-            //mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "MTK");
-            mModel = sharedPreferences.getString(ITEM_MODEL, "sp7710ga");
-            //mModel = sharedPreferences.getString(ITEM_MODEL, "6573");
+            //mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "sprd");
+            mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "MTK");
+            //mModel = sharedPreferences.getString(ITEM_MODEL, "sp7710ga");
+            mModel = sharedPreferences.getString(ITEM_MODEL, "6573");
             mSoftVer = sharedPreferences.getString(ITEM_SOFTVER, "EZXBASE_N_00.39.A4I");
 
             for (int i= 0; i<mPhoneCnt;i++)
             mImeiStr[i] = sharedPreferences.getString(ITEM_IMEI, mTelephonyManager[i].getDeviceId());
         } else {
-            //mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "Motorola");
-            mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "sprd");
-            mModel = sharedPreferences.getString(ITEM_MODEL, "sp7710ga");
+            mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "MTK");
+            mModel = sharedPreferences.getString(ITEM_MODEL, "6573");
             mSoftVer = SystemProperties.get("ro.hisense.software.version",
                     "EZXBASE_N_00.39.A4I");
-
              for (int i= 0; i<mPhoneCnt;i++)
             mImeiStr[i] = mTelephonyManager[i].getDeviceId();
         }
 
-       // createDmApn();
-        // according to cmcc test flag to decide current server relative
-        // parameters
         if (SystemProperties.get("ro.hisense.cmcc.test", "0").equals("1")) {
             setRealNetParam(mContext, false, false);
         } else {
@@ -597,7 +536,7 @@ public class DmServiceCU extends Service {
         }
         values.put(Telephony.Carriers.TYPE, "dm");
 	 if ( numeric.equals("46002") || numeric.equals("46000") || numeric.equals("46007"))
-	{
+	 {
 	        mUri = getContentResolver().insert((curPhoneId == 0)?Telephony.Carriers.CONTENT_URI:Telephony.Carriers.CONTENT_URI_SIM2, values);
 			
 	        if (mUri == null) {
@@ -605,204 +544,76 @@ public class DmServiceCU extends Service {
 	                   Telephony.Carriers.CONTENT_URI +"curPhoneId"+ curPhoneId);
 	            return;
 	        }
-	 }
+	 	}
     }
-
-    // get last successful self registe card imsi
-    private String getLastImsi(int cnt) {
-    	if (cnt < 0 || cnt > mPhoneCnt)
-    		{
-	        Log.d(TAG, "getLastImsi fail max cnt:  " + cnt);
-			return null;
-    		}
+    private String getLastImsi() {
         SharedPreferences sharedPreferences = getSharedPreferences(PREFERENCE_NAME, MODE);
-	 String imsi;
-	if (cnt == 0)
-        imsi = sharedPreferences.getString("IMSI", "");
-	else
-        imsi = sharedPreferences.getString("IMSI2", "");
-		
-        Log.d(TAG, "getLastImsi : imsi = " + imsi);
-        return imsi;
+        String imsi =  sharedPreferences.getString("IMSI", "");;
+	    Log.d(TAG, "getLastImsi : imsi = " + imsi);
+	    return imsi;
     }
-
-    // save current self registe success card imsi
-    protected boolean saveImsi(Context context, int cnt, String imsi) {
-        Log.d(TAG, "saveImsi:"+ cnt + " imsi = " + imsi);
-       
-        SharedPreferences sharedPreferences = context.getSharedPreferences(PREFERENCE_NAME, MODE);
+    
+    protected boolean saveImsi(Context context,String imsi){   	
+    	SharedPreferences sharedPreferences = context.getSharedPreferences(PREFERENCE_NAME, MODE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
-	if (cnt == 0)
-        editor.putString("IMSI", imsi);
-	else if (cnt== 1)
-        editor.putString("IMSI2", imsi);
-	else
-	 Log.d(TAG, "saveImsi: cnt invalid" ); 
-        editor.commit();
-        return true;
+	    editor.putString("IMSI", imsi);
+	    editor.commit();
+	    return true;   	
     }
 
     // get current self registe state
-    protected boolean isSelfRegOk(int cnt) {
-        SharedPreferences sharedPreferences = getSharedPreferences(PREFERENCE_NAME, MODE);
-	if (cnt == 0)
-        mIsSelfRegOk[cnt] = sharedPreferences.getBoolean("IsSelfRegOk", false);
-	else
-	if (cnt == 1)
-        mIsSelfRegOk[cnt] = sharedPreferences.getBoolean("IsSecondSelfRegOk", false);
-	else
-	return true;
+/*    protected boolean isSelfRegOk(int phoneId) {
+        SharedPreferences sharedPreferences = getSharedPreferences(PREFERENCE_NAME, MODE);	
+	    if (phoneId == 0)
+	        mIsSelfRegOk[phoneId] = sharedPreferences.getBoolean("IsSelfRegOk", false);
+		else
+		if (phoneId == 1)
+	        mIsSelfRegOk[phoneId] = sharedPreferences.getBoolean("IsSecondSelfRegOk", false);
+		else
+		return true;
 	
-        Log.d(TAG, "isSelfRegOk:"+cnt+" return " + mIsSelfRegOk[cnt]);
-        return mIsSelfRegOk[cnt];
+        Log.d(TAG, "isSelfRegOk:"+phoneId+" return " + mIsSelfRegOk[phoneId]);
+        return mIsSelfRegOk[phoneId];
     }
-
-    // set current self registe state
-    protected void setSelfRegState(Context context, int cnt, boolean isSuccess) {
-        Log.d(TAG, "setSelfRegState:"+cnt+" to " + isSuccess);
-        mIsSelfRegOk[cnt] = isSuccess;
+*/
+    protected void setRegState(Context context, boolean isSuccess){
+    	mIsSelfRegOkNew= isSuccess;
         SharedPreferences sharedPreferences = context.getSharedPreferences(PREFERENCE_NAME, MODE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-	if (cnt == 0)
-        editor.putBoolean("IsSelfRegOk", isSuccess);
-	else
-        editor.putBoolean("IsSecondSelfRegOk", isSuccess);
-	
+        SharedPreferences.Editor editor = sharedPreferences.edit();		
+	    editor.putBoolean("IsSelfRegOk", isSuccess);		
         editor.commit();
     }
-
-    /* 
-     * get selfreg sim index
-     * return
-     *  0xff    not display sim index in DM State Menu
-    */
-   /*
-    public int getSelfRegSimIndex(){
-            String lastImsi = getLastImsi();
-
-            if (mPhoneCnt > 1 && isSelfRegOk() && null != lastImsi){
-                for(int phoneId=0; phoneId < mPhoneCnt; phoneId++){
-                    String simImsi = mTelephonyManager[phoneId].getSubscriberId();
-                    if (null != simImsi && simImsi.equals(lastImsi)){
-                        Log.d(TAG, "getSelfRegSimIndex display SIM"  + (phoneId+1));
-                        return phoneId;
-                    }
-                }
-            }
-             Log.d(TAG, "getSelfRegSimIndex dont display sim index");
-            return 0xff;
+    protected boolean getRegState(){
+        SharedPreferences sharedPreferences = getSharedPreferences(PREFERENCE_NAME, MODE);
+        mIsSelfRegOkNew= sharedPreferences.getBoolean("IsSelfRegOk", false);
+        return mIsSelfRegOkNew;
     }
-*/
-    // judge if simcard change since last successful self registe
-    private boolean isSimcardChange() {
-        boolean result = false;
-        String curImsi[] = new String[2];
-	int phoneId = 0;
-        for(phoneId=0; phoneId < mPhoneCnt; phoneId++){
-            curImsi[phoneId] = mTelephonyManager[phoneId].getSubscriberId();
-        }
-
-        String lastImsi = getLastImsi(0);
-
-        Log.d(TAG, "isSimcardChange: curImsi = " + curImsi[0] + " " + curImsi[1]);
-        Log.d(TAG, "isSimcardChange: lastImsi = " + lastImsi);
-
-        // NOTE: if string compare is ok , should use memcmp etc.
-        if (curImsi[0] == null && curImsi[1] == null) {
-            Log.d(TAG, "isSimcardChange: Error !!! curImsi is null! ");
-            result = true; // if can't get imsi, no need to send selfreg
-                            // message
-        } else {
-            if ((lastImsi.equals(curImsi[0])) /*|| (lastImsi.equals(curImsi[1]))*/) {
-		   curPhoneId = 0;
-		    Log.d(TAG, "isSimcardChange: selfregok: "+curPhoneId);
-                result = false;
-            } else 
-              if ((lastImsi.equals(curImsi[1])) /*|| (lastImsi.equals(curImsi[1]))*/) {
-		   curPhoneId = 1;
-		    Log.d(TAG, "isSimcardChange: selfregok: "+curPhoneId);
-                result = false;
-            } else {
-		
-                result = false;
-	        for(phoneId=0; phoneId < mPhoneCnt; phoneId++)
- 	         {
-		if (getIsCmccCard(phoneId)) 
-			{
-			result = true;
-			curPhoneId = phoneId;
-			Log.d(TAG, "isSimcardChange: Changed and select phonid = " + phoneId );
-			break;
-			}
-	        }
-            }
-        }
-        Log.d(TAG, "isSimcardChange: result = " + result );
-
-        return result;
-    }
-/*	
-    private boolean isSimcardChange(int cnt) {
-        if (cnt < 0  || cnt > mPhoneCnt)
-        	{
-        	Log.d(TAG, "isSimcardChange: cnt invalid  " + cnt);
-        	return false;
-        	}
-        boolean result = false;
-        String curImsi ;
- 	String lastImsi = getLastImsi(0);  //we only check one imsi.
-
-        curImsi = mTelephonyManager[cnt].getSubscriberId();
-
-        Log.d(TAG, "isSimcardChange: curImsi = " + curImsi);
-        Log.d(TAG, "isSimcardChange: lastImsi = " + lastImsi);
-	 if (lastImsi.equals(curImsi))
-	 {
-	 Log.d(TAG, "isSimcardChange: selfregok: "+cnt);
-	 }else 
-	 if (getIsCmccCard(cnt))
-	 	{
-		Log.d(TAG, "isSimcardChange: Changed and select phonid = " + cnt );	 	
-	 	result = true;
-	 	}
-
-        Log.d(TAG, "isSimcardChange: result = " + result );
-
-        return result;
-    }
-*/
-    // judge if is need self registe
-    protected boolean isNeedSelfReg(int cnt) {
-        boolean result = false;
-	if (!isSelfRegOk(0))
-		return true;
-        if (isSimcardChange()) {
-            result = true;
-        }
-        Log.d(TAG, "isNeedSelfReg: " + result);
-        return result;
-    }
-
+    
+ 
     public boolean isNeedSelfReg()
     {
-    /*
+    	boolean ret = true;
+    	String savedImsi = getLastImsi();
+    	if(savedImsi == null){
+    		Log.d(TAG, "There is no register at all, need to register");
+    		return ret;
+    	}
+    	boolean isSimMatchCustomerPhone = false;
     	for (int i= 0; i< mPhoneCnt; i++)
+    	{
+    		if (mTelephonyManager[i].hasIccCard())
     		{
-    			if (mTelephonyManager[i].hasIccCard())
-    			{
-    				if (mTelephonyManager[i].getNetworkOperator()==null ||
-					mTelephonyManager[i].getNetworkOperator().equals(""))
-					{
-					Log.d(TAG, "isNeedSelfReg: operator is not found" );
-					return true;
-    					}
-    				if (!isSelfRegOk(i)) return true;
-    				if (isNeedSelfReg(i) ) return true;
+    			isSimMatchCustomerPhone = matchOperatorPhone(i);
+    			if(isSimMatchCustomerPhone){
+    				if(savedImsi.equals(getImsi(i))){
+    					Log.d(TAG, "The saved imsi is equal to phone + "+i+" imsi , the savedImsi = " + savedImsi);
+    					setRegState(mContext, true);
+    					return false;
+    				}
     			}
     		}
-		return false;
-*/		
-	return isNeedSelfReg(0);
+    	}
+		return ret;
     }
 	
     // judge is have send self registe message
@@ -817,16 +628,15 @@ public class DmServiceCU extends Service {
 
     private void setIsHaveSendSelfRegMsg(Context context, int cnt, boolean isHaveSend) {
         Log.d(TAG, "setIsHaveSendSelfRegMsg: to " + isHaveSend);
-	if (cnt < 0 || cnt > 2)
+        if (cnt < 0 || cnt > 2)
 		{
 	        Log.d(TAG, "setIsHaveSendSelfRegMsg: count invalid " + cnt);
-		return;
+	        return;
 		}
         mIsHaveSendMsg[cnt] = isHaveSend;
         SharedPreferences sharedPreferences = context.getSharedPreferences(PREFERENCE_NAME, MODE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putBoolean("IsHaveSendSelfRegMsg", isHaveSend);
-	
+        editor.putBoolean("IsHaveSendSelfRegMsg", isHaveSend);	
         editor.commit();
     }
 
@@ -1233,18 +1043,12 @@ public class DmServiceCU extends Service {
        // return "861683010001601";
         return mImeiStr[cnt];
     }
-    public String getImsi(int cnt) {
-	if (cnt >=mPhoneCnt ) return null;
-        String tImsi;
-        tImsi = mTelephonyManager[cnt].getSubscriberId();
-		
-
-        	Log.d(TAG, "getImsi: " + cnt +"---" + tImsi);
-        //todo
-        //need to fix
-       // return "861683010001601";
-       return tImsi;
-       // return mImeiStr[cnt];
+    public String getImsi(int phoneId) {
+	if (phoneId >=mPhoneCnt ) return null;
+        String imsi;
+        imsi = mTelephonyManager[phoneId].getSubscriberId();
+        Log.d(TAG, "getImsi: " + phoneId +"---" + imsi);
+        return imsi;
     }
     protected void setImei(Context context, int cnt, String imei) {
 	if (cnt >= mPhoneCnt || cnt < 0) 
@@ -1298,7 +1102,7 @@ public class DmServiceCU extends Service {
         byte[] data; // sms body byte stream
         String smsBody; // sms body string format
         String imei = getImei(0);
-	String imsi = getImsi(pcount);
+        String imsi = getImsi(pcount);
         String softVer = getSoftwareVersion();
         String manStr = getManufactory();
         String modStr = getModel();
@@ -1320,7 +1124,8 @@ public class DmServiceCU extends Service {
 
         //add for 105942 begin
         Log.d(TAG, "sendMsgBody: IS_CONFIG_SELFREG_REPLY = " + IS_CONFIG_SELFREG_REPLY);
-        if (false == IS_CONFIG_SELFREG_REPLY){
+       // if (false == IS_CONFIG_SELFREG_REPLY){
+        if (true == IS_CONFIG_SELFREG_REPLY){
             Intent sentIntent = new Intent(SENT_SMS_ACTION);  
             PendingIntent sentPI = PendingIntent.getBroadcast(this, 0, sentIntent,  0);  
               
@@ -1336,7 +1141,7 @@ public class DmServiceCU extends Service {
          }
         //add for 105942 end
        
-	Log.d("SmsReg", "destAddr = "+destAddr + "  destPort = " + destPort + "  srcPort = " + srcPort + " data = " + data);
+	Log.d(TAG, "destAddr = "+destAddr + "  destPort = " + destPort + "  srcPort = " + srcPort + " data = " + data);
         smsManager.sendDmDataMessage(destAddr, null, /* use the default SMSC */
         destPort, srcPort, data, null, /* do not need listen to send result */
         null /* do not require delivery report */);
@@ -1359,8 +1164,8 @@ public class DmServiceCU extends Service {
                                         
                                         String imsi = mTelephonyManager.getSubscriberId();
 
-                                        saveImsi(mContext, curPhoneId, imsi);
-                                        setSelfRegState(mContext, curPhoneId, true);
+                                        saveImsi(mContext,imsi);
+                                        setRegState(mContext, true);
                                         stopListeningServiceState();
                                         break;
                                 default:
@@ -1374,28 +1179,15 @@ public class DmServiceCU extends Service {
     
 
     // Send self registe message
-    private void sendSelfRegMsg(int cnt) {
-        Log.d(TAG, "enter sendSelfRegMsg()");
+    private void sendSelfRegMsg(int phoneId) {
+        Log.d(TAG, "enter sendSelfRegMsg() mContext = " + mContext);
         if (!getSelfRegSwitch()) {
             Log.d(TAG, "sendSelfRegMsg: self registe switch is closed, no need send self registe message!");
             stopListeningServiceState();
             return;
-        }
-
-        if (isHaveSendSelfRegMsg(0)) {
-            Log.d(TAG, "sendSelfRegMsg: have send self registe message!");
-            stopListeningServiceState();
-            return;
-        }
-
-        Log.d(TAG, "sendSelfRegMsg: Enter!");
-        if (isNeedSelfReg(cnt)) {
-            sendMsgBody(cnt);
-            setIsHaveSendSelfRegMsg(mContext, 0, true);
-        } else {
-            setSelfRegState(mContext, 0, true);
-            stopListeningServiceState();
-        }
+        }        
+        sendMsgBody(phoneId);
+        setIsHaveSendSelfRegMsg(mContext, phoneId, true);
     }
 
     // Send self registe message for debug mode
@@ -1404,11 +1196,11 @@ public class DmServiceCU extends Service {
         Log.d(TAG, "sendSelfRegMsgForDebug: Enter!");
 	for (int i = 0; i<mPhoneCnt; i++)
 		{
-		if (getIsCmccCard(i))
+		/*if (getIsCmccCard(i))
 			{
 	       		 sendMsgBody(i);
 		         setIsHaveSendSelfRegMsg(mContext,0, true);
-			}
+			}*/
 		}
     }
 }
