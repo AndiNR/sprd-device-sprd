@@ -1119,6 +1119,7 @@ status_t SprdCameraHardware::setParameters(const CameraParameters& params)
         Mutex::Autolock lock(&mStateLock);
         if(strcmp(params.get("null-window") , "1") == 0)
         {
+                ALOGV("mPreviewLock::null window set preview window state");
                 Mutex::Autolock previewLock(&mPreviewLock);
                 mSettingPreviewWindowState = PREVIEW_WINDOW_SET_IDLE;
         }
@@ -1534,7 +1535,6 @@ void SprdCameraHardware::receivePreviewFDFrame(camera_frame_type *frame)
 void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 {
         Mutex::Autolock cbLock(&mCallbackLock);
-	Mutex::Autolock previewLock(&mPreviewLock);
         ssize_t offset = frame->buf_id;
 
         // Ignore the first frame--there is a bug in the VFE pipeline and that
@@ -1546,6 +1546,8 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
                 return;
         }
 #if 1
+{
+Mutex::Autolock previewLock(&mPreviewLock);
 if(PREVIEW_WINDOW_SET_OK == mSettingPreviewWindowState)
 {
         int width, height, frame_size, offset_size;
@@ -1630,6 +1632,7 @@ if(PREVIEW_WINDOW_SET_OK == mSettingPreviewWindowState)
                 	ALOGI("OK to enqueue gralloc buffer!");
                 }
         }
+}
 }
 #endif
 callbacks:
