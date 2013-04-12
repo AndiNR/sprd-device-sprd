@@ -104,9 +104,9 @@ public class DmReceiverCU extends BroadcastReceiver {
         	 dmService.setCurrentPhoneID(phoneId);
 
             // save current card imsi to file
-            dmService.saveImsi(context, 0, imsi);
+            dmService.saveImsi(context,imsi);
             // set self registe state to success
-            dmService.setSelfRegState(context, 0, true);
+            dmService.setRegState(context,true);
             dmService.stopListeningServiceState();
             if (dmService.isDebugMode()) {
                 ShowMessage(context, "Self registe OK!");
@@ -117,7 +117,7 @@ public class DmReceiverCU extends BroadcastReceiver {
             // self registe fail, need not save imsi
             Log.d(TAG, "parseReplyMsgContent: self registe fail!");
             // set self registe state to fail
-            dmService.setSelfRegState(context, phoneId, false);
+            dmService.setRegState(context,false);
             dmService.stopListeningServiceState();
             if (dmService.isDebugMode()) {
                 ShowMessage(context, "Self registe fail!");
@@ -186,32 +186,7 @@ public class DmReceiverCU extends BroadcastReceiver {
 
         byte[] header = new byte[6];
         byte[] data = new byte[30];
-/*
-        header[0] = -60;
-        header[1] = -81;
-        header[2] = -121;
-        header[3] = 0;
-        data[0] = 114;
-        data[1] = 119;
-        data[2] = -30;
-        data[3] = -69;
-        data[4] = -32;
-        data[5] = 51;
-        data[6] = 118;
-        data[7] = -29;
-        data[8] = 43;
-        data[9] = -22;
-        data[10] = -71;
-        data[11] = 41;
-        data[12] = 1;
-        data[13] = -120;
-        data[14] = 66;
-        data[15] = 99;
-        data[16] = 2;
-        data[17] = -8;
-        data[18] = 0;
-        data[19] = 0;
-*/
+
         header[0] = -60;
         header[1] = -81;
         header[2] = -121;
