@@ -189,27 +189,15 @@ int32_t audio_mux_ctrl_send(uint8_t * data, uint32_t  bytes)
 	result=read(audio_ctrl_fd,common_ret,sizeof(struct cmd_common));
 
 	ALOGE(":common->command is %x ,sub cmd %x,\n", common_ret->command, common_ret->sub_cmd);
-	if (subcmd) 
+
+	if (common_ret->command == cmd_ret) 
 	{
-		if ((common_ret->command == cmd_ret) && (common_ret->sub_cmd == subcmd))
-		{
-			result = 0;
-		} 
-		else 
-		{
-			result = -1;
-		}
-	}
-	else 
+		result = 0;
+	} else
 	{
-		if (common_ret->command == cmd_ret) 
-		{
-			result = 0;
-		} else
-		{
-			result = -1;
-		}
+		result = -1;
 	}
+
 	
 	audio_mux_ctrl_unlock();
 	ALOGE(":  saudio_send_common_cmd  X");
