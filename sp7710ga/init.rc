@@ -134,11 +134,11 @@ on post-fs
     # once everything is setup, no need to modify /
     mount rootfs rootfs / ro remount
 
-    mount yaffs2 mtd@fixnv /fixnv nosuid nodev no-checkpoint,tags-ecc-off
+    mount yaffs2 mtd@fixnv /fixnv nosuid nodev no-checkpoint
     chown system system /fixnv
     chmod 0774 /fixnv
 
-    mount yaffs2 mtd@runtimenv /runtimenv nosuid nodev no-checkpoint,tags-ecc-off
+    mount yaffs2 mtd@runtimenv /runtimenv nosuid nodev no-checkpoint
     chown system system /runtimenv
     chmod 0774 /runtimenv
 
@@ -146,11 +146,11 @@ on post-fs
     chown system cache /cache
     chmod 0770 /cache
 
-    mount yaffs2 mtd@backupfixnv /backupfixnv nosuid nodev no-checkpoint,tags-ecc-off
+    mount yaffs2 mtd@backupfixnv /backupfixnv nosuid nodev no-checkpoint
     chown system system /backupfixnv
     chmod 0774 /backupfixnv
 
-    mount yaffs2 mtd@productinfo /productinfo nosuid nodev no-checkpoint,tags-ecc-off
+    mount yaffs2 mtd@productinfo /productinfo nosuid nodev no-checkpoint
     chown system system /productinfo
     chmod 0774 /productinfo
 
