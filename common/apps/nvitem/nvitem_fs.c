@@ -175,45 +175,57 @@ BOOLEAN		ramDisk_Read(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 	int fileHandle = 0;;
 	int idx;
 
+	char *firstName, *secondName;
+
 	idx = _getIdx(handle);
 	if(-1 == idx){
 		return 0;
 	}
-// 1 read origin image
+
+// 0 get read order
+	if(rand()%2){
+		firstName = _ramdiskCfg[idx].image_path;
+		secondName = _ramdiskCfg[idx].imageBak_path;
+	}
+	else{
+		secondName = _ramdiskCfg[idx].image_path;
+		firstName = _ramdiskCfg[idx].imageBak_path;
+	}
+// 1 read first image
 	memset(buf,0xFF,size);
-	fileHandle = open(_ramdiskCfg[idx].image_path, O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
+	fileHandle = open(firstName, O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
 	ret = read(fileHandle, buf, size);
 	close(fileHandle);
 	//check crc
 	if(ret == size){
 		if(_chkEcc(buf, size)){
-			printf("NVITEM partId%x:origin image read success!\n",_ramdiskCfg[idx].partId);
+			printf("NVITEM partId%x:%s read success!\n",_ramdiskCfg[idx].partId,firstName);
 			return 1;
 		}
-		printf("NVITEM partId%x:origin image ECC error!\n",_ramdiskCfg[idx].partId);
+		printf("NVITEM partId%x:%s ECC error!\n",_ramdiskCfg[idx].partId,firstName);
 	}
-	printf("NVITEM partId%x:origin image read error!\n",_ramdiskCfg[idx].partId);
-// 2 read bakup image
+	printf("NVITEM partId%x:%s read error!\n",_ramdiskCfg[idx].partId,firstName);
+// 2 read second image
 	memset(buf,0xFF,size);
-	fileHandle = open(_ramdiskCfg[idx].imageBak_path, O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
+	fileHandle = open(secondName, O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
 	ret = read(fileHandle, buf, size);
 	close(fileHandle);
 
 	if(ret != size){
-		printf("NVITEM partId%x:bakup image read error!\n",_ramdiskCfg[idx].partId);
+		printf("NVITEM partId%x:%s read error!\n",_ramdiskCfg[idx].partId,secondName);
 		return 1;
 	}
 	if(!_chkEcc(buf, size)){
-		printf("NVITEM partId%x:bakup image ECC error!\n",_ramdiskCfg[idx].partId);
+		printf("NVITEM partId%x:%s ECC error!\n",_ramdiskCfg[idx].partId,secondName);
 		return 1;
 	}
 
-	fileHandle  = open(_ramdiskCfg[idx].image_path, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
+	fileHandle  = open(firstName, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
 	write(fileHandle, buf, size);
 	fsync(fileHandle);
 	close(fileHandle);
 
-	printf("NVITEM  partId%x:bakup image read success!\n",_ramdiskCfg[idx].partId);
+	printf("NVITEM  partId%x:%s read success!\n",_ramdiskCfg[idx].partId,secondName);
 	return 1;
 
 }
