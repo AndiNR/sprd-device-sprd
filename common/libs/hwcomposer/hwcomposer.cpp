@@ -201,32 +201,52 @@ static int verify_video_layer(struct hwc_context_t *context, hwc_layer_t * l)
 	context->src_rect.y = (context->src_rect.y + SRCRECT_Y_ALLIGNED) & (~SRCRECT_Y_ALLIGNED);//dcam 8 pixel crop
     	context->src_rect.y = MIN(context->src_rect.y, context->src_img.h);
 
-    	context->src_rect.w = MIN(l->sourceCrop.right - context->src_rect.x, context->src_img.w - context->src_rect.x);
-    	context->src_rect.h = MIN(l->sourceCrop.bottom - context->src_rect.y, context->src_img.h - context->src_rect.y);
-	context->src_rect.w = (context->src_rect.w + SRCRECT_WIDTH_ALLIGNED) & (~SRCRECT_WIDTH_ALLIGNED);//dcam 8 pixel crop
+    	context->src_rect.w = MIN(l->sourceCrop.right - l->sourceCrop.left, context->src_img.w - context->src_rect.x);
+    	context->src_rect.h = MIN(l->sourceCrop.bottom - l->sourceCrop.top, context->src_img.h - context->src_rect.y);
+	if((context->src_rect.w - (context->src_rect.w & (~SRCRECT_WIDTH_ALLIGNED)))> ((SRCRECT_WIDTH_ALLIGNED+1)>>1))
+	{
+		context->src_rect.w = (context->src_rect.w + SRCRECT_WIDTH_ALLIGNED) & (~SRCRECT_WIDTH_ALLIGNED);//dcam 8 pixel crop
+	}
+	else
+	{
+		context->src_rect.w = (context->src_rect.w) & (~SRCRECT_WIDTH_ALLIGNED);//dcam 8 pixel crop
+	}
+	if((context->src_rect.h - (context->src_rect.h & (~SRCRECT_HEIGHT_ALLIGNED)))> ((SRCRECT_HEIGHT_ALLIGNED+1)>>1))
+	{
+		context->src_rect.h = (context->src_rect.h + SRCRECT_HEIGHT_ALLIGNED) & (~SRCRECT_HEIGHT_ALLIGNED);//dcam 8 pixel crop
+	}
+	else
+	{
+		context->src_rect.h = (context->src_rect.h) & (~SRCRECT_HEIGHT_ALLIGNED);//dcam 8 pixel crop
+	}
 	context->src_rect.w = MIN(context->src_rect.w, context->src_img.w - context->src_rect.x);
-	context->src_rect.h = (context->src_rect.h + SRCRECT_HEIGHT_ALLIGNED) & (~SRCRECT_HEIGHT_ALLIGNED);//dcam 8 pixel crop
 	context->src_rect.h = MIN(context->src_rect.h, context->src_img.h - context->src_rect.y);
 	//--------------------------------------------------
     	context->fb_rect.x = MAX(l->displayFrame.left, 0);
     	context->fb_rect.y = MAX(l->displayFrame.top, 0);
-
-	if(!rot_90_270) {
-		context->fb_rect.x = (context->fb_rect.x + FB_X_ALLIGNED) & (~FB_X_ALLIGNED);//lcdc must 4 pixel for yuv420
-	} else {
-		context->fb_rect.y = (context->fb_rect.y + FB_Y_ALLIGNED) & (~FB_Y_ALLIGNED);//lcdc must 4 pixel for yuv420
-	}
 	context->fb_rect.x = MIN(context->fb_rect.x, context->fb_width);
 	context->fb_rect.y = MIN(context->fb_rect.y, context->fb_height);
 
-    	context->fb_rect.w = MIN(l->displayFrame.right - context->fb_rect.x, context->fb_width - context->fb_rect.x);
-    	context->fb_rect.h = MIN(l->displayFrame.bottom - context->fb_rect.y, context->fb_height - context->fb_rect.y);
-
-	context->fb_rect.w = (context->fb_rect.w + FB_WIDTH_ALLIGNED) & (~FB_WIDTH_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
+    	context->fb_rect.w = MIN(l->displayFrame.right - l->displayFrame.left, context->fb_width - context->fb_rect.x);
+    	context->fb_rect.h = MIN(l->displayFrame.bottom - l->displayFrame.top, context->fb_height - context->fb_rect.y);
+       if((context->fb_rect.w - (context->fb_rect.w & (~FB_WIDTH_ALLIGNED)))> ((FB_WIDTH_ALLIGNED+1)>>1))
+       {
+       	context->fb_rect.w = (context->fb_rect.w + FB_WIDTH_ALLIGNED) & (~FB_WIDTH_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
+       }
+	 else
+       {
+       	context->fb_rect.w = (context->fb_rect.w) & (~FB_WIDTH_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
+	 }
+	if((context->fb_rect.h - (context->fb_rect.h & (~FB_HEIGHT_ALLIGNED)))> ((FB_HEIGHT_ALLIGNED+1)>>1))
+	{
+		context->fb_rect.h = (context->fb_rect.h + FB_HEIGHT_ALLIGNED) & (~FB_HEIGHT_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
+	}
+	else
+	{
+       	context->fb_rect.h = (context->fb_rect.h) & (~FB_HEIGHT_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
+	}
 	context->fb_rect.w = MIN(context->fb_rect.w, context->fb_width - ((context->fb_rect.x + FB_WIDTH_ALLIGNED) & (~FB_WIDTH_ALLIGNED)));
-	context->fb_rect.h = (context->fb_rect.h + FB_HEIGHT_ALLIGNED) & (~FB_HEIGHT_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
 	context->fb_rect.h = MIN(context->fb_rect.h, context->fb_height - ((context->fb_rect.y + FB_HEIGHT_ALLIGNED) & (~FB_HEIGHT_ALLIGNED)));
-
 	ALOGV("rects {%d,%d,%d,%d}, {%d,%d,%d,%d}", context->src_rect.x,context->src_rect.y,context->src_rect.w,context->src_rect.h,
 		context->fb_rect.x, context->fb_rect.y, context->fb_rect.w, context->fb_rect.h);
 
@@ -236,16 +256,15 @@ static int verify_video_layer(struct hwc_context_t *context, hwc_layer_t * l)
 		return 0;
 	}
 
-	src_width = context->src_rect.w;
-	src_height = context->src_rect.h;
-	if ((l->transform&HAL_TRANSFORM_ROT_90) == HAL_TRANSFORM_ROT_90){
-		dest_width = context->fb_rect.h;
-		dest_height = context->fb_rect.w;
-	}else{
-		dest_width = context->fb_rect.w;
-		dest_height = context->fb_rect.h;
+	dest_width = context->fb_rect.w;
+	dest_height = context->fb_rect.h;
+ 	if ((l->transform&HAL_TRANSFORM_ROT_90) == HAL_TRANSFORM_ROT_90){
+ 		src_width = context->src_rect.h;
+ 		src_height = context->src_rect.w;
+ 	}else{
+ 		src_width = context->src_rect.w;
+		src_height = context->src_rect.h;
 	}
-
 	if(4*src_width < dest_width || src_width > 4*dest_width ||
 		4*src_height < dest_height || src_height > 4*dest_height){//dcam support 1/4-4 scaling
 		return 0;
