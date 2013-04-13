@@ -108,6 +108,7 @@ static int get_modem_state(char *buffer,size_t size)
 	if(numRead > 0){
 		printf("modem_state = %s\n",buffer);
 	} else{
+		printf("modem_state error...\n",buffer);
 		return 0;
 	}
 	return numRead;

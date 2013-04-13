@@ -50,13 +50,13 @@ struct image_info download_image_info[] = {
 	{ //fixvn
 		"/fixnv/fixnv.bin",
 		"/backupfixnv/fixnv.bin",
-		0x1E000,
+		0x1F000,
 		0x400,
 	},
 	{ //fixvn
 		"/fixnv/fixnv.bin",
 		"/backupfixnv/fixnv.bin",
-		0x1E000,
+		0x1F000,
 		0x02100000,
 	},
 	{ //DSP code
@@ -433,7 +433,7 @@ static void try_to_connect_modem(int uart_fd)
 	}
 }
 
-int download_image(int channel_fd,struct image_info *info)
+int download_image(int channel_fd,struct image_info *info,int productinfo_flag)
 {
 	int packet_size;
 	int image_fd;
@@ -477,6 +477,17 @@ int download_image(int channel_fd,struct image_info *info)
 			image_size = 0;
 		}else { image_size -= HS_PACKET_SIZE;}
 		//memset(test_buffer,i,HS_PACKET_SIZE);
+		if(productinfo_flag){
+			int fd = open("/proc/cmdline", O_RDONLY);
+			memset(&test_buffer[16*1024+8],0,1024);
+			if(fd > 0){
+				read(fd, &test_buffer[16*1024+8], 1024);
+				close(fd);
+				printf("cmd_line : %s\n",(char *)&test_buffer[16*1024+8]);
+			} else {
+				printf("open /proc/cmdline failed\n");
+			}
+		}
 		ret = send_data_message(channel_fd,test_buffer,HS_PACKET_SIZE,1);
 		if(ret != DL_SUCCESS){
 			close(image_fd);
@@ -498,7 +509,10 @@ int download_images(int channel_fd)
 
 	info = &download_image_info[1];
 	for(i=0;i<image_count;i++){
-		ret = download_image(channel_fd,info);
+		if(i == image_count - 1)
+			ret = download_image(channel_fd,info,1);
+		else
+			ret = download_image(channel_fd,info,0);
 		if(ret != DL_SUCCESS)
 			break;
 		info++;
