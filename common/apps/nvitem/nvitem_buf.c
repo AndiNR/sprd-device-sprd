@@ -68,9 +68,9 @@ void initBuf(void)
 		}
 		ramNvCtl.part[i].partId					= config->partId;
 		ramNvCtl.part[i].sctNum				= config->image_size/RAMNV_SECT_SIZE;
-		ramNvCtl.part[i].fromChannel.diskbuf		= malloc(config->image_size+8);
-		ramNvCtl.part[i].backup.diskbuf			= malloc(config->image_size+8);
-		ramNvCtl.part[i].toDisk.diskbuf			= malloc(config->image_size+8);
+		ramNvCtl.part[i].fromChannel.diskbuf		= malloc(config->image_size+4);
+		ramNvCtl.part[i].backup.diskbuf			= malloc(config->image_size+4);
+		ramNvCtl.part[i].toDisk.diskbuf			= malloc(config->image_size+4);
 //---for test---
 		memset(ramNvCtl.part[i].fromChannel.diskbuf, 0, config->image_size);
 //------------
@@ -84,7 +84,9 @@ void initBuf(void)
 			config++;
 			continue;
 		}
-		backupData(i);
+		memcpy(ramNvCtl.part[i].backup.diskbuf,ramNvCtl.part[i].fromChannel.diskbuf,config->image_size+4);
+		memcpy(ramNvCtl.part[i].toDisk.diskbuf,ramNvCtl.part[i].fromChannel.diskbuf,config->image_size+4);
+//		backupData(i);
 		ramNvCtl.partNum++;
 		i++;
 		config++;
