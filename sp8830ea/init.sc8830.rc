@@ -23,8 +23,8 @@ on fs
 
 on post-fs
     mount -o remount,rw /system
-    #insmod /system/lib/modules/ump.ko
-    #insmod /system/lib/modules/mali.ko
+    insmod /system/lib/modules/ump.ko
+    insmod /system/lib/modules/mali.ko
     mv /system/lib/egl/libEGL_mali.so /system/lib/egl/libEGL_mali.so.bak
     mv /system/lib/egl/libGLESv2_mali.so /system/lib/egl/libGLESv2_mali.so.bak
     mv /system/lib/egl/libGLESv1_CM_mali.so /system/lib/egl/libGLESv1_CM_mali.so.bak
