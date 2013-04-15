@@ -43,7 +43,6 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 	persist.sys.usb.config=mtp
 
 PRODUCT_PACKAGES := \
-	VoiceDialer \
 	Settings \
 	MsmsPhone \
 	MsmsSettings \
@@ -51,9 +50,7 @@ PRODUCT_PACKAGES := \
 	Stk1 \
         ES_File_Explorer.apk \
         SecondClock.apk \
-        WorldClock.apk  \
         CallFireWall   \
-	SprdNote \
         AudioProfile \
         LiveWallpapers  \
         LiveWallpapersPicker \
