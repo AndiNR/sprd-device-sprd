@@ -425,6 +425,7 @@ static int gralloc_alloc_framebuffer(alloc_device_t* dev, size_t size, int usage
 
 static int alloc_device_alloc(alloc_device_t* dev, int w, int h, int format, int usage, buffer_handle_t* pHandle, int* pStride)
 {
+	ALOGD("%s w:%d, h:%d, format:%d usage:%d start",__FUNCTION__,w,h,format,usage);
 	if (!pHandle || !pStride)
 	{
 		return -EINVAL;
@@ -535,6 +536,7 @@ AllocNormalBuffer:
 		}
 	}
 
+	ALOGD("%s handle:0x%x end",__FUNCTION__,(unsigned int)*pHandle);
 	if (err < 0)
 	{
 		return err;
@@ -546,6 +548,7 @@ AllocNormalBuffer:
 
 static int alloc_device_free(alloc_device_t* dev, buffer_handle_t handle)
 {
+	ALOGD("%s buffer_handle_t:0x%x start",__FUNCTION__,(unsigned int)handle);
 	if (private_handle_t::validate(handle) < 0)
 	{
 		return -EINVAL;
@@ -620,6 +623,7 @@ static int alloc_device_free(alloc_device_t* dev, buffer_handle_t handle)
 
 	delete hnd;
 
+	ALOGD("%s end",__FUNCTION__);
 	return 0;
 }
 
