@@ -32,7 +32,8 @@ TARGET_NO_BOOTLOADER := false
 UBOOT_DEFCONFIG := sp7710g2
 
 # config kernel
-ifeq ($(TARGET_PRODUCT), sp7710gahvga)
+
+ifeq ($(TARGET_HVGA_ENABLE), true)
 KERNEL_DEFCONFIG := sp7710ga-native-hvga_defconfig
 else
 KERNEL_DEFCONFIG := sp7710ga-native_defconfig

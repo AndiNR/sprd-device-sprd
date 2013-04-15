@@ -40,6 +40,12 @@ else
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=0
 endif
 
+ifeq ($(TARGET_HVGA_ENABLE), true)
+PRODUCT_PROPERTY_OVERRIDES += ro.sf.lcd_density=160
+else
+PRODUCT_PROPERTY_OVERRIDES += ro.sf.lcd_density=240
+endif
+
 # Set default USB interface
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 	persist.sys.usb.config=mass_storage
@@ -60,8 +66,8 @@ PRODUCT_PACKAGES += \
 	
 # add  system properties
 PRODUCT_PROPERTY_OVERRIDES += \
-	ro.operator.version=specA \
-	ro.sf.lcd_density=240
+	ro.operator.version=specA
+
 	
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \
