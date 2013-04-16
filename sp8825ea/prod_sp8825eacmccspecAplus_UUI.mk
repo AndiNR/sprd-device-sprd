@@ -45,6 +45,7 @@ PRODUCT_PACKAGES := \
     MsmsPhone \
     Settings \
     MsmsStk \
+    SprdDM \
     Stk1 \
     framework2
 
