@@ -22,18 +22,8 @@ on fs
     #setprop ro.crypto.fuse_sdcard true
 
 on post-fs
-    mount -o remount,rw /system
     insmod /system/lib/modules/ump.ko
     insmod /system/lib/modules/mali.ko
-    mv /system/lib/egl/libEGL_mali.so /system/lib/egl/libEGL_mali.so.bak
-    mv /system/lib/egl/libGLESv2_mali.so /system/lib/egl/libGLESv2_mali.so.bak
-    mv /system/lib/egl/libGLESv1_CM_mali.so /system/lib/egl/libGLESv1_CM_mali.so.bak
-    mv /system/lib/libUMP.so /system/lib/libUMP.so.bak
-    mv /system/lib/libMali.so /system/lib/libMali.so.bak
-    mv /system/lib/hw/hwcomposer.sc8830.so /system/lib/hw/hwcomposer.sc8830.so.bak
-    mv /system/lib/hw/gralloc.sc8830.so /system/lib/hw/gralloc.sc8830.so.bak
-    mount -o remount,ro /system
-
 
 on post-fs-data
     # we will remap this as /storage/sdcard0 with the sdcard fuse tool
