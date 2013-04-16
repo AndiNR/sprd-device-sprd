@@ -51,6 +51,7 @@ BOARD_KERNEL_CMDLINE := console=ttyS1,115200n8
 
 # use default init.rc
 TARGET_PROVIDES_INIT_RC := true
+RECOVERY_PROVIDES_INIT_RC := true
 
 #select 2M,3M or 5M
 CAMERA_SUPPORT_SIZE := 5M
