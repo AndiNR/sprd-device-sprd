@@ -233,7 +233,6 @@ static uint8_t s_focus_zone_param[FOCUS_RECT_PARAM_LEN];
 static uint32_t s_af_is_stop = 1;
 static uint32_t s_af_is_cancel = 0;
 static uint32_t g_encoder_is_end = 1;
-static uint32_t s_capture_is_closed = 0;
 
 /* exif  info*/
 LOCAL JINF_EXIF_INFO_T 			g_dc_exif_info;
@@ -937,10 +936,7 @@ void *camera_encoder_thread(void *client_data)
 	uint32_t* jpeg_enc_buf_virt_addr;
 	uint32_t jpeg_enc_buf_len;
 	uint32_t i;
-    if (1 == s_capture_is_closed) {
-        ALOGV("camera_encoder_thread:capture is closed.");
-        return NULL;
-    }
+
 	g_encoder_is_end = 0;
 	ALOGV("camera_encoder_thread S. 0x%x 0x%x 0x%x 0x%x",
 		  g_buffers[g_releasebuff_index].virt_addr,g_buffers[g_releasebuff_index].phys_addr,
@@ -3196,6 +3192,7 @@ int camera_preview_init(int preview_mode)
 {
 	struct v4l2_format fmt;
 	uint32_t min;
+	uint32_t width;
 	struct v4l2_requestbuffers req;
 	uint32_t buffer_size, page_size, frame_size;
 	struct v4l2_streamparm streamparm;
@@ -3324,7 +3321,9 @@ int camera_preview_init(int preview_mode)
 		return -1;
 	}
 
-	frame_size = g_dcam_dimensions.display_width * g_dcam_dimensions.display_height * 3 / 2;
+	width = g_dcam_dimensions.display_width;
+	width += g_dcam_dimensions.display_width%4;
+	frame_size = width * g_dcam_dimensions.display_height * 3 / 2;
 	//buffer_size = frame_size;
 	buffer_size = (frame_size + 256 - 1) & ~(256 - 1);
     	for (n_buffers = 0; n_buffers < buff_cnt; ++n_buffers)
@@ -4491,7 +4490,6 @@ camera_ret_code_type camera_stop_capture(void)
     ALOGV("camera_stop_capture: Start to stop capture thread.");
 
     g_stop_capture_flag = 1;
-    s_capture_is_closed = 1;
 
     while(!g_capture_stop)
     {
@@ -5387,7 +5385,6 @@ int camera_capture_init(uint32_t mem_size,int32_t capture_fmat)
 	uint32_t ret = 0;
 	uint32_t sensor_output_w = 0, sensor_output_h = 0;
 
-    s_capture_is_closed = 0;
 	s_camera_info.rot_angle = 0;
 	s_camera_info.is_interpolation = 0;
 	s_camera_info.is_need_rotation = 0;
@@ -5746,6 +5743,8 @@ camera_ret_code_type camera_take_picture (
 
 	//get the take picture memory
 	camera_get_sensor_output_size(&sensor_output_w, &sensor_output_h);
+	ALOGV("camera_take_picture, output_w %d, output_h %d, picture_width %d, picture_height %d", 
+		sensor_output_w, sensor_output_h, g_dcam_dimensions.picture_width, g_dcam_dimensions.picture_height);
 	if((sensor_output_w * sensor_output_h) > ( g_dcam_dimensions.picture_width* g_dcam_dimensions.picture_height))
 		size = (sensor_output_w * sensor_output_h  * 2) * g_capture_buffer_num;
 	else

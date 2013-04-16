@@ -413,6 +413,7 @@ bool SprdCameraHardware::initPreview()
 {
         uint32_t page_size, buffer_size;
         uint32_t preview_buff_cnt = kPreviewBufferCount;
+        uint32_t width;
 
         if(true != startCameraIfNecessary())
                 return false;
@@ -425,7 +426,9 @@ bool SprdCameraHardware::initPreview()
         setCameraDimensions();
         ALOGV("initPreview: preview size=%dx%d", mPreviewWidth, mPreviewHeight);
 
-        mPreviewFrameSize = mPreviewWidth * mPreviewHeight * 3 / 2;
+        width = mPreviewWidth;
+        width += mPreviewWidth%4;
+        mPreviewFrameSize = width * mPreviewHeight * 3 / 2;
         buffer_size = camera_get_size_align_page(mPreviewWidth * mPreviewHeight *2);	
         buffer_size = (mPreviewFrameSize + 256 - 1) & ~(256 - 1);
         if(mOrientation_parm)
@@ -1551,6 +1554,8 @@ Mutex::Autolock previewLock(&mPreviewLock);
 if(PREVIEW_WINDOW_SET_OK == mSettingPreviewWindowState)
 {
         int width, height, frame_size, offset_size;
+        uint32_t i;
+        void *src_addr,*dst_addr;
 
         // mParameters.getPreviewSize(&width, &height);
         width  = mPreviewWidth;
@@ -1593,9 +1598,9 @@ if(PREVIEW_WINDOW_SET_OK == mSettingPreviewWindowState)
 							struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
 							uint32_t phy_addr =  (uint32_t)(private_h->phyaddr);
 							nsecs_t timestamp_old, timestamp_new;
+							int src_width;
 
 							timestamp_old = systemTime();
-
 
 							//ALOGE("wxz====: frame->buffer_phy_addr : 0x%x, phy_addr: 0x %x", frame->buffer_phy_addr, phy_addr);
 #ifdef USE_ION_MEM
@@ -1606,12 +1611,22 @@ if(PREVIEW_WINDOW_SET_OK == mSettingPreviewWindowState)
 #else
 							ALOGE("receivePreviewFrame cp buf_addr=0x%x,phy_addr=0x%x", \
 								  frame->buffer_phy_addr, vaddr);
-
-							if(0 != camera_rotation_copy_data_virtual(width, height, frame->buffer_phy_addr, (uint32_t)vaddr)){
-							        ALOGE("fail to camera_rotation_copy_data() in receivePreviewFrame.");
-							        goto callbacks;
+							if(stride != width){
+								dst_addr = vaddr;
+								src_addr = frame->buf_Virt_Addr;
+								src_width = width + width%4;
+								ALOGE("receivePreviewFrame, src_width %d", src_width);
+								for(i=0;i<height*3/2;i++) {
+									memcpy(dst_addr,src_addr,width);
+									dst_addr =(void*)((uint32_t)dst_addr+stride);
+									src_addr =(void*)((uint32_t)src_addr+src_width);
+								}
+							}else{
+								if(0 != camera_rotation_copy_data_virtual(width, height, frame->buffer_phy_addr, (uint32_t)vaddr)){
+								        ALOGE("fail to camera_rotation_copy_data() in receivePreviewFrame.");
+								        goto callbacks;
+								}
 							}
-
 							//memcpy(vaddr, frame_addr, width*height*3/2);
 							//ALOGV("receivePreviewFrame, copy to vaddr: src=%x, dst=%x, dstphy=%x \n", (uint32_t)frame_addr, (uint32_t)vaddr, phy_addr);
 #endif
