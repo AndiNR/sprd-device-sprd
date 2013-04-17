@@ -32,22 +32,24 @@
 static struct clk* g_gpu_clock = NULL;
 
 static int g_gpu_clock_on = 0;
+static int g_gpu_power_on = 0;
 
 _mali_osk_errcode_t mali_platform_init(void)
 {
-#if 0	
 	g_gpu_clock = clk_get(NULL, "clk_gpu");
 
 	MALI_DEBUG_ASSERT(g_gpu_clock);
-#endif
-	__raw_writel(__raw_readl(REG_PMU_APB_PD_GPU_TOP_CFG) & ~BIT_PD_GPU_TOP_FORCE_SHUTDOWN, REG_PMU_APB_PD_GPU_TOP_CFG);
-	mdelay(2);
-//	while(sci_glb_read(REG_PMU_APB_PD_GPU_TOP_CFG, BITS_PD_G3D_STATUS(0x1f))) udelay(100);
+
+	if(!g_gpu_power_on)
+	{
+		g_gpu_power_on = 1;
+		sci_glb_clr(REG_PMU_APB_PD_GPU_TOP_CFG, BIT_PD_GPU_TOP_FORCE_SHUTDOWN);
+		mdelay(2);
+	}
 	if(!g_gpu_clock_on)
 	{
 		g_gpu_clock_on = 1;
-		__raw_writel(__raw_readl(REG_AON_APB_APB_EB0) | BIT_GPU_EB, REG_AON_APB_APB_EB0);
-//		clk_enable(g_gpu_clock);
+		clk_enable(g_gpu_clock);
 	}
 	MALI_SUCCESS;
 }
@@ -57,23 +59,26 @@ _mali_osk_errcode_t mali_platform_deinit(void)
 	if(g_gpu_clock_on)
 	{
 		g_gpu_clock_on = 0;
-		__raw_writel(__raw_readl(REG_AON_APB_APB_EB0) & ~BIT_GPU_EB, REG_AON_APB_APB_EB0);
-//		clk_disable(g_gpu_clock);
+		clk_disable(g_gpu_clock);
 	}
-	__raw_writel(__raw_readl(REG_PMU_APB_PD_GPU_TOP_CFG) | BIT_PD_GPU_TOP_FORCE_SHUTDOWN, REG_PMU_APB_PD_GPU_TOP_CFG);
+	if(g_gpu_power_on)
+	{
+		g_gpu_power_on = 0;
+		sci_glb_set(REG_PMU_APB_PD_GPU_TOP_CFG, BIT_PD_GPU_TOP_FORCE_SHUTDOWN);
+	}
 	MALI_SUCCESS;
 }
 
 _mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
 {
-	#if 0
 	switch(power_mode)
 	{
 	case MALI_POWER_MODE_ON:
-		if(sci_glb_read(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD))
+		if(!g_gpu_power_on)
 		{
-			sci_glb_clr(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
-			while(sci_glb_read(REG_GLB_G3D_PWR_CTL, BITS_PD_G3D_STATUS(0x1f))) udelay(100);
+			g_gpu_power_on = 1;
+			sci_glb_clr(REG_PMU_APB_PD_GPU_TOP_CFG, BIT_PD_GPU_TOP_FORCE_SHUTDOWN);
+			mdelay(2);
 		}
 		if(!g_gpu_clock_on)
 		{
@@ -94,10 +99,13 @@ _mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
 			g_gpu_clock_on = 0;
 			clk_disable(g_gpu_clock);
 		}
-		sci_glb_set(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
+		if(g_gpu_power_on)
+		{
+			g_gpu_power_on = 0;
+			sci_glb_set(REG_PMU_APB_PD_GPU_TOP_CFG, BIT_PD_GPU_TOP_FORCE_SHUTDOWN);
+		}
 		break;
 	};
-	#endif
 	MALI_SUCCESS;
 }
 
