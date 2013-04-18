@@ -77,10 +77,22 @@ Only the three quirks included above are recognized at this point:
 
 <MediaCodecs>
     <Decoders>
-	<MediaCodec name="OMX.PV.mpeg4dec" type="video/mp4v-es">
+        <MediaCodec name="OMX.sprdmix.mpeg4.decoder" type="video/mp4v-es">
+            <Quirk name="requires-allocate-on-output-ports" />
+            <Quirk name="defers-output-buffer-allocation" />
+            <Quirk name="needs-flush-before-disable" />
+        </MediaCodec>
+
+        <MediaCodec name="OMX.sprdmix.h263.decoder" type="video/3gpp">
+            <Quirk name="requires-allocate-on-output-ports" />
+            <Quirk name="defers-output-buffer-allocation" />
+            <Quirk name="needs-flush-before-disable" />
+        </MediaCodec>
+
+	    <MediaCodec name="OMX.PV.mpeg4dec" type="video/mp4v-es">
 		<Quirk name="requires-allocate-on-output-ports" />
         </MediaCodec>
-	<MediaCodec name="OMX.PV.h263dec" type="video/3gpp">
+	    <MediaCodec name="OMX.PV.h263dec" type="video/3gpp">
 		<Quirk name="requires-allocate-on-output-ports" />
         </MediaCodec>
        	<MediaCodec name="OMX.PV.avcdec" type="video/avc">
