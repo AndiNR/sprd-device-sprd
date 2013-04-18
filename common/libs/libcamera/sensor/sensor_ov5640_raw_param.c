@@ -206,7 +206,6 @@ static const uint8_t s_ov5640_ae_weight_customer[]=
 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
 };
 
-/* 00: 0x->50hz 1x->60hz x0->normal x1->night*/
 static const uint32_t s_ov5640_aes_00[]={
 0x00056931, 0x00056931, 0x00056931, 0x00056931, 0x00056931, 0x00056931, 0x00056931, 0x00056931, 0x00056931, 0x00056931, 0x00056931, 0x00056931, 0x00056931, 0x0002b499, 0x0002b499, 0x0002b499, 
 0x0002b499, 0x0002b499, 0x0002b499, 0x0002b499, 0x0002b499, 0x0002b499, 0x0002b499, 0x0002b499, 0x00015a4c, 0x00015a4c, 0x00015a4c, 0x00015a4c, 0x00015a4c, 0x00015a4c, 0x00015a4c, 0x00015a4c, 
@@ -1021,4 +1020,10 @@ static struct sensor_raw_fix_info s_ov5640_fix_info={
 		(uint16_t*)s_ov5640_lnc_28,
 		sizeof(s_ov5640_lnc_28),
 	}
+};
+
+static struct sensor_version_info s_ov5640_version_info={
+	SENSOR_RAW_VERSION_ID,
+	sizeof(struct sensor_raw_info),
+	0x00
 };

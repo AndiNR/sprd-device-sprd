@@ -60,6 +60,7 @@ LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param);
 LOCAL uint32_t _ov5640_check_status(uint32_t param);
 LOCAL uint32_t _ov5640_set_iso(uint32_t mode);
 LOCAL uint32_t _ov5640_ReadGain(uint32_t param);
+LOCAL uint32_t _ov5640_flash(uint32_t param);
 
 
 //640X480 YUV
@@ -1205,7 +1206,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5640_ioctl_func_tab = {
 
 	_ov5640_BeforeSnapshot,
 	_ov5640_after_snapshot,
-	PNULL,/*_ov540_flash,*/
+	_ov5640_flash,/*_ov540_flash,*/
 	PNULL,
 	PNULL,
 	PNULL,
@@ -7250,6 +7251,29 @@ LOCAL uint32_t _ov5640_check_status(uint32_t param)
 		return 0;
 	}
 #endif
+}
+
+LOCAL uint32_t _ov5640_flash(uint32_t param)
+{
+	uint16_t value = 0;
+	uint32_t *autoflash;
+
+	autoflash = (uint32_t *) param;
+	if(autoflash){
+		//usleep(1000);
+		value = Sensor_ReadReg(0x56a1);
+		if(value < 16) {
+			*autoflash = 1;
+		}else {
+			*autoflash = 0;
+		}
+	}else {
+		SENSOR_PRINT("  NULL pointer error! ");
+		return SENSOR_FAIL;
+	}
+
+	SENSOR_PRINT(" value = %d, autoflash = 0x%x, auto_flash_mode",  value, autoflash);
+	return SENSOR_SUCCESS;
 }
 
 #if 0

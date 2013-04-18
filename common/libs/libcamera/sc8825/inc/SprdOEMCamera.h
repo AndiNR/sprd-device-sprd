@@ -32,6 +32,7 @@ extern "C"
 typedef enum {
 	CAMERA_NORMAL_MODE = 0,
 	CAMERA_HDR_MODE,
+	CAMERA_CONTINUE_SHOT_MODE,
 	CAMERA_MODE_MAX
 }takepicture_mode;
 
@@ -248,6 +249,8 @@ typedef struct
 	JPEGENC_outputType       mode;
 	void                     *outPtr;
 	uint32_t                 size;
+	takepicture_mode         cap_mode;
+	uint32_t                 need_free;
 } JPEGENC_CBrtnType;
 
 typedef enum {
@@ -430,6 +433,7 @@ typedef enum {
 	CAMERA_PARM_SENSOR_ROTATION, /* 0, 90, 180, 270 degrees */
 	CAMERA_PARM_FOCUS_MODE,
 	CAMERA_PARM_DCDV_MODE,
+	CAMERA_PARM_SHOT_NUM,
 	CAMERA_PARM_MAX
 } camera_parm_type;
 

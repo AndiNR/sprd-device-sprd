@@ -106,6 +106,7 @@ static sem_t preview_sem_lock;
 static sem_t capture_sem_lock;
 static int wire_connected = 0;
 static int sockfd = 0;
+static int sock_fd=0;
 int sequence_num = 0;
 struct camera_func s_camera_fun={0x00};
 struct camera_func* s_camera_fun_ptr=&s_camera_fun;
@@ -763,7 +764,7 @@ static void * ispserver_thread(void *args)
 		 DBG("ISP_TOOL:socket error\n");
 		 return NULL;
 	}
-
+	sock_fd=lfd;
 	optval = 1;
 	if (setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0) {
 		 DBG("ISP_TOOL:setsockopt error\n");
@@ -790,10 +791,11 @@ static void * ispserver_thread(void *args)
 
 		DBG("ISP_TOOL:log server waiting client dail in...\n");
 		/* Accept a client connection, obtaining client's address */
+		wire_connected = 0;
 		addrlen = sizeof(struct sockaddr);
 		cfd = accept(lfd, &claddr, &addrlen);
 		if (cfd == -1) {
-			DBG("accept error %s\n", strerror(errno));
+			DBG("ISP_TOOL:accept error %s\n", strerror(errno));
 			break;
 		}
 		DBG("ISP_TOOL:log server connected with client\n");
@@ -829,6 +831,7 @@ static void * ispserver_thread(void *args)
 	pthread_attr_destroy(&attr);
 	if (close(lfd) == -1)           /* Close connection */
 		DBG("ISP_TOOL:close socket lfd error\n");
+	sock_fd=0x00;
 
 	 return NULL;
 }
@@ -871,13 +874,13 @@ int ispvideo_RegCameraFunc(uint32_t cmd, int(*func)(uint32_t, uint32_t))
 
 void stopispserver()
 {
-	/*
-	if (sockfd != 0)
-		close(sockfd);
-	if (serverfd != 0)
-		close(serverfd);
-	flag = 0;
-	*/
+	DBG("ISP_TOOL:stopispserver \n");
+	if(0x00!=sock_fd)
+	{
+		shutdown(sock_fd, 0);
+		shutdown(sock_fd, 1);
+	}
+
 	preview_flag = 0;
 	capture_flag = 0;
 	preview_img_end_flag=1;
@@ -889,16 +892,14 @@ void startispserver()
 	pthread_t tdiag;
 	pthread_attr_t attr;
 	int ret;
-	static int flag = 0; // confirm called only once
+
+	DBG("ISP_TOOL:startispserver\n");
+
 	preview_flag = 0;
 	capture_flag = 0;
 	preview_img_end_flag=1;
 	capture_img_end_flag=1;
 
-	if (flag == 1)
-		return;
-
-	DBG("ISP_TOOL:startispserver\n");
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	ret = pthread_create(&tdiag, &attr, ispserver_thread, NULL);
@@ -907,5 +908,10 @@ void startispserver()
 		DBG("ISP_TOOL:pthread_create fail\n");
 		return;
 	}
-	flag = 1;
+
+}
+
+void validispserver(int32_t valid)
+{
+
 }

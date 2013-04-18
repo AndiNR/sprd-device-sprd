@@ -91,6 +91,11 @@ enum isp_tune_param_level _ispLevelConvert(uint32_t module_id)
 			cmd=ISP_CTRL_FLICKER;
 			break;
 		}
+		case ISP_TUNE_ALG:
+		{
+			cmd=ISP_CTRL_ALG;
+			break;
+		}
 		case ISP_TUNE_SPECIAL_EFFECT:
 		{
 			cmd=ISP_CTRL_SPECIAL_EFFECT;
@@ -186,6 +191,7 @@ static int32_t _ispParserDownLevel(void* in_param_ptr)
 	enum isp_ctrl_cmd cmd=ISP_CTRL_MAX;
 	uint32_t level=param_ptr[2];
 	struct isp_af_win af_param;
+	struct isp_af_win* in_af_ptr=(struct isp_af_win*)&param_ptr[2];
 	void* ioctl_param_ptr=NULL;
 	uint32_t i=0x00;
 	uint32_t start_ndex=0x00;
@@ -194,21 +200,23 @@ static int32_t _ispParserDownLevel(void* in_param_ptr)
 
 	if(ISP_CTRL_AF==cmd)
 	{
-		//param_ptr[3]; num
-		//param_ptr[4]; win start
-		af_param.valid_win=param_ptr[3];
+		af_param.valid_win=in_af_ptr->valid_win;
+		af_param.mode=in_af_ptr->mode;
 		for(i=0x00; i<af_param.valid_win; i++)
 		{
-			start_ndex=0x04*i;
-			af_param.win[i].start_x=param_ptr[start_ndex+4];
-			af_param.win[i].start_y=param_ptr[start_ndex+5];
-			af_param.win[i].end_x=param_ptr[start_ndex+4]+param_ptr[start_ndex+6]-0x01;
-			af_param.win[i].end_y=param_ptr[start_ndex+5]+param_ptr[start_ndex+7]-0x01;
+			af_param.win[i].start_x=in_af_ptr->win[i].start_x;
+			af_param.win[i].start_y=in_af_ptr->win[i].start_y;
+			af_param.win[i].end_x=in_af_ptr->win[i].end_x;
+			af_param.win[i].end_y=in_af_ptr->win[i].end_y;
 		}
 		ioctl_param_ptr=(void*)&af_param;
+
+		cmd|=ISP_TOOL_SYNC_ID;
 	}else{
 		ioctl_param_ptr=(void*)&level;
 	}
+
+	cmd|=ISP_TOOL_CMD_ID;
 
 	rtn=isp_ioctl(cmd, ioctl_param_ptr);
 

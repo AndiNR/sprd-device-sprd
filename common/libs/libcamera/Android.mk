@@ -141,11 +141,15 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_ov2655.c  \
 	sensor/sensor_ov7675.c  \
 	sensor/sensor_gc0309.c  \
+	sensor/sensor_gc2235.c \
 	sensor/sensor_s5k5ccgx.c \
+	sensor/sensor_s5k4e1ga_mipi_raw.c \
 	sensor/sensor_s5k5ccgx_mipi.c \
 	sensor/sensor_ov5640_mipi.c  \
 	sensor/sensor_ov5640_mipi_raw.c \
 	sensor/sensor_ov5647_mipi_raw.c \
+	sensor/sensor_ov5648_mipi_raw.c \
+	sensor/sensor_ov8825_mipi_raw.c \
 	sensor/sensor_hi351_mipi.c \
 	vsp/sc8825/src/vsp_drv_sc8825.c \
 	jpeg_fw_8825/src/jpegcodec_bufmgr.c \
@@ -321,6 +325,10 @@ endif
 
 ifeq ($(strip $(TARGET_BOARD_CAMERA_SUPPORT_720P)),true)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_SUPPORT_720P
+endif
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_SUPPORT_CIF)),true)
+LOCAL_CFLAGS += -DCONFIG_CAMERA_SUPPORT_CIF
 endif
 
 ifeq ($(strip $(CAMERA_DISP_ION)),true)
