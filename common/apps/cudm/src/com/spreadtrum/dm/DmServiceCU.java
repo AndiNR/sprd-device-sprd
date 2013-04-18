@@ -138,8 +138,8 @@ public class DmServiceCU extends Service {
     // Real net parameter
     private static final String REAL_SERVER_ADDR = "http://dm.wo.com.cn:6001";
 
-    //private static final String REAL_SMS_ADDR = "10655459";
-    private static final String REAL_SMS_ADDR = "10655464";
+    private static final String REAL_SMS_ADDR = "10655459";
+    //private static final String REAL_SMS_ADDR = "10655464";
     
     private static final String REAL_SMS_PORT = "26680";
 

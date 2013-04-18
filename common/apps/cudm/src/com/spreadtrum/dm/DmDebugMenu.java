@@ -1,4 +1,3 @@
-
 package com.spreadtrum.dm;
 
 import android.app.Activity;

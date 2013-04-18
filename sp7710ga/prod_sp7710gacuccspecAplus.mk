@@ -57,6 +57,7 @@ PRODUCT_PACKAGES := \
 	Settings \
 	MsmsStk \
 	Stk1 \
+	sprdcudm \
 	framework2
 
 # prebuild files
