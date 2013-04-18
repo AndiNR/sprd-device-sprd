@@ -294,8 +294,13 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"preview-size-values",
 	 "640x480,352x288,320x240,176x144"},
 	 {"preview-size", "640x480"},
+#ifndef CONFIG_CAMERA_SUPPORT_CIF
 	{"video-size-values",  "720x480,352x288,176x144"},
 	 {"video-size", "720x480"},
+#else
+	{"video-size-values",  "352x288,176x144"},
+	{"video-size", "352x288"},
+#endif
 	 {"preferred-preview-size-for-video", "352x288"},
 	{"video-frame-format-values", "yuv420sp,yuv420p"},
 	{"video-frame-format", "yuv420sp"},
@@ -350,14 +355,15 @@ struct config_element sprd_front_camera_hardware_config[] = {
     {"flash-mode", "off"},
     {"flash-mode-supported", "false"},
 #endif
-        {"focus-mode-values", "infinity"},
-        {"focus-mode", "infinity"},
-        {"focus-distances", "2.0,2.5,Infinity"},
-        {"max-num-detected-faces-hw", "5"},
-        {"smile-snap-mode","0"},
-        {"hdr-supported","false"},
-        {"hdr","0"},
-       {"null-window","0"}
+    {"focus-mode-values", "infinity"},
+    {"focus-mode", "infinity"},
+    {"focus-distances", "2.0,2.5,Infinity"},
+	{"max-num-detected-faces-hw", "5"},
+	{"smile-snap-mode","0"},
+	{"hdr-supported","false"},
+	{"hdr","0"},
+    {"null-window","0"},
+    {"capture-mode", "1"}
 };
 struct config_element sprd_back_camera_hardware_config[] = {
 	{"whitebalance-values",
@@ -378,10 +384,11 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	 {"preview-size", "640x480"},
 #ifndef CONFIG_CAMERA_SUPPORT_720P
 	{"video-size-values", "720x480,352x288,176x144"},
+	{"video-size", "720x480"},
 #else
 	{"video-size-values", "1280x720,720x480,352x288,176x144"},
+	{"video-size", "1280x720"},
 #endif
-	{"video-size", "720x480"},
 	{"preferred-preview-size-for-video", "352x288"},
 	{"video-frame-format-values", "yuv420sp,yuv420p"},
 	{"video-frame-format", "yuv420sp"},
@@ -448,7 +455,8 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"smile-snap-mode","0"},
 	{"hdr-supported","true"},
 	{"hdr","0"},
-       {"null-window","0"}
+    {"null-window","0"},
+    {"capture-mode", "1"}
 };
 
 #endif //_SPRD_CAMERA_HARDWARE_CONFIG_H_

@@ -287,7 +287,7 @@ private:
     void receiveJpegPosPicture(void);
     void receivePostLpmRawPicture(camera_frame_type *frame);
     void receiveRawPicture(camera_frame_type *frame);
-    void receiveJpegPicture(void);
+    void receiveJpegPicture(JPEGENC_CBrtnType *encInfo);
 	void receiveJpegPictureError(void);
    bool  allocSwapBufferForCap(uint32_t swap_size);
 

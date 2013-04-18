@@ -44,7 +44,7 @@
 #define SENSOR_AWB_NUM 0x14
 #define SENSOR_MAP_NUM 0x08
 
-#define SENSOR_RAW_VERSION_ID 0x0000 /* tiger-00xx, soft-xx00*/
+#define SENSOR_RAW_VERSION_ID 0x00000000 /* tiger-0000xxxx, soft-xxxx0000*/
 
 struct sensor_pos{
 	uint16_t x;
@@ -120,9 +120,11 @@ struct sensor_ae_param{
 	uint8_t skip_frame;
 	uint8_t normal_fix_fps;
 	uint8_t night_fix_fps;
+	uint8_t video_fps;
 	uint8_t target_lum;
 	uint8_t target_zone;
 	uint8_t smart;
+	uint8_t smart_rotio;
 	uint8_t quick_mode;
 	uint8_t reserved0;
 	int8_t ev[16];
@@ -267,6 +269,10 @@ struct sensor_edge_param{
 	uint8_t reserved;
 };
 
+struct sensor_edge_info{
+	struct sensor_edge_param info[6];
+};
+
 struct sensor_global_gain_param{
 	uint32_t gain;
 };
@@ -343,7 +349,7 @@ struct sensor_raw_tune_info{
 	struct sensor_saturation_param saturation;
 	struct sensor_css_param css;
 	struct sensor_af_param af;
-	struct sensor_edge_param edge;
+	struct sensor_edge_info edge;
 	struct sensor_emboss_param emboss;
 	struct sensor_global_gain_param global;
 	struct sensor_chn_gain_param chn;

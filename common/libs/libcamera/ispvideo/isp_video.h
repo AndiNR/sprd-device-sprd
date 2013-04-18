@@ -8,5 +8,5 @@ void send_img_data(uint32_t format, uint32_t width, uint32_t height, char *imgpt
 void send_capture_data(uint32_t format, uint32_t width, uint32_t height, char *ch0_ptr, int ch0_len,char *ch1_ptr, int ch1_len,char *ch2_ptr, int ch2_len);
 void startispserver();
 void stopispserver();
-
+void validispserver(int32_t valid);
 #endif

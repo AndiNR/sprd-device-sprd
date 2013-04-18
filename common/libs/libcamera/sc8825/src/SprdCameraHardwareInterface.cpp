@@ -1013,6 +1013,10 @@ status_t SprdCameraHardware::takePicture()
         if(1 == mParameters.getInt("hdr")) {
             mode = CAMERA_HDR_MODE;
         }
+
+		if(1 != mParameters.getInt("capture-mode")) {
+			mode = CAMERA_CONTINUE_SHOT_MODE;
+		}
 /*        mode = CAMERA_HDR_MODE;*/
         LOGV("cap mode %d.\n",mode);
         if(CAMERA_SUCCESS != camera_take_picture(camera_cb, this,mode))
@@ -1502,6 +1506,7 @@ callbacks:
         }
         else
                 LOGE("receivePreviewFrame: mData_cb is null.");
+        LOGE("receivePreviewFrame:e.");
 
 }
 
@@ -1565,7 +1570,7 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
 
             if(NULL == vaddr){
                 LOGE("Fail to get gralloc buffer.");
-                goto callbackraw;
+                goto enqueuehandle;
             }
             else{
             //LOGI("OK to get gralloc buffer. vaddr: 0x%x, frame_addr: 0x%x, frame->buf_Virt_Addr: 0x%x.", (uint32_t)vaddr, (uint32_t)frame_addr, (uint32_t)frame->buf_Virt_Addr);
@@ -1574,24 +1579,24 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
 #ifdef USE_ION_MEM
             if( 0 != camera_get_data_redisplay(phy_addr, width, height, frame->buffer_phy_addr, frame->buffer_uv_phy_addr, frame->dx, frame->dy)){
                 LOGE("Fail to camera_get_data_redisplay.");
-                goto callbackraw;
+                goto enqueuehandle;
             }
 #else
 			if(NULL == get_redisplay_mem(width*height*3/2, 1, &tmp_phy_addr))
-				goto callbackraw;
+				goto enqueuehandle;
 
             if( 0 != camera_get_data_redisplay(tmp_phy_addr, width, height, frame->buffer_phy_addr, frame->buffer_uv_phy_addr, frame->dx, frame->dy)){
                 LOGE("Fail to camera_get_data_redisplay.");
-		FreePmem(mReDisplayHeap);
-		mReDisplayHeap = NULL;
-                goto callbackraw;
+		        FreePmem(mReDisplayHeap);
+		        mReDisplayHeap = NULL;
+                goto enqueuehandle;
             }
 			timestamp_old = systemTime();
 			if(0 != camera_copy_data_virtual(width, height, tmp_phy_addr, (uint32_t)vaddr)){
 			        LOGE("fail to camera_copy_data_virtual() in receiveRawPicture.");
-				FreePmem(mReDisplayHeap);
-				mReDisplayHeap = NULL;			       
-			        goto callbackraw;
+                      FreePmem(mReDisplayHeap);
+		              mReDisplayHeap = NULL;
+   		              goto enqueuehandle;
 			}
 
 			//memcpy(vaddr, mReDisplayHeap->data, width*height*3/2);
@@ -1600,7 +1605,7 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
 			FreePmem(mReDisplayHeap);
 			mReDisplayHeap = NULL;
 #endif
-
+enqueuehandle:
             mGrallocHal->unlock(mGrallocHal, *buf_handle);
         }
         else
@@ -1845,7 +1850,7 @@ void   SprdCameraHardware::receiveJpegPosPicture(void)//(camera_frame_type *fram
     // which startPreview() or takePicture() are called.
 
     void
-    SprdCameraHardware::receiveJpegPicture(void)
+    SprdCameraHardware::receiveJpegPicture(JPEGENC_CBrtnType *encInfo)
     {
         LOGV("receiveJpegPicture: E image (%d bytes out of %d)",
              mJpegSize, mJpegHeap->mBufferSize);
@@ -1867,12 +1872,20 @@ void   SprdCameraHardware::receiveJpegPosPicture(void)//(camera_frame_type *fram
                            mJpegSize);
             LOGV("receiveJpegPicture:  mMsgEnabled: 0x%x.", mMsgEnabled);
            // mJpegPictureCallback(buffer, mPictureCallbackCookie);
-           if (mMsgEnabled & CAMERA_MSG_COMPRESSED_IMAGE){
-			camera_memory_t *mem = mGetMemory_cb(-1, mJpegSize, 1, 0);
-		       memcpy(mem->data, mJpegHeap->mHeap->base(), mJpegSize);
-	           //mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,buffer, mUser );
-	           mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,mem, 0, NULL, mUser );
-  		    mem->release(mem);
+           if (CAMERA_CONTINUE_SHOT_MODE != encInfo->cap_mode) {
+	           if (mMsgEnabled & CAMERA_MSG_COMPRESSED_IMAGE){
+				camera_memory_t *mem = mGetMemory_cb(-1, mJpegSize, 1, 0);
+			       memcpy(mem->data, mJpegHeap->mHeap->base(), mJpegSize);
+		           //mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,buffer, mUser );
+		           mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,mem, 0, NULL, mUser );
+	  		    mem->release(mem);
+	           }
+           } else {
+           		camera_memory_t *mem = mGetMemory_cb(-1, mJpegSize, 1, 0);
+			    memcpy(mem->data, mJpegHeap->mHeap->base(), mJpegSize);
+		        //mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,buffer, mUser );
+		        mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,mem, 0, NULL, mUser );
+	  		    mem->release(mem);
            }
             buffer = NULL;
         }
@@ -1880,11 +1893,14 @@ void   SprdCameraHardware::receiveJpegPosPicture(void)//(camera_frame_type *fram
 
         // NOTE: the JPEG encoder uses the raw image contained in mRawHeap, so we need
         // to keep the heap around until the encoding is complete.
-        LOGV("receiveJpegPicture: free the Raw and Jpeg mem. 0x%x, 0x%x", mRawHeap, mMiscHeap);
-        FreePmem(mRawHeap);
-        mRawHeap = NULL;
-        FreePmem(mMiscHeap);
-        mMiscHeap = NULL;
+        LOGV("receiveJpegPicture: free the Raw and Jpeg mem. 0x%x, 0x%x", (unsigned int)mRawHeap, (unsigned int)mMiscHeap);
+		//real add to do FreeCameraMem when shot_num == CONTINUE_NUM?
+		if (encInfo->need_free) {
+	        FreePmem(mRawHeap);
+	        mRawHeap = NULL;
+	        FreePmem(mMiscHeap);
+	        mMiscHeap = NULL;
+		}
         print_time();
         LOGV("receiveJpegPicture: X callback done.");
     }
@@ -2345,6 +2361,9 @@ static uint32_t s_focus_zone[25];
         if (-1 == rotation)
             rotation = 0;
         SET_PARM(CAMERA_PARM_SENSOR_ROTATION, rotation);
+		
+        int shot_num = mParameters.getInt("capture-mode");
+        SET_PARM(CAMERA_PARM_SHOT_NUM, shot_num);
 #if 0//test code
 	uint32_t size_cnt = 0;
          int is_mirror=0;
@@ -2372,7 +2391,7 @@ static uint32_t s_focus_zone[25];
          size_cnt = lookuprect(&s_save_zone_info[0], mParameters.get("focus-areas"));
 	if(size_cnt)
 	{
-            int i;
+            uint32_t i;
             discard_zone_weight(&s_save_zone_info[1], size_cnt);
 
             convert_ret = coordinate_convert(&s_save_zone_info[1],size_cnt,sCameraInfo[g_camera_id].orientation,is_mirror, mPreviewWidth, mPreviewHeight);
@@ -2631,6 +2650,12 @@ LOGV("start to getCameraStateStr.");
                 LOGE("SprdCameraHardware::camera_cb: @CAMERA_EXIT_CB_FAILURE(%d) in state %s.",
                      parm4,
                      obj->getCameraStateStr(obj->mCameraState));
+	if((cb == CAMERA_EXIT_CB_FAILED)&&(func == CAMERA_FUNC_TAKE_PICTURE)){
+		obj->FreeCameraMem();
+	}else if((cb == CAMERA_EXIT_CB_FAILED)&&(func == CAMERA_FUNC_ENCODE_PICTURE)){
+		obj->receiveJpegPictureError();
+	}
+
                 TRANSITION_ALWAYS(QCS_ERROR);
                 obj->HandleErrorState();
 		return ;
@@ -2761,9 +2786,13 @@ LOGV("start to getCameraStateStr.");
                         // delete this object.  If the order were reversed, we
                         // might call receiveRawPicture on a dead object.
 
-                        obj->receiveJpegPicture();
+                        obj->receiveJpegPicture((JPEGENC_CBrtnType *)parm4);
 
-                        TRANSITION(QCS_WAITING_JPEG, QCS_IDLE);
+						if( ((JPEGENC_CBrtnType *)parm4)->need_free ) {
+                        	TRANSITION(QCS_WAITING_JPEG, QCS_IDLE);
+						} else {
+							TRANSITION(QCS_WAITING_JPEG, QCS_INTERNAL_RAW_REQUESTED);
+						}
                     }
                     // transition to QCS_ERROR
                     else LOGE("camera cb: invalid state %s for "
@@ -2784,7 +2813,7 @@ LOGV("start to getCameraStateStr.");
 				{
 					obj->receiveJpegPosPicture();
 					obj->receiveJpegPictureFragment((JPEGENC_CBrtnType *)parm4);
-					obj->receiveJpegPicture();
+					obj->receiveJpegPicture((JPEGENC_CBrtnType *)parm4);
 		                           TRANSITION(QCS_WAITING_JPEG, QCS_IDLE);
 				}
 				else LOGE("camera cb: invalid state %s for "
@@ -3134,6 +3163,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 #endif
 		if (w->set_usage(w, usage )) {
         	LOGE("%s: could not set usage on gralloc buffer", __func__);
+		mSettingPreviewWindowState = PREVIEW_WINDOW_SET_FAILED;
         	return INVALID_OPERATION;
     	}
     }

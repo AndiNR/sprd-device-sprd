@@ -1159,7 +1159,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5640_ioctl_func_tab = {
 	_ov5640_GetExifInfo,
 	_ov5640_ExtFunc,
 	_ov5640_set_anti_flicker,
-	PNULL, //_ov5640_set_video_mode,
+	_ov5640_set_video_mode,
 	_ov5640_pick_out_jpeg_stream,
 	PNULL, //meter_mode
 	PNULL, //get_status
@@ -1747,12 +1747,12 @@ LOCAL const SENSOR_REG_T ov5640_video_mode_tab[][3]=
 {
 	/* preview mode: 30 fps*/
 	{
-		{0x3036, 0x46},
+		{0x3036, 0x38},
 		{0xffff, 0xff}
 	},
 	/* video mode: if use 35 fps, change it to 0x50*/
 	{
-		{0x3036, 0x50},/* 0x50: 35fps, 0x46: 30 fps*/
+		{0x3036, 0x3A},/* 0x3A: 31fps, 0x38: 30 fps*/
 		{0xffff, 0xff}
 	}
 };

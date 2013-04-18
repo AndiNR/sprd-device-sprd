@@ -44,7 +44,10 @@ extern SENSOR_INFO_T g_nmi600_yuv_info;//atv:nmi bonnie
 extern SENSOR_INFO_T g_ov5640_mipi_yuv_info;
 extern SENSOR_INFO_T g_ov5640_mipi_raw_info;
 extern SENSOR_INFO_T g_ov5647_mipi_raw_info;
+extern SENSOR_INFO_T g_ov5648_mipi_raw_info;
+extern SENSOR_INFO_T g_ov8825_mipi_raw_info;
 extern SENSOR_INFO_T g_s5k5ccgx_yuv_info_mipi;
+extern SENSOR_INFO_T g_s5k4e1ga_mipi_raw_info;
 extern SENSOR_INFO_T g_hi351_mipi_yuv_info;
 
 /**---------------------------------------------------------------------------*
@@ -55,9 +58,12 @@ const SENSOR_INFO_T* main_sensor_infor_tab[]=
 #ifdef CONFIG_BACK_CAMERA_MIPI
 	&g_ov5640_mipi_yuv_info,
 	&g_s5k5ccgx_yuv_info_mipi,
+	&g_s5k4e1ga_mipi_raw_info,
 	&g_hi351_mipi_yuv_info,
 	//&g_ov5640_mipi_raw_info,
 	&g_ov5647_mipi_raw_info,
+	&g_ov5648_mipi_raw_info,
+	&g_ov8825_mipi_raw_info,
 #endif
 #ifdef CONFIG_BACK_CAMERA_CCIR
 	&g_ov5640_yuv_info,

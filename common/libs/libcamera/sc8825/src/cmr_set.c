@@ -130,6 +130,8 @@ uint32_t camera_flash_mode_to_status(enum cmr_flash_mode f_mode)
 {
 	struct camera_context    *cxt = camera_get_cxt();
 	uint32_t                 status = FLASH_STATUS_MAX;
+	int                      ret = CAMERA_SUCCESS;
+	uint32_t		  autoflash = 0; 
 
 	switch (f_mode) {
 	case CAMERA_FLASH_MODE_OFF:
@@ -146,7 +148,12 @@ uint32_t camera_flash_mode_to_status(enum cmr_flash_mode f_mode)
 	#endif
 		break;
 	case CAMERA_FLASH_MODE_AUTO:
-		if(cxt->cmr_set.auto_flash){
+		ret = Sensor_Ioctl(SENSOR_IOCTL_FLASH, (uint32_t)&autoflash);
+		if(ret){
+			autoflash = 1;
+			CMR_LOGE("Failed to read auto flash mode, %d", ret);
+		}
+		if(autoflash){
 			status = FLASH_OPEN;
 		}else {
 			status = FLASH_CLOSE;
@@ -511,23 +518,8 @@ int camera_preview_start_set(void)
 		goto exit;
 	}
 
-	if (INVALID_SET_WORD != set->brightness) {
-		ret = camera_set_brightness(set->brightness, &skip, &skip_num);
-		CMR_RTN_IF_ERR(ret);
-	}
-
-	if (INVALID_SET_WORD != set->contrast) {
-		ret = camera_set_contrast(set->contrast, &skip, &skip_num);
-		CMR_RTN_IF_ERR(ret);
-	}
-
 	if (INVALID_SET_WORD != set->effect) {
 		ret = camera_set_effect(set->effect, &skip, &skip_num);
-		CMR_RTN_IF_ERR(ret);
-	}
-
-	if (INVALID_SET_WORD != set->expo_compen) {
-		ret = camera_set_ev(set->expo_compen, &skip, &skip_num);
 		CMR_RTN_IF_ERR(ret);
 	}
 
@@ -538,6 +530,21 @@ int camera_preview_start_set(void)
 
 	if (INVALID_SET_WORD != set->scene_mode) {
 		ret = camera_set_scene(set->scene_mode, &skip, &skip_num);
+		CMR_RTN_IF_ERR(ret);
+	}
+
+	if (INVALID_SET_WORD != set->contrast) {
+		ret = camera_set_contrast(set->contrast, &skip, &skip_num);
+		CMR_RTN_IF_ERR(ret);
+	}
+
+	if (INVALID_SET_WORD != set->brightness) {
+		ret = camera_set_brightness(set->brightness, &skip, &skip_num);
+		CMR_RTN_IF_ERR(ret);
+	}
+
+	if (INVALID_SET_WORD != set->expo_compen) {
+		ret = camera_set_ev(set->expo_compen, &skip, &skip_num);
 		CMR_RTN_IF_ERR(ret);
 	}
 
@@ -589,7 +596,7 @@ int camera_snapshot_start_set(void)
 	} else {
 	
 	}
-	if (HDR_CAP_NUM == cxt->total_cap_num) {
+	if ((CAMERA_HDR_MODE == cxt->cap_mode) && (HDR_CAP_NUM == cxt->total_cap_num)) {
 		ret = camera_set_hdr_ev(SENSOR_HDR_EV_LEVE_0);
 	}
 	return ret;
@@ -599,8 +606,8 @@ int camera_snapshot_stop_set(void)
 {
 	int                      ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
-
-	if (HDR_CAP_NUM == cxt->total_cap_num) {
+	
+	if ((CAMERA_HDR_MODE == cxt->cap_mode) && (HDR_CAP_NUM == cxt->total_cap_num)) {
 		camera_set_hdr_ev(SENSOR_HDR_EV_LEVE_1);
 	}
 	if (cxt->cmr_set.flash) {
@@ -721,10 +728,11 @@ int camera_set_ctrl(camera_parm_type id,
 		&& (CAMERA_PARM_ISO != id)
 		&& (CAMERA_PARM_SENSOR_ROTATION != id)
 		&& (CAMERA_PARM_ORIENTATION != id)
-		&& (CAMERA_PARM_PREVIEW_MODE != id)
 		&& (CAMERA_PARM_THUMBCOMP != id)
 		&& (CAMERA_PARM_JPEGCOMP != id)
-		&& (CAMERA_PARM_DCDV_MODE != id)) {
+		&& (CAMERA_PARM_DCDV_MODE != id)
+		&& (CAMERA_PARM_SHOT_NUM != id)
+		&& (CAMERA_PARM_PREVIEW_MODE != id)) {
 		return ret;
 	}
 
@@ -735,6 +743,10 @@ int camera_set_ctrl(camera_parm_type id,
 	}
 
 	switch (id) {
+	case CAMERA_PARM_SHOT_NUM:
+		cxt->total_cap_num = parm;
+		CMR_LOGI("cap num is %d.",parm);
+		break;
 	case CAMERA_PARM_DCDV_MODE:
 		cxt->is_dv_mode = parm;
 		CMR_LOGI("camera mode %d.",parm);
@@ -1157,7 +1169,6 @@ int camera_autofocus_stop(void)
 
 	pthread_mutex_lock(&cxt->cmr_set.set_mutex);
 	cxt->cmr_set.af_cancelled = 1;
-	cxt->cmr_set.bflash = 1;
 	pthread_mutex_unlock(&cxt->cmr_set.set_mutex);
 
 	CMR_LOGV("af_cancelled %d", cxt->cmr_set.af_cancelled);

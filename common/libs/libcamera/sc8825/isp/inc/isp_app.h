@@ -44,6 +44,7 @@ enum isp_callback_cmd{
 	ISP_PROC_CALLBACK=0x00000100,
 	ISP_AF_NOTICE_CALLBACK=0x00000200,
 	ISP_SKIP_FRAME_CALLBACK=0x00000300,
+	ISP_ALG_CALLBACK=0x00000400,
 	ISP_CALLBACK_CMD_MAX=0xffffffff
 };
 
@@ -195,12 +196,16 @@ enum isp_ctrl_cmd{
 	ISP_CTRL_ISO,
 	ISP_CTRL_WB_TRIM,
 	ISP_CTRL_PARAM_UPDATE,
+	ISP_CTRL_FLASH_EG,
+	ISP_CTRL_VIDEO_MODE,
+	ISP_CTRL_AF_STOP,
 	ISP_CTRL_MAX
 };
 
 enum isp_capbility_cmd{
 	ISP_VIDEO_SIZE,
 	ISP_CAPTURE_SIZE,
+	ISP_FALSH_EB,
 	ISP_CAPBILITY_MAX
 };
 
@@ -245,6 +250,11 @@ struct isp_af_notice{
 	uint32_t valid_win;
 };
 
+struct isp_alg{
+	enum isp_alg_mode mode;
+	uint32_t flash_ratio;
+};
+
 struct isp_af_win{
 	enum isp_focus_mode mode;
 	struct isp_pos_rect win[9];
@@ -259,6 +269,7 @@ struct isp_img_frm{
 };
 
 struct isp_init_param{
+	uint32_t isp_id;
 	void* setting_param_ptr;
 	struct isp_size size;
 	proc_callback ctrl_callback;
