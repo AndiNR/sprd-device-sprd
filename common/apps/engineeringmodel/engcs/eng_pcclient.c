@@ -658,71 +658,74 @@ static void *eng_atauto_thread(void *par)
 #define MODEM_SOCKET_BUFFER_SIZE	128
 static void *eng_modemreset_thread(void *par)
 {
-    int soc_fd,pipe_fd, n, ret, status;
-	char cmdrst[2]={'z',0x0a};
-	char modemrst_property[8];
-	char buffer[MODEM_SOCKET_BUFFER_SIZE];
+    int pipe_fd = 0;
+    int soc_fd, n, ret, status;
+    char cmdrst[2]={'z',0x0a};
+    char modemrst_property[8];
+    char buffer[MODEM_SOCKET_BUFFER_SIZE];
 
-	memset(modemrst_property, 0, sizeof(modemrst_property));
-	property_get(ENG_MODEMRESET_PROPERTY, modemrst_property, "");
-	n = atoi(modemrst_property);
-	ALOGD("%s: %s is %s, n=%d\n",__func__, ENG_MODEMRESET_PROPERTY, modemrst_property,n);
+    memset(modemrst_property, 0, sizeof(modemrst_property));
+    property_get(ENG_MODEMRESET_PROPERTY, modemrst_property, "");
+    n = atoi(modemrst_property);
+    ALOGD("%s: %s is %s, n=%d\n",__func__, ENG_MODEMRESET_PROPERTY, modemrst_property,n);
 
-	if(n!=1) {
-		ALOGD("%s: Modem Won't Reset after assert\n",__func__);
-		return NULL;
-	}
-	
-	pipe_fd = open("/dev/vbpipe0",O_WRONLY);
-	if(pipe_fd < 0) {
-		ALOGD("%s: cannot open vpipe0\n",__func__);
-		return NULL;	
-	}
-	
+    if(n!=1) {
+        ALOGD("%s: Modem Won't Reset after assert\n",__func__);
+        return NULL;
+    }
+
     soc_fd = socket_local_client( MODEM_SOCKET_NAME,
-                         ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+        ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
 
-	while(soc_fd < 0) {
-		ALOGD("%s: Unable bind server %s, waiting...\n",__func__, MODEM_SOCKET_NAME);
-		usleep(10*1000);
-    	soc_fd = socket_local_client( MODEM_SOCKET_NAME,
-                         ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
-	}
+    while(soc_fd < 0) {
+        ALOGD("%s: Unable bind server %s, waiting...\n",__func__, MODEM_SOCKET_NAME);
+        usleep(10*1000);
+        soc_fd = socket_local_client( MODEM_SOCKET_NAME,
+             ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+    }
 
-	ALOGD("%s, fd=%d, pipe_fd=%d\n",__func__, soc_fd, pipe_fd);
-
-	for(;;) {
-		memset(buffer, 0, MODEM_SOCKET_BUFFER_SIZE);
-		ALOGD("%s: waiting for server %s\n",__func__, MODEM_SOCKET_NAME);
-		usleep(10*1000);
-		n = read(soc_fd, buffer, MODEM_SOCKET_BUFFER_SIZE);
-		ALOGD("%s: get %d bytes %s\n", __func__, n, buffer);
-		if(n>0) {
-			if(strstr(buffer, "Assert") != NULL) {
+    for(;;) {
+        memset(buffer, 0, MODEM_SOCKET_BUFFER_SIZE);
+        ALOGD("%s: waiting for server %s\n",__func__, MODEM_SOCKET_NAME);
+        usleep(10*1000);
+        n = read(soc_fd, buffer, MODEM_SOCKET_BUFFER_SIZE);
+        ALOGD("%s: get %d bytes %s\n", __func__, n, buffer);
+        if(n>0) {
+            if(strstr(buffer, "Assert") != NULL) {
+                if (pipe_fd <= 0) {
+                    pipe_fd = open("/dev/vbpipe0",O_WRONLY);
+                    if(pipe_fd < 0) {
+                        ALOGD("%s: cannot open vbpipe0\n",__func__);
+                        close(soc_fd);
+                        return NULL;
+                    }
+                }
 write_again:
-                                n = write(pipe_fd, cmdrst, 2);
-                                ALOGD("%s: write vbpipe %d bytes RESET Modem\n",__func__, n);
-                                if (n < 0) {
-                                    if (errno == -EPIPE) {
-                                        ALOGD("peer side of vbpipe is down, reopen it");
-                                        close(pipe_fd);
-                                        sleep(10);
-                                        pipe_fd = open("/dev/vbpipe0",O_WRONLY);
-                                        if(pipe_fd < 0) {
-                                            ALOGD("%s: cannot open vpipe0\n",__func__);
-                                            return NULL;
-                                        }
-                                    }
-                                    ALOGD("num write %d is lower than 0\n", n);
-                                    sleep(1);
-                                    goto write_again;
-                                }
-			}
-		}
-	}
+                ALOGD("%s, fd=%d, pipe_fd=%d\n",__func__, soc_fd, pipe_fd);
+                n = write(pipe_fd, cmdrst, 2);
+                ALOGD("%s: write vbpipe %d bytes RESET Modem\n",__func__, n);
+                if (n < 0) {
+                    if (errno == -EPIPE) {
+                        ALOGD("peer side of vbpipe is down, reopen it");
+                        close(pipe_fd);
+                        sleep(10);
+                        pipe_fd = open("/dev/vbpipe0",O_WRONLY);
+                        if(pipe_fd < 0) {
+                            ALOGD("%s: cannot open vbpipe0\n",__func__);
+                            close(soc_fd);
+                            return NULL;
+                        }
+                    }
+                    ALOGD("num write %d is lower than 0\n", n);
+                    sleep(1);
+                    goto write_again;
+                }
+            }
+        }
+    }
 
-	close(soc_fd);
-	close(pipe_fd);
+    close(soc_fd);
+    close(pipe_fd);
 }
 
 void eng_check_factorymode_fornand(void)
