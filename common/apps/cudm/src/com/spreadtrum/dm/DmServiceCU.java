@@ -182,10 +182,13 @@ public class DmServiceCU extends Service {
                 mSmsReady[phoneId] = intent.getBooleanExtra("isReady", false);
                 boolean isReged = getRegState();
                 boolean isCuPhone = matchOperatorPhone(phoneId);
-                if(!isReged && isCuPhone){
+                boolean isNeedReg = isNeedSelfReg();
+                Log.d(TAG, "isReged = " + isReged + " isCuPhone = " + isCuPhone + " isNeedReg = " + isNeedReg);
+                if(!isReged && isCuPhone && isNeedReg){
                 	if (mSmsReady[phoneId]) {
                 		if (TelephonyManager.SIM_STATE_READY == mTelephonyManager[phoneId].getSimState()
                                 && mInService[phoneId]) {
+                			 curPhoneId = phoneId;
                 			 sendSelfRegMsg(phoneId);
                 		}
                 	}
@@ -237,9 +240,12 @@ public class DmServiceCU extends Service {
                     // sim card is ready
                     boolean isReged = getRegState();
                     boolean isCuPhone = matchOperatorPhone(phoneId);
-                    if(!isReged && isCuPhone){
+                    boolean isNeedReg = isNeedSelfReg();
+                    Log.d(TAG, "isReged = " + isReged + " isCuPhone = " + isCuPhone + " isNeedReg = " + isNeedReg);
+                    if(!isReged && isCuPhone && isNeedReg){
                     	if (TelephonyManager.SIM_STATE_READY == mTelephonyManager[phoneId].getSimState()
                                     &&  mSmsReady[phoneId]) {
+                    		curPhoneId = phoneId;
                     		 sendSelfRegMsg(phoneId);
                     	}
                     }
@@ -553,7 +559,8 @@ public class DmServiceCU extends Service {
 	    return imsi;
     }
     
-    protected boolean saveImsi(Context context,String imsi){   	
+    protected boolean saveImsi(Context context,String imsi){
+    	Log.d(TAG, "Save Imsi = " + imsi);
     	SharedPreferences sharedPreferences = context.getSharedPreferences(PREFERENCE_NAME, MODE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
 	    editor.putString("IMSI", imsi);
@@ -1160,10 +1167,9 @@ public class DmServiceCU extends Service {
                                 switch (resultCode) {
                                 case Activity.RESULT_OK:
                                         TelephonyManager mTelephonyManager = (TelephonyManager) mContext.getSystemService(
-                                                PhoneFactory.getServiceName(mContext.TELEPHONY_SERVICE, curPhoneId));
-                                        
+                                                PhoneFactory.getServiceName(mContext.TELEPHONY_SERVICE, curPhoneId));                                        
                                         String imsi = mTelephonyManager.getSubscriberId();
-
+                                        Log.d(TAG, "The saved imsi is " + imsi);
                                         saveImsi(mContext,imsi);
                                         setRegState(mContext, true);
                                         stopListeningServiceState();
