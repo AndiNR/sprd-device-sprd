@@ -52,7 +52,7 @@ loglevel 3
     mkdir /cache 0770 system cache
     mkdir /runtimenv 0774 system system
     mkdir /backupfixnv 0774 system system
-    mkdir /productinfo 0774 system system
+    mkdir /productinfo 0777 system system
     mkdir /fixnv 0774 system system
     mkdir /config 0500 root root
 
@@ -152,7 +152,7 @@ on post-fs
 
     mount yaffs2 mtd@productinfo /productinfo nosuid nodev no-checkpoint
     chown system system /productinfo
-    chmod 0774 /productinfo
+    chmod 0777 /productinfo
 
     chmod 0660 /fixnv/fixnv.bin
     chmod 0660 /backupfixnv/fixnv.bin
@@ -472,7 +472,7 @@ service drm /system/bin/drmserver
 service media /system/bin/mediaserver
     class main
     user media
-    group audio camera inet net_bt net_bt_admin net_bw_acct drmrpc system
+    group system audio camera inet net_bt net_bt_admin net_bw_acct drmrpc
     ioprio rt 4
 
 service bootanim /system/bin/bootanimation
