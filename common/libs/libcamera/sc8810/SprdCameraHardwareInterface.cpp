@@ -1654,33 +1654,48 @@ callbacks:
 #ifdef CONFIG_CAMERA_ISP
 			send_img_data((char *)frame->buf_Virt_Addr, frame->dx * frame->dy * 3 /2);
 #endif
-        if(mData_cb != NULL)
-        {
-                ALOGV("receivePreviewFrame mMsgEnabled: 0x%x, mRecordingMode: %d.",mMsgEnabled, mRecordingMode);
-                if (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME) {
+	if(mData_cb != NULL)
+	{
+		ALOGV("receivePreviewFrame mMsgEnabled: 0x%x, mRecordingMode: %d.",mMsgEnabled, mRecordingMode);
+		if (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME) {
+			sprd_camera_memory_t *tempHeap = GetPmem("/dev/pmem_adsp", frame->dx * frame->dy * 3 /2, 1);
+			if(NULL == tempHeap)
+				return;
+			if(NULL == tempHeap->handle){
+				ALOGE("Fail to GetPmem tempHeap.");
+				return;
+			}
+
+			ALOGE("receivePreviewFrame buf_addr=0x%x,phy_addr=0x%x", \
+				frame->buffer_phy_addr, tempHeap->phys_addr);
+
 #if CAM_OUT_YUV420_UV
-                        sprd_camera_memory_t *tempHeap = GetPmem("/dev/pmem_adsp", frame->dx * frame->dy * 3 /2, 1);
-                        if(NULL == tempHeap)
-                            return;
-                        if(NULL == tempHeap->handle){
-                                ALOGE("Fail to GetPmem tempHeap.");
-                                return;
-                        }
-
-                        ALOGE("receivePreviewFrame buf_addr=0x%x,phy_addr=0x%x", \
-                                  frame->buffer_phy_addr, tempHeap->phys_addr);
-
-                        if(0 != camera_convert_420_UV_VU(frame->buffer_phy_addr, tempHeap->phys_addr, frame->dx, frame->dy)){
-                                ALOGE("fail to camera_rotation_copy_data() in CAMERA_MSG_PREVIEW_FRAME.");
-                                return;
-                        }
-                        mData_cb(CAMERA_MSG_PREVIEW_FRAME, tempHeap->camera_memory, 0, NULL, mUser);
-                        FreePmem(tempHeap);
-                        tempHeap = NULL;
+			if(atoi(mParameters.get("ycbcr")) != 1) //VT would set ycbcr flag
+			{
+				if(0 != camera_convert_420_UV_VU(frame->buffer_phy_addr, tempHeap->phys_addr, frame->dx, frame->dy)){
+					ALOGE("fail to camera_rotation_copy_data() in CAMERA_MSG_PREVIEW_FRAME.");
+					FreePmem(tempHeap);
+					return;
+				}
+			}
+			else
+			{
+				memcpy(tempHeap->data , frame->buf_Virt_Addr , frame->dx * frame->dy * 3 /2);
+			}
 #else
-                        mData_cb(CAMERA_MSG_PREVIEW_FRAME, mPreviewHeap->camera_memory, offset, NULL, mUser);
+			if(atoi(mParameters.get("ycbcr")) == 1) //VT would set ycbcr flag
+			{
+				//need convert to UV format
+			}
+			else
+			{
+				memcpy(tempHeap->data , frame->buf_Virt_Addr , frame->dx * frame->dy * 3 /2);
+			}
 #endif
-                }
+			mData_cb(CAMERA_MSG_PREVIEW_FRAME, tempHeap->camera_memory, 0, NULL, mUser);
+			FreePmem(tempHeap);
+			tempHeap = NULL;
+		}
 
 		if ((mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) &&(mRecordingMode==1))
                 {
@@ -1714,7 +1729,7 @@ callbacks:
         // need to check to see if mPreviewCallback != NULL, which
         // requires holding mCallbackLock.
 
-        }
+	}
         else
                 ALOGE("receivePreviewFrame: mData_cb is null.");	
 
