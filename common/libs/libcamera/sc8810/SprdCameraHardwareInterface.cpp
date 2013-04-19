@@ -3443,7 +3443,7 @@ int SprdCameraHardware::flush_buffer(CameraFlushMemTypeEnum  type  , void *v_add
 	if (pmem) {
 		pHeapIon = pmem->ion_heap;
 		ret = pHeapIon->flush_ion_buffer(v_addr, p_addr, size);
-		if (!ret) {
+		if (ret) {
 			ALOGV("flush_buffer error ret=%d", ret);
 		}
 	}
