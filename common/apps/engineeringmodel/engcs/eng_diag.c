@@ -20,10 +20,9 @@
 #include "eut_opt.h"
 #include <ctype.h>
 #include "cutils/properties.h"
+#include <sys/reboot.h>
 
-#ifndef NUM_ELEMS(x)
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
-#endif
 
 //extern int audio_fd;
 extern AUDIO_TOTAL_T audio_total[4];
@@ -49,6 +48,7 @@ static int cmd_type;
 static int eq_or_tun_type,eq_mode_sel_type;
 
 static int eng_diag_getver(unsigned char *buf,int len, char *rsp);
+static int eng_diag_bootreset(unsigned char *buf,int len, char *rsp);
 static int eng_diag_getband(char *buf,int len, char *rsp);
 static int eng_diag_btwifi(char *buf,int len, char *rsp, int *extra_len);
 static int eng_diag_audio(char *buf,int len, char *rsp);
@@ -118,6 +118,14 @@ int eng_diag_parse(char *buf,int len)
 	ENG_LOG("%s: cmd=0x%x; subcmd=0x%x\n",__FUNCTION__, head_ptr->type, head_ptr->subtype);
 
 	switch(head_ptr->type) {
+		case DIAG_CMD_CHANGEMODE:
+			ENG_LOG("%s: Handle DIAG_CMD_CHANGEMODE\n",__FUNCTION__);
+			if(head_ptr->subtype==RESET_MODE) {
+				ret = CMD_USER_RESET;
+			} else {
+				ret=CMD_COMMON;
+			}
+			break;
 		case DIAG_CMD_FACTORYMODE:
 			ENG_LOG("%s: Handle DIAG_CMD_FACTORYMODE\n",__FUNCTION__);
 			if(head_ptr->subtype==0x07) {
@@ -149,7 +157,10 @@ int eng_diag_user_handle(int type, char *buf,int len)
 	int rlen = 0,i;
 	int extra_len=0;
 	MSG_HEAD_T head,*head_ptr=NULL;
-	char rsp[512];	
+	char rsp[512];
+	int ret;
+	int reset = 0;
+
 	memset(rsp, 0, sizeof(rsp));
 
 	ENG_LOG("%s: type=%d\n",__FUNCTION__, type);
@@ -157,6 +168,10 @@ int eng_diag_user_handle(int type, char *buf,int len)
 	switch(type){
 		case CMD_USER_VER:
 			rlen=eng_diag_getver((unsigned char*)buf,len, rsp);
+			break;
+		case CMD_USER_RESET:
+			rlen=eng_diag_bootreset((unsigned char*)buf,len, rsp);
+			reset = 1;
 			break;
 		case CMD_USER_BTWIFI:
 			rlen=eng_diag_btwifi(buf, len, rsp, &extra_len);
@@ -190,6 +205,17 @@ int eng_diag_user_handle(int type, char *buf,int len)
 	}
 	eng_diag_buf[head.len+extra_len+1] = 0x7e;
 	eng_diag_len = head.len+extra_len+2;
+
+	ret = eng_diag_write2pc(get_vser_fd());
+	if ( ret<=0 ){
+		restart_vser();
+	}
+
+	if (reset){
+		sync();
+		__reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2,
+				LINUX_REBOOT_CMD_RESTART2, "cftreboot");
+	}
 
 	if ( type == CMD_USER_AUDIO ) {
 		return 1;
@@ -286,7 +312,7 @@ int eng_atdiag_hdlr(unsigned char *buf,int len, char* rsp)
 	return rlen;
 }
 
-int eng_atdiag_euthdlr(unsigned char * buf, int len, char * rsp,int module_index)
+int eng_atdiag_euthdlr(char * buf, int len, char * rsp,int module_index)
 {
 	char args0[15] = {0};
 	char args1[15] = {0};
@@ -397,8 +423,8 @@ int get_sub_str(char *buf,char **revdata, char a, char b)
 		char *end = buf;
 		start = strchr(buf,a);
 		current = strchr(buf,b);
-		ALOGD("get_sub_str ----->>  %d",current);
-		if(current<=0){
+		ALOGD("get_sub_str ----->>  %d",(int)current);
+		if(!current){
 			return 0;
 		}
 		while (*end != '\0')
@@ -449,11 +475,6 @@ int eng_diag(char *buf,int len)
 		ret_val = eng_diag_user_handle(type, buf,len);
 		ENG_LOG("%s:user handle\n",__FUNCTION__);
 
-                //eng_l2pc_diag();
-                ret = eng_diag_write2pc(get_vser_fd());
-                if ( ret<=0 ){
-                     restart_vser();
-                }
 
 		if ( ret_val ) {
 			eng_diag_buf[0] =0x7e;
@@ -536,6 +557,17 @@ int eng_diag_getver(unsigned char *buf,int len, char *rsp)
 	}
 	ENG_LOG("%s:rlen=%d; %s", __FUNCTION__,rlen, rsp);
 
+	return rlen;
+}
+
+int eng_diag_bootreset(unsigned char *buf,int len, char *rsp)
+{
+	int rlen = 0;
+
+	sprintf(rsp, "%s","OK");
+	rlen = strlen(rsp);
+
+	ENG_LOG("%s:rlen=%d; %s", __FUNCTION__,rlen, rsp);
 	return rlen;
 }
 
@@ -953,7 +985,7 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 	MSG_HEAD_T *head_ptr=NULL;
 	char *ptr = NULL;
 	AUDIO_TOTAL_T *audio_ptr;
-    int audio_fd;
+	int audio_fd = -1;
 	
 	sprintf(rsp,"\r\nERROR\r\n");
 
@@ -1126,7 +1158,8 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 	}
 	
 out:
+	if (audio_fd >=0)
+		close(audio_fd);
 
-    close(audio_fd);
 	return strlen(rsp);
 }

@@ -88,7 +88,7 @@ typedef enum{
 }eut_modules;
 
 struct eut_cmd{
-	char *index;
+	int index;
 	char *name;
 };
 
