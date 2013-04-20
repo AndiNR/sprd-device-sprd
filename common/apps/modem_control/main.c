@@ -11,6 +11,7 @@
 #include <dirent.h>	
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <signal.h>
 #include "cutils/properties.h" 	      
 #include "packet.h"
 
@@ -108,7 +109,7 @@ static int get_modem_state(char *buffer,size_t size)
 	if(numRead > 0){
 		printf("modem_state = %s\n",buffer);
 	} else{
-		printf("modem_state error...\n",buffer);
+		printf("modem_state error...\n");
 		return 0;
 	}
 	return numRead;
@@ -209,7 +210,13 @@ static void broadcast_modem_state(char *message,int size)
 		if(client_fd[i] > 0) {
 			printf("client_fd[%d]=%d\n",i, client_fd[i]);
 			ret = write(client_fd[i], message, size);
-			printf("write %d bytes to client socket [%d] to reset modem\n", ret, client_fd[i]);
+			if(ret > 0)
+				printf("write %d bytes to client socket [%d] to reset modem\n", ret, client_fd[i]);
+			else {
+				printf("%s error: %s\n",__func__,strerror(errno));
+				close(client_fd[i]);
+				client_fd[i] = -1;
+			}
 		}
 	}
 }
@@ -252,8 +259,10 @@ static void process_modem_state_message(char *message,int size)
 					modem_state = MODEM_STA_ALIVE;
 					printf("modem_state0 = MODEM_STA_ALIVE\n"); 
 					pid = get_task_pid(MONITOR_APP);
-					if((pid > 0)&&(!first_alive))
+					if((pid > 0)&&(!first_alive)){
 						kill(pid, SIGUSR2);
+						printf("Send SIGUSR2 to MONITOR_APP\n"); 
+					}
 				} else {
 					modem_state = MODEM_STA_BOOT;
 					printf("modem_state1 = MODEM_STA_BOOT\n");
@@ -279,11 +288,13 @@ static void process_modem_state_message(char *message,int size)
 				if(alive_status == 1){
 					int pid;
 					modem_state = MODEM_STA_ALIVE;
-					printf("modem_state0 = MODEM_STA_ALIVE\n"); 
+					printf("modem_state5 = MODEM_STA_ALIVE\n"); 
 					broadcast_modem_state("Modem Alive",strlen("Modem Alive"));
 					pid = get_task_pid(MONITOR_APP);
-					if((pid > 0)&&(!first_alive))
+					if((pid > 0)&&(!first_alive)){
 						kill(pid, SIGUSR2);
+						printf("Send SIGUSR2 to MONITOR_APP\n"); 
+					}
 				}
 			}
 		break;
@@ -309,7 +320,10 @@ static void process_modem_state_message(char *message,int size)
 		break;
 	}
 }
-
+void signal_pipe_handler(int sig_num)
+{
+	printf("receive signal SIGPIPE\n");
+}
 int main(int argc, char *argv[])
 {
 	int ret, i;
@@ -317,6 +331,7 @@ int main(int argc, char *argv[])
 	pthread_t t1;
 	int priority;
 	pid_t pid;
+	struct sigaction act;
 
 	int modem_state_fd = open(MODEM_STATE_PATH, O_RDONLY);
 
@@ -329,6 +344,15 @@ int main(int argc, char *argv[])
 		printf("!!! Open %s failed, modem_reboot exit\n",MODEM_STATE_PATH);
 		return 0;
 	}
+        memset (&act, 0x00, sizeof(act));
+        act.sa_handler = &signal_pipe_handler;
+        act.sa_flags = SA_NODEFER;
+        sigfillset(&act.sa_mask);   //block all signals when handler is running.
+        ret = sigaction (SIGPIPE, &act, NULL);
+        if (ret < 0) {
+            perror("sigaction() failed!\n");
+            exit(1);
+        }
 
 	pid = getpid();
 	priority = getpriority(PRIO_PROCESS,pid);
