@@ -21,8 +21,7 @@
 
 #include <mach/hardware.h>
 #include <mach/sci.h>
-#include <mach/regs_sc8830_pmu_apb.h>
-#include <mach/regs_sc8830_aon_apb.h>
+#include <mach/sci_glb_regs.h>
 
 #include "mali_kernel_common.h"
 #include "mali_osk.h"
