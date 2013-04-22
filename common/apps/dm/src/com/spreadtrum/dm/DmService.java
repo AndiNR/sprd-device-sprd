@@ -971,7 +971,22 @@ public class DmService extends Service {
  	 curPhoneId = pid;
         return ;
    	}
-
+    public void setOnlyAPN(Context context, String apn)
+    {
+	     Log.d(TAG, "setOnlyAPN: " + apn);
+            mApn = apn;
+            mApnTemp = null;			
+    }
+    public void setOnlyProxy(Context context, String proxy)
+    {
+	     Log.d(TAG, "setOnlyProxy: " + proxy);
+            mProxyTemp = null;
+    }
+    public void setOnlyProxyPort(Context context, String port)
+    {
+	     Log.d(TAG, "setOnlyProxyPort: " + port);
+            mProxyPortTemp= null;
+    }
     public void setAPN(Context context, String apn) {
         Log.d(TAG, "setAPN: " + apn);
 

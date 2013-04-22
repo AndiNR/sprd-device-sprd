@@ -245,9 +245,27 @@ public class Vdmc {
         if (isDmSetting) 
 	{
             isDmSetting = false;
-            DmService.getInstance().setAPN(_appContext, tmpdmwapapn);
-            DmService.getInstance().setProxy(_appContext, tmpdmpwapproxy);
-            DmService.getInstance().setProxyPort(_appContext,tmpdmpwapport);
+		Log.d(TAG, "writeDMapnParam entering " );
+			
+            final String selection = "(name = 'CMCC DM' or name='CMCCDM_USIM') and numeric=\""
+                    + android.os.SystemProperties.get(
+                            PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "") + "\"";
+            Log.d(TAG, "writeCMCCDMParam 	selection:	= " + selection);
+            ContentValues values = new ContentValues();
+            values.put(Telephony.Carriers.APN, tmpdmwapapn);
+            values.put(Telephony.Carriers.PORT, tmpdmpwapproxy);
+            values.put(Telephony.Carriers.PROXY, tmpdmpwapport);
+
+            int c = values.size() > 0 ? DmService.getInstance().getContext().getContentResolver().update(
+                     (DmService.getInstance().getCurrentPhoneID()==0)?Telephony.Carriers.CONTENT_URI:Telephony.Carriers.CONTENT_URI_SIM2, 
+                    values, selection, null) : 0;
+
+            Log.d(TAG, "writecmdmParam: " + ", value = " + tmpdmwapapn
+                            + ", update count = " + c);
+			
+            DmService.getInstance().setOnlyAPN(_appContext, tmpdmwapapn);
+            DmService.getInstance().setOnlyProxy(_appContext, tmpdmpwapproxy);
+            DmService.getInstance().setOnlyProxyPort(_appContext,tmpdmpwapport);
         }
  //test0
         if (tmpmmsmmsc != null) {
