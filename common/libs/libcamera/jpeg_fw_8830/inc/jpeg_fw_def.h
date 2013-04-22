@@ -63,10 +63,10 @@ typedef struct enc_input_para_tag
 	JPEG_QUALITY_E		quant_level;
 
 	uint8				work_mode; //0: only encoder, 1: switch decoder and encoder.
-	BOOLEAN				mea_bfr0_valid; //0: invalid, 1: valid
-	BOOLEAN				mea_bfr1_valid; //0: invalid, 1: valid
-	BOOLEAN 			stream_buf0_valid;//0: invalid, 1: valid
-	BOOLEAN				stream_buf1_valid;//0: invalid, 1: valid
+	BOOLEAN				mbio_bfr0_valid; //0: invalid, 1: valid
+	BOOLEAN				mbio_bfr1_valid; //0: invalid, 1: valid
+	BOOLEAN 			bsm_buf0_valid;//0: invalid, 1: valid
+	BOOLEAN				bsm_buf1_valid;//0: invalid, 1: valid
 	BOOLEAN				is_first_slice;
 	BOOLEAN				is_last_slice;
 	uint32				restart_interval;
@@ -96,10 +96,10 @@ typedef struct jpeg_dec_input_param_tag
 	uint32				input_mcu_info;
 
 	uint8				work_mode; //0: only decoder, 1: switch decoder and encoder.
-	BOOLEAN				dbk_bfr0_valid; //0: invalid, 1: valid
-	BOOLEAN				dbk_bfr1_valid; //0: invalid, 1: valid
-	BOOLEAN 			stream_buf0_valid;//0: invalid, 1: valid
-	BOOLEAN				stream_buf1_valid;//0: invalid, 1: valid
+	BOOLEAN				mbio_bfr0_valid; //0: invalid, 1: valid
+	BOOLEAN				mbio_bfr1_valid; //0: invalid, 1: valid
+	BOOLEAN 			bsm_buf0_valid;//0: invalid, 1: valid
+	BOOLEAN				bsm_buf1_valid;//0: invalid, 1: valid
 
 	BOOLEAN				is_first_slice;
 	uint8*				bitstream_ptr;	//bitstream start address, contain the header.
@@ -163,9 +163,9 @@ PUBLIC void		  JPEG_HWSet_BSM_Buf_ReadOnly(uint8 buf_id);
 /*set the bsm pingpang buffer can be write by hardware, for JPEG encoding*/
 PUBLIC void		  JPEG_HWSet_BSM_Buf_WriteOnly(uint8 buf_id);
 /*set the mbio pingpang buffer can be read by hardware, for JPEG encoding*/
-PUBLIC void		  JPEG_HWSet_MEA_Buf_ReadOnly(uint8 buf_id);
+PUBLIC void		  JPEG_HWSet_MBIO_Buf_ReadOnly(uint8 buf_id);
 /*set the mbio pingpang buffer can be write by hardware, for JPEG decoding*/
-PUBLIC void		  JPEG_HWSet_DBK_Buf_WriteOnly(uint8 buf_id);
+PUBLIC void		  JPEG_HWSet_MBIO_Buf_WriteOnly(uint8 buf_id);
 
 ///////////////////////////////////////////////////////////////////////////
 //								Decode									///
@@ -218,8 +218,8 @@ PUBLIC uint32	JPEG_HWGetSize(void);
 /*close encoder and release resource*/
 PUBLIC void JpegEnc_FwClose(JPEG_ENC_INPUT_PARA_T *jpeg_enc_input);
 
-PUBLIC void JPEG_HWUpdateMEABufInfo(void);
-PUBLIC void JPEGDEC_HWUpdateMEABufInfo(void);
+PUBLIC void JPEG_HWUpdateMBIOBufInfo(void);
+PUBLIC void JPEGDEC_HWUpdateMBIOBufInfo(void);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

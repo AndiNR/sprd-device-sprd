@@ -15,7 +15,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8825_video_header.h"
+#include "sc8830_video_header.h"
 #include "exif_writer.h"
 
 #if !defined(_SIMULATION_)
@@ -45,7 +45,7 @@ PUBLIC void OutPutRstMarker(void)
 	
 	SCI_ASSERT(jpeg_fw_codec != PNULL);
 	
-	VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write");
+	JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write");
 
 	if (jpeg_fw_codec->RST_Count > M_RST7)
 	{
@@ -68,7 +68,7 @@ PUBLIC JPEG_RET_E PutAPP0(void)
 	* Thumbnail X size		(1 byte)
 	* Thumbnail Y size		(1 byte)
 	*/
-	if(VSP_READ_REG_POLL(VSP_BSM_REG_BASE + BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
+	if(JPG_READ_REG_POLL(JPG_BSM_REG_BASE + BSM_RDY_OFFSET, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
 	{
 		return JPEG_FAILED;
 	}
@@ -93,7 +93,7 @@ PUBLIC JPEG_RET_E PutAPP0(void)
 
 PUBLIC JPEG_RET_E JPEG_HWWriteHeadForThumbnail(void)
 {
-	if(VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "bsm: polling bsm status"))
+	if(JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "bsm: polling bsm status"))
 	{
 		return JPEG_FAILED;
 	}
@@ -138,7 +138,7 @@ PUBLIC JPEG_RET_E JPEG_HWWriteHeadForThumbnail(void)
 	return JPEG_SUCCESS;
 }
 PUBLIC JPEG_RET_E JPEG_HWWriteTailForThumbnail(void){
-	if(VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "bsm: polling bsm status"))
+	if(JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "bsm: polling bsm status"))
 	{
 		return JPEG_FAILED;
 	}	
@@ -176,7 +176,7 @@ PUBLIC JPEG_RET_E PutAPP1(APP1_T *app1_t)
 	uint32 i=0;
 	JPEG_RET_E ret; 
        
-	if(VSP_READ_REG_POLL(VSP_BSM_REG_BASE + BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
+	if(JPG_READ_REG_POLL(JPG_BSM_REG_BASE + BSM_RDY_OFFSET, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
 	{
 		return JPEG_FAILED;
 	}
@@ -280,7 +280,7 @@ PUBLIC JPEG_RET_E PutAPP1(APP1_T *app1_t)
 	char *tmp_buf = NULL;
 	SCI_TRACE_LOW("PutAPP1 E. des: %d, make: %d, model: %d, copy: %d, datetime: %d, process_method: %d, gps_date: %d.", description_len, make_len, model_len, copyright_len, datetime_len, gps_process_method_len, gps_date_len);	
 	
-	if(VSP_READ_REG_POLL(VSP_BSM_REG_BASE + BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
+	if(VSP_READ_REG_POLL(VSP_BSM_REG_BASE + BSM_RDY_OFFSET, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
 	{
 		return JPEG_FAILED;
 	}
@@ -610,7 +610,7 @@ PUBLIC JPEG_RET_E PutSOF0(void)
 
 	SCI_ASSERT(jpeg_fw_codec != PNULL);
 
-	if(VSP_READ_REG_POLL(VSP_BSM_REG_BASE + BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
+	if(JPG_READ_REG_POLL(JPG_BSM_REG_BASE + BSM_RDY_OFFSET, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
 	{
 		return JPEG_FAILED;
 	}
@@ -660,7 +660,7 @@ PUBLIC JPEG_RET_E PutSOS(void)
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGEncCodec();
 	SCI_ASSERT(jpeg_fw_codec != PNULL);
 
-	if(VSP_READ_REG_POLL(VSP_BSM_REG_BASE + BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
+	if(JPG_READ_REG_POLL(JPG_BSM_REG_BASE + BSM_RDY_OFFSET, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
 	{
 		return JPEG_FAILED;
 	}
@@ -699,7 +699,7 @@ PUBLIC JPEG_RET_E PutQuantTbl(void)
 		* Table header (1 byte)
 		* Table content (64 byte)
 		*/
-		if(VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
+		if(JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
 		{
 			return JPEG_FAILED;
 		}
@@ -710,7 +710,7 @@ PUBLIC JPEG_RET_E PutQuantTbl(void)
 		quant = jpeg_fw_codec->quant_tbl[i];
 		JPEG_ASSERT(quant!=0);
 
-		if(VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
+		if(JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
 		{
 			return JPEG_FAILED;
 		}
@@ -720,7 +720,7 @@ PUBLIC JPEG_RET_E PutQuantTbl(void)
 			JPEGFW_PutC(quant[zigzag[k]]);
 		}
 
-		if(VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
+		if(JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
 		{
 			return JPEG_FAILED;
 		}
@@ -759,7 +759,7 @@ LOCAL JPEG_RET_E PutOneHuffTbl(uint8 index, const uint8 *bits, const uint8 *huff
 	*  bits table(16 byte)  
 	*  huff value table
 	*/
-	if(VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
+	if(JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
 	{
 		return JPEG_FAILED;
 	}
@@ -778,7 +778,7 @@ LOCAL JPEG_RET_E PutOneHuffTbl(uint8 index, const uint8 *bits, const uint8 *huff
 	
 	for(i = 0; (int_count--) > 0; )
 	{
-		if(VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
+		if(JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
 		{
 			return JPEG_FAILED;
 		}
@@ -789,7 +789,7 @@ LOCAL JPEG_RET_E PutOneHuffTbl(uint8 index, const uint8 *bits, const uint8 *huff
 		}		
 	}
 
-	if(VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
+	if(JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
 	{
 		return JPEG_FAILED;
 	}
@@ -856,7 +856,7 @@ PUBLIC JPEG_RET_E WriteDRI(void)
 
 	SCI_ASSERT(jpeg_fw_codec != PNULL);
 
-	if(VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
+	if(JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write"))
 	{
 		return JPEG_FAILED;
 	}

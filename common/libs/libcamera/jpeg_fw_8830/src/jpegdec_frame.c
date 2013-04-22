@@ -15,11 +15,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8825_video_header.h"
-
-#if !defined(_SIMULATION_)
-//#include "os_api.h"
-#endif
+#include "sc8830_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -37,10 +33,10 @@ void JPEG_DecodeMCU_Baseline(void)
 {
 	vld_module();
 	dct_module();
-	mbc_module();
+	mbio_module();
 
-	g_vld_reg_ptr->JPEG_DC_Y = g_pre_dc_value[0]&0x7ff;
-	g_vld_reg_ptr->JPEG_DC_UV = ((g_pre_dc_value[2]&0x7ff)<<16) | (g_pre_dc_value[1]&0x7ff);
+	g_vld_reg_ptr->DC_Y = g_pre_dc_value[0]&0x7ff;
+	g_vld_reg_ptr->DC_UV = ((g_pre_dc_value[2]&0x7ff)<<16) | (g_pre_dc_value[1]&0x7ff);
 }
 
 extern void MBIO_INT_PROC(void);
@@ -55,9 +51,9 @@ int32 START_SW_DECODE(JPEG_CODEC_T *JpegCodec, uint32 num_of_rows)
 	uint32 mcu_num_y = (num_of_rows / (JpegCodec->mcu_height));
 	uint32 mcu_num_x = JpegCodec->mcu_num_x;
 // 	JPEG_CallBack_MCU_To_Frame CopyMCUToCoeff;
-	uint8 *y_coeff = JpegCodec->dbk_bfr0_valid ? JpegCodec->YUV_Info_0.y_data_ptr : JpegCodec->YUV_Info_1.y_data_ptr;
-	uint8 *u_coeff = JpegCodec->dbk_bfr0_valid ? JpegCodec->YUV_Info_0.u_data_ptr : JpegCodec->YUV_Info_1.u_data_ptr;
-	uint8 *v_coeff = JpegCodec->dbk_bfr0_valid ? JpegCodec->YUV_Info_0.v_data_ptr : JpegCodec->YUV_Info_1.v_data_ptr;
+	uint8 *y_coeff = JpegCodec->mbio_bfr0_valid ? JpegCodec->YUV_Info_0.y_data_ptr : JpegCodec->YUV_Info_1.y_data_ptr;
+	uint8 *u_coeff = JpegCodec->mbio_bfr0_valid ? JpegCodec->YUV_Info_0.u_data_ptr : JpegCodec->YUV_Info_1.u_data_ptr;
+	uint8 *v_coeff = JpegCodec->mbio_bfr0_valid ? JpegCodec->YUV_Info_0.v_data_ptr : JpegCodec->YUV_Info_1.v_data_ptr;
 
 	if(g_int_yuv_buf0_full == TRUE) 
 	{
@@ -155,14 +151,14 @@ int32 START_SW_DECODE(JPEG_CODEC_T *JpegCodec, uint32 num_of_rows)
 			memset(g_blocks[0], 0, JPEG_FW_DCTSIZE2*2*6);
 
 			//g_glb_reg_ptr->VSP_CTRL0 = (((y&0x3f)<<8) | (x&0x3f));
-			g_dbk_reg_ptr->DBK_SID_CFG = (((y&0x3ff)<<16) | (x&0x3ff));
+			g_mbc_reg_ptr->MB_START = (((y&0x3ff)<<16) | (x&0x3ff));
 			JPEG_DecodeMCU_Baseline();
 
 			//copy MCU data to coeff buffer,Added by wangyi 2007/05/02
 // 			CopyMCUToCoeff((uint8*)y_coeff, (uint8*)u_coeff, (uint8*)v_coeff, x, y, scale_factor);
 
 			//update interface			
-			g_vld_reg_ptr->JPEG_RESTART_MCU_CNT = (jpeg_fw_codec->restart_interval - jpeg_fw_codec->restart_to_go);
+			g_vld_reg_ptr->RESTART_MCU_CNT = (jpeg_fw_codec->restart_interval - jpeg_fw_codec->restart_to_go);
 		}
 	}
 
@@ -193,10 +189,10 @@ uint32 JpegDec_Read_nBits(uint32 nbits)
 #if _CMODEL_
 	val = read_nbits(nbits);
 #endif
-	VSP_WRITE_REG (VSP_BSM_REG_BASE+BSM_CFG2_OFF, (nbits << 24) | (0<<0), "BSM_CFG2: configure show n bits");
-	val = VSP_READ_REG (VSP_BSM_REG_BASE+BSM_RDATA_OFF, "BSM_RDATA: show n bits from bitstream");
+	JPG_WRITE_REG (JPG_BSM_REG_BASE+BSM_CFG2_OFFSET, (nbits << 24) | (0<<0), "BSM_CFG2: configure show n bits");
+	val = JPG_READ_REG (JPG_BSM_REG_BASE+BSM_RDATA_OFFSET, "BSM_RDATA: show n bits from bitstream");
 
-	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG2_OFF, (nbits << 24) | (1<<0), "BSM_CFG2: configure flush n bits");
+	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_CFG2_OFFSET, (nbits << 24) | (1<<0), "BSM_CFG2: configure flush n bits");
 	return val;
 }
 
@@ -273,13 +269,13 @@ PUBLIC JPEG_RET_E START_HW_DECODE(JPEG_CODEC_T *jpeg_fw_codec, uint32 num_of_row
 	}
 	
 	//VSP_CFG1
-	cmd =(jpeg_fw_codec->input_mcu_info<<24) | ((global_mcu_num_y & 0x3ff) << 12) | (jpeg_fw_codec->mcu_num_x & 0x3ff);
-	VSP_WRITE_REG(VSP_GLB_REG_BASE+GLB_CFG1_OFF, cmd, "VSP_CFG1: input mcu info, slice mcu number x and y");	
+	cmd =(((!jpeg_fw_codec->uv_interleaved)<<27)) |(jpeg_fw_codec->input_mcu_info<<24) | ((global_mcu_num_y & 0x3ff) << 12) | (jpeg_fw_codec->mcu_num_x & 0x3ff);
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+MB_CFG_OFFSET, cmd, "MB_CFG: input mcu info, slice mcu number x and y");	
 
 	//BSM Module cfg
-	pingpang_buf_status = ((jpeg_fw_codec->stream_buf0_valid<<1) | (jpeg_fw_codec->stream_buf1_valid));
+	pingpang_buf_status = ((jpeg_fw_codec->bsm_buf0_valid<<1) | (jpeg_fw_codec->bsm_buf1_valid));
 	cmd = ((uint32)pingpang_buf_status<<30) | ((jpeg_fw_codec->pingpang_buf_len+3) >> 2);
-	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG0_OFF, cmd, "BSM_CFG0: buffer0 for read, and the buffer size");
+	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_CFG0_OFFSET, cmd, "BSM_CFG0: buffer0 for read, and the buffer size");
 #if _CMODEL_
 if((SWITCH_MODE == jpeg_fw_codec->work_mode) || (jpeg_fw_codec->is_first_slice && (ALONE_MODE == jpeg_fw_codec->work_mode)))
 {
@@ -290,7 +286,7 @@ if((SWITCH_MODE == jpeg_fw_codec->work_mode) || (jpeg_fw_codec->is_first_slice &
 #endif
 
 	//polling bsm status
-	VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_DEBUG_OFF, ((uint32)1<<31), ((uint32)1<<31), TIME_OUT_CLK, "BSM_DEBUG: polling bsm status");
+	JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_STS0_OFFSET, V_BIT_31, 0, TIME_OUT_CLK, "BSM_DEBUG: polling bsm status");
 
 #if _CMODEL_ && !defined(_LIB) //for rtl simulation.
 	bytes_need_flush = head_byte_len%4; 
@@ -307,14 +303,14 @@ if((SWITCH_MODE == jpeg_fw_codec->work_mode) || (jpeg_fw_codec->is_first_slice &
 		
 		for (i = 0; i < g_flush_word_count; i++)
 		{
-			if(VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_DEBUG_OFF, 1<<3, 1<<3, TIME_OUT_CLK,
+			if(JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_STS0_OFFSET, 1<<3, 1<<3, TIME_OUT_CLK,
 				"polling bsm fifo fifo depth >= 8 words for gob header"))
 			{
 				JPEG_PRINT(("[START_HW_DECODE] flush failed, i = %d", i));
 				return JPEG_FAILED;
 			}
 			
-			VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG2_OFF, cmd, "BSM_CFG2: flush one word");	
+			JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_CFG2_OFFSET, cmd, "BSM_CFG2: flush one word");	
 		}
 
 		g_flush_word_count = 0;
@@ -326,8 +322,8 @@ if((SWITCH_MODE == jpeg_fw_codec->work_mode) || (jpeg_fw_codec->is_first_slice &
 
 	for ( i = 0; i < head_byte_len; i++)
 	{
-		VSP_READ_REG_POLL (VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_3, V_BIT_3, TIME_OUT_CLK,  "polling bsm fifo depth >= 8 words for PVOP MB header");
-		VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG2_OFF, (8 << 24) | (1<<0), "BSM_CFG2: configure flush n bits");
+		JPG_READ_REG_POLL (JPG_BSM_REG_BASE+BSM_STS0_OFFSET, V_BIT_3, V_BIT_3, TIME_OUT_CLK,  "polling bsm fifo depth >= 8 words for PVOP MB header");
+		JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_CFG2_OFFSET, (8 << 24) | (1<<0), "BSM_CFG2: configure flush n bits");
 	}
 }
 #endif
@@ -342,21 +338,21 @@ if((SWITCH_MODE == jpeg_fw_codec->work_mode) || (jpeg_fw_codec->is_first_slice &
 		SCI_MEMCPY(s_bs_last, (uint8*)jpeg_fw_codec->stream_0+jpeg_fw_codec->pingpang_buf_len -100, 100); //back up the last 100 byte of bitstrm bfr 0.
 	}
 
-	//MBC and DBK
-	cmd = ((jpeg_fw_codec->dbk_bfr1_valid<<1)|(jpeg_fw_codec->dbk_bfr0_valid));
-	VSP_WRITE_REG(VSP_DBK_REG_BASE+DBK_VDB_BUF_ST_OFF, cmd, "DBK_VDB_BUF_ST: set which mbio buffer is valid now.");
-	VSP_WRITE_REG(VSP_DBK_REG_BASE+DBK_MCU_NUM_OFF, total_slice_mcu_num & 0xffff, "DBK_MCU_NUM_OFF: configure the total mcu number");
-	VSP_WRITE_REG(VSP_DBK_REG_BASE+DBK_CTR1_OFF, 1, "DBK_CTRL1: SW configuration is completed, start!");
+	//MBIO
+	cmd = ((jpeg_fw_codec->mbio_bfr1_valid<<1)|(jpeg_fw_codec->mbio_bfr0_valid));
+	JPG_WRITE_REG(JPG_MBIO_REG_BASE+BUF_STS_OFFSET, cmd, "BUF_STS_OFFSET: set which mbio buffer is valid now.");
+	JPG_WRITE_REG(JPG_MBIO_REG_BASE+MCU_NUM_OFFSET, total_slice_mcu_num & 0xffff, "MCU_NUM_OFFSET: configure the total mcu number");
+	JPG_WRITE_REG(JPG_MBIO_REG_BASE+CTRL_OFFSET, 1, "CTRL_OFFSET: SW configuration is completed, start!");
 
 
 	//start VLD
-	VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_JPEG_RESTART_MCU_CNT_OFFSET, jpeg_fw_codec->restart_mcu_cnt, "VLD_JPEG_RESTART_MCU_CNT: restart_mcu_cnt");
-	VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_JPEG_RESTART_MCU_INTV_OFFSET, jpeg_fw_codec->restart_interval, "VLD_JPEG_RESTART_MCU_INTV: restart_interval");
+	JPG_WRITE_REG(JPG_VLD_REG_BASE+JPEG_RESTART_MCU_CNT_OFFSET, jpeg_fw_codec->restart_mcu_cnt, "VLD_JPEG_RESTART_MCU_CNT: restart_mcu_cnt");
+	JPG_WRITE_REG(JPG_VLD_REG_BASE+JPEG_RESTART_MCU_INTV_OFFSET, jpeg_fw_codec->restart_interval, "VLD_JPEG_RESTART_MCU_INTV: restart_interval");
 	//config DC pred for Y, U, V
-	VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_JPEG_DC_Y_OFFSET, jpeg_fw_codec->dc_pred_y, "VLD_JPEG_DC_Y: config DC_PRED for Y");
-	VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_JPEG_DC_UV_OFFSET, jpeg_fw_codec->dc_pred_uv, "VLD_JPEG_DC_UV: config DC_PRED for U and V");
-	VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_JPEG_CFG0_OFFSET, vld_mcu_num&0xfffff, "VLD_JPEG_CFG0: configure total mcu number in this slice");
-	VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_CTL_OFFSET, 1, "VLD_CTL: Stard VLD Module");	
+	JPG_WRITE_REG(JPG_VLD_REG_BASE+JPEG_DC_Y_OFFSET, jpeg_fw_codec->dc_pred_y, "VLD_JPEG_DC_Y: config DC_PRED for Y");
+	JPG_WRITE_REG(JPG_VLD_REG_BASE+JPEG_DC_UV_OFFSET, jpeg_fw_codec->dc_pred_uv, "VLD_JPEG_DC_UV: config DC_PRED for U and V");
+	JPG_WRITE_REG(JPG_VLD_REG_BASE+JPEG_TOTAL_MCU_OFFSET, vld_mcu_num&0xfffff, "VLD_JPEG_CFG0: configure total mcu number in this slice");
+	JPG_WRITE_REG(JPG_VLD_REG_BASE+VLD_CTRL_OFFSET, 1, "VLD_CTL: Stard VLD Module");	
 
 #if _CMODEL_
 	START_SW_DECODE(jpeg_fw_codec, num_of_rows);	
@@ -385,7 +381,7 @@ PUBLIC JPEG_RET_E JpegDec_GetBsBitOffset(uint32 bitstrm_bfr_switch_cnt)
 	uint32 remain_bytes_in_destuffing_module;
 	uint8 *current_bs_ptr;
 	uint32 byteNum_after_destuffing = 0; //destuffing by software.
-	uint32 bsm_debug0_reg;
+	uint32 bsm_sts0_reg;
 	uint32 remain_bits_in_bsshifter = 0;
 	uint32 actual_byteNum_after_hw_destuffing;
 	uint32 bs_byte_offset = 0;
@@ -393,11 +389,11 @@ PUBLIC JPEG_RET_E JpegDec_GetBsBitOffset(uint32 bitstrm_bfr_switch_cnt)
 	uint32 curr_bs_bfr_id = 0;
 	uint32 bs_bfr_addr;
 	
-	total_read_bytes = VSP_READ_REG(VSP_BSM_REG_BASE+BSM_CFG1_OFF, " ") &0xfffff;
+	total_read_bytes = JPG_READ_REG(JPG_BSM_REG_BASE+BSM_CFG1_OFFSET, " ") &0xfffff;
 	total_read_bytes = total_read_bytes*4; //byte
 
-	bsm_debug0_reg = VSP_READ_REG(VSP_BSM_REG_BASE+BSM_DEBUG_OFF, " ");	
-	curr_bs_bfr_id = (bsm_debug0_reg >> 4) & 0x01;
+	bsm_sts0_reg = JPG_READ_REG(JPG_BSM_REG_BASE+BSM_STS0_OFFSET, " ");	
+	curr_bs_bfr_id = (bsm_sts0_reg >> 4) & 0x01;
 
 	if(0 == curr_bs_bfr_id)
 	{
@@ -447,9 +443,9 @@ PUBLIC JPEG_RET_E JpegDec_GetBsBitOffset(uint32 bitstrm_bfr_switch_cnt)
 }
 #endif	
 
-	bsm_fifo_depth = bsm_debug0_reg & 0xf;
-	remain_bytes_in_destuffing_module = (bsm_debug0_reg>>8) & 0x3;
-	remain_bits_in_bsshifter = 32 - ((bsm_debug0_reg>>12)&0x1f);		
+	bsm_fifo_depth = bsm_sts0_reg & 0xf;
+	remain_bytes_in_destuffing_module = (bsm_sts0_reg>>8) & 0x3;
+	remain_bits_in_bsshifter = 32 - ((bsm_sts0_reg>>12)&0x1f);		
 	current_bs_ptr = (uint8*)bs_bfr_addr + total_read_bytes -1; // byte, the position of last byte which read into de-stuffing module. 
 	actual_byteNum_after_hw_destuffing = ((bsm_fifo_depth+2)*4+remain_bytes_in_destuffing_module + (remain_bits_in_bsshifter + 7)/8);
 	
@@ -504,7 +500,7 @@ PUBLIC JPEG_RET_E JpegDec_GetBsBitOffset(uint32 bitstrm_bfr_switch_cnt)
 	{
 		extern uint32 g_destuffing_cnt;
 
-		if(	jpeg_fw_codec->bitstream_offset != ((g_destuffing_cnt-destuffing_cnt)*8 + s_pBsmr_ctrl_reg->TOTAL_BITS))
+		if(	jpeg_fw_codec->bitstream_offset != ((g_destuffing_cnt-destuffing_cnt)*8 + s_pBsmr_ctrl_reg->BSM_TOTAL_BITS))
 		{
 			bs_byte_offset = bs_byte_offset;
 		// 	jpeg_fw_codec->bitstream_offset = (g_destuffing_cnt*8 + s_pBsmr_ctrl_reg->TOTAL_BITS);
@@ -648,8 +644,8 @@ PUBLIC JPEG_RET_E START_SW_DECODE_PROGRESSIVE(JPEG_CODEC_T *jpeg_fw_codec, uint3
 	uint32 ci;
 
 	const int32 *quant;
-	uint8 *y_coeff = jpeg_fw_codec->dbk_bfr0_valid ? jpeg_fw_codec->YUV_Info_0.y_data_ptr : jpeg_fw_codec->YUV_Info_1.y_data_ptr;
-	uint8 *uv_coeff = jpeg_fw_codec->dbk_bfr0_valid ? jpeg_fw_codec->YUV_Info_0.u_data_ptr : jpeg_fw_codec->YUV_Info_1.u_data_ptr;
+	uint8 *y_coeff = jpeg_fw_codec->mbio_bfr0_valid ? jpeg_fw_codec->YUV_Info_0.y_data_ptr : jpeg_fw_codec->YUV_Info_1.y_data_ptr;
+	uint8 *uv_coeff = jpeg_fw_codec->mbio_bfr0_valid ? jpeg_fw_codec->YUV_Info_0.u_data_ptr : jpeg_fw_codec->YUV_Info_1.u_data_ptr;
 	JPEG_PROGRESSIVE_INFO_T *progressive_info = JPEGFW_GetProgInfo();
 	JPEGFW_MCU_To_Frame MCUToFrm;
 	

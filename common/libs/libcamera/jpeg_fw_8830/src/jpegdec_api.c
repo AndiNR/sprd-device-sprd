@@ -15,7 +15,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8825_video_header.h"
+#include "sc8830_video_header.h"
 #include "jpegcodec_bufmgr.h"
 #include "jpegdec_api.h"
 #include <sys/ioctl.h>
@@ -32,9 +32,9 @@
 		
 //#if defined(JPEG_DEC)
 
-#include "sprd_vsp.h"
+#include "sprd_jpg.h"
 
-#define SPRD_VSP_DRIVER "/dev/sprd_vsp"
+#define SPRD_JPG_DRIVER "/dev/sprd_jpg"
 
 #define SLICE_HEIGHT 1024 //the height for slice mode
 
@@ -42,10 +42,10 @@ static uint32_t g_stream_buf_id = 1;  //record the bsm buf id for switch buf. th
 //uint32_t g_stream_buf_size = 0;
 
 //////////////////////////////////////////////////////////////////////////
-int VSP_reset_cb_dec(int fd)
+int JPG_reset_cb_dec(int fd)
 {
-//	SCI_TRACE_LOW("VSP_reset_cb\n");
-	ioctl(fd,VSP_RESET,NULL);
+//	SCI_TRACE_LOW("JPG_reset_cb\n");
+	ioctl(fd,JPG_RESET,NULL);
 	return 0;
 }
 
@@ -133,11 +133,11 @@ LOCAL void JPEGDEC_init_fw_param(JPEGDEC_PARAMS_T *jpegdec_params,
 	dec_fw_info_ptr->dec_buf.buf_size = jpegdec_params->fw_decode_buf_size;	
 	dec_fw_info_ptr->dec_buf.buf_ptr = jpegdec_params->fw_decode_buf;	
 
-	dec_fw_info_ptr->stream_buf0_valid = 1;
-	dec_fw_info_ptr->stream_buf1_valid = 0;
+	dec_fw_info_ptr->bsm_buf0_valid = 1;
+	dec_fw_info_ptr->bsm_buf1_valid = 0;
 
-    	dec_fw_info_ptr->dbk_bfr0_valid = 1;
-    	dec_fw_info_ptr->dbk_bfr1_valid = 0;
+    	dec_fw_info_ptr->mbio_bfr0_valid = 1;
+    	dec_fw_info_ptr->mbio_bfr1_valid = 0;
 
 	dec_fw_info_ptr->work_mode = 0;
 	dec_fw_info_ptr->is_first_slice = TRUE;
@@ -290,11 +290,11 @@ void JPGEDEC_Clear_INT(uint32_t mask)
 {	
 	uint32_t value;
 	
-	value = VSP_READ_REG(VSP_DCAM_REG_BASE + DCAM_INT_RAW_OFF, "");
-	SCI_TRACE_LOW("JPEGDEC DCAM_INT_RAW_OFF: 0x%x.", value);	
-	value = VSP_READ_REG(VSP_DCAM_REG_BASE + DCAM_INT_CLR_OFF, "read the interrupt clear bits.");
+	value = JPG_READ_REG(JPG_GLB_REG_BASE + GLB_INT_RAW_OFFSET, "");
+	SCI_TRACE_LOW("JPEGDEC GLB_INT_RAW_OFFSET: 0x%x.", value);	
+	value = JPG_READ_REG(JPG_GLB_REG_BASE + GLB_INT_CLR_OFFSET, "read the interrupt clear bits.");
 	value |= mask;
-	VSP_WRITE_REG(VSP_DCAM_REG_BASE + DCAM_INT_CLR_OFF, value, "clear the VLC interrupt.");
+	JPG_WRITE_REG(JPG_GLB_REG_BASE + GLB_INT_CLR_OFFSET, value, "clear the VLC interrupt.");
 }
 
 void JPEGDEC_Handle_BSM_INT(jpegdec_callback callback)
@@ -321,7 +321,7 @@ void poll_ahb_idle(uint32_t time)
 	while (1)
 	{
 		uint32 ahb_idle = 0;
-		ahb_idle = ((*(volatile uint32*)(VSP_AHBM_REG_BASE+AHBM_STS_OFFSET-VSP_DCAM_BASE+g_vsp_Vaddr_base) & 0x1));
+		ahb_idle = ((*(volatile uint32*)(JPG_GLB_REG_BASE+MST_STS_OFFSET-JPG_GLB_REG_BASE+g_jpg_Vaddr_base) & 0x1));
 
 		if (ahb_idle) //busy
 		{
@@ -353,8 +353,8 @@ uint32_t JPEGDEC_Poll_DBK_BSM(uint32_t time, uint32_t buf_len,  jpegdec_callback
 			
 	while (1)
 	{		
-		value = VSP_READ_REG(VSP_DCAM_REG_BASE + DCAM_INT_RAW_OFF, "read the interrupt register.");		
-		if(value & 0x200) //for MBC/DBK done
+		value = JPG_READ_REG(JPG_GLB_REG_BASE + GLB_INT_RAW_OFFSET, "read the interrupt register.");		
+		if(value & 0x8) //for MBIO done
 		{		
 			slice_num--;
 
@@ -368,9 +368,10 @@ uint32_t JPEGDEC_Poll_DBK_BSM(uint32_t time, uint32_t buf_len,  jpegdec_callback
 				}
 
 				/* clear interrupt */
-				(*(volatile uint32 *)(0x20c11c10-VSP_DCAM_BASE+g_vsp_Vaddr_base)) |= (1<<2);
-				(*(volatile uint32 *)(0x20c00028-VSP_DCAM_BASE+g_vsp_Vaddr_base)) |= (1<<9);
-				(*(volatile uint32 *)(0x20c11c10-VSP_DCAM_BASE+g_vsp_Vaddr_base)) |= (1<<buf_id);
+                	        (*(volatile uint32 *)(JPG_MBIO_REG_BASE+BUF_STS_OFFSET-JPG_CTRL_BASE+g_jpg_Vaddr_base)) |= (1<<2);
+	                        (*(volatile uint32 *)(JPG_GLB_REG_BASE+GLB_INT_CLR_OFFSET-JPG_CTRL_BASE+g_jpg_Vaddr_base)) |= (1<<3);
+	                        (*(volatile uint32 *)(JPG_GLB_REG_BASE+GLB_INT_CLR_OFFSET-JPG_CTRL_BASE+g_jpg_Vaddr_base)) |= (1<<buf_id);
+
 				buf_id = !buf_id;
 			}else
 			{
@@ -382,7 +383,7 @@ uint32_t JPEGDEC_Poll_DBK_BSM(uint32_t time, uint32_t buf_len,  jpegdec_callback
 				return 0;
 			}
 		}
-		else if(value & 0x3000)//for vsp error
+		else if(value & 0x4)//for vsp error
 		{
 			SCI_TRACE_LOW("JPEGDEC_Poll_DBK_BSM:vsp error 0x%x.",value);
 			return 1;
@@ -412,8 +413,8 @@ uint32_t JPEGDEC_Poll_DBK_BSM_FOR_SLICE(uint32_t time, uint32_t *buf_id_ptr,  ui
 
 	while (1)
 	{
-		value = VSP_READ_REG(VSP_DCAM_REG_BASE + DCAM_INT_RAW_OFF, "read the interrupt register.");
-		if(value & 0x200) //for MBC/DBK done
+		value = JPG_READ_REG(JPG_GLB_REG_BASE + GLB_INT_RAW_OFFSET, "read the interrupt register.");
+		if(value & 0x8) //for MBIO done
 		{
 			slice_num--;
 
@@ -432,7 +433,7 @@ uint32_t JPEGDEC_Poll_DBK_BSM_FOR_SLICE(uint32_t time, uint32_t *buf_id_ptr,  ui
 				return 0;
 			}
 		}
-		else if(value & 0x3000)//for vsp error
+		else if(value & 0x4)//for vsp error
 		{
 			SCI_TRACE_LOW("JPEGDEC_Poll_DBK_BSM_FOR_SLICE:vsp error 0x%x.",value);
 			return 1;
@@ -460,14 +461,14 @@ uint32_t JPEGDEC_Poll_MEA_BSM(uint32_t time, uint32_t buf_len,  jpegdec_callback
 			
 	while (1)
 	{
-		value = VSP_READ_REG(VSP_DCAM_REG_BASE + DCAM_INT_RAW_OFF, "read the interrupt register.");		
-		if(value & 0x80){ //for BSM done			
+		value = JPG_READ_REG(JPG_GLB_REG_BASE + GLB_INT_RAW_OFFSET, "read the interrupt register.");		
+		if(value & 0x1){ //for BSM done			
 			JPEGDEC_Handle_BSM_INT(callback);
 		}
-		if(value & 0x4000){ //for MEA done
-			 JPEG_HWUpdateMEABufInfo();
-			JPEG_HWSet_MEA_Buf_ReadOnly(1);
-			JPGEDEC_Clear_INT(0x4000);
+		if(value & 0x8){ //for MEA done
+			 JPEG_HWUpdateMBIOBufInfo();
+			JPEG_HWSet_MBIO_Buf_ReadOnly(1);
+			JPGEDEC_Clear_INT(0x8);
 			SCI_TRACE_LOW("JPEGDEC_Poll_MEA_BSM X.\n");
 			return 1;
 		}
@@ -490,13 +491,13 @@ uint32_t JPEGDEC_Poll_VLC_BSM(uint32_t time, uint32_t buf_len,  jpegdec_callback
 	SCI_TRACE_LOW("JPEGDEC_Poll_VLC_BSM E.\n");	
 	while (1)
 	{
-		value = VSP_READ_REG(VSP_DCAM_REG_BASE + DCAM_INT_RAW_OFF, "read the interrupt register.");		
-		if(value & 0x100){ //for VLC done			
-			JPGEDEC_Clear_INT(0x100);
+		value = JPG_READ_REG(JPG_GLB_REG_BASE + GLB_INT_RAW_OFFSET, "read the interrupt register.");		
+		if(value & 0x2){ //for VLC done			
+			JPGEDEC_Clear_INT(0x2);
 			SCI_TRACE_LOW("JPEGDEC_Poll_VLC_BSM X.\n");		
 			return 1;
 		}
-		if(value & 0x80){ //for BSM done		
+		if(value & 0x1){ //for BSM done		
 			JPEGDEC_Handle_BSM_INT(callback);		
 		}
 
@@ -529,8 +530,8 @@ jpegdec_params->fw_decode_buf;
 ***/
 int JPEGDEC_decode_one_pic(JPEGDEC_PARAMS_T *jpegdec_params,  jpegdec_callback callback)
 {
-	int32_t vsp_fd = -1;
-	void *vsp_addr = NULL;
+	int32_t jpg_fd = -1;
+	void *jpg_addr = NULL;
 	uint32_t ret = 0;
 	uint32 value = 0, int_val = 0, temp = 0;
 	JPEG_DEC_INPUT_PARA_T input_para_ptr;
@@ -544,31 +545,31 @@ int JPEGDEC_decode_one_pic(JPEGDEC_PARAMS_T *jpegdec_params,  jpegdec_callback c
 		SCI_TRACE_LOW("JPEGDEC set slice_num = %d .",slice_num);
 	}
 
-	if(0 ==(vsp_fd = open(SPRD_VSP_DRIVER,O_RDWR))) {
-		SCI_TRACE_LOW("JPEGDEC open vsp error, vsp_fd: %d.\n", vsp_fd);
+	if(0 ==(jpg_fd = open(SPRD_JPG_DRIVER,O_RDWR))) {
+		SCI_TRACE_LOW("JPEGDEC open jpg module error, jpg_fd: %d.\n", jpg_fd);
 		return -1;
 	} else {
-		vsp_addr = mmap(NULL,SPRD_VSP_MAP_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,vsp_fd,0);
-		SCI_TRACE_LOW("JPEGDEC  vsp addr 0x%x\n",(uint32_t)vsp_addr);
+		jpg_addr = mmap(NULL,SPRD_JPG_MAP_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,jpg_fd,0);
+		SCI_TRACE_LOW("JPEGDEC jpg addr 0x%x\n",(uint32_t)jpg_addr);
     }
 	SCI_TRACE_LOW("JPEGDEC_decode_one_pic --1 ");
-	ret =  ioctl(vsp_fd,VSP_ACQUAIRE,NULL);
+	ret =  ioctl(jpg_fd,JPG_ACQUAIRE,NULL);
 	if(ret){
-		SCI_TRACE_LOW("VSP hardware timeout try again %d\n",ret);
-		ret =  ioctl(vsp_fd,VSP_ACQUAIRE,NULL);
+		SCI_TRACE_LOW("JPG hardware timeout try again %d\n",ret);
+		ret =  ioctl(jpg_fd,JPG_ACQUAIRE,NULL);
 		if(ret){
-			SCI_TRACE_LOW("VSP hardware timeout give up %d\n",ret);
+			SCI_TRACE_LOW("JPG hardware timeout give up %d\n",ret);
 			ret = -1;
 			goto error;
 		}
 	}
 	SCI_TRACE_LOW("JPEGDEC_decode_one_pic --2 ");
-	ioctl(vsp_fd,VSP_ENABLE,NULL);
-	ioctl(vsp_fd,VSP_RESET,NULL);
+	ioctl(jpg_fd,JPG_ENABLE,NULL);
+	ioctl(jpg_fd,JPG_RESET,NULL);
 	SCI_TRACE_LOW("JPEGDEC_decode_one_pic --3 ");
-	VSP_SetVirtualBaseAddr((uint32)vsp_addr);
+	JPG_SetVirtualBaseAddr((uint32)jpg_addr);
 	SCI_TRACE_LOW("JPEGDEC_decode_one_pic --4 ");
-	VSP_reg_reset_callback(VSP_reset_cb_dec,vsp_fd);
+	JPG_reg_reset_callback(JPG_reset_cb_dec,jpg_fd);
 	SCI_TRACE_LOW("JPEGDEC_decode_one_pic ---5 ");
 	if(JPEG_SUCCESS != JPEGDEC_start_decode(jpegdec_params)) {
 		SCI_TRACE_LOW("JPEGDEC fail to JPEGDEC_start_decode.");
@@ -589,19 +590,19 @@ int JPEGDEC_decode_one_pic(JPEGDEC_PARAMS_T *jpegdec_params,  jpegdec_callback c
 		goto error;
 	}
 error:
-	munmap(vsp_addr,SPRD_VSP_MAP_SIZE);
-	ioctl(vsp_fd,VSP_DISABLE,NULL);
-	ioctl(vsp_fd,VSP_RELEASE,NULL);
-	if(vsp_fd >= 0){
-		close(vsp_fd);
+	munmap(jpg_addr,SPRD_JPG_MAP_SIZE);
+	ioctl(jpg_fd,JPG_DISABLE,NULL);
+	ioctl(jpg_fd,JPG_RELEASE,NULL);
+	if(jpg_fd >= 0){
+		close(jpg_fd);
 	}
 	return ret;
 }
 
 int JPEGDEC_Slice_Start(JPEGDEC_PARAMS_T *jpegdec_params,  JPEGDEC_SLICE_OUT_T *out_ptr)
 {
-	int vsp_fd = -1;
-	void *vsp_addr = NULL;
+	int jpg_fd = -1;
+	void *jpg_addr = NULL;
 	uint32_t ret = 0;
 	uint32 value = 0, int_val = 0, temp = 0;
 	JPEG_DEC_INPUT_PARA_T input_para_ptr;
@@ -616,31 +617,31 @@ int JPEGDEC_Slice_Start(JPEGDEC_PARAMS_T *jpegdec_params,  JPEGDEC_SLICE_OUT_T *
 		SCI_TRACE_LOW("JPEGDEC set slice_num = %d .",slice_num);
 	}
 
-	if(0 ==(vsp_fd = open(SPRD_VSP_DRIVER,O_RDWR))) {
-		SCI_TRACE_LOW("JPEGDEC open vsp error, vsp_fd: %d.\n", vsp_fd);
+	if(0 ==(jpg_fd = open(SPRD_JPG_DRIVER,O_RDWR))) {
+		SCI_TRACE_LOW("JPEGDEC open jpg module error, jpg_fd: %d.\n", jpg_fd);
 		return -1;
     } else {
-		vsp_addr = mmap(NULL,SPRD_VSP_MAP_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,vsp_fd,0);
-		SCI_TRACE_LOW("JPEGDEC  vsp addr 0x%x\n",(uint32_t)vsp_addr);
+		jpg_addr = mmap(NULL,SPRD_JPG_MAP_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,jpg_fd,0);
+		SCI_TRACE_LOW("JPEGDEC  jpg addr 0x%x\n",(uint32_t)jpg_addr);
     }
 	SCI_TRACE_LOW("JPEGDEC_decode_one_pic --1 ");
-    ret =  ioctl(vsp_fd,VSP_ACQUAIRE,NULL);
+    ret =  ioctl(jpg_fd,JPG_ACQUAIRE,NULL);
 	if(ret){
-		SCI_TRACE_LOW("VSP hardware timeout try again %d\n",ret);
-		ret =  ioctl(vsp_fd,VSP_ACQUAIRE,NULL);
+		SCI_TRACE_LOW("JPG hardware timeout try again %d\n",ret);
+		ret =  ioctl(jpg_fd,JPG_ACQUAIRE,NULL);
 		if(ret){
-			SCI_TRACE_LOW("VSP hardware timeout give up %d\n",ret);
+			SCI_TRACE_LOW("JPG hardware timeout give up %d\n",ret);
 			ret = -1;
 			goto slice_error;
 		}
 	}
 	SCI_TRACE_LOW("JPEGDEC_decode_one_pic --2 ");
-	ioctl(vsp_fd,VSP_ENABLE,NULL);
-	ioctl(vsp_fd,VSP_RESET,NULL);
+	ioctl(jpg_fd,JPG_ENABLE,NULL);
+	ioctl(jpg_fd,JPG_RESET,NULL);
 	SCI_TRACE_LOW("JPEGDEC_decode_one_pic --3 ");
-	VSP_SetVirtualBaseAddr((uint32)vsp_addr);
+	JPG_SetVirtualBaseAddr((uint32)jpg_addr);
 	SCI_TRACE_LOW("JPEGDEC_decode_one_pic --4 ");
-	VSP_reg_reset_callback(VSP_reset_cb_dec,vsp_fd);
+	JPG_reg_reset_callback(JPG_reset_cb_dec,jpg_fd);
 	SCI_TRACE_LOW("JPEGDEC_decode_one_pic ---5 ");
 	if(JPEG_SUCCESS != JPEGDEC_start_decode(jpegdec_params)) {
 		SCI_TRACE_LOW("JPEGDEC fail to JPEGDEC_start_decode.");
@@ -658,16 +659,16 @@ int JPEGDEC_Slice_Start(JPEGDEC_PARAMS_T *jpegdec_params,  JPEGDEC_SLICE_OUT_T *
 		goto slice_start_end;
 	}
 slice_error:
-	munmap(vsp_addr,SPRD_VSP_MAP_SIZE);
-	ioctl(vsp_fd,VSP_DISABLE,NULL);
-	ioctl(vsp_fd,VSP_RELEASE,NULL);
+	munmap(jpg_addr,SPRD_JPG_MAP_SIZE);
+	ioctl(jpg_fd,JPG_DISABLE,NULL);
+	ioctl(jpg_fd,JPG_RELEASE,NULL);
 
-	if(vsp_fd >= 0){
- 		close(vsp_fd);
+	if(jpg_fd >= 0){
+ 		close(jpg_fd);
  	}
 slice_start_end:
-	jpeg_fw_codec->fd =vsp_fd;
-	jpeg_fw_codec->addr = (uint32)vsp_addr;
+	jpeg_fw_codec->fd =jpg_fd;
+	jpeg_fw_codec->addr = (uint32)jpg_addr;
 	if(0 == jpeg_fw_codec->slice_num) {
 		out_ptr->is_over = 1;
 	}
@@ -680,13 +681,13 @@ int JPEGDEC_Slice_Next(JPEGDEC_SLICE_NEXT_T *update_params,  JPEGDEC_SLICE_OUT_T
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGDecCodec();
 	int ret =JPEG_SUCCESS;
 
-	JpegDec_VspTopUpdateYUVAddr(update_params->yuv_phy_buf,update_params->yuv_u_phy_buf);
-	JPEGDEC_HWUpdateMEABufInfo();
+	JpegDec_HwTopUpdateYUVAddr(update_params->yuv_phy_buf,update_params->yuv_u_phy_buf,update_params->yuv_v_phy_buf);
+	JPEGDEC_HWUpdateMBIOBufInfo();
 
 	/* clear interrupt */
-	(*(volatile uint32 *)(0x20c11c10-VSP_DCAM_BASE+g_vsp_Vaddr_base)) |= (1<<2);
-	(*(volatile uint32 *)(0x20c00028-VSP_DCAM_BASE+g_vsp_Vaddr_base)) |= (1<<9);
-	(*(volatile uint32 *)(0x20c11c10-VSP_DCAM_BASE+g_vsp_Vaddr_base)) |= (1<<jpeg_fw_codec->buf_id);
+	(*(volatile uint32 *)(JPG_MBIO_REG_BASE+BUF_STS_OFFSET-JPG_CTRL_BASE+g_jpg_Vaddr_base)) |= (1<<2);
+	(*(volatile uint32 *)(JPG_GLB_REG_BASE+GLB_INT_CLR_OFFSET-JPG_CTRL_BASE+g_jpg_Vaddr_base)) |= (1<<3);
+	(*(volatile uint32 *)(JPG_GLB_REG_BASE+GLB_INT_CLR_OFFSET-JPG_CTRL_BASE+g_jpg_Vaddr_base)) |= (1<<jpeg_fw_codec->buf_id);
 
 	jpeg_fw_codec->buf_id = !jpeg_fw_codec->buf_id;
 	SCI_TRACE_LOW("buf id %d.",jpeg_fw_codec->buf_id);
@@ -695,9 +696,9 @@ int JPEGDEC_Slice_Next(JPEGDEC_SLICE_NEXT_T *update_params,  JPEGDEC_SLICE_OUT_T
 	if((JPEG_SUCCESS != ret) || (0 == jpeg_fw_codec->slice_num)) {
 		out_ptr->is_over = 1;
 		SCI_TRACE_LOW("dec finish.");
-		munmap((void*)jpeg_fw_codec->addr,SPRD_VSP_MAP_SIZE);
-		ioctl(jpeg_fw_codec->fd,VSP_DISABLE,NULL);
-		ioctl(jpeg_fw_codec->fd,VSP_RELEASE,NULL);
+		munmap((void*)jpeg_fw_codec->addr,SPRD_JPG_MAP_SIZE);
+		ioctl(jpeg_fw_codec->fd,JPG_DISABLE,NULL);
+		ioctl(jpeg_fw_codec->fd,JPG_RELEASE,NULL);
 		if(jpeg_fw_codec->fd >= 0){
 			close(jpeg_fw_codec->fd);
 		}

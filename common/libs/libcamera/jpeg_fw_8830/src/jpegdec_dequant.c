@@ -15,11 +15,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8825_video_header.h"
-
-#if !defined(_SIMULATION_)
-//#include "os_api.h"
-#endif
+#include "sc8830_video_header.h"
 
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
@@ -87,7 +83,7 @@ PUBLIC JPEG_RET_E JPEGFW_AdjustQuantTbl_Dec()
 	int32 time_out_flag = 0;
 	uint8 tbl_id = 0;
 	uint8 tbl_num = 0;
-	uint32 qtable_addr = (uint32)JDEC_IQUANT_TBL_ADDR;
+	uint32 qtable_addr = (uint32)INV_QUANT_TBL_ADDR;
 	uint32 cmd = 0;
 	int32 tmp = 0;
 	int32 index1 = 0, index2 = 0;
@@ -106,10 +102,10 @@ PUBLIC JPEG_RET_E JPEGFW_AdjustQuantTbl_Dec()
 	
 	if(!jpeg_fw_codec->progressive_mode)
 	{
-		cmd = (1<<4) | (1<<3);	
-		VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, cmd, "DCAM_CFG: allow software to access the vsp buffer");
-		
-		time_out_flag = VSP_READ_REG_POLL(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, (1<<7), (1<<7), TIME_OUT_CLK, "DCAM_CFG: polling dcam clock status");	
+	        cmd = JPG_READ_REG(JPG_GLB_REG_BASE+GLB_CTRL_OFFSET, "DCAM_CFG: allow software to access the vsp buffer");
+	        cmd |= (1<<2);		
+	        JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_CTRL_OFFSET, cmd, "DCAM_CFG: allow software to access the vsp buffer");
+	        time_out_flag = JPG_READ_REG_POLL(JPG_GLB_REG_BASE+GLB_CTRL_OFFSET, (1<<8), (1<<8), TIME_OUT_CLK, "DCAM_CFG: polling dcam clock status");
 
 		if(time_out_flag != 0)
 		{
@@ -130,7 +126,7 @@ PUBLIC JPEG_RET_E JPEGFW_AdjustQuantTbl_Dec()
 				index2 = jpeg_fw_ASIC_DCT_Matrix[i+1];	/*lint !e661 */
 				
 				tmp = ((quant_tbl_current[index1] & 0xFFFF) | (quant_tbl_current[index2]<<16));
-				VSP_WRITE_REG(qtable_addr, tmp, "INV_QUANT_TAB_ADDR: Write Qtalbe into Qbuffer");
+				JPG_WRITE_REG(qtable_addr, tmp, "INV_QUANT_TAB_ADDR: Write Qtalbe into Qbuffer");
 				qtable_addr += 4;		
 			#if _CMODEL_
 				{
@@ -141,11 +137,11 @@ PUBLIC JPEG_RET_E JPEGFW_AdjustQuantTbl_Dec()
 			#endif//_CMODEL_	
 			}
 		}
-		
-		cmd = (0<<4) | (1<<3);		//allow hardware to access the vsp buffer
-		VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, cmd, "DCAM_CFG: configure DCAM register");
-		
-		time_out_flag = VSP_READ_REG_POLL(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, 0, 0, TIME_OUT_CLK, "DCAM_CFG: polling dcam clock status");
+
+        	cmd = JPG_READ_REG(JPG_GLB_REG_BASE+GLB_CTRL_OFFSET, "DCAM_CFG: allow hardware to access the vsp buffer");
+	        cmd = (cmd & ~0x4) ;
+	        JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_CTRL_OFFSET, cmd, "DCAM_CFG: allow hardware to access the vsp buffer");
+	        time_out_flag = JPG_READ_REG_POLL (JPG_GLB_REG_BASE+GLB_CTRL_OFFSET, 0, 0, TIME_OUT_CLK, "DCAM_CFG: polling dcam clock status");
 
 		if(time_out_flag != 0)
 		{

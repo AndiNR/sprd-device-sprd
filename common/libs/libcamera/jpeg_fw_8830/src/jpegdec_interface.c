@@ -15,7 +15,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8825_video_header.h"
+#include "sc8830_video_header.h"
 
 #if !defined(_SIMULATION_)
 //#include "os_api.h"
@@ -132,10 +132,10 @@ PUBLIC JPEG_RET_E JPEG_HWDecInit(JPEG_DEC_INPUT_PARA_T *jpeg_dec_input)
 	if(!jpeg_fw_codec->progressive_mode)
 	{
 		//init vsp global register.
-		JpegDec_VspTopRegCfg();
+		JpegDec_HwTopRegCfg();
 			
 		/*enable sub module*/
-		JpegDec_VspSubModuleCfg(jpeg_dec_input->header_len);
+		JpegDec_HwSubModuleCfg(jpeg_dec_input->header_len);
 
 		if(bNeedInit)
 		{
@@ -217,7 +217,8 @@ PUBLIC JPEG_RET_E JPEG_HWDecStart(uint32 num_of_rows, JPEG_DEC_OUTPUT_PARA_T *ou
 		JPEG_TRACE("Invalid scale down factor, which must be 0 ~ 1\n");
 		return JPEG_FAILED;
 	}
-	
+
+#if 0	
 {
 	uint32 y_addr = (uint32)(jpeg_fw_codec->YUV_Info_0.y_data_ptr);
 	uint32 u_addr = (uint32)(jpeg_fw_codec->YUV_Info_0.u_data_ptr);
@@ -227,14 +228,15 @@ PUBLIC JPEG_RET_E JPEG_HWDecStart(uint32 num_of_rows, JPEG_DEC_OUTPUT_PARA_T *ou
 	//uint32 endian_sel = 0;
 	
 		//now, for uv_interleaved
-	cmd >>= 2; //word unit
+//	cmd >>= 2; //word unit
 	//endian_sel = VSP_READ_REG(VSP_AHBM_REG_BASE+AHBM_ENDAIN_SEL_OFFSET, "red endian sel offset");		//add by shan.he
-	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_ENDAIN_SEL_OFFSET, (cmd), "configure yu offset");
+//	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_ENDAIN_SEL_OFFSET, (cmd), "configure yu offset");
 	//SCI_TRACE_LOW("JPEG_HWDecStart: endian:d.\n ", endian_sel);
 /*3plane */
-	cmd = (((v_addr - u_addr)>> 2))&0x3fffffff; //word unit
-	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_V_ADDR_OFFSET, cmd, "configure uv offset");
-}	
+//	cmd = (((v_addr - u_addr)>> 2))&0x3fffffff; //word unit
+//	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_V_ADDR_OFFSET, cmd, "configure uv offset");
+}
+#endif
 	
 	if(!jpeg_fw_codec->progressive_mode)
 	{
@@ -257,11 +259,11 @@ PUBLIC JPEG_RET_E JpegDec_FwReadoutDecInfo(uint32 *bitstrm_byte_offset_ptr, uint
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGDecCodec();
 	JPEG_RET_E ret = JPEG_SUCCESS;
 
-	VSP_READ_REG_POLL(VSP_DBK_REG_BASE+DBK_VDB_BUF_ST_OFF, 0x4, 0x4, TIME_OUT_CLK, "polling the jpeg decoding end!");
+	JPG_READ_REG_POLL(JPG_MBIO_REG_BASE+BUF_STS_OFFSET, 0x4, 0x4, TIME_OUT_CLK, "polling the jpeg decoding end!");
 
-	jpeg_fw_codec->restart_mcu_cnt = VSP_READ_REG(VSP_VLD_REG_BASE+VLD_JPEG_RESTART_MCU_CNT_OFFSET, "get restart_mcu_cnt");	
-	jpeg_fw_codec->dc_pred_y = VSP_READ_REG(VSP_VLD_REG_BASE+VLD_JPEG_DC_Y_OFFSET, "readout DC_PRED for Y");
-	jpeg_fw_codec->dc_pred_uv = VSP_READ_REG(VSP_VLD_REG_BASE+VLD_JPEG_DC_UV_OFFSET, "readout DC_PRED for UV");
+	jpeg_fw_codec->restart_mcu_cnt = JPG_READ_REG(JPG_VLD_REG_BASE+JPEG_RESTART_MCU_CNT_OFFSET, "get restart_mcu_cnt");	
+	jpeg_fw_codec->dc_pred_y = JPG_READ_REG(JPG_VLD_REG_BASE+JPEG_DC_Y_OFFSET, "readout DC_PRED for Y");
+	jpeg_fw_codec->dc_pred_uv = JPG_READ_REG(JPG_VLD_REG_BASE+JPEG_DC_UV_OFFSET, "readout DC_PRED for UV");
 
 	//get bitstream_offset
 	ret = JpegDec_GetBsBitOffset(bitstrm_bfr_switch_cnt);
@@ -273,8 +275,9 @@ PUBLIC JPEG_RET_E JpegDec_FwReadoutDecInfo(uint32 *bitstrm_byte_offset_ptr, uint
 	return ret;
 }
 
-PUBLIC void JPEGDEC_HWUpdateMEABufInfo(void)
+PUBLIC void JPEGDEC_HWUpdateMBIOBufInfo(void)
 {
+#if 0   //NOT NEED config uv_offset on SHARK.
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGDecCodec();
 	uint32 y_addr = (uint32)(jpeg_fw_codec->YUV_Info_1.y_data_ptr);
 	uint32 u_addr = (uint32)(jpeg_fw_codec->YUV_Info_1.u_data_ptr);
@@ -291,10 +294,11 @@ PUBLIC void JPEGDEC_HWUpdateMEABufInfo(void)
 */
 	cmd >>= 2; //word unit
 	
-	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_ENDAIN_SEL_OFFSET, (cmd), "configure yu offset");
+//	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_ENDAIN_SEL_OFFSET, (cmd), "configure yu offset");
 	
 /*	cmd = (((v_addr - u_addr)>> 2))&0x3fffffff; //word unit
 	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_V_ADDR_OFFSET, cmd, "configure uv offset");*/
+#endif
 }
 
 /*decode the defined number of MCU under frame mode*/
@@ -349,12 +353,12 @@ PUBLIC JPEG_RET_E JPEG_HWDecStartMCUSynchro(uint32 num_of_rows, JPEG_DEC_OUTPUT_
 
 	//VSP_CFG1
 	cmd =(jpeg_fw_codec->input_mcu_info<<24) | ((jpeg_fw_codec->mcu_num_y & 0x3ff) << 12) | (jpeg_fw_codec->mcu_num_x & 0x3ff);
-	VSP_WRITE_REG(VSP_GLB_REG_BASE+GLB_CFG1_OFF, cmd, "VSP_CFG1: input mcu info, slice mcu number x and y");	
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+MB_CFG_OFFSET, cmd, "VSP_CFG1: input mcu info, slice mcu number x and y");	
 
 	//BSM Module cfg
-	pingpang_buf_status = ((jpeg_fw_codec->stream_buf0_valid<<1) | (jpeg_fw_codec->stream_buf1_valid));
+	pingpang_buf_status = ((jpeg_fw_codec->bsm_buf0_valid<<1) | (jpeg_fw_codec->bsm_buf1_valid));
 	cmd = ((uint32)pingpang_buf_status<<30) | ((jpeg_fw_codec->pingpang_buf_len+3) >> 2);
-	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG0_OFF, cmd, "BSM_CFG0: buffer0 for read, and the buffer size");
+	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_CFG0_OFFSET, cmd, "BSM_CFG0: buffer0 for read, and the buffer size");
 #if _CMODEL_
 	g_bs_pingpang_bfr0 = jpeg_fw_codec->stream_0;
 	g_bs_pingpang_bfr1 = jpeg_fw_codec->stream_1;
@@ -362,26 +366,26 @@ PUBLIC JPEG_RET_E JPEG_HWDecStartMCUSynchro(uint32 num_of_rows, JPEG_DEC_OUTPUT_
 #endif
 
 	//polling bsm status
-	VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_DEBUG_OFF, ((uint32)1<<31), ((uint32)1<<31), TIME_OUT_CLK, "BSM_DEBUG: polling bsm status");
+	JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_STS0_OFFSET, ((uint32)1<<31), ((uint32)1<<31), TIME_OUT_CLK, "BSM_DEBUG: polling bsm status");
 	
 	//JPEG_PRINT("[JPEG_HWDecStartMCUSynchro] slice_mcu_num =d, remained_mcu_num =d", slice_mcu_num, remained_mcu_num);
 
-	/*start mbc and dbk*/
-	cmd = ((jpeg_fw_codec->dbk_bfr1_valid<<1)|(jpeg_fw_codec->dbk_bfr0_valid));
-	VSP_WRITE_REG(VSP_DBK_REG_BASE+DBK_VDB_BUF_ST_OFF, cmd, "DBK_VDB_BUF_ST: set which mbio buffer is valid now.");
+	/*start mbio*/
+	cmd = ((jpeg_fw_codec->mbio_bfr1_valid<<1)|(jpeg_fw_codec->mbio_bfr0_valid));
+	JPG_WRITE_REG(JPG_MBIO_REG_BASE+BUF_STS_OFFSET, cmd, "DBK_VDB_BUF_ST: set which mbio buffer is valid now.");
 	mbio_total_mcu_num = (jpeg_fw_codec->mcu_num_x*jpeg_fw_codec->mcu_num_y);
 	cmd = mbio_total_mcu_num & 0xffff;
-	VSP_WRITE_REG(VSP_DBK_REG_BASE+DBK_MCU_NUM_OFF, cmd, "DBK_MCU_NUM: configure the total mcu number");
-	VSP_WRITE_REG(VSP_DBK_REG_BASE+DBK_CTR1_OFF, 1, "DBK_CTR1: configure DBK configure finished");
+	JPG_WRITE_REG(JPG_MBIO_REG_BASE+JPEG_TOTAL_MCU_OFFSET, cmd, "VLD_TOTAL_MCU: configure the total mcu number");
+	JPG_WRITE_REG(JPG_MBIO_REG_BASE+CTRL_OFFSET, 1, "VLD_CTRL: configure DBK configure finished");
 
 // 	TM_SendTestPointRequest(0x20090409, 0);
 	
 	//config VLD
-	VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_JPEG_RESTART_MCU_CNT_OFFSET, jpeg_fw_codec->restart_mcu_cnt, "VLD_JPEG_RESTART_MCU_CNT: restart_mcu_cnt");
-	VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_JPEG_RESTART_MCU_INTV_OFFSET, jpeg_fw_codec->restart_interval, "VLD_JPEG_RESTART_MCU_INTV: restart_interval");
+	JPG_WRITE_REG(JPG_VLD_REG_BASE+JPEG_RESTART_MCU_CNT_OFFSET, jpeg_fw_codec->restart_mcu_cnt, "VLD_JPEG_RESTART_MCU_CNT: restart_mcu_cnt");
+	JPG_WRITE_REG(JPG_VLD_REG_BASE+JPEG_RESTART_MCU_INTV_OFFSET, jpeg_fw_codec->restart_interval, "VLD_JPEG_RESTART_MCU_INTV: restart_interval");
 	//config DC pred for Y, U, V
-	VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_JPEG_DC_Y_OFFSET, jpeg_fw_codec->dc_pred_y, "VLD_JPEG_DC_Y: config DC_PRED for Y");
-	VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_JPEG_DC_UV_OFFSET, jpeg_fw_codec->dc_pred_uv, "VLD_JPEG_DC_UV: config DC_PRED for U and V");
+	JPG_WRITE_REG(JPG_VLD_REG_BASE+JPEG_DC_Y_OFFSET, jpeg_fw_codec->dc_pred_y, "VLD_JPEG_DC_Y: config DC_PRED for Y");
+	JPG_WRITE_REG(JPG_VLD_REG_BASE+JPEG_DC_UV_OFFSET, jpeg_fw_codec->dc_pred_uv, "VLD_JPEG_DC_UV: config DC_PRED for U and V");
 #if 0	
 	{
 		uint32 y_addr = (uint32)(jpeg_fw_codec->YUV_Info_0.y_data_ptr);
@@ -394,7 +398,7 @@ PUBLIC JPEG_RET_E JPEG_HWDecStartMCUSynchro(uint32 num_of_rows, JPEG_DEC_OUTPUT_
 			//now, for uv_interleaved
 		cmd >>= 2; //word unit
 		endian_sel = VSP_READ_REG(VSP_AHBM_REG_BASE+AHBM_ENDAIN_SEL_OFFSET, "red endian sel offset");		//add by shan.he
-		VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_ENDAIN_SEL_OFFSET, (cmd<<4)|(endian_sel & 0xf), "configure uv offset");
+		JPG_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_ENDAIN_SEL_OFFSET, (cmd<<4)|(endian_sel & 0xf), "configure uv offset");
 	}	
 #endif
 {
@@ -406,11 +410,11 @@ PUBLIC JPEG_RET_E JPEG_HWDecStartMCUSynchro(uint32 num_of_rows, JPEG_DEC_OUTPUT_
 	
 	//now, for uv_interleaved
 	cmd >>= 2; //word unit
-	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_ENDAIN_SEL_OFFSET, (cmd), "configure yu offset");
+//	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_ENDAIN_SEL_OFFSET, (cmd), "configure yu offset");
 
 	/*3plane */
-	cmd = (((v_addr - u_addr)>> 2))&0x3fffffff; //word unit
-	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_V_ADDR_OFFSET, cmd, "configure uv offset");
+//	cmd = (((v_addr - u_addr)>> 2))&0x3fffffff; //word unit
+//	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_V_ADDR_OFFSET, cmd, "configure uv offset");
 }	
 
 	for(j = 0; j < num_slice; j++)
@@ -419,16 +423,16 @@ PUBLIC JPEG_RET_E JPEG_HWDecStartMCUSynchro(uint32 num_of_rows, JPEG_DEC_OUTPUT_
 
 		//configure the number of mcu vld would process;
 		cmd = slice_mcu_num & 0xfffff;
-		VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_JPEG_CFG0_OFFSET, cmd, "VLD_JPEG_CFG0: configure total mcu number in this slice");
-		VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_CTL_OFFSET, 1, "VLD_CTL: Stard VLD Module");
+		JPG_WRITE_REG(JPG_VLD_REG_BASE+JPEG_TOTAL_MCU_OFFSET, cmd, "VLD_TOTAL_MCU: configure total mcu number in this slice");
+		JPG_WRITE_REG(JPG_VLD_REG_BASE+VLD_CTRL_OFFSET, 1, "VLD_CTRL: Stard VLD Module");
 
 		vsp_time_out_cnt = 0;
 		
-		while((decode_mcu_num < (slice_mcu_num * (j+1))) || VSP_AXIM_IsBusy)
+		while((decode_mcu_num < (slice_mcu_num * (j+1)))/* || VSP_AXIM_IsBusy*/)
 		{
 			//SCI_Sleep(3);
 			
-			if(VSP_VLD_IsError)
+			if(JPG_VLD_IsError)
 			{
 				//JPEG_PRINT("[JPEG_HWDecStartMCUSynchro] decode error, slice =d", j);
 				return JPEG_FAILED;
@@ -441,7 +445,7 @@ PUBLIC JPEG_RET_E JPEG_HWDecStartMCUSynchro(uint32 num_of_rows, JPEG_DEC_OUTPUT_
 			}
 			vsp_time_out_cnt++;
 
-			decode_mcu_num = VSP_DBK_MCU_X + VSP_DBK_MCU_Y * jpeg_fw_codec->mcu_num_x;
+			decode_mcu_num = JPG_MBIO_MCU_X + JPG_MBIO_MCU_Y * jpeg_fw_codec->mcu_num_x;
 		}
 	}
 
@@ -451,15 +455,15 @@ PUBLIC JPEG_RET_E JPEG_HWDecStartMCUSynchro(uint32 num_of_rows, JPEG_DEC_OUTPUT_
 	//never use the decoded mcu number because that register will be cleared once the decoding has done
 	//configure the number of mcu vld would process;
 	cmd = remained_mcu_num & 0xfffff;
-	VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_JPEG_CFG0_OFFSET, cmd, "VLD_JPEG_CFG0: configure total mcu number in this slice");
-	VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_CTL_OFFSET, 1, "VLD_CTL: Stard VLD Module");
+	JPG_WRITE_REG(JPG_VLD_REG_BASE+JPEG_TOTAL_MCU_OFFSET, cmd, "VLD_TOTAL_MCU: configure total mcu number in this slice");
+	JPG_WRITE_REG(JPG_VLD_REG_BASE+VLD_CTRL_OFFSET, 1, "VLD_CTRL: Stard VLD Module");
 	
 	vsp_time_out_cnt = 0;
-	while(!VSP_DBK_IsJpegDecEnd ||VSP_AXIM_IsBusy)
+	while(!JPG_MBIO_IsJpegDecEnd /*||VSP_AXIM_IsBusy*/)
 	{
 		//SCI_Sleep(3);
 		
-		if(VSP_VLD_IsError)
+		if(JPG_VLD_IsError)
 		{
 			//JPEG_PRINT("[JPEG_HWDecStartMCUSynchro] decode error, last slice");
 			return JPEG_FAILED;
