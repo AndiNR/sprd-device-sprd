@@ -1216,7 +1216,7 @@ LOCAL uint32_t _ov5648_ExtFunc(uint32_t ctl_param)
 	return rtn;
 }
 
-LOCAL uint32_t _ov5648_BeforeSnapshot(uint32_t param)
+LOCAL uint32_t _ov5648_PreBeforeSnapshot(uint32_t param)
 {
 	uint8_t ret_l, ret_m, ret_h;
 	uint32_t capture_exposure, preview_maxline;
@@ -1291,6 +1291,19 @@ LOCAL uint32_t _ov5648_BeforeSnapshot(uint32_t param)
 	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_EXPOSURETIME, capture_exposure);
 
 	return SENSOR_SUCCESS;
+}
+
+LOCAL uint32_t _ov5648_BeforeSnapshot(uint32_t param)
+{
+	uint32_t cap_mode = (param>>CAP_MODE_BITS);
+	uint32_t rtn = SENSOR_SUCCESS;
+
+	param = param & 0xffff;
+	SENSOR_PRINT("%d,%d.",cap_mode,param);
+
+	rtn = _ov5648_PreBeforeSnapshot(param);
+
+	return rtn;
 }
 
 LOCAL uint32_t _ov5648_after_snapshot(uint32_t param)
