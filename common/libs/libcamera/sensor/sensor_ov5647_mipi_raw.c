@@ -1186,7 +1186,8 @@ LOCAL uint32_t _ov5647_BeforeSnapshot(uint32_t param)
 	uint32_t capture_maxline, preview_exposure;
 	uint32_t gain = 0, value = 0;
 	uint32_t prv_linetime=s_ov5647_Resolution_Trim_Tab[SENSOR_MODE_PREVIEW_ONE].line_time;
-	uint32_t cap_linetime = s_ov5647_Resolution_Trim_Tab[param].line_time;
+	uint32_t cap_linetime = s_ov5647_Resolution_Trim_Tab[(param&0xffff)].line_time;
+	param = param & 0xffff;
 
 	SENSOR_PRINT("SENSOR_OV5647: BeforeSnapshot moe: %d",param);
 
