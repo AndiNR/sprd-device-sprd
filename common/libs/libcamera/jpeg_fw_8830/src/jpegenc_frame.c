@@ -15,7 +15,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8825_video_header.h"
+#include "sc8830_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -30,7 +30,7 @@
 #if _CMODEL_
 void JPEG_EncodeMCU(void)
 {
-	mea_module();
+	mbio_module();
 	dct_module();
 	vlc_module();
 }
@@ -51,14 +51,14 @@ void START_SW_ENCODE(uint16 total_mcu_num)
 
 //	JPEG_CallBack_Frame_To_MCU CopyMCUToCoeff;
 
-	if(JpegCodec->mea_bfr1_valid)
+	if(JpegCodec->mbio_bfr1_valid)
 	{
 		y_coeff = JpegCodec->YUV_Info_1.y_data_ptr;
 		u_coeff = JpegCodec->YUV_Info_1.u_data_ptr;
 		v_coeff = JpegCodec->YUV_Info_1.v_data_ptr;
 	}
 
-	g_mea_reg_ptr->MEA_CFG2 = 0; //reset!
+//	g_mea_reg_ptr->MEA_CFG2 = 0; //reset!
 	
 	switch(JpegCodec->input_mcu_info) 
 	{
@@ -132,7 +132,7 @@ void START_SW_ENCODE(uint16 total_mcu_num)
 		JPEG_TRACE("JPEG encoding Finished...\n\n");
 	}
 
-	MEA_INT_PROC();
+	MBIO_INT_PROC();
 }
 #endif //_CMODEL_
 
@@ -145,18 +145,18 @@ PUBLIC void START_HW_ENCODE(uint16 total_mcu_num)
 	if(ALONE_MODE == jpeg_fw_codec->work_mode)
 	{
 		cmd = ((jpeg_fw_codec->mcu_num_y * jpeg_fw_codec->mcu_num_x)  & 0x1ffff);
-		VSP_WRITE_REG(VSP_VLC_REG_BASE+VLC_CFG_OFF, cmd, "VLC_CFG_OFF: total mcu number");
+		JPG_WRITE_REG(JPG_VLC_REG_BASE+VLC_TOTAL_MCU_OFFSET, cmd, "VLC_CFG_OFF: total mcu number");
 	}else
 	{
 		cmd = (total_mcu_num & 0x1ffff);
-		VSP_WRITE_REG(VSP_VLC_REG_BASE+VLC_CFG_OFF, cmd, "VLC_CFG_OFF: total mcu number of current slice");
+		JPG_WRITE_REG(JPG_VLC_REG_BASE+VLC_TOTAL_MCU_OFFSET, cmd, "VLC_CFG_OFF: total mcu number of current slice");
 	}
 	
 	/*start MEA*/
-	VSP_WRITE_REG(VSP_MEA_REG_BASE+MEA_MCU_NUM_OFF, total_mcu_num, "MEA_MCU_NUM: total mcu number");
+	JPG_WRITE_REG(JPG_MBIO_REG_BASE+MCU_NUM_OFFSET, total_mcu_num&0xfffff, "MEA_MCU_NUM: total mcu number");
 	//hardware will auto switch mbio bfr between 0 and 1. sw can't interfere. but sw should fill the corresponding mbio bfr for hw. xiaowei@20090417
-	VSP_WRITE_REG(VSP_MEA_REG_BASE+MEA_VDB_BUF_ST_OFF, 1, "DBK_VDB_BUF_ST: buf0 is valid now");
-	VSP_WRITE_REG(VSP_MEA_REG_BASE+MEA_CTRL_OFF, 1, "MEA_CTRL:  sw is ready for mea start");
+	JPG_WRITE_REG(JPG_MBIO_REG_BASE+BUF_STS_OFFSET, 1, "BUF_STS: buf0 is valid now");
+	JPG_WRITE_REG(JPG_MBIO_REG_BASE+CTRL_OFFSET, 1, "MBIO_CTRL:  sw is ready for mea start");
 	
 #if _CMODEL_
 	START_SW_ENCODE(total_mcu_num);

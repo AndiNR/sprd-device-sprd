@@ -27,10 +27,10 @@
 #endif
 
 PUBLIC JPEG_RET_E JPEG_FWInitDecInput(JPEG_DEC_INPUT_PARA_T *jpeg_dec_input);
-PUBLIC void JpegDec_VspTopRegCfg(void);
-PUBLIC void JpegDec_VspSubModuleCfg(uint32 header_length);
+PUBLIC void JpegDec_HwTopRegCfg(void);
+PUBLIC void JpegDec_HwSubModuleCfg(uint32 header_length);
 PUBLIC void JPEGFW_AllocMCUBuf(void);
-PUBLIC void JpegDec_VspTopUpdateYUVAddr(uint32 y_phy_addr,uint32_t u_phy_addr);
+PUBLIC void JpegDec_HwTopUpdateYUVAddr(uint32 y_phy_addr,uint32_t u_phy_addr,uint32_t v_phy_addr);
 
 
 /**---------------------------------------------------------------------------*

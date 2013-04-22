@@ -27,10 +27,10 @@
 #endif
 
 PUBLIC JPEG_RET_E JpegEnc_InitParam(JPEG_ENC_INPUT_PARA_T *input_para_ptr);
-PUBLIC void JpegEnc_VspTopRegCfg(void);
-PUBLIC void JpegEnc_VspSubModuleCfg(void);
+PUBLIC void JpegEnc_HwTopRegCfg(void);
+PUBLIC void JpegEnc_HwSubModuleCfg(void);
 PUBLIC void JpegEnc_QTableCfg(void);
-PUBLIC void JpegEnc_VspTopUpdateYUVAddr(uint32 y_phy_addr,uint32_t u_phy_addr);
+PUBLIC void JpegEnc_HwTopUpdateYUVAddr(uint32 y_phy_addr,uint32_t u_phy_addr,uint32_t v_phy_addr);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

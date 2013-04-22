@@ -122,6 +122,9 @@ Only the three quirks included above are recognized at this point:
     </Decoders>
 
     <Encoders>
+ 	<MediaCodec name="OMX.sprd.mpeg4.encoder" type="video/mp4v-es" />
+        <MediaCodec name="OMX.sprd.h263.encoder" type="video/3gpp" />
+
         <MediaCodec name="OMX.PV.mpeg4enc" type="video/mp4v-es" />
         <MediaCodec name="OMX.PV.h263enc" type="video/3gpp" />
 

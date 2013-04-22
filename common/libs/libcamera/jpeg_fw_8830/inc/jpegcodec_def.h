@@ -236,12 +236,10 @@ typedef struct jpeg_codec_tag
 	uint8 			using_default_quant_tab;
 	uint8			work_mode; //0: only decoder/encoder, 1: switch decoder and encoder.
 	
-	BOOLEAN			dbk_bfr0_valid; //0: invalid, 1: valid
-	BOOLEAN			dbk_bfr1_valid; //0: invalid, 1: valid
-	BOOLEAN			mea_bfr0_valid; //0: invalid, 1: valid
-	BOOLEAN			mea_bfr1_valid; //0: invalid, 1: valid
-	BOOLEAN 		stream_buf0_valid;//0: invalid, 1: valid
-	BOOLEAN			stream_buf1_valid;//0: invalid, 1: valid
+	BOOLEAN			mbio_bfr0_valid; //0: invalid, 1: valid
+	BOOLEAN			mbio_bfr1_valid; //0: invalid, 1: valid
+	BOOLEAN 		bsm_buf0_valid;//0: invalid, 1: valid
+	BOOLEAN			bsm_buf1_valid;//0: invalid, 1: valid
 
 	BOOLEAN			is_first_slice;
 	BOOLEAN			is_last_slice;

@@ -15,7 +15,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8825_video_header.h"
+#include "sc8830_video_header.h"
 
 #if !defined(_SIMULATION_)
 //#include "os_api.h"
@@ -63,11 +63,11 @@ extern void VLD_ERROR_INT_PROC(void);
 /************************************************************************/
 /* JPEG_HW_Cfg, Enable top reg                                          */
 /************************************************************************/
-PUBLIC void JpegDec_VspTopRegCfg(void)
+PUBLIC void JpegDec_HwTopRegCfg(void)
 {
 	uint32 cmd = 0;
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGDecCodec();
-	uint32 pTableAddr = (uint32)VSP_MEMO10_ADDR;
+//	uint32 pTableAddr = (uint32)VSP_MEMO10_ADDR;
 	uint32 int_mask = 0;
 	uint32 endian_sel = 0;
 
@@ -81,22 +81,32 @@ PUBLIC void JpegDec_VspTopRegCfg(void)
 	VSP_Reset();
 #else
 	//backup the INT mask register for the VSP reset will clear it
-	int_mask = VSP_READ_REG(VSP_DCAM_REG_BASE+DCAM_INT_MASK_OFF, "DCAM_INT_MASK: read INT bit");
+	int_mask = JPG_READ_REG(JPG_GLB_REG_BASE+GLB_INT_EN_OFFSET, "GLB_INT_EN_OFFSET: read INT bit");
 
-	JPEG_TRACE("[JpegDec_VspTopRegCfg] int mask = 0x%x", int_mask);
+	JPEG_TRACE("[JpegDec_HwTopRegCfg] int mask = 0x%x", int_mask);
 
 	/*reset vsp*/
-	VSP_Reset();
+	JPG_Reset();
 #endif
 
 	//DCAM init
-	cmd = (1<<3);
-	VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, cmd, "DCAM_CFG: DCAM init");
+	cmd = (1<<0);
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_CTRL_OFFSET, cmd, "DCAM_CFG: DCAM init");
+
+        cmd = (jpeg_fw_codec->c_width & 0x1fff);
+        JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_PITCH_OFFSET, cmd, "configure jpeg pitch, pixel unit");
+
+        //Clear INT
+        JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_INT_CLR_OFFSET, cmd, "GLB_INT_CLR_OFFSET: clear related INT bit");
+
+        //INT Enable
+        JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_INT_EN_OFFSET, cmd, "GLB_INT_EN_OFFSET: enable related INT bit");
+
 
 #if defined(_VSP_) && defined(SMALL_SYS)
 	//enable dcam interrupt
-	//*(volatile uint32 *)0x80003008 |= (1<<23);	//In 8800G, the interrupt enable bit is BIT23. (SC6600L: BIT26)
-	*(volatile uint32 *)0x40004008 |= (1<<7);	//modified by leon @2012.09.27
+	*(volatile uint32 *)0x71300000 |= (1<<20);	//INTC1 enable
+	*(volatile uint32 *)0x71500008 |= (1<<10);	//JPEG interrupt is bit10 of INTC1  42
 #endif
 
 	//INT Enable
@@ -104,80 +114,83 @@ PUBLIC void JpegDec_VspTopRegCfg(void)
 	{
 #if 0
 		cmd = (1 << 7) | (1 << 9) | (1 << 13);
-		VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_INT_MASK_OFF, cmd, "DCAM_INT_MASK: enable related INT bit");
+		JPG_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_INT_MASK_OFF, cmd, "DCAM_INT_MASK: enable related INT bit");
 #else
 		//restore the INT mask register
-		VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_INT_MASK_OFF, int_mask, "DCAM_INT_MASK: enable related INT bit");
-		JPEG_TRACE("[JpegDec_VspTopRegCfg] after reset, int mask = 0x%x", VSP_READ_REG(VSP_DCAM_REG_BASE+DCAM_INT_MASK_OFF, "DCAM_INT_MASK: read INT bit"));
+		JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_INT_EN_OFFSET, int_mask, "GLB_INT_EN_OFFSET: enable related INT bit");
+		JPEG_TRACE("[JpegDec_HwTopRegCfg] after reset, int mask = 0x%x", JPG_READ_REG(JPG_GLB_REG_BASE+GLB_INT_EN_OFFSET, "DCAM_INT_MASK: read INT bit"));
 #endif
 	}
 	else
 	{
 		//clear all INTs while decoding SJPG
 		int_mask = 0;
-		VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_INT_MASK_OFF, int_mask, "DCAM_INT_MASK: enable related INT bit");
+		JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_INT_EN_OFFSET, int_mask, "GLB_INT_EN_OFFSET: enable related INT bit");
 	}
 
-	JPEG_TRACE("[JpegDec_VspTopRegCfg] after reset, int mask = 0x%x", VSP_READ_REG(VSP_DCAM_REG_BASE+DCAM_INT_MASK_OFF, "DCAM_INT_MASK: read INT bit"));
+	JPEG_TRACE("[JpegDec_HwTopRegCfg] after reset, int mask = 0x%x", JPG_READ_REG(JPG_GLB_REG_BASE+GLB_INT_EN_OFFSET, "DCAM_INT_MASK: read INT bit"));
 
 #if defined(_VSP_) && defined(SMALL_SYS)
 	//init int
 	DCAMMODULE_Init();
 
+        //INT Enable
+        *(volatile uint32 *)0x60b00024 |= (1 << 3) | (1 << 2);
+
 	//register the int fun;
 	DCAMMODULE_RegisterIntFunc(VSP_BSM_DONE_ID, BSM_INT_PROC);
 	DCAMMODULE_RegisterIntFunc(VSP_MBIO_DOEN_ID, MBIO_INT_PROC);
-	DCAMMODULE_RegisterIntFunc(VSP_TIMEOUT_ID, TIME_OUT_INT_PROC);
-	DCAMMODULE_RegisterIntFunc(VSP_VLD_ERROR_ID, VLD_ERROR_INT_PROC);
+//	DCAMMODULE_RegisterIntFunc(VSP_TIMEOUT_ID, TIME_OUT_INT_PROC);
+//	DCAMMODULE_RegisterIntFunc(VSP_VLD_ERROR_ID, VLD_ERROR_INT_PROC);
 #endif
 
-	open_vsp_iram();
+//	open_vsp_iram();
 #if _CMODEL_
-	VSP_WRITE_REG(pTableAddr+ 0, DEC_FRAME0_Y>>8, "Reconstructed Y0 frame buffer ");
-	VSP_WRITE_REG(pTableAddr+ 4, DEC_FRAME1_Y>>8, "Reconstructed Y1 Frame buffer ");
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR0_OFFSET, DEC_FRAME0_Y, "Reconstructed Y0 frame buffer ");
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+ GLB_FRM_ADDR1_OFFSET, DEC_FRAME0_UV, "Reconstructed UV0 Frame buffer ");
 
-	//decoded bitstream addr0 and addr1
-	VSP_WRITE_REG(pTableAddr+ 8, BIT_STREAM_DEC_0>>8, "Decoded bit stream buffer0 ");
-	VSP_WRITE_REG(pTableAddr+ 12, BIT_STREAM_DEC_1>>8, "Decoded bit stream buffer1 ");
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR2_OFFSET, DEC_FRAME1_Y, "Reconstructed Y1 frame buffer ");
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+ GLB_FRM_ADDR3_OFFSET, DEC_FRAME1_UV, "Reconstructed UV1 Frame buffer ");
+
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+ GLB_FRM_ADDR4_OFFSET, BIT_STREAM_DEC_0>>2, "Decoded bit stream buffer0 ");
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+ GLB_FRM_ADDR5_OFFSET, BIT_STREAM_DEC_1>>2, "Decoded bit stream buffer1 ");
 #else
 	JPEG_TRACE("jpeg_fw_codec->YUV_Info_0.y_data_ptr 0x%x YUV_Info_1.y_data_ptr 0x%x",
 		jpeg_fw_codec->YUV_Info_0.y_data_ptr,
 		jpeg_fw_codec->YUV_Info_1.y_data_ptr);
 
-	JPEG_TRACE("pTableAddr 0x%x", pTableAddr);
-	VSP_WRITE_REG(pTableAddr+ 0, (uint32)(jpeg_fw_codec->YUV_Info_0.y_data_ptr)>>2, "Reconstructed Y0 frame buffer ");
-	VSP_WRITE_REG(pTableAddr+ 4, (uint32)(jpeg_fw_codec->YUV_Info_1.y_data_ptr)>>2, "Reconstructed Y1 Frame buffer ");
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR0_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_0.y_data_ptr), "Reconstructed Y0 frame buffer ");
+    	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR1_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_0.u_data_ptr), "Reconstructed U0 frame buffer ");
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR6_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_0.v_data_ptr), "Reconstructed V0 frame buffer ");
+
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR2_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_1.y_data_ptr), "Reconstructed Y1 frame buffer ");
+    	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR3_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_1.u_data_ptr), "Reconstructed U1 frame buffer ");
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR7_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_1.v_data_ptr), "Reconstructed V1 frame buffer ");
 
 // 	VSP_WRITE_REG (VSP_AHBM_REG_BASE+AHBM_BASE_ADDR_OFFSET, (uint32)jpeg_fw_codec->stream_0>>26, "AHBM_BASE_ADDR: PSRAM base address offset");
 
 	//decoded bitstream addr0 and addr1
-	VSP_WRITE_REG(pTableAddr+ 8, (uint32)(jpeg_fw_codec->stream_0)>>2, "Decoded bit stream buffer0 ");
-	VSP_WRITE_REG(pTableAddr+ 12, (uint32)(jpeg_fw_codec->stream_1)>>2, "Decoded bit stream buffer1 ");//modified by leon @2012.09.27
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR4_OFFSET, (uint32)(jpeg_fw_codec->stream_0), "Decoded bit stream buffer0 ");
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR5_OFFSET, (uint32)(jpeg_fw_codec->stream_1), "Decoded bit stream buffer1 ");//modified by leon @2012.09.27
 #endif//_CMODEL_
 
-	close_vsp_iram();
+//	close_vsp_iram();
 
-	cmd =(1<<17)| (0 << 15) | (0 << 14)| (1 << 12) | (JPEG << 8) | (1 << 7) | (1 << 6) | (1 << 3) | (1 << 1) | (1 << 0);
-	VSP_WRITE_REG(VSP_GLB_REG_BASE+GLB_CFG0_OFF, cmd, "VSP_CFG0: enable submodule, JPEG standard");
+	cmd =(0<<6)| (1 << 4) | (1 << 2)| (0 << 1) | (1 << 0);
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_CTRL_OFFSET, cmd, "GLB_CTRL: enable JPEG decoder");
 
-	cmd = ((uint32)0xffff << 0) | (0 << 16);
-	VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_VSP_TIME_OUT_OFF, cmd, "DCAM_VSP_TIME_OUT: disable hardware timer out");
+        jpeg_fw_codec->uv_interleaved = (jpeg_fw_codec->YUV_Info_0.v_data_ptr == NULL) ? 1 : 0;
+        cmd = (((!jpeg_fw_codec->uv_interleaved) << 27)) | (jpeg_fw_codec->input_mcu_info << 24) | ((jpeg_fw_codec->mcu_num_y & 0x3ff) << 12) | (jpeg_fw_codec->mcu_num_x & 0x3ff);
+        JPG_WRITE_REG(JPG_GLB_REG_BASE+MB_CFG_OFFSET, cmd, "uv_interleaved, input mcu infor, mcu max number x and y");
+
+//	cmd = ((uint32)0xffff << 0) | (0 << 16);
+//	VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_VSP_TIME_OUT_OFF, cmd, "DCAM_VSP_TIME_OUT: disable hardware timer out");
 
 //set the interval of mcu decoding
-	cmd = (jpeg_fw_codec->YUV_Info_0.v_data_ptr == NULL)?0:1;//1    //0: uv_interleaved, two plane, 1: three plane
-	cmd = (cmd<<27);
-	cmd |= 0x1ff;
-#if 1
-	cmd  |= (1<<18)|(1<<21);
-#endif
-
-	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_BURST_GAP_OFFSET, cmd, "configure AHB register: BURST_GAP, and frame_mode");
-
-	//now, for uv_interleaved
-	cmd = ((jpeg_fw_codec->c_height>>jpeg_fw_codec->scale_factor) * (jpeg_fw_codec->c_width>>jpeg_fw_codec->scale_factor))>>2; //word unit
-
-	//endian_sel = 0x5;
-	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_ENDAIN_SEL_OFFSET, (cmd), "configure uv offset");
+	cmd = (jpeg_fw_codec->YUV_Info_0.v_data_ptr == NULL)?1:0;//1    //1: uv_interleaved, two plane, 0: three plane
+	cmd = (cmd<<8)|0xff;
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+BUS_GAP_OFFSET, cmd, "configure AHB register: BURST_GAP, and frame_mode");
+        JPG_WRITE_REG(JPG_GLB_REG_BASE+BUS_GAP_OFFSET, 0, "BUS_GAP: 0");
 
 	return;
 }
@@ -187,33 +200,33 @@ uint32 head_byte_len;
 /************************************************************************/
 /* Enable sub module                                                    */
 /************************************************************************/
-PUBLIC void JpegDec_VspSubModuleCfg(uint32 header_length)
+PUBLIC void JpegDec_HwSubModuleCfg(uint32 header_length)
 {
 	uint32 cmd = 0;
 	uint32 down_sample_setting = DOWN_SAMPLE_DIS;
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGDecCodec();
 
 	//Source Size init
-	cmd = (((jpeg_fw_codec->c_height>>jpeg_fw_codec->scale_factor) & 0x0fff)<<16) | ((jpeg_fw_codec->c_width>>jpeg_fw_codec->scale_factor) & 0x0fff);
-	VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_SRC_SIZE_OFF, cmd, "DCAM_DCAM_SRC_SZIE: configure DCAM Source size");
+	cmd = (((jpeg_fw_codec->c_height) & 0x01fff)<<16) | ((jpeg_fw_codec->c_width) & 0x01fff);
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_PITCH_OFFSET, cmd, "YUV data storage pitch in memory, it is equal to image width normally");
 
 	///1. enable de-stuffing
 	///2. reconfigure current address of source bit stream buffer0, word align(the unit is word)
-	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG1_OFF, (uint32)1<<31, "BSM_CFG1 enable de-stuffing, and reset the bitstream address"); /*lint !e569*/
+	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_CFG1_OFFSET, (uint32)1<<31, "BSM_CFG1: bitstream offset address"); /*lint !e569*/
 	cmd = ((jpeg_fw_codec->pingpang_buf_len+3) >> 2);
-	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG0_OFF, cmd, "BSM_CFG0: buffer0 for read, and the buffer size");
+	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_CFG0_OFFSET, cmd, "BSM_CFG0: buffer0 for read, and the buffer size");
 
 #if 1
 	head_byte_len = header_length;
 #endif
 	//VLD Module cfg
 	cmd = ((jpeg_fw_codec->mcu_num_y * jpeg_fw_codec->mcu_num_x)  & 0x3ffff );
-	VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_JPEG_CFG0_OFFSET, cmd, "VLD_JPEG_CFG0: total mcu number.");
+	JPG_WRITE_REG(JPG_VLD_REG_BASE+JPEG_TOTAL_MCU_OFFSET, cmd, "VLD_TOTAL_MCU: total mcu number.");
 
 	//DCT Module cfg
 	cmd = (((jpeg_fw_codec->input_mcu_info) & 0x7) << 9) | (DCT_QUANT_EN << 8) | (DCT_AUTO_MODE << 1) | (IDCT_MODE);
-	VSP_WRITE_REG(VSP_DCT_REG_BASE+DCT_CONFIG_OFF, cmd, "DCT_CONFIG: mcu info, quant enable, auto-mode, idct-mode");
-//	VSP_WRITE_REG(VSP_DCT_REG_BASE+DCT_CFG_FINISH_OFF, 1, "DCT_CFG_FINISH: dct config finished");
+	JPG_WRITE_REG(JPG_DCT_REG_BASE+DCT_CFG_OFFSET, cmd, "DCT_CONFIG: mcu info, quant enable, auto-mode, idct-mode");
+	JPG_WRITE_REG(JPG_DCT_REG_BASE+DCT_CFG_DONE_OFFSET, 1, "DCT_CFG_FINISH: dct config finished");
 
 	//MBC Module cfg
 	if(JPEG_SCALING_DOWN_ZERO == jpeg_fw_codec->scale_factor)
@@ -223,11 +236,11 @@ PUBLIC void JpegDec_VspSubModuleCfg(uint32 header_length)
 	{
 		down_sample_setting = DOWN_SAMPLE_EN;
 	}
-	cmd = (jpeg_fw_codec->scale_factor << 12) | (down_sample_setting << 8);
-	VSP_WRITE_REG(VSP_MBC_REG_BASE+MBC_CFG_OFF, cmd, "MBC_CFG: scale factor, down sample setting");
+	cmd = 2;
+	JPG_WRITE_REG(JPG_MBIO_REG_BASE+CFG_OFFSET, cmd, "MBC_CFG: FREE_RUN_MODE");
 
 	//DBK Module cfg
-	VSP_WRITE_REG(VSP_DBK_REG_BASE+DBK_CFG_OFF, (0<<2)|(DBK_RUN_FREE_MODE), "DBK_CFG: disable post-filter and free_run_mode");
+//	VSP_WRITE_REG(VSP_DBK_REG_BASE+DBK_CFG_OFF, (0<<2)|(DBK_RUN_FREE_MODE), "DBK_CFG: disable post-filter and free_run_mode");
 }
 
 /************************************************************************/
@@ -333,10 +346,10 @@ PUBLIC JPEG_RET_E JPEG_FWInitDecInput(JPEG_DEC_INPUT_PARA_T *jpeg_dec_input)
 	jpeg_fw_codec->input_mcu_info			= (uint8)jpeg_dec_input->input_mcu_info;
 	jpeg_fw_codec->work_mode				= (uint8)jpeg_dec_input->work_mode;
 	jpeg_fw_codec->is_first_slice			= jpeg_dec_input->is_first_slice;
-	jpeg_fw_codec->dbk_bfr0_valid			= jpeg_dec_input->dbk_bfr0_valid;
-	jpeg_fw_codec->dbk_bfr1_valid			= jpeg_dec_input->dbk_bfr1_valid;
-	jpeg_fw_codec->stream_buf0_valid		= jpeg_dec_input->stream_buf0_valid;
-	jpeg_fw_codec->stream_buf1_valid		= jpeg_dec_input->stream_buf1_valid;
+	jpeg_fw_codec->mbio_bfr0_valid			= jpeg_dec_input->mbio_bfr0_valid;
+	jpeg_fw_codec->mbio_bfr1_valid			= jpeg_dec_input->mbio_bfr1_valid;
+	jpeg_fw_codec->bsm_buf0_valid		= jpeg_dec_input->bsm_buf0_valid;
+	jpeg_fw_codec->bsm_buf1_valid		= jpeg_dec_input->bsm_buf1_valid;
 	jpeg_fw_codec->compress_level			= jpeg_dec_input->quant_level;
 
 	if(jpeg_dec_input->scaling_down_factor > 2)
@@ -445,21 +458,25 @@ PUBLIC void JPEGFW_AllocMCUBuf(void)
 		}
 	}
 }
-PUBLIC void JpegDec_VspTopUpdateYUVAddr(uint32 y_phy_addr,uint32_t u_phy_addr)
+PUBLIC void JpegDec_HwTopUpdateYUVAddr(uint32 y_phy_addr,uint32_t u_phy_addr,uint32_t v_phy_addr)
 {
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGDecCodec();
-	uint32 pTableAddr = (uint32)VSP_MEMO10_ADDR;
 
 	jpeg_fw_codec->YUV_Info_0.y_data_ptr = (unsigned char*)y_phy_addr;
 	jpeg_fw_codec->YUV_Info_1.y_data_ptr = (unsigned char*)y_phy_addr;
 	jpeg_fw_codec->YUV_Info_0.u_data_ptr = (unsigned char*)u_phy_addr;
 	jpeg_fw_codec->YUV_Info_1.u_data_ptr = (unsigned char*)u_phy_addr;
+	jpeg_fw_codec->YUV_Info_0.v_data_ptr = (unsigned char*)v_phy_addr;
+	jpeg_fw_codec->YUV_Info_1.v_data_ptr = (unsigned char*)v_phy_addr;
 
-	open_vsp_iram();
+    	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR0_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_0.y_data_ptr), "Reconstructed Y0 frame buffer ");
+    	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR1_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_0.u_data_ptr), "Reconstructed U0 frame buffer ");
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR6_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_0.v_data_ptr), "Reconstructed V0 frame buffer ");
 
-	VSP_WRITE_REG(pTableAddr+ 0, (uint32)(jpeg_fw_codec->YUV_Info_0.y_data_ptr)>>2, "Reconstructed Y0 frame buffer ");
-	VSP_WRITE_REG(pTableAddr+ 4, (uint32)(jpeg_fw_codec->YUV_Info_1.y_data_ptr)>>2, "Reconstructed Y1 Frame buffer ");
-	close_vsp_iram();
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR2_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_1.y_data_ptr), "Reconstructed Y1 frame buffer ");
+    	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR3_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_1.u_data_ptr), "Reconstructed U1 frame buffer ");
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR7_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_1.v_data_ptr), "Reconstructed V1 frame buffer ");
+    
 	SCI_TRACE_LOW("jpeg, update yu addr,0x%x,0x%x.\n",y_phy_addr,u_phy_addr);
 }
 

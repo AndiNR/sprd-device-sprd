@@ -14,7 +14,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8825_video_header.h"
+#include "sc8830_video_header.h"
 
 #if !defined(_SIMULATION_)
 //#include "os_api.h"
@@ -60,7 +60,7 @@ LOCAL void configure_maxReg_DC (uint32 * pMaxcode, uint32 beChroma)
 	uint32 maxCode = 0;
 	uint32 offset = 0;
 
-	offset = beChroma ? VLD_Chroma_DC_LUT_OFFSET : VLD_Luma_DC_LUT_OFFSET;
+	offset = beChroma ? Chroma_DC_LUT_OFFSET : Luma_DC_LUT_OFFSET;
 	
 	for (i = 0; i < 16; i++)
 	{
@@ -70,10 +70,10 @@ LOCAL void configure_maxReg_DC (uint32 * pMaxcode, uint32 beChroma)
 #endif
 		if (beChroma)
 		{
-			VSP_WRITE_REG(VSP_VLD_REG_BASE+offset+i*(sizeof(uint32)), maxCode, "VSP_VLD_REG_BASE: configure Chroma DC max register");
+			JPG_WRITE_REG(JPG_VLD_REG_BASE+offset+i*(sizeof(uint32)), maxCode, "VSP_VLD_REG_BASE: configure Chroma DC max register");
 		}else
 		{
-			VSP_WRITE_REG(VSP_VLD_REG_BASE+offset+i*(sizeof(uint32)), maxCode, "VSP_VLD_REG_BASE: configure Luma DC max register");
+			JPG_WRITE_REG(JPG_VLD_REG_BASE+offset+i*(sizeof(uint32)), maxCode, "VSP_VLD_REG_BASE: configure Luma DC max register");
 		}
 	}
 }
@@ -89,7 +89,7 @@ LOCAL void configure_maxReg_AC (uint32 * pMaxcode, uint32 beChroma)
 	uint32 regValue = 0;
 	uint32 offset = 0;
 
-	offset = beChroma ? VLD_Chroma_AC_LUT_OFFSET : VLD_Luma_AC_LUT_OFFSET;
+	offset = beChroma ? Chroma_AC_LUT_OFFSET : Luma_AC_LUT_OFFSET;
 
 	for(i = 0; i < 16; i++)
 	{
@@ -101,10 +101,10 @@ LOCAL void configure_maxReg_AC (uint32 * pMaxcode, uint32 beChroma)
 #endif		
 		if(beChroma)
 		{
-			VSP_WRITE_REG(VSP_VLD_REG_BASE+offset+i*(sizeof(uint32)), regValue, "VSP_VLD_REG_BASE: configure Chroma AC max register");
+			JPG_WRITE_REG(JPG_VLD_REG_BASE+offset+i*(sizeof(uint32)), regValue, "VSP_VLD_REG_BASE: configure Chroma AC max register");
 		}else
 		{
-			VSP_WRITE_REG(VSP_VLD_REG_BASE+offset+i*(sizeof(uint32)), regValue, "VSP_VLD_REG_BASE: configure Luma AC max register");
+			JPG_WRITE_REG(JPG_VLD_REG_BASE+offset+i*(sizeof(uint32)), regValue, "VSP_VLD_REG_BASE: configure Luma AC max register");
 		}
 	}	
 }
@@ -140,7 +140,7 @@ void JPEGFW_configure_validReg(void)
 #if defined(TEST_VECTOR)
 // 	fprintf(g_pfhuffVldTab, "0x%x  ,", DCValid);
 #endif
-	VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_DC_VALID_OFFSET, DCValid, "VLD_DC_VALID: DC valid");
+	JPG_WRITE_REG(JPG_VLD_REG_BASE+DC_VALID_OFFSET, DCValid, "VLD_DC_VALID: DC valid");
 	
 	htbl = &jpeg_fw_codec->ac_huff_tbl[JPEG_FW_LUM_ID];
 	valid2 = collect_valid_bits (s_active_base_max[1]);
@@ -148,7 +148,7 @@ void JPEGFW_configure_validReg(void)
 	htbl = &jpeg_fw_codec->ac_huff_tbl[JPEG_FW_CHR_ID];
 	valid3 = collect_valid_bits (s_active_base_max[3]);
 	ACValid = (valid2 << 16) | (valid3 << 0);
-	VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_AC_VALID_OFFSET, ACValid, "VLD_AC_VALID: ACValid");
+	JPG_WRITE_REG(JPG_VLD_REG_BASE+AC_VALID_OFFSET, ACValid, "VLD_AC_VALID: ACValid");
 #if defined(TEST_VECTOR)
 // 	fprintf(g_pfhuffVldTab, "0x%x  ,", ACValid);
 #endif
@@ -197,13 +197,13 @@ PUBLIC void JPEGFW_configure_vld_reg_jpegDec(void)
 		const uint32 *pMaxCode = jpeg_fw_vld_default_max_code;
 
 		//config DC and AC valid;
-		VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_DC_VALID_OFFSET, pMaxCode[0], "VLD_DC_VALID: DC valid");
-		VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_AC_VALID_OFFSET, pMaxCode[1], "VLD_AC_VALID: AC valid");
+		JPG_WRITE_REG(JPG_VLD_REG_BASE+DC_VALID_OFFSET, pMaxCode[0], "VLD_DC_VALID: DC valid");
+		JPG_WRITE_REG(JPG_VLD_REG_BASE+AC_VALID_OFFSET, pMaxCode[1], "VLD_AC_VALID: AC valid");
 
 		//config AC and DC max register	
 		for(i = 2; i < 66; i++)
 		{
-			VSP_WRITE_REG(VSP_VLD_REG_BASE+VLD_DC_VALID_OFFSET+i*4, pMaxCode[i], "configure AC and DC max register");
+			JPG_WRITE_REG(JPG_VLD_REG_BASE+DC_VALID_OFFSET+i*4, pMaxCode[i], "configure AC and DC max register");
 		}
 
 		SCI_MEMCPY(g_huffTab, jpeg_fw_vld_default_huffTab, 162*4);

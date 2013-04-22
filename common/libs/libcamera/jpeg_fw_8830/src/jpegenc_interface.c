@@ -15,7 +15,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8825_video_header.h"
+#include "sc8830_video_header.h"
 
 #if !defined(_SIMULATION_)
 //#include "os_api.h"
@@ -56,14 +56,14 @@ PUBLIC JPEG_RET_E JPEG_HWEncInit(JPEG_ENC_INPUT_PARA_T *input_para_ptr)
 		}
 	}
 	
-	jpeg_fw_codec->mea_bfr0_valid = input_para_ptr->mea_bfr0_valid;
-	jpeg_fw_codec->mea_bfr1_valid = input_para_ptr->mea_bfr1_valid;
-	jpeg_fw_codec->stream_buf0_valid = input_para_ptr->stream_buf0_valid;
-	jpeg_fw_codec->stream_buf1_valid = input_para_ptr->stream_buf1_valid;
+	jpeg_fw_codec->mbio_bfr0_valid = input_para_ptr->mbio_bfr0_valid;
+	jpeg_fw_codec->mbio_bfr1_valid = input_para_ptr->mbio_bfr1_valid;
+	jpeg_fw_codec->bsm_buf0_valid = input_para_ptr->bsm_buf0_valid;
+	jpeg_fw_codec->bsm_buf1_valid = input_para_ptr->bsm_buf1_valid;
 	
 	//initialize VSP hardware module
-	JpegEnc_VspTopRegCfg();
-	JpegEnc_VspSubModuleCfg();
+	JpegEnc_HwTopRegCfg();
+	JpegEnc_HwSubModuleCfg();
 	JPEGFW_InitHuffTblWithDefaultValue(jpeg_fw_codec);
 	configure_huff_tab(g_huff_tab_enc, 162);
 	JpegEnc_QTableCfg();
@@ -71,8 +71,9 @@ PUBLIC JPEG_RET_E JPEG_HWEncInit(JPEG_ENC_INPUT_PARA_T *input_para_ptr)
 	return ret;
 }
 
-PUBLIC void JPEG_HWUpdateMEABufInfo(void)
+PUBLIC void JPEG_HWUpdateMBIOBufInfo(void)
 {
+#if 0
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGEncCodec();
 	uint32 y_addr = (uint32)(jpeg_fw_codec->YUV_Info_1.y_data_ptr);
 	uint32 u_addr = (uint32)(jpeg_fw_codec->YUV_Info_1.u_data_ptr);
@@ -83,7 +84,8 @@ PUBLIC void JPEG_HWUpdateMEABufInfo(void)
 	//now, for uv_interleaved
 	cmd >>= 2; //word unit
 	//endian_sel = VSP_READ_REG(VSP_AHBM_REG_BASE+AHBM_ENDAIN_SEL_OFFSET, "red endian sel offset");		//add by shan.he
-	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_ENDAIN_SEL_OFFSET, cmd, "configure uv offset");
+//	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_ENDAIN_SEL_OFFSET, cmd, "configure uv offset");
+#endif    
 }
 
 PUBLIC JPEG_RET_E JPEG_HWEncStart(uint32 raw_width, uint32 raw_height, JPEG_ENC_OUTPUT_PARA_T *output_para_ptr)
@@ -115,23 +117,7 @@ PUBLIC JPEG_RET_E JPEG_HWEncStart(uint32 raw_width, uint32 raw_height, JPEG_ENC_
 		VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_ENDAIN_SEL_OFFSET, (cmd<<4)|(endian_sel & 0xf), "configure uv offset");
 	}
 #endif 
-
-
-{
-	uint32 y_addr = (uint32)(jpeg_fw_codec->YUV_Info_0.y_data_ptr);
-	uint32 u_addr = (uint32)(jpeg_fw_codec->YUV_Info_0.u_data_ptr);
-	uint32 v_addr = (uint32)(jpeg_fw_codec->YUV_Info_0.v_data_ptr);
 	
-	uint32 cmd = u_addr - y_addr;
-	
-	//now, for uv_interleaved
-	cmd >>= 2; //word unit
-	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_ENDAIN_SEL_OFFSET, (cmd), "configure yu offset");
-
-	/*3plane */
-	cmd = (((v_addr - u_addr)>> 2))&0x3fffffff; //word unit
-	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_V_ADDR_OFFSET, cmd, "configure uv offset");
-}	
 	START_HW_ENCODE(total_mcu_num);
 
 //	if(READ_REG_POLL(VSP_MEA_REG_BASE+MEA_VDB_BUF_ST_OFF, 0x04, 0x04, TIME_OUT_CLK, "polling mea done status"))
@@ -153,7 +139,7 @@ PUBLIC JPEG_RET_E JPEG_HWEncStart(uint32 raw_width, uint32 raw_height, JPEG_ENC_
 //PUBLIC JPEG_RET_E JPEG_HWWriteHead()
 PUBLIC JPEG_RET_E JPEG_HWWriteHead(APP1_T *app1_t)
 {
-	if(VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "bsm: polling bsm status"))
+	if(JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "bsm: polling bsm status"))
 	{
 		return JPEG_FAILED;
 	}
@@ -201,19 +187,19 @@ PUBLIC JPEG_RET_E JPEG_HWWriteHead(APP1_T *app1_t)
 
 PUBLIC JPEG_RET_E JPEG_HWWriteTail(void)
 {
-	VSP_READ_REG_POLL(VSP_VLC_REG_BASE+VLC_ST_OFF, 0x4, 0x4, TIME_OUT_CLK, "VLC_CTRL_OFF: polling the vlc is done!");
+	JPG_READ_REG_POLL(JPG_VLC_REG_BASE+VLC_CTRL_OFFSET, V_BIT_31, 0, TIME_OUT_CLK, "VLC_CTRL_OFF: polling the vlc is done!");
 	
 	//clear vlc, Hardware should flush vlc internal buffer and byte align(if the last aligned byte value is 0xff, then 0x00 will be followed).
-	VSP_WRITE_REG(VSP_VLC_REG_BASE+VLC_ST_OFF, 1, "VLC_ST_OFF: clear vlc module");
+	JPG_WRITE_REG(JPG_VLC_REG_BASE+VLC_CTRL_OFFSET, 1, "VLC_ST_OFF: clear vlc module");
 	
 #if _CMODEL_
 	write_nbits(0xffd9, 16, 0);
 #endif //_CMODEL_
 
-	VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, 1, 1, TIME_OUT_CLK, "BSM_READY: polling bsm rfifo ready");
+	JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, 1, 1, TIME_OUT_CLK, "BSM_READY: polling bsm rfifo ready");
 
-	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG2_OFF, (16<<24), "BSM_CFG2: configure 16 bit for writing");
-	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_WDATA_OFF, 0xffd9, "BSM_WDATA: configure the value to be written to bitstream");
+	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_CFG2_OFFSET, (16<<24), "BSM_CFG2: configure 16 bit for writing");
+	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_WDATA_OFFSET, 0xffd9, "BSM_WDATA: configure the value to be written to bitstream");
 
 	if(JPEG_HWWaitingEnd() != TRUE)
 	{
@@ -242,13 +228,13 @@ PUBLIC uint32  JPEG_HWGetSize(void)
 			;
 		}
 
-		VSP_READ_REG_POLL(VSP_DCAM_REG_BASE+DCAM_INT_STS_OFF, 0x100, 0x100, TIME_OUT_CLK, "DCAM_INT_STS: polling the vlc is done!");
+		JPG_READ_REG_POLL(JPG_GLB_REG_BASE+GLB_INT_STS_OFFSET, 0x2, 0x2, TIME_OUT_CLK, "DCAM_INT_STS: polling the vlc is done!");
 	#endif//SMALL_SYS
 
-		VSP_READ_REG_POLL(VSP_VLC_REG_BASE+VLC_ST_OFF, 0x0, 0x0, TIME_OUT_CLK, "VLC_CTRL_OFF: polling the vlc is done!");
+	        JPG_READ_REG_POLL(JPG_VLC_REG_BASE+VLC_CTRL_OFFSET, V_BIT_31, 0, TIME_OUT_CLK, "VLC_CTRL_OFF: polling the vlc is done!");
 
 		//clear vlc, Hardware should flush vlc internal buffer and byte align(if the last aligned byte value is 0xff, then 0x00 will be followed).
-		VSP_WRITE_REG(VSP_VLC_REG_BASE+VLC_ST_OFF, 1, "VLC_ST_OFF: clear vlc module");
+		JPG_WRITE_REG(JPG_VLC_REG_BASE+VLC_CTRL_OFFSET, 1, "VLC_ST_OFF: clear vlc module");
 	
 		if(!jpeg_fw_codec->is_last_slice)
 		{
@@ -257,14 +243,14 @@ PUBLIC uint32  JPEG_HWGetSize(void)
 	}
 
 	//get the length;
-	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG2_OFF, 2, "BSM_CFG2: Move data remain in FIFO to external memory");
-	VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "BSM_DEBUG: polling bsm status");	
+	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_CFG2_OFFSET, 2, "BSM_CFG2: Move data remain in FIFO to external memory");
+	JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_STS0_OFFSET, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "BSM_DEBUG: polling bsm status");	
 #if _CMODEL_
 	clear_bsm_fifo();
 	//clear_bsm_bfr(1, 0);
 #endif
 
-	jpeg_fw_codec->encoded_stream_len = (VSP_READ_REG(VSP_BSM_REG_BASE+BSM_TOTAL_BITS_OFF, "BSM_TOTAL_BITS: Read the total bits") >>3); //byte.
+	jpeg_fw_codec->encoded_stream_len = (JPG_READ_REG(JPG_BSM_REG_BASE+BSM_TOTAL_BITS_OFFSET, "BSM_TOTAL_BITS: Read the total bits") >>3); //byte.
 
 	if(SWITCH_MODE == jpeg_fw_codec->work_mode) //return the remain bitstream byte length in current ping-pang buffer.
 	{

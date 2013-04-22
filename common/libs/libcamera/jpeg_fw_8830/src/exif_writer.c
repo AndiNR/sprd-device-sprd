@@ -19,7 +19,7 @@
 #include "jpeg_exif_type.h"
 #include "exif_writer.h"
 #include "jpeg_stream.h"
-#include "sc8825_video_header.h"
+#include "sc8830_video_header.h"
 
 #define DEBUG_STR     "%s(L %d), %s: "
 #define DEBUG_ARGS    __FILE__,__LINE__,__FUNCTION__

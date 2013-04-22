@@ -23,7 +23,6 @@ PUBLIC void		  JPEG_HWSet_BSM_Buf_ReadOnly(uint8 buf_id);
 PUBLIC void		  JPEG_HWSet_BSM_Buf_WriteOnly(uint8 buf_id);
 PUBLIC void		  JPEG_HWSet_MBIO_Buf_WriteOnly(uint8 buf_id);
 PUBLIC void		  JPEG_HWSet_MBIO_Buf_ReadOnly(uint8 buf_id);
-PUBLIC void 		  JPEG_HWSet_MEA_Buf_ReadOnly(uint8 buf_id);
 PUBLIC void		  JPEG_HWResetVSP(void);
 PUBLIC BOOLEAN	  JPEG_HWWaitingEnd(void);
 

@@ -24,31 +24,20 @@
 extern "C"
 {
 #endif 
-#define VSP_VLC_REG_BASE	(VSP_CTRL_BASE + 0x0c00)
-#define VSP_VLC_REG_SIZE	0xC
+#define JPG_VLC_REG_BASE	(JPG_CTRL_BASE + 0x4c00)
+#define JPG_VLC_REG_SIZE	0xC
 
-#define VLC_CFG_OFF			0x00
-#define VLC_CTRL_OFF		0x04
-#define VLC_ST_OFF			0x08
+#define VLC_TOTAL_MCU_OFFSET			0x00
+#define VLC_CTRL_OFFSET		0x04
 
-typedef struct  vsp_vlc_reg_tag
+typedef struct  jpg_vlc_reg_tag
 {
 	
-	volatile uint32 VLC_CFG0;		//reserved
-									//[16:0]: TOTAL_MCU, The total MCU number of current encoding picture.
+	volatile uint32 TOTAL_MCU;		//[19:0]: TOTAL_MCU_CNT, Total MCU number of VLC MCU.
 		
-	volatile uint32 VLC_CTRL;		//[31:24]: MB_X_ID, Current MB ID in direction
-									//[21:16]: QP_CUR, Current MB QP
-									//[11]: LEFT_AVAIL
-									//[10]: TOP_AVAIL
-									//[9]: TL_AVAIL
-									//[8]: VLC_MB_TYPE
-									//[5:0]: VLC_MB_CBP, Bit[5] - Y0, Bit[4] - Y1, Bit[3] - Y2, Bit[2] - Y3, Bit[1] - U,Bit[0] - V
-
-	volatile uint32 VLC_ST;			//[31]: VLC state: 0 ¨C idle, 1 - busy
-									//[1]: VLC_START, Write 1 to start VLC. Note: only for video encoding for SW starts VLC every MB.
-									//[0]: VLC_CLR, Write 1 to clear JPEG VLC module
-}VSP_VLC_REG_T;
+	volatile uint32 CTRL;		//[31]: VLC_STS: VLC status, 0: idle; 1: busy
+									//[0]: VLC_CLR, Write 1 to clear VLC module
+}JPG_VLC_REG_T;
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

@@ -15,7 +15,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8825_video_header.h"
+#include "sc8830_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -35,18 +35,18 @@ LOCAL void JPEGFW_PutBits(uint32 val, uint32 nbits)
 	write_nbits(val, nbits, 0);
 #endif //_CMODEL_
 
-	VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, 1, 1, TIME_OUT_CLK, "BSM_READY: polling bsm rfifo ready");
+	JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, 1, 1, TIME_OUT_CLK, "BSM_READY: polling bsm rfifo ready");
 
-	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG2_OFF, (nbits << 24) , "BSM_CFG2: configure write n bits");
-	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_WDATA_OFF, val, "BSM_WDATA: write val(n bits) to bitstream, auto-stuffing");
+	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_CFG2_OFFSET, (nbits << 24) , "BSM_CFG2: configure write n bits");
+	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_WDATA_OFFSET, val, "BSM_WDATA: write val(n bits) to bitstream, auto-stuffing");
 }
 #else
 __inline void JPEGFW_PutBits(uint32 val, uint32 nbits)
 {
 	//VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_3, 0, TIME_OUT_CLK, "BSM_READY: polling bsm rfifo ready");
-    VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, 1, 1, TIME_OUT_CLK, "BSM_READY: polling bsm rfifo ready");
-	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG2_OFF, (nbits << 24) , "BSM_CFG2: configure write n bits");
-	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_WDATA_OFF, val, "BSM_WDATA: write val(n bits) to bitstream, auto-stuffing");
+    JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, 1, 1, TIME_OUT_CLK, "BSM_READY: polling bsm rfifo ready");
+	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_CFG2_OFFSET, (nbits << 24) , "BSM_CFG2: configure write n bits");
+	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_WDATA_OFFSET, val, "BSM_WDATA: write val(n bits) to bitstream, auto-stuffing");
 }
 #endif //_CMODEL_
 /*****************************************************************************
@@ -61,10 +61,10 @@ PUBLIC void JPEGFW_PutC(uint8 ch)
 	write_nbits(ch, 8, 0);
 #endif //_CMODEL_
 
-	VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, 1, 1, TIME_OUT_CLK, "BSM_READY: polling bsm rfifo ready");
+	JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, 1, 1, TIME_OUT_CLK, "BSM_READY: polling bsm rfifo ready");
 
-	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG2_OFF, (8<<24), "BSM_CFG2: configure 8 bit for writing");
-	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_WDATA_OFF, ch, "BSM_WDATA: configure the value to be written to bitstream");
+	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_CFG2_OFFSET, (8<<24), "BSM_CFG2: configure 8 bit for writing");
+	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_WDATA_OFFSET, ch, "BSM_WDATA: configure the value to be written to bitstream");
 }
 
 /*****************************************************************************
@@ -79,10 +79,10 @@ PUBLIC void JPEGFW_PutW(uint16 w)
 	write_nbits(w, 16, 0);
 #endif //_CMODEL_
 
-	VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, 1, 1, TIME_OUT_CLK, "BSM_READY: polling bsm rfifo ready");
+	JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, 1, 1, TIME_OUT_CLK, "BSM_READY: polling bsm rfifo ready");
 
-	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG2_OFF, (16<<24), "BSM_CFG2: configure 16 bit for writing");
-	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_WDATA_OFF, w, "BSM_WDATA: configure the value to be written to bitstream");
+	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_CFG2_OFFSET, (16<<24), "BSM_CFG2: configure 16 bit for writing");
+	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_WDATA_OFFSET, w, "BSM_WDATA: configure the value to be written to bitstream");
 }
 PUBLIC void JPEGFW_PutW_II(uint16 w)
 {
