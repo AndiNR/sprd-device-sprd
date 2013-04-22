@@ -16,7 +16,7 @@
 //#endif
 
 
-//#define MY_DEBUG
+#define MY_DEBUG
 
 #ifdef MY_DEBUG
 #define MY_TRACE    ALOGW
@@ -25,20 +25,13 @@
 #endif
 
 #define VBC_CMD_TAG   "VBC"
-
+/*
 #define READ_PARAS(type, exp)    if (s_vbpipe_fd > 0 && paras_ptr != NULL) { \
         exp = read(s_vbpipe_fd, paras_ptr, sizeof(type)); \
         }
+*/
 
 #define ENG_AUDIO_PGA       "/sys/class/vbc_param_config/vbc_pga_store"
-
-static uint32_t android_cur_device = 0x0;   // devices value the same as audiosystem.h
-static pthread_t s_vbc_ctrl_thread = 0;
-static int s_vbpipe_fd = -1;
-static int s_is_exit = 0;
-static int s_is_active = 0;
-static int android_sim_num = 0;
-
 
 /* vbc control parameters struct here.*/
 typedef struct Paras_Mode_Gain
@@ -131,6 +124,38 @@ typedef struct
     unsigned int    cmd_type;
     unsigned int    paras_size; /* the size of Parameters Data, unit: bytes*/
 }parameters_head_t;
+
+#define VBC_PIPE_NAME_MAX_LEN 16
+#define VBC_PIPE_COUNT 1//one pipe used in one cp
+
+typedef struct
+{
+	char vbpipe[VBC_PIPE_NAME_MAX_LEN];//vbpipe5/vbpipe6
+	int vbpipe_fd;
+	int vbpipe_pre_fd;
+	int is_exit;
+	struct tiny_audio_device *adev;
+}vbc_ctrl_thread_para_t;
+
+/*support multiple call for multiple modem(cp0/cp1/...):
+different modem is corresponding to different pipe and all pipes use the only vbc.
+support multiple pipe:
+1. change VBC_PIPE_COUNT
+2. change the definition of s_vbc_ctrl_pipe_info.
+*/
+static char s_vbc_ctrl_pipe_info[VBC_PIPE_COUNT][VBC_PIPE_NAME_MAX_LEN] =
+{
+		//{"/dev/vbpipe5"},
+		{"/dev/vbpipe6"}
+};
+
+static pthread_t s_vbc_ctrl_thread_id[VBC_PIPE_COUNT] ={0};
+static vbc_ctrl_thread_para_t st_vbc_ctrl_thread_para[VBC_PIPE_COUNT] = {0};
+
+static uint32_t android_cur_device = 0x0;   // devices value the same as audiosystem.h
+static int s_is_active = 0;
+static int fd_audio_para = -1;
+static int android_sim_num = 0;
 
 /* Transfer packet by vbpipe, packet format as follows.*/
 /************************************************
@@ -709,17 +734,33 @@ int SetParas_DeviceCtrl_Incall(int fd_pipe,struct tiny_audio_device *adev)
 int vbc_ctrl_open(struct tiny_audio_device *adev)
 {
     if (s_is_active) return (-1);
-    int rc;
+    int rc,i=0,j=0;
     MY_TRACE("%s IN.",__func__);
-    s_is_exit = 0;
     s_is_active = 1;
-    rc = pthread_create(&s_vbc_ctrl_thread, NULL, vbc_ctrl_thread_routine, (void *)adev);
-    if (rc) {
-        ALOGE("error, pthread_create failed, rc=%d", rc);
-        s_is_active = 0;
-        return (-1);
-    }
+    while(i<VBC_PIPE_COUNT)
+    {
+        memcpy(st_vbc_ctrl_thread_para[i].vbpipe, s_vbc_ctrl_pipe_info[i], VBC_PIPE_NAME_MAX_LEN);
+        st_vbc_ctrl_thread_para[i].adev = adev;
+        st_vbc_ctrl_thread_para[i].vbpipe_fd = -1;
+        st_vbc_ctrl_thread_para[i].vbpipe_pre_fd = -1;
+        st_vbc_ctrl_thread_para[i].is_exit = 0;
+        rc = pthread_create(&(s_vbc_ctrl_thread_id[i]), NULL,
+                vbc_ctrl_thread_routine, (void *)(&(st_vbc_ctrl_thread_para[i])));
+        if (rc) {
+            ALOGE("error, pthread_create failed, rc=%d, i:%d", rc, i);
+            while(j<i)
+            {
+                //need to delete the threads.
+                //pthread_cancel (s_vbc_ctrl_thread_id[j]);
+                j++;
+            }
+            s_is_active = 0;
+            return (-1);
+        }
+        i++;
+     }
 
+    adev->cur_vbpipe_fd = -1;
     return (0);
 }
 
@@ -728,11 +769,17 @@ int vbc_ctrl_close()
     if (!s_is_active) return (-1);
     MY_TRACE("%s IN.",__func__);
    
-    s_is_exit = 1;
+    int i=0;
     s_is_active = 0;
     /* close vbpipe.*/
-    close(s_vbpipe_fd);
-    s_vbpipe_fd = -1;
+	while(i<VBC_PIPE_COUNT)
+	{
+		close(st_vbc_ctrl_thread_para[i].vbpipe_fd);
+		st_vbc_ctrl_thread_para[i].vbpipe_fd = -1;
+		st_vbc_ctrl_thread_para[i].vbpipe_pre_fd = -1;
+		st_vbc_ctrl_thread_para[i].is_exit = 1;
+		i++;
+	}
 
     /* terminate thread.*/
     //pthread_cancel (s_vbc_ctrl_thread);    
@@ -742,10 +789,12 @@ int vbc_ctrl_close()
 void *vbc_ctrl_thread_routine(void *arg)
 {
     int ret = 0;
+    vbc_ctrl_thread_para_t	*para = NULL;
     struct tiny_audio_device *adev;
     parameters_head_t read_common_head;
     parameters_head_t write_common_head;
-    adev = (struct tiny_audio_device *)arg;
+    para = (vbc_ctrl_thread_para_t *)arg;
+    adev = (struct tiny_audio_device *)(para->adev);
 
     memset(&read_common_head, 0, sizeof(parameters_head_t));
     memset(&write_common_head, 0, sizeof(parameters_head_t));
@@ -753,64 +802,112 @@ void *vbc_ctrl_thread_routine(void *arg)
     memcpy(&write_common_head.tag[0], VBC_CMD_TAG, 3);
     write_common_head.cmd_type = VBC_CMD_NONE;
     write_common_head.paras_size = 0;
-    MY_TRACE("vbc_ctrl_thread_routine in.");
+    MY_TRACE("vbc_ctrl_thread_routine in pipe_name:%s.", para->vbpipe);
     
 RESTART:
-    if (s_is_exit) goto EXIT;
+    if (para->is_exit) goto EXIT;
     /* open vbpipe to build connection.*/
-    if (s_vbpipe_fd == -1) {
-        s_vbpipe_fd = open("/dev/vbpipe6", O_RDWR);
-        if (s_vbpipe_fd < 0) {
-            ALOGE("Error: s_vbpipe_fd(%d) open failed, %s ", s_vbpipe_fd,strerror(errno));
-            if(adev->call_start){                  //cp crash during call
-                mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);  //switch to arm
-                pthread_mutex_lock(&adev->lock);
-                force_all_standby(adev);
-                pcm_close(adev->pcm_modem_ul);
-                pcm_close(adev->pcm_modem_dl);
-                adev->call_start = 0;
-                adev->call_connected = 0;
-                pthread_mutex_unlock(&adev->lock);
+    if (para->vbpipe_fd == -1) {
+        para->vbpipe_fd = open(para->vbpipe, O_RDWR);//open("/dev/vbpipe6", O_RDWR);
+        if (para->vbpipe_fd < 0) {
+            if(adev->cur_vbpipe_fd!=-1)/*other pipe is using.*/
+            {
+                MY_TRACE("VBC_CMD_HAL_RESTART other pipe is working, wait a while and then try to open pipe_name:%s.", para->vbpipe);
+            }
+            else
+            {
+                MY_TRACE("VBC_CMD_HAL_RESTART try vbc_lock, pipe_name:%s.", para->vbpipe);
+                pthread_mutex_lock(&adev->vbc_lock);
+                MY_TRACE("VBC_CMD_HAL_RESTART get vbc_lock, pipe_name:%s.", para->vbpipe);
+                ALOGE("VBC_CMD_HAL_RESTART Error: vbpipe_name(%s), vbpipe_fd(%d) open failed, %s ", para->vbpipe, para->vbpipe_fd,strerror(errno));   //cp crash
+                if(adev->call_start &&
+                        (adev->cur_vbpipe_fd==para->vbpipe_pre_fd/*only current vbpipe need to close*/)){                  //cp crash during call
+                    mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);  //switch to arm
+                    pthread_mutex_lock(&adev->lock);
+                    force_all_standby(adev);
+                    pcm_close(adev->pcm_modem_ul);
+                    pcm_close(adev->pcm_modem_dl);
+                    adev->call_start = 0;
+                    adev->call_connected = 0;
+                    adev->cur_vbpipe_fd = -1;
+                    para->vbpipe_pre_fd = -1;
+                    pthread_mutex_unlock(&adev->lock);
+                }
+                MY_TRACE("VBC_CMD_HAL_RESTART release vbc_lock, pipe_name:%s.", para->vbpipe);
+                pthread_mutex_unlock(&adev->vbc_lock);
             }
             sleep(1);
             goto RESTART;
         } else {
-            ALOGW("s_vbpipe_fd(%d) open successfully.", s_vbpipe_fd);
+            para->vbpipe_pre_fd = para->vbpipe_fd;
+            ALOGW("vbpipe_name(%s) vbpipe_fd(%d) open successfully.", para->vbpipe, para->vbpipe_fd);
         }
     } else {
-        ALOGW("warning: s_vbpipe_fd(%d) NOT closed.", s_vbpipe_fd);
+        ALOGW("vbpipe_name(%s) warning: vbpipe_fd(%d) NOT closed.", para->vbpipe, para->vbpipe_fd);
     }
 
     /* loop to read parameters from vbpipe.*/
-    while(!s_is_exit)
+    while(!para->is_exit)
     {
-    	ALOGW("looping now...");
+        ALOGW("%s, looping now...", para->vbpipe);
         /* read parameters common head of the packet.*/
-        ret = ReadParas_Head(s_vbpipe_fd, &read_common_head);
-        if (ret < 0) {
+        ret = ReadParas_Head(para->vbpipe_fd, &read_common_head);
+        MY_TRACE("VBC_CMD_HAL_get_cmd try vbc_lock, pipe_name:%s, ret:%d.", para->vbpipe, ret);
+        pthread_mutex_lock(&adev->vbc_lock);
+        MY_TRACE("VBC_CMD_HAL_get_cmd get vbc_lock, pipe_name:%s.", para->vbpipe);
+        if(ret < 0) {
             ALOGE("Error, %s read head failed(%s), need to read again ",__func__,strerror(errno));
+                        MY_TRACE("VBC_CMD_HAL_get_cmd release vbc_lock, pipe_name:%s.", para->vbpipe);
+            pthread_mutex_unlock(&adev->vbc_lock);
             continue;
         }else if (ret == 0) {   //cp something wrong
-            ALOGE("Error, %s read head failed(%s), need to reopen vbpipe ",__func__,strerror(errno));
+            ALOGE("Error, %s read head failed(%s), need to reopen vbpipe, pipe_name:%s",__func__,strerror(errno), para->vbpipe);
             if(adev->call_start){                  //cp crash during call
-                mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);  //switch to arm
-                pthread_mutex_lock(&adev->lock);
-                force_all_standby(adev);
-                pcm_close(adev->pcm_modem_ul);
-                pcm_close(adev->pcm_modem_dl);
-                adev->call_start = 0;
-                adev->call_connected = 0;
-                pthread_mutex_unlock(&adev->lock);
+                  if(adev->cur_vbpipe_fd!=para->vbpipe_fd)
+                { /*other cp are using vbc, app/ril need to confirm the control flow: in one time just only one modem can use vbc.*/
+                    ALOGE("other cp(pipe_fd:%d) is using vbc,  this cp(pipe_name:%s) error, need to reopen.",
+                        adev->cur_vbpipe_fd, para->vbpipe);
+                }
+                else
+                {
+                    mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);  //switch to arm
+                    pthread_mutex_lock(&adev->lock);
+                    force_all_standby(adev);
+                    pcm_close(adev->pcm_modem_ul);
+                    pcm_close(adev->pcm_modem_dl);
+                    adev->call_start = 0;
+                    adev->call_connected = 0;
+                    adev->cur_vbpipe_fd = -1;
+                    pthread_mutex_unlock(&adev->lock);
+                }
             }
-	        sleep(1);
-            close(s_vbpipe_fd);
-            s_vbpipe_fd = -1;
+            sleep(1);
+            close(para->vbpipe_fd);
+            para->vbpipe_fd = -1;
+            MY_TRACE("VBC_CMD_HAL_get_cmd release vbc_lock.");
+            pthread_mutex_unlock(&adev->vbc_lock);
             goto RESTART;
         }
-        ALOGW("%s call start, Get CMD(%d) from cp, paras_size:%d devices:0x%x mode:%d", adev->call_start ? "":"NOT",read_common_head.cmd_type,read_common_head.paras_size,adev->devices,adev->mode);
-        if (!memcmp(&read_common_head.tag[0], VBC_CMD_TAG, 3)) {
-            switch (read_common_head.cmd_type)
-            {
+
+        ALOGW("%s In Call, Get CMD(%d) from cp(pipe:%s, pipe_fd:%d, cur_pipe_fd:%d), paras_size:%d devices:0x%x mode:%d",
+            adev->call_start ? "":"NOT", read_common_head.cmd_type,
+            para->vbpipe, para->vbpipe_fd, adev->cur_vbpipe_fd,
+            read_common_head.paras_size,adev->devices,adev->mode);
+         pthread_mutex_lock(&adev->lock);
+         if((adev->cur_vbpipe_fd!=-1) && (adev->cur_vbpipe_fd!=para->vbpipe_fd))
+         {
+            ALOGE("other cp(pipe_fd:%d) is using vbc,  this cp(pipe_name:%s) need to wait...",
+                        adev->cur_vbpipe_fd, para->vbpipe);
+            //if need to reply to cp for this req or not?
+            pthread_mutex_unlock(&adev->lock);
+            MY_TRACE("VBC_CMD_HAL_get_cmd release vbc_lock, cmd:%d.", read_common_head.cmd_type);
+            pthread_mutex_unlock(&adev->vbc_lock);
+            continue;
+         }
+         pthread_mutex_unlock(&adev->lock);
+         if (!memcmp(&read_common_head.tag[0], VBC_CMD_TAG, 3)) {
+         switch (read_common_head.cmd_type)
+         {
             case VBC_CMD_HAL_OPEN:
             {
                 MY_TRACE("VBC_CMD_HAL_OPEN IN.");
@@ -822,20 +919,21 @@ RESTART:
                 if (!pcm_is_ready(adev->pcm_modem_dl)) {
                     ALOGE("cannot open pcm_modem_dl : %s", pcm_get_error(adev->pcm_modem_dl));
                     pcm_close(adev->pcm_modem_dl);
-                    s_is_exit = 1;
+                    para->is_exit = 1;
                 }
                 adev->pcm_modem_ul= pcm_open(s_tinycard, PORT_MODEM, PCM_IN, &pcm_config_vrec_vx);
                 if (!pcm_is_ready(adev->pcm_modem_ul)) {
                     ALOGE("cannot open pcm_modem_ul : %s", pcm_get_error(adev->pcm_modem_ul));
                     pcm_close(adev->pcm_modem_ul);
                     pcm_close(adev->pcm_modem_dl);
-                    s_is_exit = 1;
+                    para->is_exit = 1;
                 }
                 ALOGW("START CALL,open pcm device...");
                 adev->call_start = 1;
-                SetParas_OpenHal_Incall(s_vbpipe_fd);   //get sim card number
+                SetParas_OpenHal_Incall(para->vbpipe_fd);   //get sim card number
+                adev->cur_vbpipe_fd = para->vbpipe_fd;
                 pthread_mutex_unlock(&adev->lock);
-                MY_TRACE("VBC_CMD_HAL_OPEN OUT.");
+                MY_TRACE("VBC_CMD_HAL_OPEN OUT, cur_vbpipe_id:%d, vbpipe_name:%s.", adev->cur_vbpipe_fd, para->vbpipe);
             }
             break;
             case VBC_CMD_HAL_CLOSE:
@@ -843,7 +941,7 @@ RESTART:
                 MY_TRACE("VBC_CMD_HAL_CLOSE IN.");
                 adev->call_prestop = 1;
                 write_common_head.cmd_type = VBC_CMD_RSP_CLOSE;     //ask cp to read vaudio data, "call_prestop" will stop to write pcm data again.
-                WriteParas_Head(s_vbpipe_fd, &write_common_head);
+                WriteParas_Head(para->vbpipe_fd, &write_common_head);
                 mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);  //switch vbc to arm
                 if(adev->call_start){  //if mediaserver crashed, audio will reopen, "call_start" value is 0, should bypass all the settings.
                     ALOGW("VBC_CMD_HAL_CLOSE, try lock");
@@ -854,13 +952,14 @@ RESTART:
                     pcm_close(adev->pcm_modem_dl);
                     adev->call_start = 0;
                     adev->call_connected = 0;
+                    adev->cur_vbpipe_fd = -1;
                     ALOGW("END CALL,close pcm device & switch to arm...");
                     pthread_mutex_unlock(&adev->lock);
                 }else{
                     ALOGW("VBC_CMD_HAL_CLOSE, call thread restart, we should stop call!!!");
                 }
-                ReadParas_Head(s_vbpipe_fd,&write_common_head);
-                Write_Rsp2cp(s_vbpipe_fd,VBC_CMD_HAL_CLOSE);
+                ReadParas_Head(para->vbpipe_fd,&write_common_head);
+                Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_HAL_CLOSE);
                 adev->call_prestop = 0;
                 MY_TRACE("VBC_CMD_HAL_CLOSE OUT.");
             }
@@ -868,10 +967,19 @@ RESTART:
             case VBC_CMD_SET_MODE:
             {
                 MY_TRACE("VBC_CMD_SET_MODE IN.");
-                ret = SetParas_Route_Incall(s_vbpipe_fd,adev);
-                if(ret < 0){
-                    MY_TRACE("VBC_CMD_SET_MODE SetParas_Route_Incall error.s_is_exit:%d ",s_is_exit);
-                    s_is_exit = 1;
+                int i=0;
+                while(i<VBC_PIPE_COUNT)
+                {
+                    if(st_vbc_ctrl_thread_para[i].vbpipe_fd!=-1)
+                    {
+                        ret = SetParas_Route_Incall(st_vbc_ctrl_thread_para[i].vbpipe_fd,adev);
+                        if(ret < 0){
+                            MY_TRACE("VBC_CMD_SET_MODE SetParas_Route_Incall error. pipe:%s, s_is_exit:%d ",
+                                st_vbc_ctrl_thread_para[i].vbpipe, st_vbc_ctrl_thread_para[i].is_exit);
+                            st_vbc_ctrl_thread_para[i].is_exit = 1;
+                        }
+                    }
+                    i++;
                 }
                 MY_TRACE("VBC_CMD_SET_MODE OUT.");
             }
@@ -879,10 +987,19 @@ RESTART:
             case VBC_CMD_SET_GAIN:
             {
                 MY_TRACE("VBC_CMD_SET_GAIN IN.");
-                ret = SetParas_Volume_Incall(s_vbpipe_fd,adev);
-                if(ret < 0){
-                    MY_TRACE("VBC_CMD_SET_GAIN SetParas_Route_Incall error.s_is_exit:%d ",s_is_exit);
-                    s_is_exit = 1;
+                int i=0;
+                while(i<VBC_PIPE_COUNT)
+                {
+                    if(st_vbc_ctrl_thread_para[i].vbpipe_fd!=-1)
+                    {
+                        ret = SetParas_Volume_Incall(st_vbc_ctrl_thread_para[i].vbpipe_fd,adev);
+                        if(ret < 0){
+                            MY_TRACE("VBC_CMD_SET_GAIN SetParas_Route_Incall error. pipe:%s, s_is_exit:%d ",
+                                st_vbc_ctrl_thread_para[i].vbpipe, st_vbc_ctrl_thread_para[i].is_exit);
+                            st_vbc_ctrl_thread_para[i].is_exit = 1;
+                        }
+                    }
+                    i++;
                 }
                 MY_TRACE("VBC_CMD_SET_GAIN OUT.");
             }
@@ -890,10 +1007,10 @@ RESTART:
             case VBC_CMD_SWITCH_CTRL:
             {
                 MY_TRACE("VBC_CMD_SWITCH_CTRL IN.");
-                ret = SetParas_Switch_Incall(s_vbpipe_fd,adev);
+                ret = SetParas_Switch_Incall(para->vbpipe_fd,adev);
                 if(ret < 0){
-                    MY_TRACE("VBC_CMD_SWITCH_CTRL SetParas_Switch_Incall error.s_is_exit:%d ",s_is_exit);
-                    s_is_exit = 1;
+                    MY_TRACE("VBC_CMD_SWITCH_CTRL SetParas_Switch_Incall error.s_is_exit:%d ",para->is_exit);
+                    para->is_exit = 1;
                 }
                 pthread_mutex_lock(&adev->lock);
                 adev->call_connected = 1;
@@ -911,10 +1028,10 @@ RESTART:
             case VBC_CMD_DEVICE_CTRL:
             {
                 MY_TRACE("VBC_CMD_DEVICE_CTRL IN.");
-                ret = SetParas_DeviceCtrl_Incall(s_vbpipe_fd,adev);
+                ret = SetParas_DeviceCtrl_Incall(para->vbpipe_fd,adev);
                 if(ret < 0){
-                    MY_TRACE("VBC_CMD_DEVICE_CTRL SetParas_DeviceCtrl_Incall error.s_is_exit:%d ",s_is_exit);
-                    s_is_exit = 1;
+                    MY_TRACE("VBC_CMD_DEVICE_CTRL SetParas_DeviceCtrl_Incall error.s_is_exit:%d ",para->is_exit);
+                    para->is_exit = 1;
                 }
                 MY_TRACE("VBC_CMD_DEVICE_CTRL OUT.");
             }
@@ -926,9 +1043,12 @@ RESTART:
         } else {
             ALOGE("Error, (0x%x)NOT match VBC_CMD_TAG, wrong packet.", *((int*)read_common_head.tag));
         }
+        MY_TRACE("VBC_CMD_HAL_get_cmd release vbc_lock.");
+        pthread_mutex_unlock(&adev->vbc_lock);
     }
+
 EXIT:
-    ALOGW("vbc_ctrl_thread exit!!!");
+    ALOGW("vbc_ctrl_thread exit, pipe:%s!!!", para->vbpipe);
     return 0;
 }
 

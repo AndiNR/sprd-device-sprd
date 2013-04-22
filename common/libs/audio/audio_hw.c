@@ -218,11 +218,13 @@ struct tiny_audio_device {
     audio_mode_t mode;
     int devices;
     volatile int device_switch;  /*changing device flag*/
+    volatile int cur_vbpipe_fd;  /*current vb pipe id, if all pipes is closed this is -1.*/
     struct pcm *pcm_modem_dl;
     struct pcm *pcm_modem_ul;
-    int call_start;
-    int call_connected;
+    volatile int call_start;
+    volatile int call_connected;
     volatile int call_prestop;
+    pthread_mutex_t vbc_lock;/*for multiple vb pipe.*/
     float voice_volume;
     struct tiny_stream_in *active_input;
     struct tiny_stream_out *active_output;
