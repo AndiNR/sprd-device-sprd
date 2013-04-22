@@ -1759,6 +1759,8 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
     void *vaddr;
     int width, height, frame_size, offset_size;
     nsecs_t timestamp_old, timestamp_new;
+    void *src_addr,*dst_addr;
+    int src_width, i;
 
     ALOGV("receiveRawPicture: E");
     print_time();
@@ -1792,7 +1794,8 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
             native_handle_t *pNativeHandle = (native_handle_t *)*buf_handle;
             struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
             uint32_t phy_addr =  (uint32_t)(private_h->phyaddr);
-			uint32_t tmp_phy_addr;
+            uint32_t tmp_phy_addr;
+            void *tmp_vir_addr;
 					   
             if(NULL == vaddr){
                 ALOGE("Fail to get gralloc buffer.");
@@ -1808,28 +1811,41 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
                 goto callbackraw;
             }
 #else
-			if(NULL == get_redisplay_mem(width*height*3/2, 1, &tmp_phy_addr))
-				goto callbackraw;
+            tmp_vir_addr = get_redisplay_mem(width*height*3/2, 1, &tmp_phy_addr);
+            if(NULL == tmp_vir_addr){
+                ALOGE("Fail to get redisplay mem.");
+                goto callbackraw;
+            }
 
             if( 0 != camera_get_data_redisplay(tmp_phy_addr, width, height, frame->buffer_phy_addr, frame->dx, frame->dy)){
                 ALOGE("Fail to camera_get_data_redisplay.");
-		FreePmem(mReDisplayHeap);
-		mReDisplayHeap = NULL;
+                FreePmem(mReDisplayHeap);
+                mReDisplayHeap = NULL;
                 goto callbackraw;
             }
-			timestamp_old = systemTime();
-			if(0 != camera_rotation_copy_data_virtual(width, height, tmp_phy_addr, (uint32_t)vaddr)){
-			        ALOGE("fail to camera_rotation_copy_data() in receiveRawPicture.");
-				FreePmem(mReDisplayHeap);
-				mReDisplayHeap = NULL;
-			        goto callbackraw;
-			}
-
-			//memcpy(vaddr, mReDisplayHeap->data, width*height*3/2);
-			timestamp_new = systemTime();
-			ALOGV("receiveRawPicture: %lld, %lld, time = %lld us \n",timestamp_old, timestamp_new, (timestamp_new-timestamp_old)/1000);
-			FreePmem(mReDisplayHeap);
-			mReDisplayHeap = NULL;
+            timestamp_old = systemTime();
+            if(stride != width){
+                dst_addr = vaddr;
+                src_addr = tmp_vir_addr;
+                ALOGE("receivePreviewFrame, src_width %d", src_width);
+                for(i=0;i<height*3/2;i++) {
+                    memcpy(dst_addr,src_addr,width);
+                    dst_addr =(void*)((uint32_t)dst_addr+stride);
+                    src_addr =(void*)((uint32_t)src_addr+width);
+                }
+            }else {
+                if(0 != camera_rotation_copy_data_virtual(width, height, tmp_phy_addr, (uint32_t)vaddr)){
+                    ALOGE("fail to camera_rotation_copy_data() in receiveRawPicture.");
+                    FreePmem(mReDisplayHeap);
+                    mReDisplayHeap = NULL;
+                    goto callbackraw;
+                }
+            }
+            //memcpy(vaddr, mReDisplayHeap->data, width*height*3/2);
+            timestamp_new = systemTime();
+            ALOGV("receiveRawPicture: %lld, %lld, time = %lld us \n",timestamp_old, timestamp_new, (timestamp_new-timestamp_old)/1000);
+            FreePmem(mReDisplayHeap);
+            mReDisplayHeap = NULL;
 #endif
 
             mGrallocHal->unlock(mGrallocHal, *buf_handle);
