@@ -910,7 +910,7 @@ status_t SprdCameraHardware::autoFocus()
     }
 status_t SprdCameraHardware::cancelAutoFocus()
 {
-        return camera_cancel_autofocus();
+        return camera_cancel_autofocus(this);
 }
 uint32_t get_physical_address(sprd_camera_memory_t *mMem,uint32_t *size)
 {

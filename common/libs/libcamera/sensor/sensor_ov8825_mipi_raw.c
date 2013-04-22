@@ -21,6 +21,8 @@
 #define ov8825_I2C_ADDR_W        0x36
 #define ov8825_I2C_ADDR_R         0x36
 
+#define OV8825_MIN_FRAME_LEN_PRV  0x5e8
+
 LOCAL uint32_t _ov8825_GetResolutionTrimTab(uint32_t param);
 LOCAL uint32_t _ov8825_PowerOn(uint32_t power_on);
 LOCAL uint32_t _ov8825_Identify(uint32_t param);
@@ -791,8 +793,9 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 
 	//ae
 	sensor_ptr->ae.skip_frame=0x01;
-	sensor_ptr->ae.normal_fix_fps=0x1e;
-	sensor_ptr->ae.night_fix_fps=0x1e;
+	sensor_ptr->ae.normal_fix_fps=0;
+	sensor_ptr->ae.night_fix_fps=0;
+	sensor_ptr->ae.video_fps=0x1e;
 	sensor_ptr->ae.target_lum=60;
 	sensor_ptr->ae.target_zone=8;
 	sensor_ptr->ae.quick_mode=1;
@@ -1298,6 +1301,8 @@ LOCAL uint32_t _ov8825_write_exposure(uint32_t param)
 	uint32_t ret_value = SENSOR_SUCCESS;
 	uint16_t expsure_line=0x00;
 	uint16_t dummy_line=0x00;
+	uint16_t frame_len=0x00;
+	uint16_t frame_len_cur=0x00;
 	uint16_t value=0x00;
 	uint16_t value0=0x00;
 	uint16_t value1=0x00;
@@ -1307,14 +1312,26 @@ LOCAL uint32_t _ov8825_write_exposure(uint32_t param)
 	dummy_line=(param>>0x10)&0xffff;
 
 	SENSOR_PRINT("SENSOR_ov8825: write_exposure line:%d, dummy:%d", expsure_line, dummy_line);
-#if 1
+
+	frame_len = ((expsure_line+4)> OV8825_MIN_FRAME_LEN_PRV) ? (expsure_line+4) : OV8825_MIN_FRAME_LEN_PRV;
+
+	frame_len_cur = (Sensor_ReadReg(0x380e)&0xff)<<8;
+	frame_len_cur |= Sensor_ReadReg(0x380f)&0xff;
+
+	if(frame_len_cur != frame_len){
+		value=(frame_len)&0xff;
+		ret_value = Sensor_WriteReg(0x380f, value);
+		value=(frame_len>>0x08)&0xff;
+		ret_value = Sensor_WriteReg(0x380e, value);
+	}
+
 	value=(expsure_line<<0x04)&0xff;
 	ret_value = Sensor_WriteReg(0x3502, value);
 	value=(expsure_line>>0x04)&0xff;
 	ret_value = Sensor_WriteReg(0x3501, value);
 	value=(expsure_line>>0x0c)&0x0f;
 	ret_value = Sensor_WriteReg(0x3500, value);
-#endif
+
 	return ret_value;
 }
 
@@ -1324,12 +1341,12 @@ LOCAL uint32_t _ov8825_write_gain(uint32_t param)
 	uint16_t value=0x00;
 
 	SENSOR_PRINT("SENSOR_ov8825: write_gain:0x%x", param);
-#if 1
+
 	value = param&0xff;
 	ret_value = Sensor_WriteReg(0x350b, value);/*0-7*/
 	value = (param>>0x08)&0x01;
 	ret_value = Sensor_WriteReg(0x350a, value);/*8*/
-#endif
+
 	return ret_value;
 }
 
@@ -1341,18 +1358,11 @@ LOCAL uint32_t _ov8825_write_af(uint32_t param)
 
 	SENSOR_PRINT("SENSOR_ov8825: _write_af 0x%x", param);
 
-#if 1
-//	reg_val = Sensor_ReadReg(0x3618);
 	value = (param&0xf)<<0x04;
 	value = value + 8 + (g_af_slewrate&0x7);
 	ret_value = Sensor_WriteReg(0x3618, value);
-//	reg_val = Sensor_ReadReg(0x3619);
-//	value = ((reg_val>>2)<<6) +  (param&0x3f0)>>0x04;
 	value = (param&0x3f0)>>0x04;
 	ret_value = Sensor_WriteReg(0x3619, value);
-#else
-	SENSOR_PRINT("SENSOR_ov8825: _write_af use  fake path");
-#endif
 
 	return ret_value;
 }
@@ -1367,10 +1377,7 @@ LOCAL uint32_t _ov8825_BeforeSnapshot(uint32_t param)
 	uint32_t cap_linetime = s_ov8825_Resolution_Trim_Tab[param].line_time;
 
 	SENSOR_PRINT("SENSOR_ov8825: BeforeSnapshot moe: %d",param);
-#if 0
-	Sensor_SetMode(param);
-	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_EXPOSURETIME, capture_exposure);
-#else
+
 	if (SENSOR_MODE_PREVIEW_ONE >= param){
 		SENSOR_PRINT("SENSOR_ov8825: prvmode equal to capmode");
 		return SENSOR_SUCCESS;
@@ -1408,6 +1415,13 @@ LOCAL uint32_t _ov8825_BeforeSnapshot(uint32_t param)
 		capture_exposure = 1;
 	}
 
+	if(capture_exposure > (capture_maxline - 4)){
+		capture_maxline = capture_exposure + 4;
+		ret_l = (unsigned char)(capture_maxline&0x0ff);
+		ret_h = (unsigned char)((capture_maxline >> 8)&0xff);
+		Sensor_WriteReg(0x380e, ret_h);
+		Sensor_WriteReg(0x380f, ret_l);
+	}
 	ret_l = ((unsigned char)capture_exposure&0xf) << 4;
 	ret_m = (unsigned char)((capture_exposure&0xfff) >> 4) & 0xff;
 	ret_h = (unsigned char)(capture_exposure >> 12);
@@ -1420,7 +1434,7 @@ LOCAL uint32_t _ov8825_BeforeSnapshot(uint32_t param)
 	Sensor_WriteReg(0x350b, gain_0b);
 
 	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_EXPOSURETIME, capture_exposure);
-#endif
+
 	return SENSOR_SUCCESS;
 }
 

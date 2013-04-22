@@ -20,6 +20,8 @@
 #define ov5647_I2C_ADDR_W        0x36
 #define ov5647_I2C_ADDR_R         0x36
 
+#define OV5647_MIN_FRAME_LEN_PRV  0x4a0
+
 LOCAL uint32_t _ov5647_GetResolutionTrimTab(uint32_t param);
 LOCAL uint32_t _ov5647_PowerOn(uint32_t power_on);
 LOCAL uint32_t _ov5647_Identify(uint32_t param);
@@ -539,8 +541,9 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 
 	//ae
 	sensor_ptr->ae.skip_frame=0x01;
-	sensor_ptr->ae.normal_fix_fps=0x1e;
-	sensor_ptr->ae.night_fix_fps=0x1e;
+	sensor_ptr->ae.normal_fix_fps=0;
+	sensor_ptr->ae.night_fix_fps=0;
+	sensor_ptr->ae.video_fps=0x1e;
 	sensor_ptr->ae.target_lum=60;
 	sensor_ptr->ae.target_zone=8;
 	sensor_ptr->ae.quick_mode=1;
@@ -987,7 +990,7 @@ LOCAL uint32_t _ov5647_PowerOn(uint32_t power_on)
 		Sensor_SetMonitorVoltage(SENSOR_AVDD_2800MV);
 		Sensor_SetVoltage(dvdd_val, avdd_val, iovdd_val);
 		usleep(20*1000);
-		_dw9174_SRCInit(2);
+		//_dw9174_SRCInit(2);
 		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
 		usleep(10*1000);
 		Sensor_PowerDown(!power_down);
@@ -1043,6 +1046,8 @@ LOCAL uint32_t _ov5647_write_exposure(uint32_t param)
 	uint32_t ret_value = SENSOR_SUCCESS;
 	uint16_t expsure_line=0x00;
 	uint16_t dummy_line=0x00;
+	uint16_t frame_len=0x00;
+	uint16_t frame_len_cur=0x00;
 	uint16_t value=0x00;
 	uint16_t value0=0x00;
 	uint16_t value1=0x00;
@@ -1052,6 +1057,17 @@ LOCAL uint32_t _ov5647_write_exposure(uint32_t param)
 	dummy_line=(param>>0x10)&0xffff;
 
 	SENSOR_PRINT("SENSOR_OV5647: write_exposure line:%d, dummy:%d", expsure_line, dummy_line);
+	frame_len = ((expsure_line+4)> OV5647_MIN_FRAME_LEN_PRV) ? (expsure_line+4) : OV5647_MIN_FRAME_LEN_PRV;
+
+	frame_len_cur = (Sensor_ReadReg(0x380e)&0xff)<<8;
+	frame_len_cur |= Sensor_ReadReg(0x380f)&0xff;
+
+	if(frame_len_cur != frame_len){
+		value=(frame_len)&0xff;
+		ret_value = Sensor_WriteReg(0x380f, value);
+		value=(frame_len>>0x08)&0xff;
+		ret_value = Sensor_WriteReg(0x380e, value);
+	}
 
 	value=(expsure_line<<0x04)&0xff;
 	ret_value = Sensor_WriteReg(0x3502, value);
@@ -1069,8 +1085,8 @@ LOCAL uint32_t _ov5647_write_gain(uint32_t param)
 	uint16_t value=0x00;
 	uint32_t real_gain = 0;
 
-	real_gain = ((param&0xf)+16)*(((param>>4)&0x01)+1)*(((param>>5)&0x01)+1);
-	real_gain = real_gain*(((param>>6)&0x01)+1)*(((param>>7)*0x01)+1)*(((param>>8)*0x01)+1);
+	real_gain = ((param&0xf)+16)*(((param>>4)&0x01)+1)*(((param>>5)&0x01)+1)*(((param>>6)&0x01)+1)*(((param>>7)&0x01)+1);
+	real_gain = real_gain*(((param>>8)&0x01)+1)*(((param>>9)&0x01)+1)*(((param>>10)&0x01)+1)*(((param>>11)&0x01)+1);
 
 	SENSOR_PRINT("SENSOR_OV5647: real_gain:0x%x, param: 0x%x", real_gain, param);
 
@@ -1211,6 +1227,14 @@ LOCAL uint32_t _ov5647_BeforeSnapshot(uint32_t param)
 
 	gain=gain*360/300;
 
+
+	if(capture_exposure > (capture_maxline - 4)){
+		capture_maxline = capture_exposure + 4;
+		ret_l = (unsigned char)(capture_maxline&0x0ff);
+		ret_h = (unsigned char)((capture_maxline >> 8)&0xff);
+		Sensor_WriteReg(0x380e, ret_h);
+		Sensor_WriteReg(0x380f, ret_l);
+	}
 	ret_l = (unsigned char)((capture_exposure&0x0f) << 4);
 	ret_m = (unsigned char)((capture_exposure&0xfff) >> 4);
 	ret_h = (unsigned char)(capture_exposure >> 12);

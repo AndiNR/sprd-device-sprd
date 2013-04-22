@@ -1185,10 +1185,11 @@ LOCAL uint32_t _s5k4e1ga_BeforeSnapshot(uint32_t param)
 	uint32_t capture_exposure, preview_maxline;
 	uint32_t capture_maxline, preview_exposure;
 	uint32_t prv_linetime=s_s5k4e1ga_Resolution_Trim_Tab[SENSOR_MODE_PREVIEW_ONE].line_time;
-	uint32_t cap_linetime = s_s5k4e1ga_Resolution_Trim_Tab[param].line_time;
+	uint32_t cap_linetime;
 	uint32_t frame_len = 0x00;
 
-
+	param = param & 0xffff;
+	cap_linetime = s_s5k4e1ga_Resolution_Trim_Tab[param].line_time;
 	SENSOR_PRINT("SENSOR_s5k4e1ga: BeforeSnapshot moe: %d",param);
 
 	if (SENSOR_MODE_PREVIEW_ONE >= param){
