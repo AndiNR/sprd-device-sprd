@@ -1286,6 +1286,10 @@ void SprdCameraHardware::receivePreviewFDFrame(camera_frame_type *frame)
     uint32_t k = 0;
 
    /* if(1 == mParameters.getInt("smile-snap-mode")){*/
+    if (NULL == mFDAddr) {
+         LOGV("already stop fd.");
+         return;
+    }
     LOGV("receive face_num %d.",frame->face_num);
     metadata.number_of_faces = frame->face_num;
     if((0 != frame->face_num)&&(frame->face_num<=FACE_DETECT_NUM)) {
