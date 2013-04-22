@@ -483,7 +483,7 @@ camera_ret_code_type camera_start_preview(camera_cb_f_type callback,
 
 camera_ret_code_type camera_start_focus(void *client_data);
 
-camera_ret_code_type camera_cancel_autofocus(void);
+camera_ret_code_type camera_cancel_autofocus(void *client_data);
 
 camera_ret_code_type camera_stop(camera_cb_f_type callback,
 				void *client_data);

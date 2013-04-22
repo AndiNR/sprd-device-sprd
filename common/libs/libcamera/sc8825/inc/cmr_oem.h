@@ -43,6 +43,7 @@ extern "C"
 #define CMR_EVT_AF_START                            (CMR_EVT_OEM_BASE + 10)
 #define CMR_EVT_AF_EXIT                             (CMR_EVT_OEM_BASE + 11)
 #define CMR_EVT_AF_INIT                             (CMR_EVT_OEM_BASE + 12)
+#define CMR_EVT_AF_CANCEL                           (CMR_EVT_OEM_BASE + 13)
 
 #define CMR_EVT_PREV_BASE        (CMR_EVT_OEM_BASE + 0x100)
 #define CMR_EVT_PREV_INIT          (CMR_EVT_OEM_BASE + 0x0)
@@ -218,10 +219,12 @@ struct camera_settings {
 	uint32_t                 set_end;
 
 	uint32_t                 af_cancelled;
+	uint32_t                 af_processing;
 	uint8_t                  focus_zone_param[CAMERA_FOCUS_RECT_PARAM_LEN];
 	pthread_mutex_t          set_mutex;
 	sem_t                    isp_af_sem;
 	uint32_t                 isp_af_win_val;
+	uint32_t                 isp_af_running;
 	uint32_t                 auto_flash;
 	uint8_t                   bflash;
 };
@@ -272,6 +275,7 @@ struct camera_context {
 	sem_t                    prev_sync_sem;
 	int32_t                set_flag;
 	sem_t                    set_sem;
+	sem_t                    hdr_sem;
 
 	/*for preview*/
 	struct img_size          display_size;
