@@ -38,13 +38,16 @@
 #include "ion_sprd.h"
 #include "hwcomposer_sprd.h"
 #include <cutils/properties.h>
+#include "dump_bmp.h"
 
 #define SPRD_ION_DEV "/dev/ion"
 
 #define OVERLAY_BUF_NUM 2
-extern void dump_layers(hwc_layer_list_t *list);
-extern int g_randNum;
-extern bool g_ResetDumpIndexFlag;
+extern void dump_layers(hwc_layer_list_t *list , int flag);
+extern int g_rand_set_Num;
+extern bool g_Reset_hwcset_DumpIndexFlag;
+extern int g_rand_prepare_Num;
+extern bool g_Reset_hwcprepare_DumpIndexFlag;
 inline unsigned int round_up_to_page_size(unsigned int x)
 {
     return (x + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1);
@@ -504,10 +507,18 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 	//reset dump index and recalculate random number when geometry changed
 	if(list->flags & HWC_GEOMETRY_CHANGED)
 	{
-		g_ResetDumpIndexFlag = true;
-		srand(g_randNum);
-		g_randNum = rand();
+		g_Reset_hwcset_DumpIndexFlag = true;
+		srand(g_rand_set_Num);
+		g_rand_set_Num = rand();
+		g_Reset_hwcprepare_DumpIndexFlag = true;
+		srand(g_rand_prepare_Num);
+		g_rand_prepare_Num = rand();
 	}
+       if(list)
+       {
+            dump_layers(list , DUMP_AT_HWCOMPOSER_HWC_PREPARE);
+            g_Reset_hwcprepare_DumpIndexFlag = false;
+       }
 	ALOGI_IF(debugenable,"hwc_prepare %d b", list->numHwLayers);
 	ctx->fb_layer_count = 0;
 	ctx->osd_overlay_flag = 0;
@@ -625,8 +636,11 @@ static int hwc_set(hwc_composer_device_t *dev,
     }
 
     //add for dump layer to file, need set property dump.hwcomposer.path & dump.hwcomposer.flag
-    dump_layers(list);
-    g_ResetDumpIndexFlag = false;
+    if(list)
+    {
+        dump_layers(list , DUMP_AT_HWCOMPOSER_HWC_SET);
+        g_Reset_hwcset_DumpIndexFlag = false;
+    }
     //add for dump layer end
 
     //ALOGI("hwc_set %d e", list->numHwLayers);

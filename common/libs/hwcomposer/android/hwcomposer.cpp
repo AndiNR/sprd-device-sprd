@@ -25,12 +25,15 @@
 #include <EGL/egl.h>
 
 #include "hwcomposer_android.h"
+#include "dump_bmp.h"
 /*****************************************************************************/
 
 
-extern void dump_layers(hwc_layer_list_t *list);
-extern int g_randNum;
-extern bool g_ResetDumpIndexFlag;
+extern void dump_layers(hwc_layer_list_t *list , int flag);
+extern int g_rand_set_Num;
+extern bool g_Reset_hwcset_DumpIndexFlag;
+extern int g_rand_prepare_Num;
+extern bool g_Reset_hwcprepare_DumpIndexFlag;
 
 static int hwc_device_open(const struct hw_module_t* module, const char* name,
         struct hw_device_t** device);
@@ -73,9 +76,17 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
             list->hwLayers[i].compositionType = HWC_FRAMEBUFFER;
         }
         //reset dump index flag and recalculate the random number
-	  g_ResetDumpIndexFlag = true;
-        srand(g_randNum);
-        g_randNum = rand();
+	  g_Reset_hwcset_DumpIndexFlag = true;
+        srand(g_rand_set_Num);
+        g_rand_set_Num = rand();
+        g_Reset_hwcprepare_DumpIndexFlag = true;
+        srand(g_rand_prepare_Num);
+        g_rand_prepare_Num = rand();
+    }
+    if(list)
+    {
+        dump_layers(list , DUMP_AT_HWCOMPOSER_HWC_PREPARE);
+	  g_Reset_hwcprepare_DumpIndexFlag = false;
     }
     return 0;
 }
@@ -89,8 +100,11 @@ static int hwc_set(hwc_composer_device_t *dev,
     //    dump_layer(&list->hwLayers[i]);
     //}
     //add for dump layer to file, need set property dump.hwcomposer.path & dump.hwcomposer.flag
-    dump_layers(list);
-    g_ResetDumpIndexFlag = false;
+    if(list)
+    {
+        dump_layers(list , DUMP_AT_HWCOMPOSER_HWC_SET);
+        g_Reset_hwcset_DumpIndexFlag = false;
+    }
     //add for dump layer end
     EGLBoolean sucess = eglSwapBuffers((EGLDisplay)dpy, (EGLSurface)sur);
     if (!sucess) {
