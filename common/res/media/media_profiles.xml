@@ -141,7 +141,7 @@
 
         <EncoderProfile quality="480p" fileFormat="mp4" duration="60">
             <Video codec="m4v"
-                   bitRate="6000000"
+                   bitRate="4000000"
                    width="720"
                    height="480"
                    frameRate="31" />
@@ -153,7 +153,7 @@
 
         <EncoderProfile quality="timelapse480p" fileFormat="mp4" duration="60">
             <Video codec="m4v"
-                   bitRate="6000000"
+                   bitRate="4000000"
                    width="720"
                    height="480"
                    frameRate="31" />
