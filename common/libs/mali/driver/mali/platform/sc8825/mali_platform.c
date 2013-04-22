@@ -14,14 +14,19 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/version.h>
 #include <linux/delay.h>
 #include <linux/clk.h>
 #include <asm/system.h>
 #include <asm/io.h>
 
 #include <mach/hardware.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0))
 #include <mach/regs_glb.h>
 #include <mach/regs_ahb.h>
+#else
+#include <mach/sci_glb_regs.h>
+#endif
 #include <mach/sci.h>
 
 #include "mali_kernel_common.h"
