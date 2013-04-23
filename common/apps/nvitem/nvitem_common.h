@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <windows.h>
+#define NVITEM_PRINT printf
 #else
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,6 +15,10 @@
 #include <pthread.h>
 #include "engapi.h"
 #include "engat.h"
+
+#define LOG_TAG "NVITEM"
+#include <cutils/log.h>
+#define NVITEM_PRINT ALOGD
 #endif
 
 #ifndef _NVITEM_COMMON_H_
