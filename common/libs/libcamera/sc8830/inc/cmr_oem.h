@@ -34,36 +34,45 @@ extern "C"
 #include "cmr_arith.h"
 
 
-#define CMR_EVT_INIT                                (CMR_EVT_OEM_BASE)
-#define CMR_EVT_START                               (CMR_EVT_OEM_BASE + 1)
-#define CMR_EVT_STOP                                (CMR_EVT_OEM_BASE + 2)
-#define CMR_EVT_EXIT                                (CMR_EVT_OEM_BASE + 3)
-#define CMR_EVT_BEFORE_SET                          (CMR_EVT_OEM_BASE + 4)
-#define CMR_EVT_AFTER_SET                           (CMR_EVT_OEM_BASE + 5)
-#define CMR_EVT_AF_START                            (CMR_EVT_OEM_BASE + 10)
-#define CMR_EVT_AF_EXIT                             (CMR_EVT_OEM_BASE + 11)
-#define CMR_EVT_AF_INIT                             (CMR_EVT_OEM_BASE + 12)
+#define CMR_EVT_INIT                                 (CMR_EVT_OEM_BASE)
+#define CMR_EVT_START                                (CMR_EVT_OEM_BASE + 1)
+#define CMR_EVT_STOP                                 (CMR_EVT_OEM_BASE + 2)
+#define CMR_EVT_EXIT                                 (CMR_EVT_OEM_BASE + 3)
+#define CMR_EVT_BEFORE_SET                           (CMR_EVT_OEM_BASE + 4)
+#define CMR_EVT_AFTER_SET                            (CMR_EVT_OEM_BASE + 5)
+#define CMR_EVT_AF_START                             (CMR_EVT_OEM_BASE + 10)
+#define CMR_EVT_AF_EXIT                              (CMR_EVT_OEM_BASE + 11)
+#define CMR_EVT_AF_INIT                              (CMR_EVT_OEM_BASE + 12)
 
-#define CMR_EVT_PREV_BASE        (CMR_EVT_OEM_BASE + 0x100)
-#define CMR_EVT_PREV_INIT          (CMR_EVT_OEM_BASE + 0x0)
-#define CMR_EVT_PREV_EXIT          (CMR_EVT_OEM_BASE + 0xF)
-#define CMR_EVT_PREV_V4L2_BASE          (CMR_EVT_PREV_BASE + 0x10)
-#define CMR_EVT_PREV_V4L2_TX_DONE        (CMR_EVT_PREV_V4L2_BASE + CMR_V4L2_TX_DONE - CMR_EVT_V4L2_BASE)
-#define CMR_EVT_PREV_V4L2_TX_NO_MEM       (CMR_EVT_PREV_V4L2_BASE +  CMR_V4L2_TX_NO_MEM - CMR_EVT_V4L2_BASE)
-#define CMR_EVT_PREV_V4L2_TX_ERR             (CMR_EVT_PREV_V4L2_BASE + CMR_V4L2_TX_ERROR - CMR_EVT_V4L2_BASE)
-#define CMR_EVT_PREV_V4L2_CSI2_ERR             (CMR_EVT_PREV_V4L2_BASE + CMR_V4L2_CSI2_ERR - CMR_EVT_V4L2_BASE)
-#define CMR_EVT_PREV_CVT_BASE                 (CMR_EVT_PREV_BASE + 0x20)
-#define CMR_EVT_PREV_CVT_ROT_DONE     (CMR_EVT_PREV_CVT_BASE + CMR_IMG_CVT_ROT_DONE - CMR_EVT_CVT_BASE)
+#define CMR_EVT_PREV_BASE                            (CMR_EVT_OEM_BASE + 0x100)
+#define CMR_EVT_PREV_INIT                            (CMR_EVT_OEM_BASE + 0x0)
+#define CMR_EVT_PREV_EXIT                            (CMR_EVT_OEM_BASE + 0xF)
+#define CMR_EVT_PREV_V4L2_BASE                       (CMR_EVT_PREV_BASE + 0x10)
+#define CMR_EVT_PREV_V4L2_TX_DONE                    (CMR_EVT_PREV_V4L2_BASE + CMR_V4L2_TX_DONE - CMR_EVT_V4L2_BASE)
+#define CMR_EVT_PREV_V4L2_TX_NO_MEM                  (CMR_EVT_PREV_V4L2_BASE +  CMR_V4L2_TX_NO_MEM - CMR_EVT_V4L2_BASE)
+#define CMR_EVT_PREV_V4L2_TX_ERR                     (CMR_EVT_PREV_V4L2_BASE + CMR_V4L2_TX_ERROR - CMR_EVT_V4L2_BASE)
+#define CMR_EVT_PREV_V4L2_CSI2_ERR                   (CMR_EVT_PREV_V4L2_BASE + CMR_V4L2_CSI2_ERR - CMR_EVT_V4L2_BASE)
+#define CMR_EVT_PREV_CVT_BASE                        (CMR_EVT_PREV_BASE + 0x20)
+#define CMR_EVT_PREV_CVT_ROT_DONE                    (CMR_EVT_PREV_CVT_BASE + CMR_IMG_CVT_ROT_DONE - CMR_EVT_CVT_BASE)
+
+
+#define CMR_EVT_CAP_BASE                             (CMR_EVT_OEM_BASE + 0x200)
+#define CMR_EVT_CAP_INIT                             (CMR_EVT_CAP_BASE + 0)
+#define CMR_EVT_CAP_EXIT                             (CMR_EVT_CAP_BASE + 1)
+#define CMR_EVT_CAP_TX_DONE                          (CMR_EVT_CAP_BASE + 2)
+#define CMR_EVT_CAP_START_CAP                        (CMR_EVT_CAP_BASE + 3)
+
 
 #define CAMERA_OEM_MSG_QUEUE_SIZE                    50
 #define CAMERA_AF_MSG_QUEUE_SIZE                     5
-#define CAMERA_PREV_MSG_QUEUE_SIZE                     20
+#define CAMERA_PREV_MSG_QUEUE_SIZE                   20
+#define CAMERA_CAP_MSG_QUEUE_SIZE                    20
 #define CAMERA_PREV_ID_BASE                          0x1000
 #define CAMERA_CAP0_ID_BASE                          0x2000
 #define CAMERA_CAP1_ID_BASE                          0x4000
 #define CAMERA_PREV_FRM_CNT                          V4L2_BUF_MAX
 #define CAMERA_PREV_ROT_FRM_CNT                      4
-#define CAMERA_CAP_FRM_CNT                           CMR_IMG_CNT_MAX
+#define CAMERA_CAP_FRM_CNT                           4 //CMR_IMG_CNT_MAX
 #define CAMERA_ZOOM_LEVEL_MAX                        8
 #define ZOOM_STEP(x)                                 ((x - x / CMR_ZOOM_FACTOR) / CAMERA_ZOOM_LEVEL_MAX)
 #define CAMERA_PIXEL_ALIGNED                         4
@@ -75,6 +84,11 @@ extern "C"
 enum zoom_mode {
 	ZOOM_BY_CAP = 0,
 	ZOOM_POST_PROCESS
+};
+
+enum {
+	TAKE_PICTURE_NO = 0,
+	TAKE_PICTURE_NEEDED
 };
 
 enum RECOVER_STATUS {
@@ -92,6 +106,7 @@ enum {
 	CMR_IDLE = 0x00,
 	CMR_PREVIEW,
 	CMR_PREVIEW_RECOVER,
+	CMR_CAPTURE_PREPARE,
 	CMR_CAPTURE,
 	CMR_CAPTURE_SLICE,
 	CMR_CAPTURE_RECOVER,
@@ -119,7 +134,7 @@ enum {
 	IMG_CVT_IDLE = 0x50,
 	IMG_CVT_ROTATING,
 	IMG_CVT_ROT_DONE,
-	IMG_CVT_SCALING
+	IMG_CVT_SCALING,
 };
 
 
@@ -223,7 +238,7 @@ struct camera_settings {
 	sem_t                    isp_af_sem;
 	uint32_t                 isp_af_win_val;
 	uint32_t                 auto_flash;
-	uint8_t                   bflash;
+	uint8_t                  bflash;
 };
 
 struct camera_context {
@@ -243,7 +258,12 @@ struct camera_context {
 	uint32_t                 msg_queue_handle;
 	uint32_t                 af_msg_que_handle;
 	volatile uint32_t        is_working;
-	uint32_t                 camera_status;
+	uint32_t                 preview_status;
+	uint32_t                 capture_status;
+	uint32_t                 is_take_picture;
+	pthread_mutex_t          take_mutex;
+	uint32_t                 chn_1_status;
+	uint32_t                 chn_2_status;
 	uint32_t                 recover_status;
 	uint32_t                 recover_cnt;
 	pthread_mutex_t          cb_mutex;
@@ -259,18 +279,23 @@ struct camera_context {
 	uint32_t                 pre_frm_cnt;
 	pthread_mutex_t          prev_mutex;
 	sem_t                    af_sync_sem;
-	sem_t                   af_start_sync_sem;
 	sem_t                    init_sem;
 	sem_t                    exit_sem;
 	sem_t                    start_sem;
 	sem_t                    stop_sem;
 	uint32_t                 err_code;
 	uint32_t                 camera_id;
-	pthread_t              prev_thread;
+	pthread_t                prev_thread;
 	uint32_t                 prev_msg_que_handle;
-	uint32_t                prev_inited;
+	uint32_t                 prev_inited;
 	sem_t                    prev_sync_sem;
-	int32_t                set_flag;
+	/* capture thread */
+	pthread_t                cap_thread;
+	uint32_t                 cap_msg_que_handle;
+	uint32_t                 cap_inited;
+	sem_t                    cap_sync_sem;
+
+	int32_t                  set_flag;
 	sem_t                    set_sem;
 
 	/*for preview*/
@@ -312,6 +337,13 @@ struct camera_context {
 	pthread_mutex_t          cancel_mutex;
 	uint32_t                 cap_canceled;
 	takepicture_mode         cap_mode;
+	/* for capture ZSL */
+	struct frm_info          cap_frm_info[CAMERA_CAP_FRM_CNT];
+	struct img_frm           cap_frm[CAMERA_CAP_FRM_CNT];
+	uint32_t                 cap_phys_addr;
+	uint32_t                 *cap_virt_addr;
+	uint32_t                 cap_mem_szie;
+
 	/*for setting*/
 	struct camera_settings   cmr_set;
 	uint32_t                 orientation;

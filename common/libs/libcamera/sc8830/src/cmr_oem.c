@@ -83,11 +83,12 @@ uint32_t camera_get_img_type(uint32_t format_mode)
 
 int camera_get_trim_rect(struct img_rect *src_trim_rect, uint32_t zoom_level, struct img_size *dst_size)
 {
-	uint32_t trim_width;
-	uint32_t trim_height;
-	uint32_t zoom_step_w = 0, zoom_step_h = 0;
+	uint32_t                 trim_width;
+	uint32_t                 trim_height;
+	uint32_t                 zoom_step_w = 0, zoom_step_h = 0;
 
 	if (NULL == src_trim_rect || NULL == dst_size) {
+		CMR_LOGE("0x%x, 0x%x", (uint32_t)src_trim_rect, (uint32_t)dst_size);
 		return -CAMERA_INVALID_PARM;
 	}
 
@@ -95,6 +96,7 @@ int camera_get_trim_rect(struct img_rect *src_trim_rect, uint32_t zoom_level, st
 	trim_height = src_trim_rect->height;
 
 	if (0 == dst_size->width || 0 == dst_size->height) {
+		CMR_LOGE("0x%x, 0x%x", dst_size->width, dst_size->height);
 		return -CAMERA_INVALID_PARM;
 	}
 
@@ -273,7 +275,7 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 	time(&timep);
 	p = gmtime(&timep);
 	sprintf(datetime_buf,
-			"%4d:%2d:%2d %2d:%2d:%2d",
+			"%4d:%02d:%02d %02d:%02d:%02d",
 			(1900+p->tm_year),
 			(1+p->tm_mon),
 			p->tm_mday,

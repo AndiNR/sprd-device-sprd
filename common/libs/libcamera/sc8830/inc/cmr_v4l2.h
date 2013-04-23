@@ -25,6 +25,17 @@ extern "C"
 
 #define V4L2_BUF_MAX                   8
 
+enum channel_num {
+	CHN_0 = 0,
+	CHN_1,
+	CHN_2,
+};
+
+enum channel_status {
+	CHN_IDLE = 2,
+	CHN_BUSY
+};
+
 enum v4l2_sensor_format {
 	V4L2_SENSOR_FORMAT_YUV = 0,
 	V4L2_SENSOR_FORMAT_SPI,
@@ -51,12 +62,14 @@ struct img_frm_cap {
 	uint32_t                            need_binning;
 };
 
-struct cap_cfg {
+struct sn_cfg {
 	struct img_size                     sn_size;
-	uint32_t                            channel_num;
 	uint32_t                            frm_num;
-	struct img_frm_cap                  cfg0;
-	struct img_frm_cap                  cfg1;
+};
+
+struct cap_cfg {
+	uint32_t                            channel_id;
+	struct img_frm_cap                  cfg;
 };
 
 struct buffer_cfg {
@@ -81,13 +94,14 @@ int cmr_v4l2_init(void);
 int cmr_v4l2_deinit(void);
 void cmr_v4l2_evt_reg(cmr_evt_cb  v4l2_event_cb);
 int cmr_v4l2_if_cfg(struct sensor_if *sn_if);
-int cmr_v4l2_cap_cfg(struct cap_cfg *cfg);
+int cmr_v4l2_sn_cfg(struct sn_cfg *config);
+int cmr_v4l2_cap_cfg(struct cap_cfg *config);
 int cmr_v4l2_buff_cfg (struct buffer_cfg *buf_cfg);
 int cmr_v4l2_cap_start(uint32_t skip_num);
 int cmr_v4l2_cap_stop(void);
-int cmr_v4l2_cap_resume(uint32_t skip_number);
-int cmr_v4l2_cap_pause(void);
-int cmr_v4l2_free_frame(uint32_t channel_num, uint32_t index);
+int cmr_v4l2_cap_resume(uint32_t channel_id, uint32_t skip_number, uint32_t deci_factor);
+int cmr_v4l2_cap_pause(uint32_t channel_id);
+int cmr_v4l2_free_frame(uint32_t channel_id, uint32_t index);
 int cmr_v4l2_scale_capability(uint32_t *width, uint32_t *sc_factor);
 
 #ifdef __cplusplus

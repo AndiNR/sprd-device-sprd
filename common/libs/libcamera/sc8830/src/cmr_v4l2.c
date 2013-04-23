@@ -50,6 +50,21 @@ enum
 	EXIT_EXCEPTION,
 };
 
+
+/*
+	capability       parameters                         structure member
+	0x1000           capture mode, single or multi      capture.capturemode
+	0x1001           skip number for CAP sub-module     capture.reserved[0];
+	0x1002           image width/height from sensor     capture.reserved[2], capture.reserved[3];
+	0x1003           base id for each frame             capture.reserved[1];
+*/
+enum dcam_parm_id {
+	CAPTURE_MODE = 0x1000,
+	CAPTURE_SKIP_NUM,
+	CAPTURE_SENSOR_SIZE,
+	CAPTURE_FRM_ID_BASE
+};
+
 static char               dev_name[50] = "/dev/video0";
 static int                fd = -1;
 static cmr_evt_cb         v4l2_evt_cb = NULL;
@@ -198,52 +213,69 @@ int cmr_v4l2_if_cfg(struct sensor_if *sn_if)
 	return ret;
 }
 
-int cmr_v4l2_cap_cfg(struct cap_cfg *cfg)
+int cmr_v4l2_sn_cfg(struct sn_cfg *config)
 {
 	int                      ret = 0;
 	struct v4l2_streamparm   stream_parm;
+
+	stream_parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	stream_parm.parm.capture.capability = CAPTURE_MODE;
+	if (1 == config->frm_num) {
+		stream_parm.parm.capture.capturemode = 0;/* means single-frame sample mode */
+	} else {
+		stream_parm.parm.capture.capturemode = 1;/* means multi-frame sample mode */
+	}
+	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
+	CMR_RTN_IF_ERR(ret);
+
+	stream_parm.parm.capture.capability = CAPTURE_SENSOR_SIZE;
+	stream_parm.parm.capture.reserved[2] = config->sn_size.width;
+	stream_parm.parm.capture.reserved[3] = config->sn_size.height;
+	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
+
+exit:
+	return ret;
+
+}
+
+int cmr_v4l2_cap_cfg(struct cap_cfg *config)
+{
+	int                      ret = 0;
 	struct v4l2_crop         crop;
 	struct v4l2_fmtdesc      fmtdesc;
 	struct v4l2_format       format;
 	uint32_t                 found = 0;
-	uint32_t                 ret_channel_num = 0;
 	uint32_t                 pxl_fmt;
+	uint32_t                 cfg_id = config->channel_id;
+	enum v4l2_buf_type       buf_type;
 	
 	CMR_CHECK_FD;
 
-	if (NULL == cfg || 0 == cfg->channel_num || 0 == cfg->frm_num)
+	if (NULL == config)
 		return -1;
-	CMR_LOGV("channle number %d , frame number %d", cfg->channel_num, cfg->frm_num);
 
-	/* firstly, set capture mode as single capture or multi-capture */
-	stream_parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	ret = ioctl(fd, VIDIOC_G_PARM, &stream_parm);
-	CMR_RTN_IF_ERR(ret);
+	CMR_LOGV("channel_id %d", config->channel_id);
 
-	if (1 == cfg->frm_num) {
-		stream_parm.parm.capture.capturemode = 0;
+	if (CHN_1 == cfg_id) {
+		buf_type  = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	} else {
-		stream_parm.parm.capture.capturemode = 1;
+		buf_type  = V4L2_BUF_TYPE_PRIVATE;
 	}
-	stream_parm.parm.capture.reserved[2] = cfg->sn_size.width;
-	stream_parm.parm.capture.reserved[3] = cfg->sn_size.height;
-	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
-	CMR_RTN_IF_ERR(ret);
 
-	/* secondly, set the crop rectangle PATH1 module, this should be called before VIDIOC_TRY_FMT called */
-	crop.c.left   = cfg->cfg0.src_img_rect.start_x;
-	crop.c.top    = cfg->cfg0.src_img_rect.start_y;
-	crop.c.width  = cfg->cfg0.src_img_rect.width;
-	crop.c.height = cfg->cfg0.src_img_rect.height;
-	crop.type     = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	/* firstly, set the crop rectangle PATH1 module, this should be called before VIDIOC_TRY_FMT called */
+	crop.c.left   = config->cfg.src_img_rect.start_x;
+	crop.c.top    = config->cfg.src_img_rect.start_y;
+	crop.c.width  = config->cfg.src_img_rect.width;
+	crop.c.height = config->cfg.src_img_rect.height;
+	crop.type     = buf_type;
 	ret = ioctl(fd, VIDIOC_S_CROP, &crop);
 	CMR_RTN_IF_ERR(ret);
 
-	/* thirdly,  check whether the output format described by cfg->cfg0 can be supported by the low layer */
+	/* secondly,  check whether the output format described by config->cfg[cfg_id] can be supported by the low layer */
 	found = 0;
 	fmtdesc.index = 0;
-	fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	pxl_fmt = cmr_v4l2_get_4cc(cfg->cfg0.dst_img_fmt);
+	fmtdesc.type = buf_type;
+	pxl_fmt = cmr_v4l2_get_4cc(config->cfg.dst_img_fmt);
 	while (0 == ioctl(fd, VIDIOC_ENUM_FMT, &fmtdesc)) {
 		if (fmtdesc.pixelformat == pxl_fmt) {
 			CMR_LOGV("FourCC 0x%x is supported by the low layer", pxl_fmt);
@@ -255,73 +287,21 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *cfg)
 
 	if (found) {
 		bzero(&format, sizeof(struct v4l2_format));
-		format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-		format.fmt.pix.width = cfg->cfg0.dst_img_size.width;
-		format.fmt.pix.height = cfg->cfg0.dst_img_size.height;
+		format.type = buf_type;
+		format.fmt.pix.width = config->cfg.dst_img_size.width;
+		format.fmt.pix.height = config->cfg.dst_img_size.height;
 		format.fmt.pix.pixelformat = pxl_fmt; //fourecc
-		format.fmt.pix.priv = cfg->cfg0.need_isp;
+		format.fmt.pix.priv = config->cfg.need_isp;
 		ret = ioctl(fd, VIDIOC_TRY_FMT, &format);
 		CMR_LOGV("need binning, %d", format.fmt.pix.sizeimage);
 		if (format.fmt.pix.sizeimage) {
-			cfg->cfg0.need_binning = 1;
+			config->cfg.need_binning = 1;
 		}
 		CMR_RTN_IF_ERR(ret);
-		ret_channel_num++;
-	}
-
-	/* lastly,  check whether the output format described by cfg->cfg1 can be supported by the low layer */
-	if (cfg->channel_num == 2) {
-		crop.c.left   = cfg->cfg1.src_img_rect.start_x;
-		crop.c.top    = cfg->cfg1.src_img_rect.start_y;
-		crop.c.width  = cfg->cfg1.src_img_rect.width;
-		crop.c.height = cfg->cfg1.src_img_rect.height;
-		crop.type     = V4L2_BUF_TYPE_PRIVATE;
-		ret = ioctl(fd, VIDIOC_S_CROP, &crop);
-		CMR_RTN_IF_ERR(ret);
-
-		found = 0;
-		fmtdesc.index = 0;
-		fmtdesc.type = V4L2_BUF_TYPE_PRIVATE;
-		pxl_fmt = cmr_v4l2_get_4cc(cfg->cfg1.dst_img_fmt);
-		while (0 == ioctl(fd, VIDIOC_ENUM_FMT, &fmtdesc)) {
-			if (fmtdesc.pixelformat == pxl_fmt) {
-				CMR_LOGV("FourCC 0x%x is supported by the low layer", pxl_fmt);
-				found = 1;
-				break;
-			}
-			fmtdesc.index++;
-		}
-
-		if (found) {
-			bzero(&format, sizeof(struct v4l2_format));
-			format.type = V4L2_BUF_TYPE_PRIVATE;
-			format.fmt.pix.width = cfg->cfg1.dst_img_size.width;
-			format.fmt.pix.height = cfg->cfg1.dst_img_size.height;
-			format.fmt.pix.pixelformat = pxl_fmt; //fourecc
-			CMR_LOGI("type, w, h, pixelformat, 0x%x %d %d 0x%x",
-				format.type, format.fmt.pix.width,
-				format.fmt.pix.height, format.fmt.pix.pixelformat);
-
-			ret = ioctl(fd, VIDIOC_TRY_FMT, &format);
-			if (0 == ret) {
-				ret_channel_num++;
-				cfg->cfg1.need_isp = format.fmt.pix.priv;
-			} else {
-				CMR_LOGV("Failed, %d", ret);
-			}
-		}
-
 	}
 
 exit:
-
-	if (ret_channel_num) {
-		ret = 0;
-		cfg->channel_num = ret_channel_num;
-	}
-
-	CMR_LOGV("ret %d channle number %d", ret, cfg->channel_num);
-
+	CMR_LOGV("ret %d", ret);
 	return ret;
 }
 
@@ -339,28 +319,27 @@ int cmr_v4l2_buff_cfg (struct buffer_cfg *buf_cfg)
 
 	CMR_LOGV("%d %d 0x%x ", buf_cfg->channel_id, buf_cfg->count, buf_cfg->base_id);
 
-	if (0 == buf_cfg->channel_id) {
+	if (CHN_1 == buf_cfg->channel_id) {
 		v4l2_buf.type  = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-		stream_parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	} else {
 		v4l2_buf.type  = V4L2_BUF_TYPE_PRIVATE;
-		stream_parm.type = V4L2_BUF_TYPE_PRIVATE;
 	}
 
 	/* firstly , set the base index for each channel */
-	ret = ioctl(fd, VIDIOC_G_PARM, &stream_parm);
-	CMR_RTN_IF_ERR(ret);
-	stream_parm.parm.capture.reserved[1] = buf_cfg->base_id;
+	stream_parm.type                      = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	stream_parm.parm.capture.capability   = CAPTURE_FRM_ID_BASE;
+	stream_parm.parm.capture.reserved[1]  = buf_cfg->base_id;
+	stream_parm.parm.capture.extendedmode = buf_cfg->channel_id;
 	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
 	CMR_RTN_IF_ERR(ret);
-
-/*	CMR_LOGI("wjp:test %d,0x%x.",buf_cfg->count,buf_cfg->addr[0].addr_y);*/
 
 	/* secondly , set the frame address */
 	for (i = 0; i < buf_cfg->count; i++) {
 		v4l2_buf.m.userptr  = buf_cfg->addr[i].addr_y;
 		v4l2_buf.input      = buf_cfg->addr[i].addr_u;
 		v4l2_buf.reserved   = buf_cfg->addr[i].addr_v;
+		CMR_LOGI("VIDIOC_QBUF: buf %d: Y=0x%x, U=0x%x, V=0x%x \n",
+			i, buf_cfg->addr[i].addr_y, buf_cfg->addr[i].addr_u, buf_cfg->addr[i].addr_v);
 		ret = ioctl(fd, VIDIOC_QBUF, &v4l2_buf);
 		if (ret) {
 			CMR_LOGE("Failed to QBuf, %d", ret);
@@ -382,10 +361,8 @@ int cmr_v4l2_cap_start(uint32_t skip_num)
 	CMR_CHECK_FD;
 
 	stream_parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	ret = ioctl(fd, VIDIOC_G_PARM, &stream_parm);
-	CMR_RTN_IF_ERR(ret);
+	stream_parm.parm.capture.capability = CAPTURE_SKIP_NUM;	
 	stream_parm.parm.capture.reserved[0] = skip_num; /* just modify the skip number parameter */
-	stream_parm.parm.capture.extendedmode = 0; /* set normal stream on/off mode */
 	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
 	CMR_RTN_IF_ERR(ret);
 
@@ -404,20 +381,12 @@ exit:
 int cmr_v4l2_cap_stop(void)
 {
 	int                      ret = 0;
-	struct v4l2_streamparm   stream_parm;
 	enum v4l2_buf_type       buf_type;
 
 	CMR_CHECK_FD;
 	pthread_mutex_lock(&status_mutex);
 	is_on = 0;
 	pthread_mutex_unlock(&status_mutex);
-
-	stream_parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	ret = ioctl(fd, VIDIOC_G_PARM, &stream_parm);
-	CMR_RTN_IF_ERR(ret);
-	stream_parm.parm.capture.extendedmode = 0; /* set normal stream on/off mode */
-	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
-	CMR_RTN_IF_ERR(ret);
 
 	ret = ioctl(fd, VIDIOC_STREAMOFF, &buf_type);
 	CMR_LOGV("streamoff done.");
@@ -426,58 +395,52 @@ exit:
 	return ret;
 }
 
-int cmr_v4l2_cap_resume(uint32_t skip_number)
+/*
+parameters for v4l2_ext_controls
+ ctrl_class,     should be reserved by V4L2, can be V4L2_CTRL_CLASS_USER or 
+                       V4L2_CTRL_CLASS_CAMERA, etc;
+ count,          pause/resume control , 0 means pause, 1 means resume;
+ error_idx,      channel id;
+ reserved[0],    skip number;
+ reserved[1],    deci_factor;
+ struct v4l2_ext_control *controls;
+*/
+int cmr_v4l2_cap_resume(uint32_t channel_id, uint32_t skip_number, uint32_t deci_factor)
 {
 	int                      ret = 0;
-	struct v4l2_streamparm   stream_parm;
-	enum v4l2_buf_type       buf_type;
+	struct v4l2_ext_controls ext_ctl;
 
 	CMR_CHECK_FD;
-
-	stream_parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	ret = ioctl(fd, VIDIOC_G_PARM, &stream_parm);
-	CMR_RTN_IF_ERR(ret);
-	stream_parm.parm.capture.reserved[0] = skip_number; /* only just modify the skip number parameter */
-	stream_parm.parm.capture.extendedmode = 1; /* set lightly stream on/off mode */
-	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
-	CMR_RTN_IF_ERR(ret);
-
-	ret = ioctl(fd, VIDIOC_STREAMON, &buf_type);
-
-exit:
-
+	bzero(&ext_ctl, sizeof(struct v4l2_ext_controls));
+	ext_ctl.ctrl_class  = V4L2_CTRL_CLASS_CAMERA;
+	ext_ctl.count       = 1;
+	ext_ctl.error_idx   = channel_id;
+	ext_ctl.reserved[0] = skip_number;
+	ext_ctl.reserved[1] = deci_factor;
+	ret = ioctl(fd, VIDIOC_S_EXT_CTRLS, &ext_ctl);
 	return ret;
 }
 
-int cmr_v4l2_cap_pause(void)
+int cmr_v4l2_cap_pause(uint32_t channel_id)
 {
 	int                      ret = 0;
-	struct v4l2_streamparm   stream_parm;
-	enum v4l2_buf_type       buf_type;
+	struct v4l2_ext_controls ext_ctl;
 
 	CMR_CHECK_FD;
-
-	stream_parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	ret = ioctl(fd, VIDIOC_G_PARM, &stream_parm);
-	CMR_RTN_IF_ERR(ret);
-
-	stream_parm.parm.capture.extendedmode = 1; /* set lightly stream on/off mode */
-	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
-	CMR_RTN_IF_ERR(ret);
-
-	ret = ioctl(fd, VIDIOC_STREAMOFF, &buf_type);
-
-exit:
-
+	bzero(&ext_ctl, sizeof(struct v4l2_ext_controls));
+	ext_ctl.ctrl_class = V4L2_CTRL_CLASS_CAMERA;
+	ext_ctl.count      = 0;
+	ext_ctl.error_idx  = channel_id;
+	ret = ioctl(fd, VIDIOC_S_EXT_CTRLS, &ext_ctl);
 	return ret;
 }
 
-int cmr_v4l2_free_frame(uint32_t channel_num, uint32_t index)
+int cmr_v4l2_free_frame(uint32_t channel_id, uint32_t index)
 {
 	int                      ret = 0;
 	struct v4l2_buffer       v4l2_buf;
 
-	CMR_LOGV("channel %d, index 0x%x", channel_num, index);
+	CMR_LOGV("channel id %d, index 0x%x", channel_id, index);
 
 	CMR_CHECK_FD;
 
@@ -487,9 +450,10 @@ int cmr_v4l2_free_frame(uint32_t channel_num, uint32_t index)
 		return ret;
 	}
 	pthread_mutex_unlock(&status_mutex);
-
 	v4l2_buf.index = index;
-	if (0 == channel_num) {
+	if (CHN_0 == channel_id) {
+
+	} else if (CHN_1 == channel_id) {
 		v4l2_buf.type  = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	} else {
 		v4l2_buf.type  = V4L2_BUF_TYPE_PRIVATE;
@@ -610,12 +574,13 @@ static void* cmr_v4l2_thread_proc(void* data)
 					continue;
 				}
 				if (V4L2_BUF_TYPE_VIDEO_CAPTURE == buf.type) {
-					frame.channel_id = 0;
+					frame.channel_id = CHN_1;
 				} else if (V4L2_BUF_TYPE_PRIVATE == buf.type) {
-					frame.channel_id = 1;
+					frame.channel_id = CHN_2;
 				} else {
 					continue;
 				}
+
 				CMR_LOGV("TX got one frame! buf_type 0x%x, id 0x%x", buf.type, buf.index);
 				frame.height   = buf.reserved;
 				frame.frame_id = buf.index;

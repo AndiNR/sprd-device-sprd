@@ -1,10 +1,8 @@
 /*
 * hardware/sprd/hsdroid/libcamera/sprdcamerahardwareinterface.cpp
- * Dcam HAL based on sc8800g2
  *
- * Copyright (C) 2011 Spreadtrum
+ * Copyright (C) 2013 Spreadtrum
  *
- * Author: Xiaozhe wang <xiaozhe.wang@spreadtrum.com>
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -18,6 +16,7 @@
 
 #define LOG_NDEBUG 0
 #define LOG_TAG "SprdCameraHardware"
+
 #include <utils/Log.h>
 #include <utils/String16.h>
 #include <sys/types.h>
@@ -37,9 +36,7 @@
 #include <media/hardware/MetadataBufferType.h>
 
 #include "SprdOEMCamera.h"
-#include "SprdCameraHardwareConfig.h"
 #include "SprdCameraHardwareInterface.h"
-//#include "SprdCameraHardwareStub.h"
 
 #ifdef CONFIG_CAMERA_ISP
 extern "C" {
@@ -47,8 +44,10 @@ extern "C" {
 }
 #endif
 
-//#define USE_ION_MEM		1
-#define CMCC_POWER_OPT          1
+//////////////////////////////////////////////////////////////////
+namespace android {
+
+#define STOP_PREVIEW_BEFORE_CAPTURE 0
 
 #define LOGV       ALOGV
 #define LOGE       ALOGE
@@ -56,1144 +55,23 @@ extern "C" {
 #define LOGW       ALOGW
 #define LOGD       ALOGD
 
-
-
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof(*x))
-#define PRINT_TIME 0
-#define METADATA_SIZE 12 // (4 * 3)
-
-#define SET_PARM(x,y) do {                                             \
-        ALOGV("initCameraParameters: set parm: %s, %d", #x, y);         \
-        camera_set_parm (x, y, NULL, NULL);                       \
-    } while(0)
-
-extern "C" {
-
-int32_t g_camera_id = -1;
-uint32_t g_sprd_zoom_levle = 0;
-
-static inline void print_time()
-{
-#if PRINT_TIME
-    struct timeval time;
-    gettimeofday(&time, NULL);
-    LOGV("time: %lld us.", time.tv_sec * 1000000LL + time.tv_usec);
-#endif
-}
-
-typedef struct {
-    int width;
-    int height;
-} preview_size_type;
-
-// These sizes have to be a multiple of 16 in each dimension
-static preview_size_type preview_sizes[] = {
-    { 640, 480 },
-    { 480, 320 }, // HVGA
-    { 432, 320 }, // 1.35-to-1, for photos. (Rounded up from 1.3333 to 1)
-    { 352, 288 }, // CIF
-    { 320, 240 }, // QVGA
-    { 240, 160 }, // SQVGA
-    { 176, 144 }, // QCIF
-};
-#define PREVIEW_SIZE_COUNT (sizeof(preview_sizes)/sizeof(preview_size_type))
-
-// default preview size is QVGA
-#define DEFAULT_PREVIEW_SETTING 0
-
-#define LIKELY( exp )       (__builtin_expect( (exp) != 0, true  ))
-#define UNLIKELY( exp )     (__builtin_expect( (exp) != 0, false ))
-}
-
-
-struct buf_addrs {
-    uint32_t type;  // make sure that this is 4 byte.
-    unsigned int addr_y;
-    unsigned int addr_cbcr;
-    unsigned int buf_index;
-    unsigned int reserved;
-};
-
-namespace android {
-    static Mutex singleton_lock;
-   // static Mutex rex_init_lock;
-    //static Condition rex_init_wait;
-
-    static uint8_t* malloc_preview(uint32_t, uint32_t *, uint32_t);
-    static uint8_t* malloc_raw(uint32_t, uint32_t *, uint32_t);
-    static int free_preview(uint32_t *, uint32_t , uint32_t);
-    static int free_raw(uint32_t *, uint32_t , uint32_t);
-    static int reassoc(qdsp_module_type module);
-    //static void cb_rex_signal_ready(void);
-
-
-gralloc_module_t const* SprdCameraHardware::mGrallocHal;
-
-
-#ifdef CMCC_POWER_OPT
-#include<fcntl.h>
-static int flag_lower_emc_freq = 0;
-static void lower_emc_freq(char flag)
-{
-	int fp_emc_freq = -1;
-	fp_emc_freq = open("/sys/emc/emc_freq", O_WRONLY);
-	if (fp_emc_freq > 0) {
-		write(fp_emc_freq, &flag, sizeof(flag));
-		close(fp_emc_freq);
-		LOGV("lower_emc_freq: %c \n", flag);
-	} else {
-		LOGV("lower_emc_freq: fp_emc_freq open failed \n");
-	}
-}
-#endif
-    SprdCameraHardware::SprdCameraHardware(int cameraId)
-        : mParameters(),
-        mPreviewHeight(-1),
-        mPreviewWidth(-1),
-        mRawHeight(-1),
-        mRawWidth(-1),
-        mCameraState(QCS_INIT),
-        mPreviewFrameSize(0),
-        mRawSize(0),
-        mPreviewCount(0),
-        mNotify_cb(0),
-        mData_cb(0),
-        mData_cb_timestamp(0),
-        mUser(0),
-        mMsgEnabled(0),
-        mPreviewHeap(NULL),
-        mRawHeap(NULL),
-        mMiscHeap(NULL),
-        mFDHeap(NULL),
-        mFDAddr(0),
-        mPreviewStartFlag(0),
-        mMetadataHeap(NULL),
-        mIsStoreMetaData(false),
-        mSettingPreviewWindowState(PREVIEW_WINDOW_SET_IDLE)
-    {
-        LOGV("openCameraHardware: call createInstance. cameraId: %d.", cameraId);
-
-        if (!mGrallocHal) {
-                int ret = hw_get_module(GRALLOC_HARDWARE_MODULE_ID, (const hw_module_t **)&mGrallocHal);
-                if (ret)
-                        LOGE("ERR(%s):Fail on loading gralloc HAL", __func__);
-        }
-
-    	char propBuf_atv[10];
-		property_get("sys.camera.atv", propBuf_atv, "0");
-        LOGV("openCameraHardware: call createInstance. cameraId: %d.", cameraId);
-		if(0 == strcmp(propBuf_atv, "1")){
-			g_camera_id = 5; //for ATV
-		}
-		else{
-			g_camera_id = cameraId;
-		}
-
-        if(2 == g_camera_id){
-                //SprdCameraHardwareStub::createInstance();
-
-        }
-        else{
-                //SprdCameraHardware::createInstance();
-                //createInstance();
-                initDefaultParameters();
-        }
-    }
-
-    status_t SprdCameraHardware::initDefaultParameters()
-    {
-        LOGV("initDefaultParameters E");
-        CameraParameters p;
-
-        preview_size_type* ps = &preview_sizes[DEFAULT_PREVIEW_SETTING];
-        p.setPreviewSize(ps->width, ps->height);
-        p.setPreviewFrameRate(15);
-        p.setPreviewFormat("yuv420sp");
-        p.setPictureFormat("jpeg");
-        p.set("jpeg-quality", "100"); // maximum quality
-        p.set("jpeg-thumbnail-width", "320");
-        p.set("jpeg-thumbnail-height", "240");
-        p.set("jpeg-thumbnail-quality", "80");
-        p.set("focus-mode", "auto");
-
-        if(1 == g_camera_id) //for the front camera
-        {
-                uint32_t count, i;
-                count = ARRAY_SIZE(sprd_front_camera_hardware_config);
-                LOGV("front camera parameters: set count : %d", count);
-                for(i = 0; i < count; i++)
-                {
-                        LOGV("front camera parameters: set %d: key: %s, value: %s.", i, sprd_front_camera_hardware_config[i].key, sprd_front_camera_hardware_config[i].value);
-                        p.set(sprd_front_camera_hardware_config[i].key, sprd_front_camera_hardware_config[i].value);
-                }
-        }
-        else //for the back camera
-        {
-                uint32_t count, i;
-                count = ARRAY_SIZE(sprd_back_camera_hardware_config);
-                LOGV("back camera parameters: set count : %d", count);
-                for(i = 0; i < count; i++)
-                {
-                        LOGV("back camera parameters: set %d: key: %s, value: %s.", i, sprd_back_camera_hardware_config[i].key, sprd_back_camera_hardware_config[i].value);
-                        p.set(sprd_back_camera_hardware_config[i].key, sprd_back_camera_hardware_config[i].value);
-                }
-        }
-        if (setParameters(p) != NO_ERROR) {
-            LOGE("Failed to set default parameters?!");
-	     return UNKNOWN_ERROR;
-        }
-        LOGV("initDefaultParameters X.");
-        return NO_ERROR;
-    }
-
-#define ROUND_TO_PAGE(x)  (((x)+0xfff)&~0xfff)
-
-    // Called with mStateLock held!
-bool SprdCameraHardware::startCameraIfNecessary()
-{
-        if (mCameraState == QCS_INIT) {
-                LOGV("waiting for camera_init to initialize.startCameraIfNecessary");
-                if(CAMERA_SUCCESS != camera_init(g_camera_id)){
-                        mCameraState = QCS_INIT;
-                        LOGE("CameraIfNecessary: fail to camera_init().");
-                        return false;
-                }
-
-                //LOGV("starting REX emulation");
-                LOGV("waiting for camera_start.g_camera_id: %d.", g_camera_id);
-                // NOTE: camera_start() takes (height, width), not (width, height).
-                if(CAMERA_SUCCESS != camera_start(camera_cb, this, mPreviewHeight, mPreviewWidth)){
-                        mCameraState = QCS_ERROR;
-                        LOGE("CameraIfNecessary: fail to camera_start().");
-                        return false;
-                }
-                LOGV("OK to camera_start.");
-                while(mCameraState != QCS_IDLE && mCameraState != QCS_ERROR) {
-                        LOGV("init camera: waiting for QCS_IDLE");
-                        mStateWait.wait(mStateLock);
-                        LOGV("init camera: woke up");
-                }
-                LOGV("init camera: initializing parameters");
-        }
-        else LOGV("camera hardware has been started already");
-        return true;
-}
-
-void SprdCameraHardware::enableMsgType(int32_t msgType)
-{
-        LOGV("mLock:enableMsgType S .\n");
-        Mutex::Autolock lock(mLock);
-        mMsgEnabled |= msgType;
-        LOGV("mLock:enableMsgType E .\n");
-}
-
-void SprdCameraHardware::disableMsgType(int32_t msgType)
-{
-        LOGV("'mLock:disableMsgType S.\n");
-  //      Mutex::Autolock lock(mLock);
-        mMsgEnabled &= ~msgType;
-        LOGV("'mLock:disableMsgType E.\n");
-}
-
-bool SprdCameraHardware::msgTypeEnabled(int32_t msgType)
-{
-        LOGV("mLock:msgTypeEnabled S.\n");
-        Mutex::Autolock lock(mLock);
-        LOGV("mLock:msgTypeEnabled E.\n");
-        return (mMsgEnabled & msgType);
-}
-
-status_t SprdCameraHardware::dump(int fd) const
-{
-        const size_t SIZE = 256;
-        char buffer[SIZE];
-        String8 result;
-        const Vector<String16> args;
-
-        // Dump internal primitives.
-        snprintf(buffer, 255, "SprdCameraHardware::dump: state (%d)\n", mCameraState);
-        result.append(buffer);
-        snprintf(buffer, 255, "preview width(%d) x height (%d)\n", mPreviewWidth, mPreviewHeight);
-        result.append(buffer);
-        snprintf(buffer, 255, "raw width(%d) x height (%d)\n", mRawWidth, mRawHeight);
-        result.append(buffer);
-        snprintf(buffer, 255, "preview frame size(%d), raw size (%d), jpeg size (%d) and jpeg max size (%d)\n", mPreviewFrameSize, mRawSize, mJpegSize, mJpegMaxSize);
-        result.append(buffer);
-        write(fd, result.string(), result.size());
-        mParameters.dump(fd, args);
-        return NO_ERROR;
-    }
-
-sprd_camera_memory_t* SprdCameraHardware::GetPmem(const char *device_name, int buf_size, int num_bufs)
-{
-	sprd_camera_memory_t *memory = (sprd_camera_memory_t *)malloc(sizeof(*memory));
-	if(NULL == memory) {
-		LOGE("wxz: Fail to GetPmem, memory is NULL.");
-		return NULL;
-	}
-	camera_memory_t *camera_memory;
-	int paddr, psize;
-        int order = 0, acc = buf_size *num_bufs ;
-	acc = camera_get_size_align_page(acc);
-        MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc , MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
-
-	camera_memory = mGetMemory_cb(pHeapIon->getHeapID(), acc/num_bufs, num_bufs, NULL);
-
-        if(NULL == camera_memory) {
-                   goto getpmem_end;
-        }
-        if(0xFFFFFFFF == (uint32_t)camera_memory->data) {
-                 camera_memory = NULL;
-                 LOGE("Fail to GetPmem().");
-                 goto getpmem_end;
-       }
-	pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
-	memory->ion_heap = pHeapIon;
-	memory->camera_memory = camera_memory;
-	memory->phys_addr = paddr;
-	memory->phys_size = psize;
-	memory->handle = camera_memory->handle;
-	//memory->data = camera_memory->data;
-	memory->data = pHeapIon->getBase();
-
-       LOGV("GetPmem: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
-                            memory->phys_addr, (uint32_t)camera_memory->data,
-                            camera_memory->size, memory->phys_size);
-
-getpmem_end:
-	return memory;
-}
-
-void SprdCameraHardware::FreePmem(sprd_camera_memory_t* memory)
-{
-        if(memory){
-                if(memory->camera_memory->release){
-                        memory->camera_memory->release(memory->camera_memory);
-                        memory->camera_memory = NULL;
-                } else {
-                        LOGE("fail to FreePmem: NULL is camera_memory->release.");
-               }
-		if(memory->ion_heap) {
-			delete memory->ion_heap;
-			memory->ion_heap = NULL;
-		}
-		memory = NULL;
-        } else{
-                LOGV("FreePmem: NULL");
-        }
-}
-
-void SprdCameraHardware::FreeFdmem(void)
-{
-        if (mFDAddr) {
-            camera_set_fd_mem(0,0,0);
-            free((void*)mFDAddr);
-            mFDAddr = 0;
-        }
-}
-bool SprdCameraHardware::initPreview()
-{
-        uint32_t page_size, buffer_size;
-        uint32_t preview_buff_cnt = kPreviewBufferCount;
-
-        if(true != startCameraIfNecessary())
-                return false;
-
-        // Tell libqcamera what the preview and raw dimensions are.  We
-        // call this method even if the preview dimensions have not changed,
-        // because the picture ones may have.
-        // NOTE: if this errors out, mCameraState != QCS_IDLE, which will be
-        //       checked by the caller of this method.
-        setCameraDimensions();
-        LOGV("initPreview: preview size=%dx%d", mPreviewWidth, mPreviewHeight);
-
-	camerea_set_preview_format(mPreviewFormat);
-        mPreviewFrameSize = mPreviewWidth * mPreviewHeight * 3 / 2;
-        buffer_size = camera_get_size_align_page(mPreviewFrameSize);
-
-        if(camera_get_rot_set())
-        {
-                /* allocate 1 more buffer for rotation */
-                preview_buff_cnt += kPreviewRotBufferCount;
-                LOGV("initPreview: rotation, increase buffer: %d \n", preview_buff_cnt);
-        }
-        mPreviewHeap = GetPmem("/dev/pmem_adsp", buffer_size, preview_buff_cnt);
-        if(NULL == mPreviewHeap)
-            return false;
-        if(NULL == mPreviewHeap->handle){
-                LOGE("Fail to GetPmem mPreviewHeap. buffer_size: 0x%x.", buffer_size);
-                return false;
-        }
-        if(mPreviewHeap->phys_addr & 0xFF){
-                LOGE("error: the mPreviewHeap is not 256 bytes aligned.");
-                return false;
-        }
-
-	if (camera_set_preview_mem((uint32_t)mPreviewHeap->phys_addr,
-				(uint32_t)mPreviewHeap->data,
-				(uint32_t)mPreviewHeap->phys_size))
-		return false;
-
-        return true;
-}
-
-void SprdCameraHardware::deinitPreview()
-{
-        FreeFdmem();
-        FreePmem(mPreviewHeap);
-        mPreviewHeap = NULL;
-        FreePmem(mFDHeap);
-        mFDHeap = NULL;
-}
-
-    // Called with mStateLock held!
-bool SprdCameraHardware::initRaw(bool initJpegHeap)
-{
-        uint32_t page_size, buffer_size;
-        uint32_t sensor_max_width,sensor_max_height;
-	uint32_t local_width, local_height;
-	uint32_t mem_sie0, mem_size1;
-
-        LOGV("initRaw E");
-        if(true != startCameraIfNecessary())
-                return false;
-
-	if (camera_capture_max_img_size(&local_width, &local_height))
-		return false;
-
-	if (camera_capture_get_buffer_size(g_camera_id,local_width, local_height, &mem_sie0, &mem_size1))
-		return false;
-
-        mRawSize = mem_sie0;
-        mJpegMaxSize = mRawSize;
-        buffer_size = mJpegMaxSize;
-        mJpegHeap = NULL;
-
-        LOGV("initRaw: initializing mRawHeap.");
-
-        buffer_size = camera_get_size_align_page(buffer_size);
-        LOGV("CAMERA HARD:initRaw:mRawHeap align size = %d . count %d ",buffer_size, kRawBufferCount);
-
-        mRawHeap = GetPmem("/dev/pmem_adsp", buffer_size, kRawBufferCount);
-        if(NULL == mRawHeap)
-            return false;
-        if(NULL == mRawHeap->handle){
-                LOGE("Fail to GetPmem mRawHeap. buffer_size: 0x%x.", buffer_size);
-                return false;
-        }
-        if(0 != mem_size1) {
-            buffer_size = camera_get_size_align_page(mem_size1);
-            mMiscHeap = GetPmem("/dev/pmem_adsp", buffer_size, kRawBufferCount);
-            if(NULL == mMiscHeap) {
-                FreePmem(mRawHeap);
-                mRawHeap = NULL;
-                return false;
-            }
-            if(NULL == mMiscHeap->handle){
-                    LOGE("Fail to GetPmem mRawHeap. buffer_size: 0x%x.", buffer_size);
-                    FreePmem(mRawHeap);
-                    mRawHeap = NULL;
-                    return false;
-            }
-       }
-        if(0 != mem_size1) {
-            if (camera_set_capture_mem(0,
-            (uint32_t)mRawHeap->phys_addr,
-            (uint32_t)mRawHeap->data,
-            (uint32_t)mRawHeap->phys_size,
-            (uint32_t)mMiscHeap->phys_addr,
-            (uint32_t)mMiscHeap->data,
-            (uint32_t)mMiscHeap->phys_size))
-                return false;
-        }else {
-            if (camera_set_capture_mem(0,
-            (uint32_t)mRawHeap->phys_addr,
-            (uint32_t)mRawHeap->data,
-            (uint32_t)mRawHeap->phys_size,
-            0,
-            0,
-            0))
-                return false;
-        }
-
-        if (initJpegHeap) {
-                LOGV("initRaw: initializing mJpegHeap.");
-                buffer_size = mJpegMaxSize;
-                buffer_size = camera_get_size_align_page(buffer_size);
-                mJpegHeap =   new AshmemPool(buffer_size,
-                	                               kJpegBufferCount,
-                	                               0,
-                	                               0,
-                	                               "jpeg");
-                if (!mJpegHeap->initialized()) {
-                        LOGE("initRaw X failed: error initializing mJpegHeap.");
-                        mJpegHeap = NULL;
-                        FreePmem(mRawHeap);
-                        mRawHeap = NULL;
-                        FreePmem(mMiscHeap);
-                        mMiscHeap = NULL;
-                        return false;
-                }
-                LOGV("initJpeg success");
-        }
-        LOGV("initRaw X success");
-        return true;
-}
-
-void SprdCameraHardware::release()
-{
-        LOGV("release E");
-        LOGV("mLock:release S .\n");
-        Mutex::Autolock l(&mLock);
-
-        // Either preview was ongoing, or we are in the middle or taking a
-        // picture.  It's the caller's responsibility to make sure the camera
-        // is in the idle or init state before destroying this object.
-
-        if (mCameraState != QCS_IDLE && mCameraState != QCS_INIT) {
-                LOGE("Serious error: the camera state is %s, "
-                        "not QCS_IDLE or QCS_INIT!",
-                        getCameraStateStr(mCameraState));
-        }
-        mStateLock.lock();
-        if (mCameraState != QCS_INIT) {
-            // When libqcamera detects an error, it calls camera_cb from the
-            // call to camera_stop, which would cause a deadlock if we
-            // held the mStateLock.  For this reason, we have an intermediate
-            // state QCS_INTERNAL_STOPPING, which we use to check to see if the
-            // camera_cb was called inline.
-                mCameraState = QCS_INTERNAL_STOPPING;
-                mStateLock.unlock();
-
-                LOGV("stopping camera.");
-                if(CAMERA_SUCCESS != camera_stop(stop_camera_cb, this)){
-                        mCameraState = QCS_ERROR;
-                        mStateLock.unlock();
-			if(mIsStoreMetaData) {
-				mMetadataHeap = NULL;
-			}
-                        LOGE("release: fail to camera_stop().");
-                        LOGV("mLock:release E.\n");
-                        return;
-                }
-
-                mStateLock.lock();
-                if (mCameraState == QCS_INTERNAL_STOPPING) {
-                        while (mCameraState != QCS_INIT &&
-                                mCameraState != QCS_ERROR) {
-                                LOGV("stopping camera: waiting for QCS_INIT");
-                                mStateWait.wait(mStateLock);
-                        }
-                }
-
-                if(QCS_ERROR != mCameraState)
-                        mCameraState = QCS_INIT;
-        }
-	if(mIsStoreMetaData) {
-		mMetadataHeap = NULL;
-	}
-        mStateLock.unlock();
-        LOGV("release X");
-        LOGV("mLock:release E.\n");
-    }
-
-SprdCameraHardware::~SprdCameraHardware()
-{
-        LOGV("~SprdCameraHardware E");
-        Mutex::Autolock singletonLock(&singleton_lock);
-        //singleton.clear();
-        LOGV("~SprdCameraHardware X");
-}
-
-void SprdCameraHardware::setCallbacks(camera_notify_callback notify_cb,
-                                                                                        camera_data_callback data_cb,
-                                                                                        camera_data_timestamp_callback data_cb_timestamp,
-                                                                                        camera_request_memory get_memory,
-                                                                                        void *user)
-{
-        mNotify_cb = notify_cb;
-        mData_cb = data_cb;
-        mData_cb_timestamp = data_cb_timestamp;
-        mGetMemory_cb = get_memory;
-        mUser = user;
-}
-
-status_t SprdCameraHardware::startPreviewInternal()
-{
-        LOGV("startPreview E");
-
-        if (mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) {
-#ifdef CMCC_POWER_OPT
-			flag_lower_emc_freq = 1;
-			lower_emc_freq('2');
-#endif
-		SET_PARM(CAMERA_PARM_PREVIEW_MODE, CAMERA_PREVIEW_MODE_MOVIE);
-        } else {
-#ifdef CMCC_POWER_OPT
-		flag_lower_emc_freq = 1;
-		lower_emc_freq('1');
-#endif
-		SET_PARM(CAMERA_PARM_PREVIEW_MODE, CAMERA_PREVIEW_MODE_SNAPSHOT);
-        }
-
-        if (mCameraState == QCS_PREVIEW_IN_PROGRESS) {
-                LOGE("startPreview is already in progress, doing nothing.");
-                // We might want to change the callback functions while preview is
-                // streaming, for example to enable or disable recording.
-                //setCallbackFuns(pcb, puser, rcb, ruser);
-                LOGV("mLock:startPreview E.\n");
-                return NO_ERROR;
-        }
-
-        // We check for these two states explicitly because it is possible
-        // for startPreview() to be called in response to a raw or JPEG
-        // callback, but before we've updated the state from QCS_WAITING_RAW
-        // or QCS_WAITING_JPEG to QCS_IDLE.  This is because in camera_cb(),
-        // we update the state *after* we've made the callback.  See that
-        // function for an explanation.
-
-        if (mCameraState == QCS_WAITING_RAW ||
-                mCameraState == QCS_WAITING_JPEG) {
-                while (mCameraState != QCS_IDLE &&
-                        mCameraState != QCS_ERROR) {
-                        LOGV("waiting for QCS_IDLE");
-                        mStateWait.wait(mStateLock);
-                }
-        }
-
-        if (mCameraState != QCS_IDLE) {
-                LOGE("startPreview X Camera state is %s, expecting QCS_IDLE!",
-                getCameraStateStr(mCameraState));
-                LOGV("mLock:startPreview E.\n");
-                return INVALID_OPERATION;
-        }
-
-        if (!initPreview()) {
-                LOGE("startPreview X initPreview failed.  Not starting preview.");
-                LOGV("mLock:startPreview E.\n");
-                return UNKNOWN_ERROR;
-        }
-
-        // setCallbackFuns(pcb, puser, rcb, ruser);
-        // hack to prevent first preview frame from being black
-        mPreviewCount = 0;
-        mCameraState = QCS_INTERNAL_PREVIEW_REQUESTED;
-        camera_ret_code_type qret = camera_start_preview(camera_cb, this);
-        LOGV("camera_start_preview X");
-        if (qret == CAMERA_SUCCESS) {
-                while(mCameraState != QCS_PREVIEW_IN_PROGRESS &&
-                        mCameraState != QCS_ERROR) {
-                        LOGV("waiting for QCS_PREVIEW_IN_PROGRESS");
-                        mStateWait.wait(mStateLock);
-                }
-        }
-        else {
-                LOGE("startPreview failed: sensor error.");
-                mCameraState = QCS_ERROR;
-		FreePmem(mPreviewHeap);
-		mPreviewHeap = NULL;
-        }
-        LOGV("startPreview X,mRecordingMode=%d.",mRecordingMode);
-        LOGV("mLock:startPreview E.\n");
-        return mCameraState == QCS_PREVIEW_IN_PROGRESS ? NO_ERROR : UNKNOWN_ERROR;
-}
-
-void SprdCameraHardware::stopPreviewInternal()
-{
-        LOGV("stopPreviewInternal E");
-
-#ifdef CMCC_POWER_OPT
-	if (flag_lower_emc_freq) {
-		lower_emc_freq('0');
-		flag_lower_emc_freq = 0;
-	}
-#endif
-
-        if (mCameraState != QCS_PREVIEW_IN_PROGRESS) {
-                LOGE("Preview not in progress!");
-                FreeFdmem();
-                FreePmem(mPreviewHeap);
-                mPreviewHeap = NULL;
-                FreePmem(mFDHeap);
-                mFDHeap = NULL;
-                return;
-        }
-
-        /*if (mAutoFocusCallback != NULL) {
-            // WARNING: clear mAutoFocusCallback BEFORE you call
-            // camera_stop_focus.  The CAMERA_EXIT_CB_ABORT is (erroneously)
-            // delivered inline camera_stop_focus(), and we cannot acquire
-            // mStateLock, because that would cause a deadlock.  In any case,
-            // CAMERA_EXIT_CB_ABORT is delivered only when we call
-            // camera_stop_focus.
-            mAutoFocusCallback = NULL;
-            camera_stop_focus();
-        }*/
-        //camera_stop_focus();
-        mCameraState = QCS_INTERNAL_PREVIEW_STOPPING;
-
-        if(CAMERA_SUCCESS != camera_stop_preview()){
-                mCameraState = QCS_ERROR;
-                FreeFdmem();
-                FreePmem(mPreviewHeap);
-                mPreviewHeap = NULL;
-                FreePmem(mFDHeap);
-                mFDHeap = NULL;
-                LOGE("stopPreviewInternal: fail to camera_stop_preview().");
-                return;
-        }
-        while (mCameraState != QCS_IDLE &&
-        mCameraState != QCS_ERROR)  {
-                LOGV("waiting for QCS_IDLE");
-                mStateWait.wait(mStateLock);
-        }
-
-        LOGV("stopPreviewInternal: Freeing preview heap.");
-        FreeFdmem();
-        FreePmem(mPreviewHeap);
-        mPreviewHeap = NULL;
-        FreePmem(mFDHeap);
-        mFDHeap = NULL;
-        LOGV("stopPreviewInternal: X Preview has stopped.");
-}
-
-status_t SprdCameraHardware::startPreview()
-{
-        LOGV("mLock:startPreview S.\n");
-        Mutex::Autolock l(&mLock);
-        Mutex::Autolock stateLock(&mStateLock);
-       if(mPreviewStartFlag == 0) {
-            LOGV("don't need to start preview.");
-            return NO_ERROR;
-        }
-        if(mMsgEnabled & CAMERA_MSG_VIDEO_FRAME)
-                mRecordingMode = 1;
-        else
-                mRecordingMode = 0;
-        return startPreviewInternal();
-}
-
-void SprdCameraHardware::stopPreview()
-{
-        LOGV("stopPreview: E");
-        LOGV("mLock:stopPreview S.\n");
-        Mutex::Autolock l(&mLock);
-        Mutex::Autolock statelock(&mStateLock);
-        mRecordingMode = 0;
-        stopPreviewInternal();
-
-        LOGV("stopPreview: X");
-        LOGV("mLock:stopPreview E.\n");
-}
-
-bool SprdCameraHardware::previewEnabled()
-{
-        bool ret = 0;
-        LOGV("mLock:previewEnabled S.\n");
-        Mutex::Autolock l(&mLock);
-        LOGV("mLock:previewEnabled E.\n");
-        if(0 == mPreviewStartFlag) {
-            return 1;
-        }  else if (2 == mPreviewStartFlag) {
-            return 0;
-        } else {
-            return mCameraState == QCS_PREVIEW_IN_PROGRESS;
-        }
-}
-
-status_t SprdCameraHardware::startRecording()
-{
-        LOGV("mLock:startRecording S.\n");
-        Mutex::Autolock l(&mLock);
-        Mutex::Autolock stateLock(&mStateLock);
-        if (mCameraState == QCS_PREVIEW_IN_PROGRESS) {
-                LOGV("wxz call stopPreviewInternal in startRecording().");
-                mCameraState = QCS_INTERNAL_PREVIEW_STOPPING;
-                if(CAMERA_SUCCESS != camera_stop_preview()){
-                        mCameraState = QCS_ERROR;
-                        FreeFdmem();
-			FreePmem(mPreviewHeap);
-                        mPreviewHeap = NULL;
-			FreePmem(mFDHeap);
-                        mFDHeap = NULL;
-                        LOGE("startRecording: fail to camera_stop_preview().");
-                        return INVALID_OPERATION;
-                }
-                while (mCameraState != QCS_IDLE &&
-                mCameraState != QCS_ERROR)  {
-                        LOGV("waiting for QCS_IDLE");
-                        mStateWait.wait(mStateLock);
-                }
-
-	        LOGV("startRecording: Freeing preview heap.");
-            FreeFdmem();
-		FreePmem(mPreviewHeap);
-	        mPreviewHeap = NULL;
-            FreePmem(mFDHeap);
-            mFDHeap = NULL;
-        }
-        mRecordingMode = 1;
-        LOGV("startRecording,mRecordingMode=%d.",mRecordingMode);
-        return startPreviewInternal();
-    }
-
-void SprdCameraHardware::stopRecording()
-{
-        LOGV("stopRecording: E");
-        LOGV("mLock:stopRecording S.\n");
-        Mutex::Autolock l(&mLock);
-        Mutex::Autolock statelock(&mStateLock);
-        stopPreviewInternal();
-        LOGV("stopRecording: X");
-        LOGV("mLock:stopRecording E.\n");
-}
-
-bool SprdCameraHardware::recordingEnabled()
-{
-        LOGV("mLock:recordingEnabled S.\n");
-        Mutex::Autolock l(&mLock);
-        Mutex::Autolock stateLock(&mStateLock);
-        LOGV("mLock:recordingEnabled E.\n");
-        return mCameraState == QCS_PREVIEW_IN_PROGRESS && (mMsgEnabled & CAMERA_MSG_VIDEO_FRAME);
-}
-void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
-{
-        //LOGV("releaseRecordingFrame E. ");
-        Mutex::Autolock l(&mLock);
-        uint8_t *addr = (uint8_t *)opaque;
-        uint32_t index;
-
-        if (mCameraState != QCS_PREVIEW_IN_PROGRESS) {
-                LOGE("releaseRecordingFrame: Preview not in progress!");
-                return;
-        }
-
-	if(mIsStoreMetaData) {
-		index = (addr - (uint8_t *)mMetadataHeap->data) / (METADATA_SIZE);
-	}
-	else {
-        	index = (addr - (uint8_t *)mPreviewHeap->data) / (mPreviewWidth * mPreviewHeight * 3 / 2);
-	}
-
-	if(index > kPreviewBufferCount){
-		LOGV("releaseRecordingFrame error: index: %d, addr: %x, data: %x, w=%d, h=%d \n",
-			    index, (uint32_t)addr, (uint32_t)mPreviewHeap->data, mPreviewWidth, mPreviewHeight);
-	}
-        //LOGV("releaseRecordingFrame: index: %d, offset: %x, size: %x.", index,offset,size);
-        camera_release_frame(index);
-        LOGV("releaseRecordingFrame: index: %d", index);
-        //LOGV("releaseRecordingFrame X. ");
-}
-
-status_t SprdCameraHardware::autoFocus()
-{
-        LOGV("Starting auto focus.");
-        LOGV("mLock:autoFocus S.\n");
-        Mutex::Autolock l(&mLock);
-        Mutex::Autolock lock(&mStateLock);
-
-        if (mCameraState != QCS_PREVIEW_IN_PROGRESS) {
-                LOGE("Invalid camera state %s: expecting QCS_PREVIEW_IN_PROGRESS,"
-                " cannot start autofocus!",
-                getCameraStateStr(mCameraState));
-                LOGV("mLock:autoFocus E.\n");
-                return INVALID_OPERATION;
-        }
-
-        if(0 != camera_start_autofocus(CAMERA_AUTO_FOCUS, camera_cb, this))
-        {
-                LOGE("auto foucs fail.");
-                //return INVALID_OPERATION;
-        }
-        LOGV("mLock:autoFocus E.\n");
-        return NO_ERROR;
-    }
-status_t SprdCameraHardware::cancelAutoFocus()
-{
-        return camera_cancel_autofocus();
-}
-uint32_t get_physical_address(sprd_camera_memory_t *mMem,uint32_t *size)
-{
-        *size = mMem->phys_size;
-        return mMem->phys_addr;
-}
-
-status_t SprdCameraHardware::setTakePictureSize(uint32_t width, uint32_t height)
-{
-	mRawWidth=width;
-	mRawHeight=height;
-
-	 return NO_ERROR;
-}
-
-status_t SprdCameraHardware::takePicture()
-{
-        takepicture_mode  mode = CAMERA_NORMAL_MODE;
-        /*LOGV("takePicture: E raw_cb = %p, jpeg_cb = %p",
-             raw_cb, jpeg_cb);*/
-        print_time();
-
-        Mutex::Autolock l(&mLock);
-        Mutex::Autolock stateLock(&mStateLock);
-
-        Sprd_camera_state last_state = mCameraState;
-        if (mCameraState == QCS_PREVIEW_IN_PROGRESS) {
-                LOGV("call stopPreviewInternal in takePicture().");
-                stopPreviewInternal();
-        }
-        LOGV("ok to stopPreviewInternal in takePicture.");
-
-        // We check for these two states explicitly because it is possible
-        // for takePicture() to be called in response to a raw or JPEG
-        // callback, but before we've updated the state from QCS_WAITING_RAW
-        // or QCS_WAITING_JPEG to QCS_IDLE.  This is because in camera_cb(),
-        // we update the state *after* we've made the callback.  See that
-        // function for an explanation why.
-
-        if (mCameraState == QCS_WAITING_RAW ||
-            mCameraState == QCS_WAITING_JPEG) {
-            while (mCameraState != QCS_IDLE &&
-                   mCameraState != QCS_ERROR) {
-                LOGV("waiting for QCS_IDLE");
-                mStateWait.wait(mStateLock);
-            }
-        }
-
-        if (mCameraState != QCS_IDLE) {
-            LOGE("takePicture: %sunexpected state %d, expecting QCS_IDLE",
-                 (last_state == QCS_PREVIEW_IN_PROGRESS ?
-                  "(stop preview) " : ""),
-                 mCameraState);
-            // If we had to stop preview in order to take a picture, and
-            // we failed to transition to a QCS_IDLE state, that's because
-            // of an internal error.
-                   LOGV("mLock:takePictureE.\n");
-            return last_state == QCS_PREVIEW_IN_PROGRESS ?
-                UNKNOWN_ERROR :
-                INVALID_OPERATION;
-        }
-	LOGV("start to initRaw in takePicture.");
-
-        camera_set_dimensions(mRawWidth,
-                                   mRawHeight,
-                                   mPreviewWidth,
-                                   mPreviewHeight,
-                                   NULL,
-                                   NULL);
-
-        interpoation_flag = 0;
-        if (!initRaw(mData_cb != NULL)) {
-                LOGE("initRaw failed.  Not taking picture.");
-                LOGV("mLock:takePictureE.\n");
-                return UNKNOWN_ERROR;
-        }
-
-        if (mCameraState != QCS_IDLE) {
-                LOGE("takePicture: (init raw) "
-                "unexpected state %d, expecting QCS_IDLE",
-                mCameraState);
-                LOGV("mLock:takePictureE.\n");
-                // If we had to stop preview in order to take a picture, and
-                // we failed to transition to a QCS_IDLE state, that's because
-                // of an internal error.
-                FreePmem(mRawHeap);
-                mRawHeap = NULL;
-                FreePmem(mMiscHeap);
-                mMiscHeap = NULL;
-                //           mJpegHeap = NULL;
-                return last_state == QCS_PREVIEW_IN_PROGRESS ?
-                UNKNOWN_ERROR :
-                INVALID_OPERATION;
-        }
-
-        mCameraState = QCS_INTERNAL_RAW_REQUESTED;
-
-        LOGV("INTERPOLATION::takePicture:mRawWidth=%d,g_sprd_zoom_levle=%d",mRawWidth,g_sprd_zoom_levle);
-
-        if(1 == mParameters.getInt("hdr")) {
-            mode = CAMERA_HDR_MODE;
-        }
-
-		if(1 != mParameters.getInt("capture-mode")) {
-			mode = CAMERA_CONTINUE_SHOT_MODE;
-		}
-/*        mode = CAMERA_HDR_MODE;*/
-        LOGV("cap mode %d.\n",mode);
-        if(CAMERA_SUCCESS != camera_take_picture(camera_cb, this,mode))
-        {
-                mCameraState = QCS_ERROR;
-                LOGE("takePicture: fail to camera_take_picture.");
-                LOGV("mLock:takePictureE.\n");
-                FreePmem(mRawHeap);
-                mRawHeap = NULL;
-                FreePmem(mMiscHeap);
-                mMiscHeap = NULL;
-                //          mJpegHeap = NULL;
-                return UNKNOWN_ERROR;
-        }
-
-        // It's possible for the YUV callback as well as the JPEG callbacks
-        // to be invoked before we even make it here, so we check for all
-        // possible result states from takePicture.
-
-        while (mCameraState != QCS_WAITING_RAW &&
-               mCameraState != QCS_WAITING_JPEG &&
-               mCameraState != QCS_IDLE &&
-               mCameraState != QCS_ERROR)  {
-            LOGV("takePicture: waiting for QCS_WAITING_RAW or QCS_WAITING_JPEG");
-            mStateWait.wait(mStateLock);
-            LOGV("takePicture: woke up, state is %s",
-                 getCameraStateStr(mCameraState));
-        }
-        LOGV("takePicture: X");
-        LOGV("mLock:takePictureE.\n");
-        print_time();
-        return mCameraState != QCS_ERROR ?
-            NO_ERROR : UNKNOWN_ERROR;
-    }
-
-status_t SprdCameraHardware::cancelPicture()
-{
-        LOGV("mLock:cancelPicture S.\n");
-        Mutex::Autolock l(&mLock);
-        Mutex::Autolock stateLock(&mStateLock);
-
-        switch (mCameraState) {
-        case QCS_INTERNAL_RAW_REQUESTED:
-        case QCS_WAITING_RAW:
-        case QCS_WAITING_JPEG:
-            LOGD("camera state is %s, stopping picture.",
-                 getCameraStateStr(mCameraState));
-
-            mCameraState = QCS_INTERNAL_CAPTURE_STOPPING;
-            camera_stop_capture();
-	    FreeCameraMem();
-            while (mCameraState != QCS_IDLE &&
-                   mCameraState != QCS_ERROR)  {
-                LOGV("cancelPicture: waiting for QCS_IDLE");
-                mStateWait.wait(mStateLock);
-            }
-            break;
-        default:
-            LOGV("not taking a picture (state %s)",
-                 getCameraStateStr(mCameraState));
-        }
-
-        LOGV("cancelPicture: X");
-		     LOGV("mLock:cancelPicture E.\n");
-        return NO_ERROR;
-    }
-
-status_t SprdCameraHardware::setParameters(const CameraParameters& params)
-{
-        LOGV("setParameters: E params = %p", &params);
-        LOGV("mLock:setParameters S.\n");
-        Mutex::Autolock l(&mLock);
-        Mutex::Autolock lock(&mStateLock);
-        if(strcmp(params.get("null-window") , "1") == 0)
-        {
-                ALOGV("mPreviewLock::null window set preview window state");
-                Mutex::Autolock previewLock(&mPreviewLock);
-                mSettingPreviewWindowState = PREVIEW_WINDOW_SET_IDLE;
-        }
-
-        // FIXME: verify params
-        // yuv422sp is here only for legacy reason. Unfortunately, we release
-        // the code with yuv422sp as the default and enforced setting. The
-        // correct setting is yuv420sp.
-        if(strcmp(params.getPreviewFormat(), "yuv422sp")== 0)
-        {
-                mPreviewFormat = 0;
-        }
-        else if(strcmp(params.getPreviewFormat(), "yuv420sp") == 0)
-        {
-                mPreviewFormat = 1;
-        }
-        else if(strcmp(params.getPreviewFormat(), "rgb565") == 0)
-        {
-                mPreviewFormat = 2;
-        }
-		else if(strcmp(params.getPreviewFormat(), "yuv420p") == 0)
-		{
-			mPreviewFormat = 3;
-		}
-        else
-        {
-                LOGE("Onlyyuv422sp/yuv420sp/rgb565 preview is supported.\n");
-                return INVALID_OPERATION;
-        }
-        mPreviewFormat = 1;
-        if(strcmp(params.getPictureFormat(), "yuv422sp")== 0)
-        {
-                mPictureFormat = 0;
-        }
-        else if(strcmp(params.getPictureFormat(), "yuv420sp")== 0)
-        {
-                mPictureFormat = 1;
-        }
-        else if(strcmp(params.getPictureFormat(), "rgb565")== 0)
-        {
-                mPictureFormat = 2;
-        }
-        else if(strcmp(params.getPictureFormat(), "jpeg")== 0)
-        {
-                mPictureFormat = 3;
-        }
-        else
-        {
-                LOGE("Onlyyuv422sp/yuv420sp/rgb565/jpeg  picture format is supported.\n");
-                return INVALID_OPERATION;
-        }
-        mPictureFormat = 1;
-        LOGV("setParameters: mPreviewFormat=%d,mPictureFormat=%d.\n",mPreviewFormat,mPictureFormat);
-
-        // FIXME: will this make a deep copy/do the right thing? String8 i
-        // should handle it
-        mParameters = params;
-         //now we matain null-window state in hal. to ensure the correct state
-        if(strcmp(mParameters.get("null-window") , "1") == 0)
-        {
-                mParameters.set("null-window" , "0");
-        }
-
-        // libqcamera only supports certain size/aspect ratios
-        // find closest match that doesn't exceed app's request
-        int width, height;
-	int rawWidth, rawHeight;
-        params.getPreviewSize(&width, &height);
-        LOGV("requested size %d x %d", width, height);
-	params.getPictureSize(&rawWidth, &rawHeight);
-        ALOGV("requested size %d x %d", width, height);
-        mPreviewWidth = (width + 1) & ~1;
-        mPreviewHeight = (height + 1) & ~1;
-        mRawHeight = (rawHeight + 1) & ~1;
-        mRawWidth = (rawWidth + 1) & ~1;
-        LOGV("requested picture size %d x %d", mRawWidth, mRawHeight);
-        LOGV("requested preview size %d x %d", mPreviewWidth, mPreviewHeight);
-
-        if(CAMERA_ZOOM_MAX <= atoi(mParameters.get("zoom")) ){
-                mParameters.set("zoom", mParameters.get("max-zoom"));
-                return BAD_VALUE;
-        }
-        if (camera_set_change_size(mRawWidth,mRawHeight,mPreviewWidth,mPreviewHeight)) {
-            mPreviewStartFlag = 2;
-        }
-        if(NO_ERROR != initCameraParameters()){
-                return UNKNOWN_ERROR;
-        }
-        LOGV("setParameters: X mCameraState=%d", mCameraState);
-        LOGV("mLock:setParameters E.\n");
-         return NO_ERROR;
-    }
-
-CameraParameters SprdCameraHardware::getParameters() const
-{
-        LOGV("getParameters: EX");
-        return mParameters;
-}
-
-static CameraInfo sCameraInfo[] = {
-    {
+#define PRINT_TIME 				0
+#define ROUND_TO_PAGE(x)  	(((x)+0xfff)&~0xfff)
+#define ARRAY_SIZE(x) 		(sizeof(x) / sizeof(*x))
+#define METADATA_SIZE 		12 // (4 * 3)
+
+#define SET_PARM(x,y) 	do { \
+							LOGV("%s: set camera param: %s, %d", __func__, #x, y); \
+							camera_set_parm (x, y, NULL, NULL); \
+						} while(0)
+
+///////////////////////////////////////////////////////////////////
+//static members
+/////////////////////////////////////////////////////////////////////////////////////////
+gralloc_module_t const* SprdCameraHardware::mGrallocHal = NULL;
+
+const CameraInfo SprdCameraHardware::kCameraInfo[] = { 
+	{
         CAMERA_FACING_BACK,
         90,  /* orientation */
     },
@@ -1205,7 +83,7 @@ static CameraInfo sCameraInfo[] = {
 #endif
 };
 
-static CameraInfo sCameraInfo3[] = {
+const CameraInfo SprdCameraHardware::kCameraInfo3[] = {
     {
         CAMERA_FACING_BACK,
         90,  /* orientation */
@@ -1220,1902 +98,224 @@ static CameraInfo sCameraInfo3[] = {
         2,
         0,  /* orientation */
     }
-};
+};	
 
-void* SprdCameraHardware::get_redisplay_mem(uint32_t size, uint32_t count, uint32_t *phy_addr)
+int SprdCameraHardware::getPropertyAtv()
 {
-        uint32_t i;
-        uint32_t real_size = 0;
-        int buffer_size = camera_get_size_align_page(size);
-        LOGV("INTERPOLATION:temp mem size=%d,align size=%d .",size,buffer_size);
-        mReDisplayHeap = GetPmem("/dev/pmem_adsp", buffer_size, 1);
-        if(NULL == mReDisplayHeap)
-            return NULL;
-        if(NULL == mReDisplayHeap->handle){
-                LOGE("Fail to GetPmem mTempHWHeap. buffer_size: 0x%x.", buffer_size);
-                return NULL;
-        }
-
-        {
-        *phy_addr = (uint32_t)get_physical_address(mReDisplayHeap,&real_size);
-        uint32_t vaddr = (uint32_t)mReDisplayHeap->data;
-
-        LOGV("get_temp_mem_by_HW: MALLOC size: %d, num: %d --> %p",
-        buffer_size, count, (void *)vaddr);
-        return (void *)vaddr;
-        }
-
-        LOGV("get_temp_mem_by_HW: X NULL");
-        return NULL;
-    }
-
-void SprdCameraHardware::FreeCameraMem(void)
-{
-        Mutex::Autolock cbLock(&mCallbackLock);
-        FreePmem(mRawHeap);
-        mRawHeap = NULL;
-        FreePmem(mMiscHeap);
-        mMiscHeap = NULL;
-        //     mJpegHeap = NULL;
-}
-
-void SprdCameraHardware::getPictureFormat(int * format)
-{
-        *format = mPictureFormat;
-}
-
-void SprdCameraHardware::HandleErrorState(void)
-{
-        Mutex::Autolock cbLock(&mCallbackLock);
-        if(mMsgEnabled & CAMERA_MSG_ERROR)
-        {
-                if(mData_cb != NULL) {
-                        LOGE("HandleErrorState");
-			mNotify_cb(CAMERA_MSG_ERROR, 0,0,mUser);
-                }
-        }
-        LOGE("HandleErrorState:don't enable error msg!");
-}
-
-void SprdCameraHardware::receivePreviewFDFrame(camera_frame_type *frame)
-{
-    Mutex::Autolock cbLock(&mCallbackLock);
-    ssize_t offset = frame->buf_id;
-    camera_frame_metadata_t metadata;
-    camera_face_t face_info[FACE_DETECT_NUM];
-    uint32_t k = 0;
-
-   /* if(1 == mParameters.getInt("smile-snap-mode")){*/
-    LOGV("receive face_num %d.",frame->face_num);
-    metadata.number_of_faces = frame->face_num;
-    if((0 != frame->face_num)&&(frame->face_num<=FACE_DETECT_NUM)) {
-       for(k=0 ; k<frame->face_num ; k++) {
-            face_info[k].id = k;
-#if 1
-            face_info[k].rect[0] = (frame->face_ptr->sx*2000/mPreviewWidth)-1000;
-            face_info[k].rect[1] = (frame->face_ptr->sy*2000/mPreviewHeight)-1000;
-            face_info[k].rect[2] = (frame->face_ptr->ex*2000/mPreviewWidth)-1000;
-            face_info[k].rect[3] = (frame->face_ptr->ey*2000/mPreviewHeight)-1000;
-            LOGV("smile level %d.\n",frame->face_ptr->smile_level);
-#else
-            face_info[k].rect[0] = frame->face_ptr->sx;
-            face_info[k].rect[1] = frame->face_ptr->sy;
-            face_info[k].rect[2] = frame->face_ptr->ex;
-            face_info[k].rect[3] = frame->face_ptr->ey;
-            LOGV("rect:%d,%d,%d,%d.\n",
-                face_info[k].rect[0],face_info[k].rect[1],face_info[k].rect[2],face_info[k].rect[3]);
-
-            if(frame->face_ptr->smile_level > FACE_SMILE_LIMIT) {
-                face_info[k].score   = 100;
-            } else {
-                face_info[k].score   = 0;
-            }
-#endif
-            face_info[k].score = frame->face_ptr->smile_level;
-            frame->face_ptr++;
-       }
-    }
-    metadata.faces = &face_info[0];
-    if(mMsgEnabled&CAMERA_MSG_PREVIEW_METADATA) {
-        LOGV("smile capture msg is enabled.");
-        if(camera_get_rot_set()) {
-            mData_cb(CAMERA_MSG_PREVIEW_METADATA,mPreviewHeap->camera_memory,(kPreviewBufferCount+offset),&metadata,mUser);
-        } else {
-            mData_cb(CAMERA_MSG_PREVIEW_METADATA,mPreviewHeap->camera_memory,offset,&metadata,mUser);
-        }
-    } else {
-        LOGV("smile capture msg is disabled.");
-    }
-/*    mParameters.set("smile-snap-mode",0);*/
-}
-
-void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
-{
-        Mutex::Autolock cbLock(&mCallbackLock);
-        ssize_t offset = frame->buf_id;
-        camera_frame_metadata_t metadata;
-        camera_face_t face_info[FACE_DETECT_NUM];
-        uint32_t k = 0;
-
-        // Ignore the first frame--there is a bug in the VFE pipeline and that
-        // frame may be bad.
-        if (++mPreviewCount == 1) {
-                if(CAMERA_SUCCESS != camera_release_frame(frame->buf_id)){
-                        LOGE("receivePreviewFrame: fail to camera_release_frame().offset: %d.", frame->buf_id);
-                }
-                return;
-        }
-   //     LOGV("receivePreviewFrame\n");
-#if 1
-{
-Mutex::Autolock previewLock(&mPreviewLock);
-if(mSettingPreviewWindowState == PREVIEW_WINDOW_SET_OK)
-{
-        int width, height, frame_size, offset_size;
-
-        // mParameters.getPreviewSize(&width, &height);
-        width  = frame->dx;/*mPreviewWidth;*/
-        height = frame->dy;/*mPreviewHeight;*/
-	LOGV("receivePreviewFrame: width=%d, height=%d \n",width, height);
-  /*  LOGV("mPreviewWindow=0x%x,mGrallocHal=0x%x.",mPreviewWindow,mGrallocHal);*/
-
-        if (mPreviewWindow && mGrallocHal) {
-                buffer_handle_t *buf_handle;
-                int stride;
-                if (0 != mPreviewWindow->dequeue_buffer(mPreviewWindow, &buf_handle, &stride)) {
-                        LOGE("Could not dequeue gralloc buffer!\n");
-                        goto callbacks;
-                }
-                //LOGI("stride: %d, width: %d, height: %d, frame->buf_id: %d.", stride, width, height, frame->buf_id);
-
-                void *vaddr;
-                if (!mGrallocHal->lock(mGrallocHal,
-                                *buf_handle,
-                                GRALLOC_USAGE_SW_WRITE_OFTEN,
-                                0, 0, width, height, &vaddr)) {
-                        char *frame_addr = (char *)frame->buf_Virt_Addr;
-
-                        if((NULL == vaddr) || (NULL == frame_addr)){
-                                LOGE("Fail to get gralloc buffer.");
-                                goto callbacks;
-                        } else{
-			//LOGI("OK to get gralloc buffer. vaddr: 0x%x, frame_addr: 0x%x, frame->buf_Virt_Addr: 0x%x.", (uint32_t)vaddr, (uint32_t)frame_addr, (uint32_t)frame->buf_Virt_Addr);
-		     }
-
-					{
-						native_handle_t *pNativeHandle = (native_handle_t *)*buf_handle;
-						struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
-						uint32_t phy_addr =  (uint32_t)(private_h->phyaddr);
-
-						nsecs_t timestamp_old, timestamp_new;
-
-						timestamp_old = systemTime();
-
-#ifdef USE_ION_MEM
-						if(0 != camera_copy_data(width, height, frame->buffer_phy_addr, phy_addr)){
-							LOGE("fail to call camera_copy_data in receivePreviewFrame.");
-							goto callbacks;
-						}
-#else
-                        #if 0
-						if(0 != camera_copy_data_virtual(width, height, frame->buffer_phy_addr, (uint32_t)vaddr)){
-							LOGE("fail to camera_copy_data_virtual() in receivePreviewFrame.");
-							goto callbacks;
-						}
-                        #else
-                        memcpy((void*)vaddr, (void*)frame->buf_Virt_Addr,width*height*3/2);
-                        #endif
-
-						//memcpy(vaddr, frame_addr, width*height*3/2);
-						//LOGV("receivePreviewFrame, copy to vaddr: src=%x, dst=%x, dstphy=%x \n", (uint32_t)frame_addr, (uint32_t)vaddr, phy_addr);
-#endif
-						timestamp_new = systemTime();
-						LOGV("receivePreviewFrame %lld, %lld, time = %lld us \n",timestamp_old, timestamp_new, (timestamp_new-timestamp_old)/1000);
-
-					}
-                        mGrallocHal->unlock(mGrallocHal, *buf_handle);
-                }
-                else
-                        LOGE("%s: could not obtain gralloc buffer", __func__);
-
-                if (0 != mPreviewWindow->enqueue_buffer(mPreviewWindow, buf_handle)) {
-                        LOGE("Could not enqueue gralloc buffer!\n");
-                        goto callbacks;
-                }
-                else{
-                //LOGI("OK to enqueue gralloc buffer!");
-                }
-        }
-        else {
-            LOGV("dont need copy to preview window!\n");
-        }
-}
-}
-#endif
-callbacks:
-#ifdef CONFIG_CAMERA_ISP
-			send_img_data(2, mPreviewWidth, mPreviewHeight, (char *)frame->buf_Virt_Addr, frame->dx * frame->dy * 3 /2);
-#endif
-        if(mData_cb != NULL)
-        {
-                LOGV("receivePreviewFrame mMsgEnabled: 0x%x",mMsgEnabled);
-                if (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME) {
-#if 1
-                        sprd_camera_memory_t *tempHeap = GetPmem("/dev/pmem_adsp", frame->dx * frame->dy * 3 /2, 1);
-                        if(NULL == tempHeap)
-                            return;
-                        if(NULL == tempHeap->handle){
-                                LOGE("Fail to GetPmem tempHeap.");
-                                return;
-                        }
-                       /* if(0 != camera_convert_420_UV_VU(frame->buffer_phy_addr, tempHeap->phys_addr, frame->dx, frame->dy)){
-                                LOGE("fail to camera_rotation_copy_data() in CAMERA_MSG_PREVIEW_FRAME.");
-                                return;
-                        }*/
-                        memcpy(tempHeap->data,frame->buf_Virt_Addr,frame->dx * frame->dy * 3 /2);
-                        mData_cb(CAMERA_MSG_PREVIEW_FRAME, tempHeap->camera_memory, 0, NULL, mUser);
-                        FreePmem(tempHeap);
-                        tempHeap = NULL;
-#else
-                        if(camera_get_rot_set()) {
-                            mData_cb(CAMERA_MSG_PREVIEW_FRAME,mPreviewHeap->camera_memory,(kPreviewBufferCount+offset),NULL,mUser);
-                        } else {
-                            mData_cb(CAMERA_MSG_PREVIEW_FRAME,mPreviewHeap->camera_memory,offset,NULL,mUser);
-                        }
-#endif
-                }
-
-		if ((mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) &&(mRecordingMode==1))
-                {
-                        nsecs_t timestamp = systemTime();/*frame->timestamp;*/
-                        LOGV("test timestamp = %lld, mIsStoreMetaData: %d.",timestamp, mIsStoreMetaData);
-			if(mIsStoreMetaData) {
-	                        uint32_t *data = (uint32_t *)mMetadataHeap->data + offset * METADATA_SIZE / 4;
-				*data++ = kMetadataBufferTypeCameraSource;
-				*data++ = frame->buffer_phy_addr;
-				*data = (uint32_t)frame->buf_Virt_Addr;
-	                        mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mMetadataHeap,  offset, mUser);
-			}
-			else {
-	                        //mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap->mBuffers[offset], mUser);
-	                        if(camera_get_rot_set()) {
-	                            mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap->camera_memory, (kPreviewBufferCount+offset), mUser);
-	                        } else {
-	                            mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap->camera_memory, offset, mUser);
-	                        }
-			}
-                     //LOGV("receivePreviewFrame: record index: %d, offset: %x, size: %x, frame->buf_Virt_Addr: 0x%x.", offset, off, size, (uint32_t)frame->buf_Virt_Addr);
-                }
-		else{
-                        if(CAMERA_SUCCESS != camera_release_frame(offset)){
-                        LOGE("receivePreviewFrame: fail to camera_release_frame().offset: %d.", offset);
-                }
-        }
-        // When we are doing preview but not recording, we need to
-        // release every preview frame immediately so that the next
-        // preview frame is delivered.  However, when we are recording
-        // (whether or not we are also streaming the preview frames to
-        // the screen), we have the user explicitly release a preview
-        // frame via method releaseRecordingFrame().  In this way we
-        // allow a video encoder which is potentially slower than the
-        // preview stream to skip frames.  Note that we call
-        // camera_release_frame() in this method because we first
-        // need to check to see if mPreviewCallback != NULL, which
-        // requires holding mCallbackLock.
-
-        }
-        else
-                LOGE("receivePreviewFrame: mData_cb is null.");
-        LOGE("receivePreviewFrame:e.");
-
-}
-
-void SprdCameraHardware::notifyShutter()
-{
-        LOGV("notifyShutter: E");
-        print_time();
-        //   Mutex::Autolock lock(&mStateLock);
-
-        /*if (mShutterCallback)
-        mShutterCallback(mPictureCallbackCookie);*/
-        //if(mNotify_cb)
-        LOGV("notifyShutter mMsgEnabled: 0x%x.", mMsgEnabled);
-        if (mMsgEnabled & CAMERA_MSG_SHUTTER)
-                mNotify_cb(CAMERA_MSG_SHUTTER, 0, 0, mUser);
-        print_time();
-        LOGV("notifyShutter: X");
-}
-
-    // Pass the pre-LPM raw picture to raw picture callback.
-    // This method is called by a libqcamera thread, different from the one on
-    // which startPreview() or takePicture() are called.
-void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
-{
-    void *vaddr;
-    int width, height, frame_size, offset_size;
-	nsecs_t timestamp_old, timestamp_new;
-
-    LOGV("receiveRawPicture: E");
-    print_time();
-
-    Mutex::Autolock cbLock(&mCallbackLock);
-
-    if(QCS_INTERNAL_CAPTURE_STOPPING == mCameraState){
-		LOGV("receiveRawPicture: warning: mCameraState = QCS_INTERNAL_CAPTURE_STOPPING, return \n");
-		return;
-    }
-
-    //width = 640;
-    //height = 480;
-    width  = mPreviewWidth;
-    height = mPreviewHeight;
-
-    if (mPreviewWindow && mGrallocHal) {
-        buffer_handle_t *buf_handle;
-        int stride;
-        if (0 != mPreviewWindow->dequeue_buffer(mPreviewWindow, &buf_handle, &stride)) {
-            LOGE("Could not dequeue gralloc buffer!\n");
-            goto callbackraw;
-        }
-
-        if (!mGrallocHal->lock(mGrallocHal,
-                               *buf_handle,
-                               GRALLOC_USAGE_SW_WRITE_OFTEN,
-                               0, 0, width, height, &vaddr))
-        {
-            native_handle_t *pNativeHandle = (native_handle_t *)*buf_handle;
-            struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
-            uint32_t phy_addr =  (uint32_t)(private_h->phyaddr);
-			uint32_t tmp_phy_addr;
-
-            if(NULL == vaddr){
-                LOGE("Fail to get gralloc buffer.");
-                goto enqueuehandle;
-            }
-            else{
-            //LOGI("OK to get gralloc buffer. vaddr: 0x%x, frame_addr: 0x%x, frame->buf_Virt_Addr: 0x%x.", (uint32_t)vaddr, (uint32_t)frame_addr, (uint32_t)frame->buf_Virt_Addr);
-            }
-
-#ifdef USE_ION_MEM
-            if( 0 != camera_get_data_redisplay(phy_addr, width, height, frame->buffer_phy_addr, frame->buffer_uv_phy_addr, frame->dx, frame->dy)){
-                LOGE("Fail to camera_get_data_redisplay.");
-                goto enqueuehandle;
-            }
-#else
-			if(NULL == get_redisplay_mem(width*height*3/2, 1, &tmp_phy_addr))
-				goto enqueuehandle;
-
-            if( 0 != camera_get_data_redisplay(tmp_phy_addr, width, height, frame->buffer_phy_addr, frame->buffer_uv_phy_addr, frame->dx, frame->dy)){
-                LOGE("Fail to camera_get_data_redisplay.");
-		        FreePmem(mReDisplayHeap);
-		        mReDisplayHeap = NULL;
-                goto enqueuehandle;
-            }
-			timestamp_old = systemTime();
-			if(0 != camera_copy_data_virtual(width, height, tmp_phy_addr, (uint32_t)vaddr)){
-			        LOGE("fail to camera_copy_data_virtual() in receiveRawPicture.");
-                      FreePmem(mReDisplayHeap);
-		              mReDisplayHeap = NULL;
-   		              goto enqueuehandle;
-			}
-
-			//memcpy(vaddr, mReDisplayHeap->data, width*height*3/2);
-			timestamp_new = systemTime();
-			LOGV("receiveRawPicture: %lld, %lld, time = %lld us \n",timestamp_old, timestamp_new, (timestamp_new-timestamp_old)/1000);
-			FreePmem(mReDisplayHeap);
-			mReDisplayHeap = NULL;
-#endif
-enqueuehandle:
-            mGrallocHal->unlock(mGrallocHal, *buf_handle);
-        }
-        else
-            LOGE("%s: could not obtain gralloc buffer", __func__);
-
-        if (0 != mPreviewWindow->enqueue_buffer(mPreviewWindow, buf_handle)) {
-            LOGE("Could not enqueue gralloc buffer!\n");
-            goto callbackraw;
-        }
-	else{
-		//LOGI("OK to enqueue gralloc buffer!");
+	char propBuf_atv[10] = {0};
+	int atv = 0;
+	
+	property_get("sys.camera.atv", propBuf_atv, "0");
+	if (0 == strcmp(propBuf_atv, "1")) {
+		atv = 1;
 	}
-    }
-
-callbackraw:
-        //if (mRawPictureCallback != NULL) {
-        if (mData_cb!= NULL) {
-	        // Find the offset within the heap of the current buffer.
-	        ssize_t offset = (uint32_t)frame->buf_Virt_Addr;
-	        offset -= (uint32_t)mRawHeap->data;
-	        ssize_t frame_size = 0;
-
-	        if(CAMERA_RGB565 == frame->format)
-		        frame_size = frame->dx * frame->dy * 2;        // for RGB565
-		else if(CAMERA_YCBCR_4_2_2 == frame->format)
-		        frame_size = frame->dx * frame->dy * 2;        //for YUV422
-		else if(CAMERA_YCBCR_4_2_0 == frame->format)
-		        frame_size = frame->dx * frame->dy * 3 / 2;        //for YUV420
-		else
-			frame_size = frame->dx * frame->dy * 2;
-	        if (offset + frame_size <= (ssize_t)mRawHeap->phys_size) {
-	                offset /= frame_size;
-			   LOGV("mMsgEnabled: 0x%x, offset: %d.",mMsgEnabled, (uint32_t)offset);
-			   if (mMsgEnabled & CAMERA_MSG_RAW_IMAGE)
-			   {
-				mData_cb(CAMERA_MSG_RAW_IMAGE, mRawHeap->camera_memory, offset, NULL, mUser);
-			    }
-			if(mMsgEnabled & CAMERA_MSG_RAW_IMAGE_NOTIFY) {
-				LOGV("mMsgEnabled & CAMERA_MSG_RAW_IMAGE_NOTIFY");
-				mNotify_cb(CAMERA_MSG_RAW_IMAGE_NOTIFY, 0,0,mUser);
-			}
-	        }
-	            else LOGE("receiveRawPicture: virtual address %p is out of range!",
-	                      frame->buf_Virt_Addr);
-        }
-        else LOGV("Raw-picture callback was canceled--skipping.");
-        print_time();
-        LOGV("receiveRawPicture: X");
-    }
-
-    // Encode the post-LPM raw picture.
-    // This method is called by a libqcamera thread, different from the one on
-    // which startPreview() or takePicture() are called.
-
-void SprdCameraHardware::receivePostLpmRawPicture(camera_frame_type *frame)
-{
-        LOGV("receivePostLpmRawPicture: E");
-        print_time();
-        Sprd_camera_state new_state = QCS_ERROR;
-        Mutex::Autolock cbLock(&mCallbackLock);
-
-        if (mData_cb!= NULL) {
-            bool encode_location = true;
-
-#define PARSE_LOCATION(what,type,fmt,desc) do {                                           \
-                pt.what = 0;                                                              \
-                const char *what##_str = mParameters.get("gps-"#what);                    \
-                LOGV("receiveRawPicture: GPS PARM %s --> [%s]", "gps-"#what, what##_str); \
-                if (what##_str) {                                                         \
-                    type what = 0;                                                        \
-                    if (sscanf(what##_str, fmt, &what) == 1)                              \
-                        pt.what = what;                                                   \
-                    else {                                                                \
-                        LOGE("GPS " #what " %s could not"                                 \
-                              " be parsed as a " #desc,                                   \
-                              what##_str);                                                \
-                        encode_location = false;                                          \
-                    }                                                                     \
-                }                                                                         \
-                else {                                                                    \
-                    LOGW("receiveRawPicture: GPS " #what " not specified: "               \
-                          "defaulting to zero in EXIF header.");                          \
-                    encode_location = false;                                              \
-               }                                                                          \
-            } while(0)
-
-            PARSE_LOCATION(timestamp, long, "%ld", "long");
-            if (!pt.timestamp) pt.timestamp = time(NULL);
-            PARSE_LOCATION(altitude, double, "%lf", "double float");
-            PARSE_LOCATION(latitude, double, "%lf", "double float");
-            PARSE_LOCATION(longitude, double, "%lf", "double float");
-  	    pt.process_method = mParameters.get("gps-processing-method");
-
-#undef PARSE_LOCATION
-
-            if (encode_location) {
-                LOGV("receiveRawPicture: setting image location ALT %lf LAT %lf LON %lf",
-                     pt.altitude, pt.latitude, pt.longitude);
-                if (camera_set_position(&pt, NULL, NULL) != CAMERA_SUCCESS) {
-                    LOGE("receiveRawPicture: camera_set_position: error");
-                    // return;  // not a big deal
-                }
-            }
-            else
-		LOGV("receiveRawPicture: not setting image location");
-
-            mJpegSize = 0;
-
-            if(CAMERA_SUCCESS != camera_encode_picture(frame, &camera_handle, camera_cb, this)){
-		mCameraState = QCS_ERROR;
-		FreePmem(mRawHeap);
-                mRawHeap = NULL;
-		LOGE("receivePostLpmRawPicture: fail to camera_encode_picture().");
-	    }
-        }
-        else {
-            LOGV("JPEG callback was cancelled--not encoding image.");
-            // We need to keep the raw heap around until the JPEG is fully
-            // encoded, because the JPEG encode uses the raw image contained in
-            // that heap.
-
-        FreePmem(mRawHeap);
-        mRawHeap = NULL;
-        FreePmem(mMiscHeap);
-        mMiscHeap = NULL;
-        }
-        print_time();
-        LOGV("receivePostLpmRawPicture: X");
-    }
-
-    void   SprdCameraHardware::receiveJpegPictureFragment( JPEGENC_CBrtnType *encInfo)
-    {
-        camera_encode_mem_type *enc =  (camera_encode_mem_type *)encInfo->outPtr;
-
-        uint8_t *base = (uint8_t *)mJpegHeap->mHeap->base();
-        uint32_t size = encInfo->size;
-        uint32_t remaining = mJpegHeap->mHeap->virtualSize();
-        uint32_t i = 0;
-        uint8_t *temp_ptr,*src_ptr;
-        remaining -= mJpegSize;
-	LOGV("receiveJpegPictureFragment E.");
-        LOGV("receiveJpegPictureFragment: (status %d size %d remaining %d mJpegSize %d)",
-             encInfo->status,
-             size, remaining,mJpegSize);
-
-        if (size > remaining) {
-            LOGE("receiveJpegPictureFragment: size %d exceeds what "
-                 "remains in JPEG heap (%d), truncating",
-                 size,
-                 remaining);
-            size = remaining;
-        }
-
-        //camera_handle.mem.encBuf[index].used_len = 0;
-	LOGV("receiveJpegPictureFragment : base + mJpegSize: %x, enc->buffer: %x, size: %x", (uint32_t)(base + mJpegSize), (uint32_t)enc->buffer, size) ;
-//	memcpy(base + mJpegSize, enc->buffer, size);
-   /* temp_ptr = (uint8_t*)(base + mJpegSize);
-    src_ptr = (uint8_t*)enc->buffer;
-    for(i=0;i<size;i++) {
-        *temp_ptr++ = *src_ptr++;
-    }*/
-    memcpy(base + mJpegSize, enc->buffer, size);
-        mJpegSize += size;
-
-	LOGV("receiveJpegPictureFragment X.");
-    }
-
-
-void   SprdCameraHardware::receiveJpegPosPicture(void)//(camera_frame_type *frame)
-{
-	LOGV("receiveJpegPosPicture: E");
-	print_time();
-	Sprd_camera_state new_state = QCS_ERROR;
-
-	Mutex::Autolock cbLock(&mCallbackLock);
-	LOGV("receiveJpegPosPicture mCallbackLock!");
-
-        //if (mJpegPictureCallback != NULL) {
-        if (mData_cb!= NULL) {
-
-            bool encode_location = true;
-
-#define PARSE_LOCATION(what,type,fmt,desc) do {                                           \
-                pt.what = 0;                                                              \
-                const char *what##_str = mParameters.get("gps-"#what);                    \
-                LOGV("receiveRawPicture: GPS PARM %s --> [%s]", "gps-"#what, what##_str); \
-                if (what##_str) {                                                         \
-                    type what = 0;                                                        \
-                    if (sscanf(what##_str, fmt, &what) == 1)                              \
-                        pt.what = what;                                                   \
-                    else {                                                                \
-                        LOGE("GPS " #what " %s could not"                                 \
-                              " be parsed as a " #desc,                                   \
-                              what##_str);                                                \
-                        encode_location = false;                                          \
-                    }                                                                     \
-                }                                                                         \
-                else {                                                                    \
-                    LOGW("receiveRawPicture: GPS " #what " not specified: "               \
-                          "defaulting to zero in EXIF header.");                          \
-                    encode_location = false;                                              \
-               }                                                                          \
-            } while(0)
-
-            PARSE_LOCATION(timestamp, long, "%ld", "long");
-            if (!pt.timestamp) pt.timestamp = time(NULL);
-            PARSE_LOCATION(altitude, double, "%lf", "double float");
-            PARSE_LOCATION(latitude, double, "%lf", "double float");
-            PARSE_LOCATION(longitude, double, "%lf", "double float");
-
-#undef PARSE_LOCATION
-
-            if (encode_location) {
-                LOGV("receiveJpegPosPicture: setting image location ALT %lf LAT %lf LON %lf",
-                     pt.altitude, pt.latitude, pt.longitude);
-                if (camera_set_position(&pt, NULL, NULL) != CAMERA_SUCCESS) {
-                    LOGE("receiveRawPicture: camera_set_position: error");
-                    // return;  // not a big deal
-                }
-            }
-            else
-		LOGV("receiveRawPicture: not setting image location");
-
-            mJpegSize = 0;
-        }
-        else {
-            LOGV("receiveJpegPosPicture JPEG callback was cancelled--not encoding image.");
-            // We need to keep the raw heap around until the JPEG is fully
-            // encoded, because the JPEG encode uses the raw image contained in
-            // that heap.
-        FreePmem(mRawHeap);
-        mRawHeap = NULL;
-        FreePmem(mMiscHeap);
-        mMiscHeap = NULL;
-        }
-	print_time();
-	LOGV("receiveJpegPosPicture: X");
-	LOGV("receiveJpegPosPicture  free mCallbackLock!");
-}
-
-    // This method is called by a libqcamera thread, different from the one on
-    // which startPreview() or takePicture() are called.
-
-    void
-    SprdCameraHardware::receiveJpegPicture(JPEGENC_CBrtnType *encInfo)
-    {
-        LOGV("receiveJpegPicture: E image (%d bytes out of %d)",
-             mJpegSize, mJpegHeap->mBufferSize);
-        print_time();
-        Mutex::Autolock cbLock(&mCallbackLock);
-
-        int index = 0;
-
-        //if (mJpegPictureCallback) {
-        if (mData_cb) {
-	    LOGV("receiveJpegPicture: mData_cb.");
-            // The reason we do not allocate into mJpegHeap->mBuffers[offset] is
-            // that the JPEG image's size will probably change from one snapshot
-            // to the next, so we cannot reuse the MemoryBase object.
-            sp<MemoryBase> buffer = new
-                MemoryBase(mJpegHeap->mHeap,
-                           index * mJpegHeap->mBufferSize +
-                           mJpegHeap->mFrameOffset,
-                           mJpegSize);
-            LOGV("receiveJpegPicture:  mMsgEnabled: 0x%x.", mMsgEnabled);
-           // mJpegPictureCallback(buffer, mPictureCallbackCookie);
-           if (CAMERA_CONTINUE_SHOT_MODE != encInfo->cap_mode) {
-	           if (mMsgEnabled & CAMERA_MSG_COMPRESSED_IMAGE){
-				camera_memory_t *mem = mGetMemory_cb(-1, mJpegSize, 1, 0);
-			       memcpy(mem->data, mJpegHeap->mHeap->base(), mJpegSize);
-		           //mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,buffer, mUser );
-		           mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,mem, 0, NULL, mUser );
-	  		    mem->release(mem);
-	           }
-           } else {
-           		camera_memory_t *mem = mGetMemory_cb(-1, mJpegSize, 1, 0);
-			    memcpy(mem->data, mJpegHeap->mHeap->base(), mJpegSize);
-		        //mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,buffer, mUser );
-		        mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,mem, 0, NULL, mUser );
-	  		    mem->release(mem);
-           }
-            buffer = NULL;
-        }
-        else LOGV("JPEG callback was cancelled--not delivering image.");
-
-        // NOTE: the JPEG encoder uses the raw image contained in mRawHeap, so we need
-        // to keep the heap around until the encoding is complete.
-        LOGV("receiveJpegPicture: free the Raw and Jpeg mem. 0x%x, 0x%x", (unsigned int)mRawHeap, (unsigned int)mMiscHeap);
-		//real add to do FreeCameraMem when shot_num == CONTINUE_NUM?
-		if (encInfo->need_free) {
-	        FreePmem(mRawHeap);
-	        mRawHeap = NULL;
-	        FreePmem(mMiscHeap);
-	        mMiscHeap = NULL;
-		}
-        print_time();
-        LOGV("receiveJpegPicture: X callback done.");
-    }
-
-    void
-    SprdCameraHardware::receiveJpegPictureError(void)
-    {
-        LOGV("receiveJpegPictureError.");
-        print_time();
-        Mutex::Autolock cbLock(&mCallbackLock);
-
-        int index = 0;
-
-        if (mData_cb) {
-	        LOGV("receiveJpegPicture: mData_cb.");
-           if (mMsgEnabled & CAMERA_MSG_COMPRESSED_IMAGE){
-	           mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,NULL, 0, NULL, mUser );
-           }
-        } else LOGV("JPEG callback was cancelled--not delivering image.");
-        // NOTE: the JPEG encoder uses the raw image contained in mRawHeap, so we need
-        // to keep the heap around until the encoding is complete.
-        FreePmem(mRawHeap);
-        mRawHeap = NULL;
-        FreePmem(mMiscHeap);
-        mMiscHeap = NULL;
-        print_time();
-        LOGV("receiveJpegPictureError: X callback done.");
-    }
-
-    static int lookupvalue(const struct str_map *const arr, const char *name)
-    {
-    	LOGV("lookup: name :%s .",name);
-        if (name) {
-            const struct str_map * trav = arr;
-            while (trav->desc) {
-                if (!strcmp(trav->desc, name))
-                    return trav->val;
-                trav++;
-            }
-        }
-	return  0xFFFFFFFF;
-    }
-static int lookup(const struct str_map *const arr, const char *name, int def)
-{
-        int ret = lookupvalue(arr, name);
-
-        return 0xFFFFFFFF == (unsigned int)ret ? def : ret;
-}
-static uint32_t lookupsizewh(uint32_t *arr, const char *size_str)
-{
-	uint32_t pos = 0;
-	char *a=(char*)size_str;
-	char *b;
-	char k[10] = {0};
-
-	uint32_t *size_arr = arr;
-	uint32_t cnt = 0;
-	uint32_t i=0;
-	if(!a)
-	{
-		return 0;
+	else {
+		atv = 0;
 	}
 
-	b = strchr(a,'x');
-	if(b==0)
-		goto lookupsizewh_done;
+	LOGV("getPropertyAtv: %d", atv);
 
-	strncpy(k,a,(b-a));
-	a = b+1;
-
-	*size_arr++=strtol(k,0,0);
-	*size_arr++=strtol(a,0,0);
-	cnt++;
-lookupsizewh_done:
-	LOGV("lookupsizewh:cnt=%d.",cnt);
-	LOGV("lookupsizewh:%d,%d.",arr[i],arr[i+1]);
-
-	return cnt;
-
+	return atv;
 }
 
-static uint32_t lookupsize(uint32_t *arr, const char *size_str)
+int SprdCameraHardware::getNumberOfCameras()
 {
-	uint32_t pos = 0;
-	char *a=(char*)size_str;
-	char *b,*c;
-	char k[10] = {0};
-	char m[10]={0};
-	uint32_t *size_arr = arr;
-	uint32_t cnt = 0;
-	uint32_t i=0;
-	if(!a)
-	{
-		return 0;
+	int num = 0;
+
+	if (1 == getPropertyAtv()) {
+		num = sizeof(SprdCameraHardware::kCameraInfo3) / sizeof(SprdCameraHardware::kCameraInfo3[0]);
+	} else {
+		num = sizeof(SprdCameraHardware::kCameraInfo) / sizeof(SprdCameraHardware::kCameraInfo[0]);
 	}
-	do
-	{
-		b = strchr(a,'x');
-		if(b==0)
-			goto lookupsize_done;
 
-		strncpy(k,a,(b-a));
-		a = b+1;
-		*size_arr++=strtol(k,0,0);
-
-		b = strchr(a,',');
-		if(b==0)
-		{
-			b = strchr(a,'\0');
-		}
-		memset(k,0,10);
-	         strncpy(k,a,(b-a));
-		a=b+1;
-		*size_arr++=strtol(k,0,0);
-
-		memset(k,0,10);
-		cnt++;
-	}while(a);
-lookupsize_done:
-	LOGV("lookupsize:cnt=%d.",cnt);
-	for(i=0;i<2*cnt;i+=2)
-	{
-		LOGV("lookupsize:%d,%d.",arr[i],arr[i+1]);
-	}
-	return cnt;
-
+	LOGV("getNumberOfCameras: %d",num);
+	return num;
 }
 
-#define CAMERA_HAL_FOCUS_ZONE_MAX   5
-static int s_save_zone_info[5*CAMERA_HAL_FOCUS_ZONE_MAX+1];
-static uint32_t lookuprect(int *arr, const char *rect_str)
+int SprdCameraHardware::getCameraInfo(int cameraId, struct camera_info *cameraInfo)
 {
-	char *a=(char*)rect_str;
-	char *b,*c;
-	char k[40] = {0};
-	char m[40]={0};
-	int *rect_arr = arr+1;
-	uint32_t cnt = 0;
-	uint32_t i=0;
-	if(!a)
-	{
-		return 0;
+	if (1 == getPropertyAtv()) {
+		memcpy(cameraInfo, &kCameraInfo3[cameraId], sizeof(CameraInfo));
+	} else {
+		memcpy(cameraInfo, &kCameraInfo[cameraId], sizeof(CameraInfo));
 	}
-	do
-	{
-		b = strchr(a,'(');
-		if(b==0)
-			goto lookuprect_done;
-                  a = b+1;
-                  b = strchr(a,')');
-                  if(b==0)
-			goto lookuprect_done;
-
-		strncpy(k,a,(b-a));
-		a = b+1;
-
-                  c = strchr(k,',');
-                  strncpy(m,k,(c-k));
-		*rect_arr++=strtol(m,0,0);//left
-		memset(m,0,20);
-
-		b=c+1;
-		c=strchr(b,',');
-		strncpy(m,b,(c-b));
-		*rect_arr++=strtol(m,0,0);//top
-		memset(m,0,20);
-
-		b=c+1;
-		c=strchr(b,',');
-		strncpy(m,b,(c-b));
-		*rect_arr++=strtol(m,0,0);//right
-		memset(m,0,20);
-
-		b=c+1;
-		c=strchr(b,',');
-		strncpy(m,b,(c-b));
-		*rect_arr++=strtol(m,0,0);//bottom
-		memset(m,0,20);
-
-	        b=c+1;
-		*rect_arr++=strtol(b,0,0);//weight
-		memset(m,0,20);
-		memset(k,0,10);
-		cnt++;
-                  if(cnt==CAMERA_HAL_FOCUS_ZONE_MAX)
-                    break;
-	}while(a);
-lookuprect_done:
-	LOGV("lookuprect:cnt=%d.",cnt);
-         arr[0] = cnt;
-	for(i=1;i<5*cnt;i+=5)
-	{
-		LOGV("lookupsize:%d,%d,%d,%d,%d.\n",arr[i],arr[i+1],arr[i+2],arr[i+3],arr[i+4]);
-	}
-	return cnt;
-
+	return 0;
 }
-static void discard_zone_weight(int *arr, uint32_t size)
+/////////////////////////////////////////////////////////////////////////////////////////
+//SprdCameraHardware: public functions
+/////////////////////////////////////////////////////////////////////////////////////////
+SprdCameraHardware::SprdCameraHardware(int cameraId)
+	: mParameters(),
+	mPreviewHeight(-1),
+	mPreviewWidth(-1),
+	mRawHeight(-1),
+	mRawWidth(-1),
+	mPreviewHeap(NULL),
+	mRawHeap(NULL),
+	mMiscHeap(NULL),
+	mFDAddr(0),    
+	mRawHeapSize(0),
+	mMiscHeapSize(0),
+	mJpegHeapSize(0),
+	mPreviewHeapSize(0),    
+	mPreviewFormat(1),
+	mPictureFormat(1),
+	mPreviewStartFlag(0),
+	mRecordingMode(0),
+	mJpegSize(0),
+	mNotify_cb(0),
+	mData_cb(0),
+	mData_cb_timestamp(0),
+	mGetMemory_cb(0),
+	mUser(0),
+	mMsgEnabled(0),
+	mPreviewWindow(NULL),
+	mMetadataHeap(NULL),
+	mIsStoreMetaData(false),
+	mIsFreqChanged(false),
+	mZoomLevel(0),
+	mCameraId(cameraId)
 {
-    uint32_t i = 0;
-    int *dst_arr = &arr[4];
-    int *src_arr = &arr[5];
+	LOGV("openCameraHardware: E cameraId: %d.", cameraId);
 
-    for(i=0;i<(size-1);i++)
-    {
-        *dst_arr++ = *src_arr++;
-        *dst_arr++ = *src_arr++;
-        *dst_arr++ = *src_arr++;
-        *dst_arr++ = *src_arr++;
-        src_arr++;
-    }
-    for(i=0;i<size;i++)
-    {
-        LOGV("CAMERA HAL:discard_zone_weight: %d:%d,%d,%d,%d.\n",i,arr[i*4],arr[i*4+1],arr[i*4+2],arr[i*4+3]);
-     }
-}
+	setCameraState(SPRD_INIT, STATE_CAMERA);
 
-static void coordinate_struct_convert(int *rect_arr,int arr_size)
-{
-    int i =0;
-    int left = 0,top=0,right=0,bottom=0;
-    int *rect_arr_copy = rect_arr;
-
-    for(i=0;i<arr_size/4;i++)
-    {
-        left = *rect_arr++;
-        top = *rect_arr++;
-        right = *rect_arr;
-        *rect_arr++ = (((right-left+3) >> 2)<<2);
-        bottom = *rect_arr;
-        *rect_arr++=(((bottom-top+3) >> 2)<<2);
-    }
-    for(i=0;i<arr_size/4;i++)
-    {
-        LOGV("CAMERA HAL test:zone:%d,%d,%d,%d.\n",rect_arr_copy[i*4],rect_arr_copy[i*4+1],rect_arr_copy[i*4+2],rect_arr_copy[i*4+3]);
-    }
-}
-static int coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror, int width, int height)
-{
-	int i;
-	int x1,x2,y1,y2;
-	int temp;
-	int recHalfWidth;
-	int recHalfHeight;
-	int centre_x;
-	int centre_y;
-	int ret = 0;
-
-	LOGV("coordinate_convert: mPreviewWidth=%d, mPreviewHeight=%d, arr_size=%d, angle=%d, is_mirror=%d \n", 
-		width, height, arr_size, angle, is_mirror);
-
-	for(i=0;i<arr_size*2;i++)
-	{
-            x1 = rect_arr[i*2];
-            y1 = rect_arr[i*2+1];
-
-            if(is_mirror)
-                x1 = -x1;
-
-            switch(angle)
-            {
-                case 0:
-                    rect_arr[i*2]         = (1000 + x1) * height / 2000; // 480
-                    rect_arr[i*2 + 1]   = (1000 + y1) * width / 2000;	// 640
-                    break;
-
-                case 90:
-                    rect_arr[i*2]         = (1000 - y1) * height / 2000;
-                    rect_arr[i*2 + 1]   = (1000 + x1) * width / 2000;
-                    break;
-
-                case 180:
-                    rect_arr[i*2]         = (1000 - x1) * height / 2000;
-                    rect_arr[i*2 + 1]   = (1000 - y1) * width / 2000;
-                    break;
-
-                case 270:
-                    rect_arr[i*2]         = (1000 + y1) * height / 2000;
-                    rect_arr[i*2 + 1]   = (1000 - y1) * width / 2000;
-                    break;
-
-            }
+	if (!mGrallocHal) {
+		int ret = hw_get_module(GRALLOC_HARDWARE_MODULE_ID, (const hw_module_t **)&mGrallocHal);
+		if (ret)
+			LOGE("ERR(%s):Fail on loading gralloc HAL", __func__);
 	}
 
-    for(i=0;i<arr_size;i++)
-    {
-        // (x1, y1, x2, y2)
-        // if x1 > x2, (x2, y1, x1, y2)
-        if(rect_arr[i*4] > rect_arr[i*4+2])
-        {
-            temp                    = rect_arr[i*4];
-            rect_arr[i*4]       = rect_arr[i*4+2];
-            rect_arr[i*4+2]     = temp;
+	if (1 == getPropertyAtv()) {
+		mCameraId = 5; //for ATV
+	} else {
+		mCameraId = cameraId;
+	}
 
-        }
+	initDefaultParameters();
 
-        if(rect_arr[i*4+1] > rect_arr[i*4+3])
-        {
-            temp                    = rect_arr[i*4+1];
-            rect_arr[i*4+1]       = rect_arr[i*4+3];
-            rect_arr[i*4+3]     = temp;
+	LOGV("openCameraHardware: X cameraId: %d.", cameraId);
+}
 
-        }
-        LOGV("CAMERA HAL:coordinate_convert: %d: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
-    }
+SprdCameraHardware::~SprdCameraHardware()
+{
+}
 
-	// make sure the coordinate within [width, height]
-	// for 90 degree only
-	for(i=0; i<arr_size*4; i+=2){
-		if(rect_arr[i] < 0){
-			rect_arr[i]= 0;
-		}
-		if(rect_arr[i] > height){
-			rect_arr[i] = height;
+void SprdCameraHardware::release()
+{
+    LOGV("release E");
+    LOGV("mLock:release S .\n");
+    Mutex::Autolock l(&mLock);
+
+    // Either preview was ongoing, or we are in the middle or taking a
+    // picture.  It's the caller's responsibility to make sure the camera
+    // is in the idle or init state before destroying this object.	
+	LOGV("release:camera state = %s, preview state = %s, capture state = %s",
+		getCameraStateStr(getCameraState()), getCameraStateStr(getPreviewState()), 
+		getCameraStateStr(getCaptureState()));
+	
+    if (isCapturing()) {
+		cancelPictureInternal();
+    }	
+	
+    if (isPreviewing()) {
+		stopPreviewInternal();
+    }	
+	
+	if (isCameraInit()) {
+		// When libqcamera detects an error, it calls camera_cb from the
+		// call to camera_stop, which would cause a deadlock if we
+		// held the mStateLock.  For this reason, we have an intermediate
+		// state SPRD_INTERNAL_STOPPING, which we use to check to see if the
+		// camera_cb was called inline.
+		setCameraState(SPRD_INTERNAL_STOPPING, STATE_CAMERA);
+
+		LOGV("stopping camera.");
+		if(CAMERA_SUCCESS != camera_stop(camera_cb, this)){
+			setCameraState(SPRD_ERROR, STATE_CAMERA);
+			mMetadataHeap = NULL;
+			LOGE("release: fail to camera_stop().");
+			LOGV("mLock:release E.\n");
+			return;
 		}
 
-		if(rect_arr[i+1] < 0){
-			rect_arr[i+1]= 0;
-		}
-		if(rect_arr[i+1] > width){
-			rect_arr[i+1] = width;
-		}
-	}
+		WaitForCameraStop();
+	}	
 
-	for(i=0;i<arr_size;i++)
-	{
-		int preview_x, preview_y, preview_w, preview_h;
-		int point_x, point_y;
-		
-		LOGV("CAMERA HAL:coordinate_convert %d: org: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
+	mMetadataHeap = NULL;		
 
-		// only for angle 90/270
-		// calculate the centre point
-		recHalfHeight  	= (rect_arr[i*4+2] - rect_arr[i])/2;
-		recHalfWidth   	= (rect_arr[i*4+3] - rect_arr[i+1])/2;
-		centre_y  		= rect_arr[i*4+2] - recHalfHeight;
-		centre_x 		= rect_arr[i*4+3] - recHalfWidth;
-		LOGV("CAMERA HAL:coordinate_convert %d: center point: x=%d, y=%d\n", i, centre_x, centre_y);
-
-		// map to sensor coordinate
-		centre_y		= height - centre_y;
-		LOGV("CAMERA HAL:coordinate_convert %d: sensor centre pointer: x=%d, y=%d, half_w=%d, half_h=%d.\n",
-				i, centre_x, centre_y, recHalfWidth, recHalfHeight);
-		
-		ret = camera_get_preview_rect(&preview_x, &preview_y, &preview_w, &preview_h);
-		if(ret){
-			LOGV("coordinate_convert: camera_get_preview_rect failed, return \n");
-			return -1;
-		}
-		LOGV("CAMERA HAL:coordinate_convert %d: preview rect: x=%d, y=%d, preview_w=%d, preview_h=%d.\n",
-				i, preview_x, preview_y, preview_w, preview_h);
-		
-		point_x = preview_x + centre_x*preview_w/width;
-		point_y = preview_y + centre_y*preview_h/height;
-		LOGV("CAMERA HAL:coordinate_convert %d: out point: x=%d, y=%d\n", i, point_x, point_y);
-		
-		rect_arr[i] 	= point_x - recHalfWidth;
-		rect_arr[i+1] 	= point_y - recHalfHeight;
-		rect_arr[i+2] 	= point_x + recHalfWidth;
-		rect_arr[i+3] 	= point_y + recHalfHeight;
-
-		LOGV("CAMERA HAL:coordinate_convert %d: final: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
-	}
-
-	return ret;
+	LOGV("release X");
+	LOGV("mLock:release E.\n");		
 }
 
-status_t strToFPS(const char *str, int &min, int &max) {
-	  char *pDest;
-	  char strTmp[100] = {0}; //CR 187754
+int SprdCameraHardware::getCameraId() const
+{
+    return mCameraId;
+}
 
-	  if (str == NULL) return UNKNOWN_ERROR;
+status_t SprdCameraHardware::startPreview()
+{
+	LOGV("startPreview: E");
+	Mutex::Autolock l(&mLock);
 
-	  LOGV("preview-fps-range: %s", str);
-
-	  pDest = strrchr(str,(int)',');
-	   memcpy(strTmp, str, strlen(str) - strlen(pDest));
-	    min = atoi(strTmp);
-	    pDest = strrchr((const char *)str, (int)',');
-        if (pDest == NULL) {
-            LOGV("pDest is NULL.");
-            return UNKNOWN_ERROR;
-        }
-	    pDest++;
-	    strcpy(strTmp, pDest);
-	    max = atoi(strTmp);
-
-	   LOGV("preview-fps-range: min: %d, max: %d.", min, max);
-
+	if(mPreviewStartFlag == 0) {
+	    LOGV("don't need to start preview.");
 	    return NO_ERROR;
-  }
-
-static uint32_t s_focus_zone[25];
-
-    status_t SprdCameraHardware::initCameraParameters()
-    {
-        LOGV("initCameraParameters: E");
-
-        // Because libqcamera is broken, for the camera_set_parm() calls
-        // SprdCameraHardware camera_cb() is called synchronously,
-        // so we cannot wait on a state change.  Also, we have to unlock
-        // the mStateLock, because camera_cb() acquires it.
-
-        if(true != startCameraIfNecessary())
-            return UNKNOWN_ERROR;
-
-	//wxz20120316: check the value of preview-fps-range. //CR168435
-	{
-		int min,max;
-		if(NO_ERROR != strToFPS(mParameters.get("preview-fps-range"), min, max)){
-			LOGE("Fail to strToFPS(). ");
-			return UNKNOWN_ERROR;
-		}
-		if((min > max) || (min < 0) || (max < 0)){
-			LOGE("Error to FPS range: mix: %d, max: %d.", min, max);
-			return UNKNOWN_ERROR;
-		}
-	}
-	//check preview size
-	{
-		int w,h;
-		mParameters.getPreviewSize(&w, &h);
-		if((w < 0) || (h < 0)){
-			mParameters.setPreviewSize(640, 480);
-			return UNKNOWN_ERROR;
-		}
-	}
-
-        // Default Rotation - none
-        int rotation = mParameters.getInt("rotation");
-
-        // Rotation may be negative, but may not be -1, because it has to be a
-        // multiple of 90.  That's why we can still interpret -1 as an error,
-        if (rotation == -1) {
-            LOGV("rotation not specified or is invalid, defaulting to 0");
-            rotation = 0;
-        }
-        else if (rotation % 90) {
-            LOGV("rotation %d is not a multiple of 90 degrees!  Defaulting to zero.",
-                 rotation);
-            rotation = 0;
-        }
-        else {
-            // normalize to [0 - 270] degrees
-            rotation %= 360;
-            if (rotation < 0) rotation += 360;
-        }
-        SET_PARM(CAMERA_PARM_ENCODE_ROTATION, rotation);
-        if(1 == mParameters.getInt("sensororientation")){
-        	SET_PARM(CAMERA_PARM_ORIENTATION, 1); //for portrait
-        	mOrientation_parm = 1;
-	}
-	else{
-        	SET_PARM(CAMERA_PARM_ORIENTATION, 0); //for landscape
-        	mOrientation_parm = 0;
-	}
-        rotation = mParameters.getInt("sensorrotation");
-        if (-1 == rotation)
-            rotation = 0;
-        SET_PARM(CAMERA_PARM_SENSOR_ROTATION, rotation);
-		
-        int shot_num = mParameters.getInt("capture-mode");
-        SET_PARM(CAMERA_PARM_SHOT_NUM, shot_num);
-#if 0//test code
-	uint32_t size_cnt = 0;
-         int is_mirror=0;
-	char *src="(-800,-750,-650,0,1),(-500,-50,50,30,1)";
-
-        LOGV("focus area: %s \n", mParameters.get("focus-areas"));
-
-         size_cnt = lookuprect(&s_save_zone_info[0],src);
-	if(size_cnt)
-	{
-            discard_zone_weight(&s_save_zone_info[1],size_cnt);
-            is_mirror = (g_camera_id == 1) ? 1 : 0;
-            coordinate_convert(&s_save_zone_info[1],size_cnt,sCameraInfo[g_camera_id].orientation,is_mirror, mPreviewWidth, mPreviewHeight);
-            coordinate_struct_convert(&s_save_zone_info[1],size_cnt*4);
-	}
-#else
-	uint32_t size_cnt = 0;
-        int is_mirror=0;
-		int convert_ret = 0;
-
-        is_mirror = (g_camera_id == 1) ? 1 : 0;
-
-        LOGV("focus area: %s, mirror=%d, orientation = %d \n", mParameters.get("focus-areas"), is_mirror, sCameraInfo[g_camera_id].orientation);
-
-         size_cnt = lookuprect(&s_save_zone_info[0], mParameters.get("focus-areas"));
-	if(size_cnt)
-	{
-            uint32_t i;
-            discard_zone_weight(&s_save_zone_info[1], size_cnt);
-
-            convert_ret = coordinate_convert(&s_save_zone_info[1],size_cnt,sCameraInfo[g_camera_id].orientation,is_mirror, mPreviewWidth, mPreviewHeight);
-			if(convert_ret)
-			{
-                size_cnt = 0;
-                LOGV("error: coordinate_convert error, ignore focus \n");
-			}
-			else
-			{
-	            coordinate_struct_convert(&s_save_zone_info[1],size_cnt*4);
-
-	            for (i=0; i<size_cnt*4; i++)
-	            {
-	                if(s_save_zone_info[i+1] < 0)
-	                {
-	                    size_cnt = 0;
-	                    LOGV("error: focus area %d < 0, ignore focus \n", s_save_zone_info[i+1]);
-	                }
-	            }
-			}
-	}
-#endif
-	s_focus_zone[0] = size_cnt;
-
-	//SET_PARM(CAMERA_PARM_FOCUS_RECT,(int32_t)s_focus_zone);
-	SET_PARM(CAMERA_PARM_FOCUS_RECT,(int32_t)s_save_zone_info);
-if (g_camera_id == 0) {
-	if(0xFFFFFFFF == (unsigned int)lookupvalue(focus_mode_map,
-                        mParameters.get("focus-mode"))){
-		mParameters.set("focus-mode", "auto");
-		return UNKNOWN_ERROR;
-	}
-        SET_PARM(CAMERA_PARM_AF_MODE,
-                 lookup(focus_mode_map,
-                        mParameters.get("focus-mode"),
-                        CAMERA_FOCUS_MODE_AUTO));
-}
-        SET_PARM(CAMERA_PARM_WB,
-                 lookup(wb_map,
-                        mParameters.get("whitebalance"),
-                        CAMERA_WB_AUTO));
-        SET_PARM(CAMERA_PARM_CAMERA_ID,
-                 lookup(camera_id_map,
-                        mParameters.get("cameraid"),
-                        CAMERA_CAMERA_ID_BACK));
-        SET_PARM(CAMERA_PARM_JPEGCOMP,  atoi(mParameters.get("jpeg-quality")));
-        SET_PARM(CAMERA_PARM_THUMBCOMP, atoi(mParameters.get("jpeg-thumbnail-quality")));
-        SET_PARM(CAMERA_PARM_EFFECT,
-                 lookup(effect_map,
-                        mParameters.get("effect"),
-                        CAMERA_EFFECT_NONE));
-        SET_PARM(CAMERA_PARM_SCENE_MODE,
-                 lookup(scene_mode_map,
-                        mParameters.get("scene-mode"),
-                        CAMERA_SCENE_MODE_AUTO));
-	g_sprd_zoom_levle = lookup(zoom_map,mParameters.get("zoom"), CAMERA_ZOOM_1X);
-        SET_PARM(CAMERA_PARM_ZOOM, g_sprd_zoom_levle);
-
-        SET_PARM(CAMERA_PARM_BRIGHTNESS,
-                 lookup(brightness_map,
-                        mParameters.get("brightness"),
-                        CAMERA_BRIGHTNESS_DEFAULT));
-        SET_PARM(CAMERA_PARM_CONTRAST,
-                 lookup(contrast_map,
-                        mParameters.get("contrast"),
-                        CAMERA_CONTRAST_DEFAULT));
-
-	SET_PARM(CAMERA_PARM_EXPOSURE_COMPENSATION,
-		lookup(exposure_compensation_map,
-			mParameters.get("exposure-compensation"),
-			CAMERA_EXPOSURW_COMPENSATION_DEFAULT));
-
-	SET_PARM(CAMERA_PARM_ANTIBANDING,
-		lookup(antibanding_map,
-			mParameters.get("antibanding"),
-			CAMERA_ANTIBANDING_50HZ));
-
-        SET_PARM(CAMERA_PARM_ISO,
-                 lookup(iso_map,
-                        mParameters.get("iso"),
-                        CAMERA_ISO_AUTO));
-       SET_PARM(CAMERA_PARM_DCDV_MODE,
-                 lookup(camera_dcdv_mode,
-                        mParameters.get("recording-hint"),
-                        CAMERA_DC_MODE));
-#if 0
-	int recordin_hit = lookup(recording_hint_map, mParameters.get("recording-hint"), CAMERA_RECORDING_MAX);
-	LOGV("recordin_hit = %d \n", recordin_hit);
-	if(CAMERA_RECORDING_MAX != recordin_hit)
-		SET_PARM(CAMERA_PARM_PREVIEW_MODE, recordin_hit);
-#endif
-
-#ifndef CONFIG_CAMERA_788
-    if (g_camera_id == 0) {
-	if(0xFFFFFFFF == (unsigned int)lookupvalue(flash_mode_map,
-                        mParameters.get("flash-mode"))){
-		mParameters.set("flash-mode", "off");
-		return UNKNOWN_ERROR;
-	}
-        SET_PARM(CAMERA_PARM_FLASH,
-                 lookup(flash_mode_map,
-                        mParameters.get("flash-mode"),
-                        CAMERA_FLASH_MODE_OFF));
-    }
-#endif
-
-        int ns_mode = mParameters.getInt("nightshot-mode");
-        if (ns_mode < 0) ns_mode = 0;
-        SET_PARM(CAMERA_PARM_NIGHTSHOT_MODE, ns_mode);
-
-        int luma_adaptation = mParameters.getInt("luma-adaptation");
-        if (luma_adaptation < 0) luma_adaptation = 0;
-        SET_PARM(CAMERA_PARM_LUMA_ADAPTATION, luma_adaptation);
-
-	double focal_len = atof(mParameters.get("focal-length")) * 1000;
-	SET_PARM(CAMERA_PARM_FOCAL_LENGTH,  (int32_t)focal_len);
-
-
-
-        int th_w, th_h, th_q;
-        th_w = mParameters.getInt("jpeg-thumbnail-width");
-        if (th_w < 0) LOGW("property jpeg-thumbnail-width not specified");
-
-        th_h = mParameters.getInt("jpeg-thumbnail-height");
-        if (th_h < 0) LOGW("property jpeg-thumbnail-height not specified");
-
-        th_q = mParameters.getInt("jpeg-thumbnail-quality");
-        if (th_q < 0) LOGW("property jpeg-thumbnail-quality not specified");
-
-        if (th_w >= 0 && th_h >= 0 && th_q >= 0) {
-            LOGI("setting thumbnail dimensions to %dx%d, quality %d",
-                 th_w, th_h, th_q);
-            int ret = camera_set_thumbnail_properties(th_w, th_h, th_q);
-            if (ret != CAMERA_SUCCESS) {
-                LOGE("camera_set_thumbnail_properties returned %d", ret);
-            }
-        }
-
-        // Set Default JPEG encoding--this does not cause a callback
-        encode_properties.quality   = mParameters.getInt("jpeg-quality");
-        if (encode_properties.quality < 0) {
-            LOGW("JPEG-image quality is not specified "
-                 "or is negative, defaulting to %d",
-                 encode_properties.quality);
-            encode_properties.quality = 100;
-        }
-        else LOGV("Setting JPEG-image quality to %d",
-                  encode_properties.quality);
-        encode_properties.format    = CAMERA_JPEG;
-        encode_properties.file_size = 0x0;
-        camera_set_encode_properties(&encode_properties);
-
-
-        LOGV("initCameraParameters: X");
-      return NO_ERROR;
-    }
-
-#undef SET_PARM
-
-    // Called with mStateLock held!
-    void SprdCameraHardware::setCameraDimensions()
-    {
-        if (mCameraState != QCS_IDLE) {
-            LOGE("set camera dimensions: expecting state QCS_IDLE, not %s",
-                 getCameraStateStr(mCameraState));
-            return;
-        }
-
-        camera_set_dimensions(mRawWidth,
-                                   mRawHeight,
-                                   mPreviewWidth,
-                                   mPreviewHeight,
-                                   NULL,
-                                   NULL);
-
-    }
-
-    SprdCameraHardware::Sprd_camera_state
-     SprdCameraHardware::change_state(Sprd_camera_state new_state,
-        bool lock)
-    {
-    	LOGV("start to change_state.");
-        //if (lock) mStateLock.lock();
-        LOGV("start to lock.");
-        if (new_state != mCameraState) {
-            // Due to the fact that we allow only one thread at a time to call
-            // startPreview(), stopPreview(), or takePicture(), we know that
-            // only one thread at a time may be blocked waiting for a state
-            // transition on mStateWait.  That's why we signal(), not
-            // broadcast().
-LOGV("start to mCameraState.");
-            LOGV("state transition %s --> %s",
-                 getCameraStateStr(mCameraState),
-                 getCameraStateStr(new_state));
-LOGV("start to getCameraStateStr.");
-            mCameraState = new_state;
-            mStateWait.signal();
-        }
-		LOGV("start to signal.");
-       // if (lock) mStateLock.unlock();
-        LOGV("start to unlock.");
-        return new_state;
-    }
-
-#define CAMERA_STATE(n) case n: if(n != CAMERA_FUNC_START_PREVIEW || cb != CAMERA_EVT_CB_FRAME) LOGV("STATE %s // STATUS %d", #n, cb);
-#define TRANSITION(e,s) do { \
-            obj->change_state(obj->mCameraState == e ? s : QCS_ERROR); \
-        } while(0)
-#define TRANSITION_LOCKED(e,s) do { \
-            obj->change_state((obj->mCameraState == e ? s : QCS_ERROR), false); \
-        } while(0)
-#define TRANSITION_ALWAYS(s) obj->change_state(s)
-
-
-    // This callback is called from the destructor.
-    void SprdCameraHardware::stop_camera_cb(camera_cb_type cb,
-                                                const void *client_data,
-                                                camera_func_type func,
-                                                int32_t parm4)
-    {
-        SprdCameraHardware *obj =
-            (SprdCameraHardware *)client_data;
-        switch(func) {
-            CAMERA_STATE(CAMERA_FUNC_STOP)
-                TRANSITION(QCS_INTERNAL_STOPPING, QCS_INIT);
-            break;
-        default:
-            break;
-        }
-    }
-
-    void SprdCameraHardware::camera_cb(camera_cb_type cb,
-                                           const void *client_data,
-                                           camera_func_type func,
-                                           int32_t parm4)
-    {
-        SprdCameraHardware *obj =
-            (SprdCameraHardware *)client_data;
-#if 0
-        // Promote the singleton to make sure that we do not get destroyed
-        // while this callback is executing.
-        if (UNLIKELY(getInstance() == NULL)) {
-            LOGE("camera object has been destroyed--returning immediately");
-            return;
-        }
-#endif
-        if (cb == CAMERA_EXIT_CB_ABORT ||     // Function aborted
-            cb == CAMERA_EXIT_CB_DSP_ABORT || // Abort due to DSP failure
-            cb == CAMERA_EXIT_CB_ERROR ||     // Failed due to resource
-            cb == CAMERA_EXIT_CB_FAILED)      // Execution failed or rejected
-        {
-            // Autofocus failures occur relatively often and are not fatal, so
-            // we do not transition to QCS_ERROR for them.
-            if (func != CAMERA_FUNC_START_FOCUS) {
-                LOGE("SprdCameraHardware::camera_cb: @CAMERA_EXIT_CB_FAILURE(%d) in state %s.",
-                     parm4,
-                     obj->getCameraStateStr(obj->mCameraState));
-	if((cb == CAMERA_EXIT_CB_FAILED)&&(func == CAMERA_FUNC_TAKE_PICTURE)){
-		obj->FreeCameraMem();
-	}else if((cb == CAMERA_EXIT_CB_FAILED)&&(func == CAMERA_FUNC_ENCODE_PICTURE)){
-		obj->receiveJpegPictureError();
-	}
-
-                TRANSITION_ALWAYS(QCS_ERROR);
-                obj->HandleErrorState();
-		return ;
-            }
-        }
-
-        switch(func) {
-            // This is the commonest case.
-            CAMERA_STATE(CAMERA_FUNC_START_PREVIEW)
-                switch(cb) {
-                case CAMERA_RSP_CB_SUCCESS:
-                    TRANSITION(QCS_INTERNAL_PREVIEW_REQUESTED,
-                               QCS_PREVIEW_IN_PROGRESS);
-                    break;
-                case CAMERA_EVT_CB_FRAME:
-                    switch (obj->mCameraState) {
-                    case QCS_PREVIEW_IN_PROGRESS:
-                        if (parm4)
-                            obj->receivePreviewFrame((camera_frame_type *)parm4);
-                        break;
-                    case QCS_INTERNAL_PREVIEW_STOPPING:
-                        LOGV("camera cb: discarding preview frame "
-                             "while stopping preview");
-                        break;
-                    default:
-                        // transition to QCS_ERROR
-                        LOGE("camera cb: invalid state %s for preview!",
-                             obj->getCameraStateStr(obj->mCameraState));
-                        break;
-                    }
-                    break;
-                case CAMERA_EVT_CB_FD:
-                    if( QCS_PREVIEW_IN_PROGRESS == obj->mCameraState) {
-                        if (parm4)
-                            obj->receivePreviewFDFrame((camera_frame_type *)parm4);
-                    }
-                    break;
-                default:
-                    // transition to QCS_ERROR
-                    LOGE("unexpected cb %d for CAMERA_FUNC_START_PREVIEW.",
-                         cb);
-                }
-                break;
-            CAMERA_STATE(CAMERA_FUNC_START)
-                TRANSITION(QCS_INIT, QCS_IDLE);
-		LOGV("OK to QCS_INIT, QCS_IDLE");
-                break;
-            CAMERA_STATE(CAMERA_FUNC_STOP_PREVIEW)
-                TRANSITION(QCS_INTERNAL_PREVIEW_STOPPING,
-                           QCS_IDLE);
-                break;
-            CAMERA_STATE(CAMERA_FUNC_RELEASE_PICTURE)
-                TRANSITION(QCS_INTERNAL_CAPTURE_STOPPING,
-                           QCS_IDLE);
-                 obj->FreeCameraMem();
-                break;
-            CAMERA_STATE(CAMERA_FUNC_TAKE_PICTURE)
-                if (cb == CAMERA_RSP_CB_SUCCESS) {
-		//	obj->notifyShutter();
-                    TRANSITION(QCS_INTERNAL_RAW_REQUESTED,
-                               QCS_WAITING_RAW);
-                }
-                else if (cb == CAMERA_EVT_CB_SNAPSHOT_DONE) {
-                    obj->notifyShutter();
-                    // Received pre-LPM raw picture. Notify callback now.
-                    obj->receiveRawPicture((camera_frame_type *)parm4);
-                }
-                else if (cb == CAMERA_EXIT_CB_DONE)
-		{
-		     {
-                  //      Mutex::Autolock lock(&obj->mStateLock);
-                        TRANSITION_LOCKED(QCS_WAITING_RAW,
-                                          //obj->mJpegPictureCallback != NULL ?
-                                          obj->mData_cb != NULL ?
-                                          QCS_WAITING_JPEG :
-                                          QCS_IDLE);
-                    }
-                    // It's important that we call receiveRawPicture() before
-                    // we transition the state because another thread may be
-                    // waiting in cancelPicture(), and then delete this object.
-                    // If the order were reversed, we might call
-                    // receiveRawPicture on a dead object.
-                    LOGV("Receiving post LPM raw picture.");
-                    obj->receivePostLpmRawPicture((camera_frame_type *)parm4);
-                } else {  // transition to QCS_ERROR
-                    if (obj->mCameraState == QCS_ERROR) {
-                        Mutex::Autolock l(&obj->mLock);
-                        Mutex::Autolock stateLock(&obj->mStateLock);
-                        LOGE("camera cb: invalid state %s for taking a picture!",
-                             obj->getCameraStateStr(obj->mCameraState));
-                             obj->FreeCameraMem();
-                        if (obj->mMsgEnabled & CAMERA_MSG_RAW_IMAGE)
-                       		 obj->mData_cb(CAMERA_MSG_RAW_IMAGE, NULL, 0 , NULL, obj->mUser);
-                        if (obj->mMsgEnabled & CAMERA_MSG_COMPRESSED_IMAGE)
-                        	obj->mData_cb(CAMERA_MSG_COMPRESSED_IMAGE, NULL, 0, NULL, obj->mUser);
-                        TRANSITION_ALWAYS(QCS_IDLE);
-                    }
-                }
-                break;
-            CAMERA_STATE(CAMERA_FUNC_ENCODE_PICTURE)
-                switch (cb) {
-                case CAMERA_RSP_CB_SUCCESS:
-                    // We already transitioned the camera state to
-                    // QCS_WAITING_JPEG when we called
-                    // camera_encode_picture().
-                    break;
-                case CAMERA_EXIT_CB_BUFFER:
-                    if (obj->mCameraState == QCS_WAITING_JPEG) {
-                        obj->receiveJpegPictureFragment(
-                            (JPEGENC_CBrtnType *)parm4);
-                    }
-                    else LOGE("camera cb: invalid state %s for receiving "
-                              "JPEG fragment!",
-                              obj->getCameraStateStr(obj->mCameraState));
-                    break;
-                case CAMERA_EXIT_CB_DONE:
-                    if (obj->mCameraState == QCS_WAITING_JPEG) {
-                        // Receive the last fragment of the image.
-                        obj->receiveJpegPictureFragment(
-                            (JPEGENC_CBrtnType *)parm4);
-
-                        // The size of the complete JPEG image is in
-                        // mJpegSize.
-			LOGV("CAMERA_EXIT_CB_DONE MID.");
-                        // It's important that we call receiveJpegPicture()
-                        // before we transition the state because another
-                        // thread may be waiting in cancelPicture(), and then
-                        // delete this object.  If the order were reversed, we
-                        // might call receiveRawPicture on a dead object.
-
-                        obj->receiveJpegPicture((JPEGENC_CBrtnType *)parm4);
-
-						if( ((JPEGENC_CBrtnType *)parm4)->need_free ) {
-                        	TRANSITION(QCS_WAITING_JPEG, QCS_IDLE);
-						} else {
-							TRANSITION(QCS_WAITING_JPEG, QCS_INTERNAL_RAW_REQUESTED);
-						}
-                    }
-                    // transition to QCS_ERROR
-                    else LOGE("camera cb: invalid state %s for "
-                              "receiving JPEG!",
-                              obj->getCameraStateStr(obj->mCameraState));
-                    break;
-                case CAMERA_EXIT_CB_FAILED:
-                    obj->receiveJpegPictureError();
-                    break;
-	       case CAMERA_EVT_CB_SNAPSHOT_JPEG_DONE:
-			 	TRANSITION_LOCKED(QCS_WAITING_RAW,
-                                          //obj->mJpegPictureCallback != NULL ?
-                                          obj->mData_cb != NULL ?
-                                          QCS_WAITING_JPEG :
-                                          QCS_IDLE);
-
-				if (obj->mCameraState == QCS_WAITING_JPEG)
-				{
-					obj->receiveJpegPosPicture();
-					obj->receiveJpegPictureFragment((JPEGENC_CBrtnType *)parm4);
-					obj->receiveJpegPicture((JPEGENC_CBrtnType *)parm4);
-		                           TRANSITION(QCS_WAITING_JPEG, QCS_IDLE);
-				}
-				else LOGE("camera cb: invalid state %s for "
-		                              "receiving JPEG!",
-		                              obj->getCameraStateStr(obj->mCameraState));
-		break;
-                default:
-                    // transition to QCS_ERROR
-                    LOGE("camera cb: unknown cb %d for JPEG!", cb);
-                }
-            break;
-            CAMERA_STATE(CAMERA_FUNC_START_FOCUS) {
-                // NO TRANSITION HERE.  We acquire mStateLock here because it is
-                // possible for ::autoFocus to be called after the call to
-                // mAutoFocusCallback() but before we set mAutoFocusCallback
-                // to NULL.
-                //if (obj->mAutoFocusCallback) {
-                if (obj->mNotify_cb) {
-                    switch (cb) {
-                    case CAMERA_RSP_CB_SUCCESS:
-                        LOGV("camera cb: autofocus has started.");
-                        break;
-                    case CAMERA_EXIT_CB_DONE: {
-                        LOGV("camera cb: autofocus succeeded.");
-                        LOGV("camera cb: autofocus mNotify_cb start.");
-			//if(NULL != obj->mNotify_cb)
-			if (obj->mMsgEnabled & CAMERA_MSG_FOCUS)
-				obj->mNotify_cb(CAMERA_MSG_FOCUS, 1, 0, obj->mUser);
-			else
-				LOGE("camera cb: mNotify_cb is null.");
- 		   LOGV("camera cb: autofocus mNotify_cb ok.");
-                    }
-                        break;
-                    case CAMERA_EXIT_CB_ABORT:
-                        LOGE("camera cb: autofocus aborted");
-                        //break;
-                    case CAMERA_EXIT_CB_FAILED: {
-                        LOGE("camera cb: autofocus failed");
-                        //Mutex::Autolock lock(&obj->mStateLock);
-                        if (obj->mMsgEnabled & CAMERA_MSG_FOCUS)
-                        	obj->mNotify_cb(CAMERA_MSG_FOCUS, 0, 0, obj->mUser);
-                    }
-                        break;
-                    default:
-                        LOGE("camera cb: unknown cb %d for "
-                             "CAMERA_FUNC_START_FOCUS!", cb);
-                    }
-                }
-            } break;
-        default:
-            // transition to QCS_ERROR
-            LOGE("Unknown camera-callback status %d", cb);
-        }
-    }
-
-#undef TRANSITION
-#undef TRANSITION_LOCKED
-#undef TRANSITION_ALWAYS
-#undef CAMERA_STATE
-
-    static unsigned clp2(unsigned x) {
-        x = x - 1;
-        x = x | (x >> 1);
-        x = x | (x >> 2);
-        x = x | (x >> 4);
-        x = x | (x >> 8);
-        x = x | (x >>16);
-        return x + 1;
-    }
-
-    SprdCameraHardware::MemPool::MemPool(int buffer_size, int num_buffers,
-                                             int frame_size,
-                                             int frame_offset,
-                                             const char *name) :
-        mBufferSize(buffer_size),
-        mNumBuffers(num_buffers),
-        mFrameSize(frame_size),
-        mFrameOffset(frame_offset),
-        mBuffers(NULL), mName(name)
-    {
-        // empty
-    }
-
-    void SprdCameraHardware::MemPool::completeInitialization()
-    {
-        // If we do not know how big the frame will be, we wait to allocate
-        // the buffers describing the individual frames until we do know their
-        // size.
-
-        if (mFrameSize > 0) {
-            mBuffers = new sp<MemoryBase>[mNumBuffers];
-            for (int i = 0; i < mNumBuffers; i++) {
-                mBuffers[i] = new
-                    MemoryBase(mHeap,
-                               i * mBufferSize + mFrameOffset,
-                               mFrameSize);
-            }
-        }
-    }
-
-    SprdCameraHardware::AshmemPool::AshmemPool(int buffer_size, int num_buffers,
-                                                   int frame_size,
-                                                   int frame_offset,
-                                                   const char *name) :
-        SprdCameraHardware::MemPool(buffer_size,
-                                        num_buffers,
-                                        frame_size,
-                                        frame_offset,
-                                        name)
-    {
-            LOGV("constructing MemPool %s backed by ashmem: "
-                 "%d frames @ %d bytes, offset %d, "
-                 "buffer size %d",
-                 mName,
-                 num_buffers, frame_size, frame_offset, buffer_size);
-
-            int page_mask = getpagesize() - 1;
-            int ashmem_size = buffer_size * num_buffers;
-            ashmem_size += page_mask;
-            ashmem_size &= ~page_mask;
-
-            mHeap = new MemoryHeapBase(ashmem_size);
-
-            completeInitialization();
-    }
-/*wxzN
-    SprdCameraHardware::PmemPool::PmemPool(const char *pmem_pool,
-                                               int buffer_size, int num_buffers,
-                                               int frame_size,
-                                               int frame_offset,
-                                               const char *name) :
-        SprdCameraHardware::MemPool(buffer_size,
-                                        num_buffers,
-                                        frame_size,
-                                        frame_offset,
-                                        name)
-    {
-        LOGV("constructing MemPool %s backed by pmem pool %s: "
-             "%d frames @ %d bytes, offset %d, buffer size %d",
-             mName,
-             pmem_pool, num_buffers, frame_size, frame_offset,
-             buffer_size);
-
-        // Make a new mmap'ed heap that can be shared across processes.
-
-        mAlignedSize = clp2(buffer_size * num_buffers);
-
-        sp<MemoryHeapBase> masterHeap =
-            new MemoryHeapBase(pmem_pool, mAlignedSize,  MemoryHeapBase::NO_CACHING);
-        sp<MemoryHeapPmem> pmemHeap = new MemoryHeapPmem(masterHeap, MemoryHeapBase::NO_CACHING);
-        if (pmemHeap->getHeapID() >= 0) {
-            pmemHeap->slap();
-            masterHeap.clear();
-            mHeap = pmemHeap;
-            pmemHeap.clear();
-
-            mFd = mHeap->getHeapID();
-            if (::ioctl(mFd, PMEM_GET_SIZE, &mSize)) {
-                LOGE("pmem pool %s ioctl(PMEM_GET_SIZE) error %s (%d)",
-                     pmem_pool,
-                     ::strerror(errno), errno);
-                mHeap.clear();
-                return;
-            }
-
-            LOGV("pmem pool %s ioctl(PMEM_GET_SIZE) is %ld",
-                 pmem_pool,
-                 mSize.len);
-
-            completeInitialization();
-        }
-        else LOGE("pmem pool %s error: could not create master heap!",
-                  pmem_pool);
-    }
-
-*/
-    SprdCameraHardware::MemPool::~MemPool()
-    {
-        LOGV("destroying MemPool %s", mName);
-        if (mFrameSize > 0)
-            delete [] mBuffers;
-        mHeap.clear();
-        LOGV("destroying MemPool %s completed", mName);
-    }
-
-    status_t SprdCameraHardware::MemPool::dump(int fd, const Vector<String16> &args) const
-    {
-        const size_t SIZE = 256;
-        char buffer[SIZE];
-        String8 result;
-
-        snprintf(buffer, 255, "SprdCameraHardware::AshmemPool::dump\n");
-        result.append(buffer);
-        if (mName) {
-            snprintf(buffer, 255, "mem pool name (%s)\n", mName);
-            result.append(buffer);
-        }
-        if (mHeap != 0) {
-            snprintf(buffer, 255, "heap base(%p), size(%d), flags(%d), device(%s)\n",
-                     mHeap->getBase(), mHeap->getSize(),
-                     mHeap->getFlags(), mHeap->getDevice());
-            result.append(buffer);
-        }
-        snprintf(buffer, 255, "buffer size (%d), number of buffers (%d),"
-                 " frame size(%d), and frame offset(%d)\n",
-                 mBufferSize, mNumBuffers, mFrameSize, mFrameOffset);
-        result.append(buffer);
-        write(fd, result.string(), result.size());
-        return NO_ERROR;
-    }
-
-const char* const SprdCameraHardware::getCameraStateStr(
-        SprdCameraHardware::Sprd_camera_state s)
-    {
-        static const char* states[] = {
-#define STATE_STR(x) #x
-            STATE_STR(QCS_INIT),
-            STATE_STR(QCS_IDLE),
-            STATE_STR(QCS_ERROR),
-            STATE_STR(QCS_PREVIEW_IN_PROGRESS),
-            STATE_STR(QCS_WAITING_RAW),
-            STATE_STR(QCS_WAITING_JPEG),
-            STATE_STR(QCS_INTERNAL_PREVIEW_STOPPING),
-            STATE_STR(QCS_INTERNAL_PREVIEW_REQUESTED),
-            STATE_STR(QCS_INTERNAL_RAW_REQUESTED),
-            STATE_STR(QCS_INTERNAL_STOPPING),
-#undef STATE_STR
-        };
-        return states[s];
-    }
-status_t SprdCameraHardware::sendCommand(int32_t cmd, int32_t arg1, int32_t arg2)
-{
-    uint32_t buffer_size = mPreviewWidth * mPreviewHeight * 3 / 2;
-    uint32_t addr = 0;
-    LOGE("sendCommand: facedetect mem size 0x%x.",buffer_size);
-	if(CAMERA_CMD_START_FACE_DETECTION == cmd){
-        addr = (uint32_t)malloc(buffer_size);
-        mFDAddr = addr;
-        camera_set_fd_mem(0,addr,buffer_size);
-        camera_set_start_facedetect(1);
-	} else if(CAMERA_CMD_STOP_FACE_DETECTION == cmd) {
-	    LOGE("sendCommand: not support the CAMERA_CMD_STOP_FACE_DETECTION.");
-        camera_set_start_facedetect(0);
-        FreePmem(mFDHeap);
-        mFDHeap = NULL;
-        FreeFdmem();
-	}
-
-	return NO_ERROR;
+	}	
+
+	bool isRecordingMode = (mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) > 0 ? true : false;
+	
+	return startPreviewInternal(isRecordingMode);
 }
 
-
-////////////////////////================//////////////////////////////
-
-status_t SprdCameraHardware::storeMetaDataInBuffers(bool enable)
+void SprdCameraHardware::stopPreview()
 {
-    // FIXME:
-    // metadata buffer mode can be turned on or off.
-    // Spreadtrum needs to fix this.
-    if (!enable) {
-        LOGE("Non-metadata buffer mode is not supported!");
-	mIsStoreMetaData = false;
-        return INVALID_OPERATION;
-    }
-	if(NULL == mMetadataHeap) {
-		if(NULL == (mMetadataHeap = mGetMemory_cb(-1, METADATA_SIZE, kPreviewBufferCount, NULL))){
-			LOGE("fail to alloc memory for the metadata for storeMetaDataInBuffers.");
-			return INVALID_OPERATION;
-		}
-	}
-    mIsStoreMetaData = true;
+	LOGV("stopPreview: E");
+	Mutex::Autolock l(&mLock);			
 
-    return NO_ERROR;
+	stopPreviewInternal();
+	setRecordingMode(false);
+	
+	LOGV("stopPreview: X");
+}
+
+bool SprdCameraHardware::previewEnabled()
+{
+    bool ret = 0;
+    LOGV("mLock:previewEnabled S.\n");
+    Mutex::Autolock l(&mLock);
+    LOGV("mLock:previewEnabled E.\n");
+    if(0 == mPreviewStartFlag) {
+        return 1;
+    }  else if (2 == mPreviewStartFlag) {
+        return 0;
+    } else {
+        return isPreviewing();
+    }
 }
 
 status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 {
     int min_bufs;
-    Mutex::Autolock stateLock(&mStateLock);
-    Mutex::Autolock previewLock(&mPreviewLock);
-    mSettingPreviewWindowState = PREVIEW_WINDOW_SETTING;
+
     mPreviewWindow = w;
     LOGV("%s: mPreviewWindow %p", __func__, mPreviewWindow);
 
     if (!w) {
         LOGE("preview window is NULL!");
         mPreviewStartFlag = 0;
-        mSettingPreviewWindowState = PREVIEW_WINDOW_SET_IDLE;
         return NO_ERROR;
     }
 
-
     mPreviewStartFlag = 1;
-    //if (mPreviewRunning && !mPreviewStartDeferred) {
-    if (mCameraState == QCS_PREVIEW_IN_PROGRESS){
+
+    if (isPreviewing()){
         LOGI("stop preview (window change)");
         stopPreviewInternal();
-    }
+    }	
 
     if (w->get_min_undequeued_buffer_count(w, &min_bufs)) {
         LOGE("%s: could not retrieve min undequeued buffer count", __func__);
-	  mSettingPreviewWindowState = PREVIEW_WINDOW_SET_FAILED;
         return INVALID_OPERATION;
     }
 
@@ -3127,14 +327,14 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
     LOGV("%s: setting buffer count to %d", __func__, kPreviewBufferCount);
     if (w->set_buffer_count(w, kPreviewBufferCount)) {
         LOGE("%s: could not set buffer count", __func__);
-       mSettingPreviewWindowState = PREVIEW_WINDOW_SET_FAILED;
-       return INVALID_OPERATION;
+        return INVALID_OPERATION;
     }
 
     int preview_width;
     int preview_height;
     mParameters.getPreviewSize(&preview_width, &preview_height);
     LOGV("%s: preview size: %dx%d.", __func__, preview_width, preview_height);
+	
 #if CAM_OUT_YUV420_UV
     int hal_pixel_format = HAL_PIXEL_FORMAT_YCbCr_420_SP;
 #else
@@ -3149,21 +349,15 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 	usage = GRALLOC_USAGE_SW_WRITE_OFTEN;
 
     if (preview_width > 640) {
-#ifdef USE_ION_MEM
-		usage |= GRALLOC_USAGE_PRIVATE_0;
-#endif
+
 		if (w->set_usage(w, usage )) {
         	LOGE("%s: could not set usage on gralloc buffer", __func__);
-             mSettingPreviewWindowState = PREVIEW_WINDOW_SET_FAILED;
         	return INVALID_OPERATION;
     	}
     } else {
-#ifdef USE_ION_MEM
-		usage |= GRALLOC_USAGE_PRIVATE_0;
-#endif
+
 		if (w->set_usage(w, usage )) {
         	LOGE("%s: could not set usage on gralloc buffer", __func__);
-		mSettingPreviewWindowState = PREVIEW_WINDOW_SET_FAILED;
         	return INVALID_OPERATION;
     	}
     }
@@ -3173,34 +367,2333 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
                                 hal_pixel_format)) {
         LOGE("%s: could not set buffers geometry to %s",
              __func__, str_preview_format);
-	  mSettingPreviewWindowState = PREVIEW_WINDOW_SET_FAILED;
         return INVALID_OPERATION;
     }
 
-   /* if (mPreviewRunning && mPreviewStartDeferred) {
-        LOGV("start/resume preview");
-        status_t ret = startPreviewInternal();
-        if (ret == OK) {
-            mPreviewStartDeferred = false;
-            mPreviewCondition.signal();
-        }
-    }
-    mPreviewLock.unlock();*/
-
-   status_t ret = startPreviewInternal();
+   status_t ret = startPreviewInternal(isRecordingMode());
    if (ret != NO_ERROR) {
-      mSettingPreviewWindowState = PREVIEW_WINDOW_SET_FAILED;
-   	return INVALID_OPERATION;
+		return INVALID_OPERATION;
    }
-   mSettingPreviewWindowState = PREVIEW_WINDOW_SET_OK;
+
     return NO_ERROR;
 }
 
-int SprdCameraHardware::getCameraId() const
+status_t SprdCameraHardware::takePicture()
 {
-    return g_camera_id;
+	LOGV("takePicture: E");
+	
+    print_time();
+
+    Mutex::Autolock l(&mLock);	
+
+#if STOP_PREVIEW_BEFORE_CAPTURE	
+	//stop preview first for debug
+    if (isPreviewing()) {
+		LOGV("call stopPreviewInternal in takePicture().");
+		stopPreviewInternal();
+    }
+    LOGV("ok to stopPreviewInternal in takePicture. preview state = %d", getPreviewState());
+
+	if (isPreviewing()) {
+		LOGE("takePicture: stop preview error!, preview state = %d", getPreviewState());
+		return UNKNOWN_ERROR;
+	}
+#endif	
+
+	//wait for last capture being finished
+	if (isCapturing()) {
+		WaitForCaptureDone();
+	}
+
+	LOGV("start to initCapture in takePicture.");	
+
+	setCameraState(SPRD_INTERNAL_RAW_REQUESTED, STATE_CAPTURE);
+    LOGV("INTERPOLATION::takePicture:mRawWidth=%d,mZoomLevel=%d",mRawWidth,mZoomLevel);
+    if(CAMERA_SUCCESS != camera_take_picture(camera_cb, this, getCaptureMode()))
+    {
+    	setCameraState(SPRD_ERROR, STATE_CAPTURE);
+		LOGE("takePicture: fail to camera_take_picture.");
+		return UNKNOWN_ERROR;
+    }
+
+	bool result = WaitForCaptureStart();
+
+	print_time();
+    LOGV("takePicture: X");
+    	
+    return result ? NO_ERROR : UNKNOWN_ERROR;	
 }
 
+status_t SprdCameraHardware::cancelPicture()
+{
+	Mutex::Autolock l(&mLock);	
+
+	return cancelPictureInternal();
+}
+
+status_t SprdCameraHardware::setTakePictureSize(uint32_t width, uint32_t height)
+{
+	mRawWidth = width;
+	mRawHeight = height;
+
+	return NO_ERROR;
+}
+
+status_t SprdCameraHardware::startRecording()
+{
+	LOGV("mLock:startRecording S.\n");
+	Mutex::Autolock l(&mLock);
+
+#if STOP_PREVIEW_BEFORE_CAPTURE			
+	if (isPreviewing()) {
+		LOGV("wxz call stopPreviewInternal in startRecording().");
+		setCameraState(SPRD_INTERNAL_PREVIEW_STOPPING, STATE_PREVIEW);
+		
+		if(CAMERA_SUCCESS != camera_stop_preview()){
+			setCameraState(SPRD_ERROR, STATE_PREVIEW);
+			FreeFdmem();
+			FreePmem(mPreviewHeap);
+			mPreviewHeap = NULL;
+			LOGE("startRecording: fail to camera_stop_preview().");
+			return INVALID_OPERATION;
+		}
+
+		WaitForPreviewStop();
+
+		LOGV("startRecording: Freeing preview heap.");
+		FreeFdmem();
+		FreePmem(mPreviewHeap);
+		mPreviewHeap = NULL;
+	}
+#endif
+
+	return startPreviewInternal(true);
+}
+
+void SprdCameraHardware::stopRecording()
+{
+	LOGV("stopRecording: E");
+	Mutex::Autolock l(&mLock);
+	stopPreviewInternal();
+	LOGV("stopRecording: X");
+}
+
+void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
+{
+	//LOGV("releaseRecordingFrame E. ");
+	Mutex::Autolock l(&mLock);
+	uint8_t *addr = (uint8_t *)opaque;
+	uint32_t index;
+
+	if (!isPreviewing()) {
+		LOGE("releaseRecordingFrame: Preview not in progress!");
+		return;
+	}
+
+	if(mIsStoreMetaData) {
+		index = (addr - (uint8_t *)mMetadataHeap->data) / (METADATA_SIZE);
+	}
+	else {
+		index = (addr - (uint8_t *)mPreviewHeap->data) / (mPreviewWidth * mPreviewHeight * 3 / 2);
+	}
+
+	if(index > kPreviewBufferCount){
+		LOGV("releaseRecordingFrame error: index: %d, addr: %x, data: %x, w=%d, h=%d \n",
+		index, (uint32_t)addr, (uint32_t)mPreviewHeap->data, mPreviewWidth, mPreviewHeight);
+	}
+	//LOGV("releaseRecordingFrame: index: %d, offset: %x, size: %x.", index,offset,size);
+	camera_release_frame(index);
+	LOGV("releaseRecordingFrame: index: %d", index);
+	//LOGV("releaseRecordingFrame X. ");
+}
+
+bool SprdCameraHardware::recordingEnabled()
+{
+	LOGV("recordingEnabled: E");
+	Mutex::Autolock l(&mLock);
+	LOGV("recordingEnabled: X");
+	
+	return isPreviewing() && (mMsgEnabled & CAMERA_MSG_VIDEO_FRAME);
+}
+
+status_t SprdCameraHardware::autoFocus()
+{
+	LOGV("Starting auto focus.");
+	LOGV("mLock:autoFocus S.\n");
+	Mutex::Autolock l(&mLock);
+
+	if (!isPreviewing()) {
+		LOGE("autoFocus: not previewing");
+		return INVALID_OPERATION;
+	}
+
+	if(0 != camera_start_autofocus(CAMERA_AUTO_FOCUS, camera_cb, this)){
+		LOGE("auto foucs fail.");
+		//return INVALID_OPERATION;
+	}
+
+	LOGV("mLock:autoFocus E.\n");
+	return NO_ERROR;				
+}
+
+status_t SprdCameraHardware::cancelAutoFocus()
+{
+	return camera_cancel_autofocus();
+}
+
+status_t SprdCameraHardware::setParameters(const SprdCameraParameters& params)
+{
+	LOGV("setParameters: E params = %p", &params);
+	LOGV("mLock:setParameters S.\n");
+	Mutex::Autolock l(&mLock);
+
+#if 0
+	// FIXME: verify params
+	// yuv422sp is here only for legacy reason. Unfortunately, we release
+	// the code with yuv422sp as the default and enforced setting. The
+	// correct setting is yuv420sp.
+	if(strcmp(params.getPreviewFormat(), "yuv422sp")== 0) {
+		mPreviewFormat = 0;
+	}
+	else if(strcmp(params.getPreviewFormat(), "yuv420sp") == 0) {
+		mPreviewFormat = 1;
+	}
+	else if(strcmp(params.getPreviewFormat(), "rgb565") == 0) {
+		mPreviewFormat = 2;
+	}
+	else if(strcmp(params.getPreviewFormat(), "yuv420p") == 0) {
+		mPreviewFormat = 3;
+	}
+	else {
+		LOGE("Onlyyuv422sp/yuv420sp/rgb565 preview is supported.\n");
+		return INVALID_OPERATION;
+	}
+
+	if(strcmp(params.getPictureFormat(), "yuv422sp")== 0) {
+		mPictureFormat = 0;
+	}
+	else if(strcmp(params.getPictureFormat(), "yuv420sp")== 0) {
+		mPictureFormat = 1;
+	}
+	else if(strcmp(params.getPictureFormat(), "rgb565")== 0) {
+		mPictureFormat = 2;
+	}
+	else if(strcmp(params.getPictureFormat(), "jpeg")== 0) {
+		mPictureFormat = 3;
+	}
+	else {
+		LOGE("Onlyyuv422sp/yuv420sp/rgb565/jpeg  picture format is supported.\n");
+		return INVALID_OPERATION;
+	}	
+#else	
+	mPreviewFormat = 1;
+	mPictureFormat = 1;
+#endif	
+
+	LOGV("setParameters: mPreviewFormat=%d,mPictureFormat=%d.",mPreviewFormat,mPictureFormat);
+
+	// FIXME: will this make a deep copy/do the right thing? String8 i
+	// should handle it
+	mParameters = params;
+
+	// libqcamera only supports certain size/aspect ratios
+	// find closest match that doesn't exceed app's request
+	int width = 0, height = 0;
+	int rawWidth = 0, rawHeight = 0;
+	params.getPreviewSize(&width, &height);
+	LOGV("setParameters: requested preview size %d x %d", width, height);
+	params.getPictureSize(&rawWidth, &rawHeight);
+	LOGV("setParameters:requested picture size %d x %d", width, height);
+	
+	mPreviewWidth = (width + 1) & ~1;
+	mPreviewHeight = (height + 1) & ~1;
+	mRawHeight = (rawHeight + 1) & ~1;
+	mRawWidth = (rawWidth + 1) & ~1;
+	LOGV("setParameters: requested picture size %d x %d", mRawWidth, mRawHeight);
+	LOGV("setParameters: requested preview size %d x %d", mPreviewWidth, mPreviewHeight);
+	
+	if (camera_set_change_size(mRawWidth, mRawHeight, mPreviewWidth, mPreviewHeight)) {
+		mPreviewStartFlag = 2;
+	}
+	
+	if(NO_ERROR != setCameraParameters()){
+		return UNKNOWN_ERROR;
+	}
+
+	LOGV("mLock:setParameters E.\n");
+	return NO_ERROR;
+}
+
+SprdCameraParameters SprdCameraHardware::getParameters() const
+{
+	LOGV("getParameters: EX");
+	return mParameters;
+}
+
+void SprdCameraHardware::setCallbacks(camera_notify_callback notify_cb,
+                                    camera_data_callback data_cb,
+                                    camera_data_timestamp_callback data_cb_timestamp,
+                                    camera_request_memory get_memory,
+                                    void *user)
+{
+	mNotify_cb = notify_cb;
+	mData_cb = data_cb;
+	mData_cb_timestamp = data_cb_timestamp;
+	mGetMemory_cb = get_memory;
+	mUser = user;
+}
+
+void SprdCameraHardware::enableMsgType(int32_t msgType)
+{
+	LOGV("mLock:enableMsgType S .\n");
+	Mutex::Autolock lock(mLock);
+	mMsgEnabled |= msgType;
+	LOGV("mLock:enableMsgType E .\n");
+}
+
+void SprdCameraHardware::disableMsgType(int32_t msgType)
+{
+	LOGV("'mLock:disableMsgType S.\n");
+	//Mutex::Autolock lock(mLock);
+	mMsgEnabled &= ~msgType;
+	LOGV("'mLock:disableMsgType E.\n");
+}
+
+bool SprdCameraHardware::msgTypeEnabled(int32_t msgType)
+{
+	LOGV("mLock:msgTypeEnabled S.\n");
+	Mutex::Autolock lock(mLock);
+	LOGV("mLock:msgTypeEnabled E.\n");
+	return (mMsgEnabled & msgType);
+}
+
+status_t SprdCameraHardware::sendCommand(int32_t cmd, int32_t arg1, int32_t arg2)
+{
+    uint32_t buffer_size = mPreviewWidth * mPreviewHeight * 3 / 2;
+    uint32_t addr = 0;
+    LOGE("sendCommand: facedetect mem size 0x%x.",buffer_size);
+	if(CAMERA_CMD_START_FACE_DETECTION == cmd){
+		setFdmem(buffer_size);
+        camera_set_start_facedetect(1);
+	} else if(CAMERA_CMD_STOP_FACE_DETECTION == cmd) {
+	    LOGE("sendCommand: not support the CAMERA_CMD_STOP_FACE_DETECTION.");
+        camera_set_start_facedetect(0);
+        FreeFdmem();
+	}
+
+	return NO_ERROR;
+}
+
+status_t SprdCameraHardware::storeMetaDataInBuffers(bool enable)
+{
+    // FIXME:
+    // metadata buffer mode can be turned on or off.
+    // Spreadtrum needs to fix this.
+    if (!enable) {
+		LOGE("Non-metadata buffer mode is not supported!");
+		mIsStoreMetaData = false;
+		return INVALID_OPERATION;
+    }
+	
+	if(NULL == mMetadataHeap) {
+		if(NULL == (mMetadataHeap = mGetMemory_cb(-1, METADATA_SIZE, kPreviewBufferCount, NULL))) {
+			LOGE("fail to alloc memory for the metadata for storeMetaDataInBuffers.");
+			return INVALID_OPERATION;
+		}
+	}
+	
+	mIsStoreMetaData = true;
+
+	return NO_ERROR;
+}
+
+status_t SprdCameraHardware::dump(int fd) const
+{
+	const size_t SIZE = 256;
+	char buffer[SIZE];
+	String8 result;
+	const Vector<String16> args;
+
+	// Dump internal primitives.
+//	snprintf(buffer, 255, "SprdCameraHardware::dump: state (%s, %s, %s)\n", 
+//				getCameraStateStr(getCameraState()), getCameraStateStr(getPreviewState()), getCameraStateStr(getCaptureState()));
+	result.append(buffer);
+	snprintf(buffer, 255, "preview width(%d) x height (%d)\n", mPreviewWidth, mPreviewHeight);
+	result.append(buffer);
+	snprintf(buffer, 255, "raw width(%d) x height (%d)\n", mRawWidth, mRawHeight);
+	result.append(buffer);
+	snprintf(buffer, 255, "preview frame size(%d), raw size (%d), jpeg size (%d) and jpeg max size (%d)\n", mPreviewHeapSize, mRawHeapSize, mJpegSize, mJpegHeapSize);
+	result.append(buffer);
+	write(fd, result.string(), result.size());
+	mParameters.dump(fd, args);
+	return NO_ERROR;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//SprdCameraHardware: private functions
+//////////////////////////////////////////////////////////////////////////////
+const char* const SprdCameraHardware::getCameraStateStr(
+        SprdCameraHardware::Sprd_camera_state s)
+{
+        static const char* states[] = {
+#define STATE_STR(x) #x
+            STATE_STR(SPRD_INIT),
+            STATE_STR(SPRD_IDLE),
+            STATE_STR(SPRD_ERROR),
+            STATE_STR(SPRD_PREVIEW_IN_PROGRESS),
+            STATE_STR(SPRD_WAITING_RAW),
+            STATE_STR(SPRD_WAITING_JPEG),
+            STATE_STR(SPRD_INTERNAL_PREVIEW_STOPPING),
+            STATE_STR(SPRD_INTERNAL_CAPTURE_STOPPING),
+            STATE_STR(SPRD_INTERNAL_PREVIEW_REQUESTED),
+            STATE_STR(SPRD_INTERNAL_RAW_REQUESTED),
+            STATE_STR(SPRD_INTERNAL_STOPPING),
+#undef STATE_STR
+        };
+        return states[s];
+}
+
+void SprdCameraHardware::print_time()
+{
+#if PRINT_TIME
+	struct timeval time;
+	gettimeofday(&time, NULL);
+	LOGV("time: %lld us.", time.tv_sec * 1000000LL + time.tv_usec);
+#endif
+}
+
+// Called with mStateLock held!
+bool SprdCameraHardware::setCameraDimensions()
+{
+	if (isPreviewing() || isCapturing()) {
+		LOGE("setCameraDimensions: expecting state SPRD_IDLE, not %s, %s",
+				getCameraStateStr(getPreviewState()), 
+				getCameraStateStr(getCaptureState()));
+		return false;
+	}
+
+	if (0 != camera_set_dimensions(mRawWidth, mRawHeight, mPreviewWidth, 
+ 								mPreviewHeight, NULL, NULL)) {
+ 		return false;
+ 	}
+
+	return true;
+}
+
+void SprdCameraHardware::setCameraPreviewMode()
+{
+	if (isRecordingMode()) {
+		SET_PARM(CAMERA_PARM_PREVIEW_MODE, CAMERA_PREVIEW_MODE_MOVIE);
+	} else {
+		SET_PARM(CAMERA_PARM_PREVIEW_MODE, CAMERA_PREVIEW_MODE_SNAPSHOT);
+	}	
+}
+
+bool SprdCameraHardware::isRecordingMode()
+{
+	return mRecordingMode;
+}
+
+void SprdCameraHardware::setRecordingMode(bool enable)
+{
+	mRecordingMode = enable;
+}
+
+void SprdCameraHardware::setCameraState(Sprd_camera_state state, state_owner owner)
+{
+
+	LOGV("setCameraState:state: %s, owner: %d", getCameraStateStr(state), owner);
+	Mutex::Autolock stateLock(&mStateLock);	
+	
+	switch (state) {
+	//camera state
+	case SPRD_INIT:
+		mCameraState.camera_state = SPRD_INIT;
+		mCameraState.preview_state = SPRD_IDLE;
+		mCameraState.capture_state = SPRD_IDLE;
+		break;
+
+	case SPRD_IDLE:
+		switch (owner) {
+		case STATE_CAMERA:
+			mCameraState.camera_state = SPRD_IDLE;
+			break;
+
+		case STATE_PREVIEW:
+			mCameraState.preview_state = SPRD_IDLE;
+			break;
+
+		case STATE_CAPTURE:
+			mCameraState.capture_state = SPRD_IDLE;
+			break;
+		}
+		break;
+
+	case SPRD_INTERNAL_STOPPING:
+		mCameraState.camera_state = SPRD_INTERNAL_STOPPING;
+		break;				
+
+	case SPRD_ERROR:
+		switch (owner) {
+		case STATE_CAMERA:
+			mCameraState.camera_state = SPRD_ERROR;
+			break;
+
+		case STATE_PREVIEW:
+			mCameraState.preview_state = SPRD_ERROR;
+			break;
+
+		case STATE_CAPTURE:
+			mCameraState.capture_state = SPRD_ERROR;
+			break;
+		}		
+		break;
+
+	//preview state
+	case SPRD_PREVIEW_IN_PROGRESS:
+		mCameraState.preview_state = SPRD_PREVIEW_IN_PROGRESS;
+		break;
+
+	case SPRD_INTERNAL_PREVIEW_STOPPING:
+		mCameraState.preview_state = SPRD_INTERNAL_PREVIEW_STOPPING;
+		break;
+
+	case SPRD_INTERNAL_PREVIEW_REQUESTED:
+		mCameraState.preview_state = SPRD_INTERNAL_PREVIEW_REQUESTED;
+		break;
+
+	//capture state
+	case SPRD_INTERNAL_RAW_REQUESTED:
+		mCameraState.capture_state = SPRD_INTERNAL_RAW_REQUESTED;
+		break;		
+
+	case SPRD_WAITING_RAW:
+		mCameraState.capture_state = SPRD_WAITING_RAW;
+		break;
+
+	case SPRD_WAITING_JPEG:
+		mCameraState.capture_state = SPRD_WAITING_JPEG;
+		break;
+
+	case SPRD_INTERNAL_CAPTURE_STOPPING:
+		mCameraState.capture_state = SPRD_INTERNAL_CAPTURE_STOPPING;
+		break;		
+
+	default:
+		LOGD("setCameraState: error");
+		break;
+	}
+
+	LOGV("setCameraState:camera state = %s, preview state = %s, capture state = %s", getCameraStateStr(mCameraState.camera_state),
+				getCameraStateStr(mCameraState.preview_state), getCameraStateStr(mCameraState.capture_state));
+}
+
+SprdCameraHardware::Sprd_camera_state SprdCameraHardware::getCameraState()
+{
+	LOGV("getCameraState: %s", getCameraStateStr(mCameraState.camera_state));
+	return mCameraState.camera_state;
+}
+
+SprdCameraHardware::Sprd_camera_state SprdCameraHardware::getPreviewState()
+{
+	LOGV("getPreviewState: %s", getCameraStateStr(mCameraState.preview_state));
+	return mCameraState.preview_state;
+}
+
+SprdCameraHardware::Sprd_camera_state SprdCameraHardware::getCaptureState()
+{
+	LOGV("getCaptureState: %s", getCameraStateStr(mCameraState.capture_state));
+	return mCameraState.capture_state;
+}
+
+bool SprdCameraHardware::isCameraInit()
+{
+	LOGV("isCameraInit: %s", getCameraStateStr(mCameraState.camera_state));
+	return (SPRD_IDLE == mCameraState.camera_state);
+}
+
+bool SprdCameraHardware::isCameraIdle()
+{	
+	return (SPRD_IDLE == mCameraState.preview_state
+			&& SPRD_IDLE == mCameraState.capture_state);
+}
+
+bool SprdCameraHardware::isPreviewing()
+{
+	LOGV("isPreviewing: %s", getCameraStateStr(mCameraState.preview_state));
+	return (SPRD_PREVIEW_IN_PROGRESS == mCameraState.preview_state);
+}
+
+bool SprdCameraHardware::isCapturing()
+{
+	LOGV("isCapturing: %s", getCameraStateStr(mCameraState.capture_state));
+#if 1
+	return (SPRD_WAITING_RAW == mCameraState.capture_state 
+			|| SPRD_WAITING_JPEG == mCameraState.capture_state);
+#else
+	return (SPRD_IDLE != mCameraState.capture_state);
+#endif
+}
+
+bool SprdCameraHardware::WaitForCameraStart()
+{
+	Mutex::Autolock stateLock(&mStateLock);
+	
+    while(SPRD_IDLE != mCameraState.camera_state 
+			&& SPRD_ERROR != mCameraState.camera_state) {
+        LOGV("WaitForCameraStart: waiting for SPRD_IDLE");
+        mStateWait.wait(mStateLock);
+        LOGV("WaitForCameraStart: woke up");
+    }
+
+	return SPRD_IDLE == mCameraState.camera_state;
+}
+
+bool SprdCameraHardware::WaitForCameraStop()
+{
+	Mutex::Autolock stateLock(&mStateLock);
+	
+	if (SPRD_INTERNAL_STOPPING == mCameraState.camera_state)
+	{
+	    while(SPRD_INIT != mCameraState.camera_state 
+				&& SPRD_ERROR != mCameraState.camera_state) {
+	        LOGV("WaitForCameraStop: waiting for SPRD_IDLE");
+	        mStateWait.wait(mStateLock);
+	        LOGV("WaitForCameraStop: woke up");
+	    }
+	}
+
+	return SPRD_INIT == mCameraState.camera_state;
+}
+
+bool SprdCameraHardware::WaitForPreviewStart()
+{
+	Mutex::Autolock stateLock(&mStateLock);	
+	while(SPRD_PREVIEW_IN_PROGRESS != mCameraState.preview_state
+		&& SPRD_ERROR != mCameraState.preview_state) {
+		LOGV("WaitForPreviewStart: waiting for SPRD_PREVIEW_IN_PROGRESS");
+		mStateWait.wait(mStateLock);
+		LOGV("WaitForPreviewStart: woke up");
+	}	
+
+	return SPRD_PREVIEW_IN_PROGRESS == mCameraState.preview_state;
+}
+
+bool SprdCameraHardware::WaitForPreviewStop()
+{
+	Mutex::Autolock statelock(&mStateLock);
+    while (SPRD_IDLE != mCameraState.preview_state  
+			&& SPRD_ERROR != mCameraState.preview_state) {
+		LOGV("WaitForPreviewStop: waiting for SPRD_IDLE");
+		mStateWait.wait(mStateLock);
+		LOGV("WaitForPreviewStop: woke up");
+    }
+
+	return SPRD_IDLE == mCameraState.preview_state;
+}
+
+bool SprdCameraHardware::WaitForCaptureStart()
+{
+	Mutex::Autolock stateLock(&mStateLock);
+	
+    // It's possible for the YUV callback as well as the JPEG callbacks
+    // to be invoked before we even make it here, so we check for all
+    // possible result states from takePicture.
+	while (SPRD_WAITING_RAW != mCameraState.capture_state  
+		 && SPRD_WAITING_JPEG != mCameraState.capture_state
+		 && SPRD_IDLE != mCameraState.capture_state 
+		 && SPRD_ERROR != mCameraState.camera_state) {
+		LOGV("WaitForCaptureStart: waiting for SPRD_WAITING_RAW or SPRD_WAITING_JPEG");
+		mStateWait.wait(mStateLock);
+		LOGV("WaitForCaptureStart: woke up, state is %s",
+				getCameraStateStr(mCameraState.capture_state));
+	}	
+
+	return (SPRD_WAITING_RAW == mCameraState.capture_state 
+			|| SPRD_WAITING_JPEG == mCameraState.capture_state 
+			|| SPRD_IDLE == mCameraState.capture_state);
+}
+
+bool SprdCameraHardware::WaitForCaptureDone()
+{	
+	Mutex::Autolock stateLock(&mStateLock);
+	while (SPRD_IDLE != mCameraState.capture_state
+		 && SPRD_ERROR != mCameraState.capture_state) {
+		LOGV("WaitForCaptureDone: waiting for SPRD_IDLE");
+		mStateWait.wait(mStateLock);
+		LOGV("WaitForCaptureDone: woke up");
+	}
+
+	return SPRD_IDLE == mCameraState.capture_state;	
+}
+
+// Called with mLock held!
+bool SprdCameraHardware::startCameraIfNecessary()
+{
+	if (!isCameraInit()) {
+		LOGV("waiting for camera_init to initialize.startCameraIfNecessary");
+		if(CAMERA_SUCCESS != camera_init(mCameraId)){
+			setCameraState(SPRD_INIT, STATE_CAMERA);
+			LOGE("CameraIfNecessary: fail to camera_init().");
+			return false;
+		}
+
+		LOGV("waiting for camera_start.g_camera_id: %d.", mCameraId);
+		if(CAMERA_SUCCESS != camera_start(camera_cb, this, mPreviewHeight, mPreviewWidth)){
+			setCameraState(SPRD_ERROR, STATE_CAMERA);
+			LOGE("CameraIfNecessary: fail to camera_start().");
+			return false;
+		}
+		
+		LOGV("OK to camera_start.");
+		WaitForCameraStart();
+		
+		LOGV("init camera: initializing parameters");
+	}
+	else 
+		LOGV("camera hardware has been started already");
+	
+	return true;
+}
+
+
+
+
+
+sprd_camera_memory_t* SprdCameraHardware::GetPmem(int buf_size, int num_bufs)
+{	
+	sprd_camera_memory_t *memory = (sprd_camera_memory_t *)malloc(sizeof(*memory));
+	if(NULL == memory) {
+		LOGE("wxz: Fail to GetPmem, memory is NULL.");
+		return NULL;
+	}
+	
+	camera_memory_t *camera_memory;
+	int paddr, psize;
+	int order = 0, acc = buf_size *num_bufs ;
+	acc = camera_get_size_align_page(acc);
+	MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc , MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+
+	camera_memory = mGetMemory_cb(pHeapIon->getHeapID(), acc/num_bufs, num_bufs, NULL);
+
+	if(NULL == camera_memory) {
+		goto getpmem_end;
+	}
+	
+	if(0xFFFFFFFF == (uint32_t)camera_memory->data) {
+		camera_memory = NULL;
+		LOGE("Fail to GetPmem().");
+		goto getpmem_end;
+	}
+	
+	pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
+	memory->ion_heap = pHeapIon;
+	memory->camera_memory = camera_memory;
+	memory->phys_addr = paddr;
+	memory->phys_size = psize;
+	memory->handle = camera_memory->handle;
+	//memory->data = camera_memory->data;
+	memory->data = pHeapIon->getBase();
+
+	LOGV("GetPmem: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
+			memory->phys_addr, (uint32_t)camera_memory->data,
+			camera_memory->size, memory->phys_size);
+
+getpmem_end:
+	return memory;
+}
+
+void SprdCameraHardware::FreePmem(sprd_camera_memory_t* memory)
+{
+	if(memory){
+		if(memory->camera_memory->release){
+			memory->camera_memory->release(memory->camera_memory);
+			memory->camera_memory = NULL;
+		} 
+		else {
+			LOGE("fail to FreePmem: NULL is camera_memory->release.");
+		}
+
+		if(memory->ion_heap) {
+			delete memory->ion_heap;
+			memory->ion_heap = NULL;
+		}
+
+		memory = NULL;
+	} 
+	else {
+		LOGV("FreePmem: NULL");
+	}
+}
+
+void SprdCameraHardware::setFdmem(uint32_t size)
+{	
+	if (mFDAddr) {
+		free((void*)mFDAddr);
+		mFDAddr = 0;		
+	}
+		
+	uint32_t addr = (uint32_t)malloc(size);
+	mFDAddr = addr;
+	camera_set_fd_mem(0, addr, size);
+}
+
+void SprdCameraHardware::FreeFdmem(void)
+{
+	if (mFDAddr) {
+		camera_set_fd_mem(0,0,0);
+		free((void*)mFDAddr);
+		mFDAddr = 0;
+	}
+}
+
+//mPreviewHeapSize must be set before this function be called
+bool SprdCameraHardware::allocatePreviewMem()
+{
+	uint32_t buffer_size = camera_get_size_align_page(mPreviewHeapSize);
+	uint32_t preview_buff_cnt = kPreviewBufferCount;
+	
+	if(camera_get_rot_set())
+	{
+		/* allocate 1 more buffer for rotation */
+		preview_buff_cnt += kPreviewRotBufferCount;
+		LOGV("initPreview: rotation, increase buffer: %d \n", preview_buff_cnt);
+	}
+	
+	mPreviewHeap = GetPmem(buffer_size, preview_buff_cnt);
+	
+	if(NULL == mPreviewHeap)
+		return false;
+	
+	if(NULL == mPreviewHeap->handle) {
+		LOGE("Fail to GetPmem mPreviewHeap. buffer_size: 0x%x.", buffer_size);		
+		return false;
+	}
+	
+	if(mPreviewHeap->phys_addr & 0xFF) {
+		LOGE("error: the mPreviewHeap is not 256 bytes aligned.");
+		return false;
+	}
+
+	return true;
+}
+
+void SprdCameraHardware::freePreviewMem()
+{
+	FreeFdmem();
+	FreePmem(mPreviewHeap);
+	mPreviewHeap = NULL;
+	mPreviewHeapSize = 0;
+}
+
+bool SprdCameraHardware::initPreview()
+{
+	uint32_t page_size, buffer_size;
+	uint32_t preview_buff_cnt = kPreviewBufferCount;
+
+	if (!startCameraIfNecessary())
+		return false;
+
+	setCameraPreviewMode();
+
+	// Tell libqcamera what the preview and raw dimensions are.  We
+	// call this method even if the preview dimensions have not changed,
+	// because the picture ones may have.
+	// NOTE: if this errors out, mCameraState != SPRD_IDLE, which will be
+	//       checked by the caller of this method.
+	if (!setCameraDimensions()) {
+		LOGE("initPreview: setCameraDimensions failed");
+		return false;
+	}
+	
+	LOGV("initPreview: preview size=%dx%d", mPreviewWidth, mPreviewHeight);
+
+	camerea_set_preview_format(mPreviewFormat);
+
+	switch (mPreviewFormat) {
+	case 0:
+		case 1:	//yuv420
+		mPreviewHeapSize = mPreviewWidth * mPreviewHeight * 3 / 2;
+		break;
+
+	default:
+		return false;
+	}
+	
+	if (!allocatePreviewMem()) {
+		return false;
+	}
+
+	if (camera_set_preview_mem((uint32_t)mPreviewHeap->phys_addr,
+								(uint32_t)mPreviewHeap->data,
+								(uint32_t)mPreviewHeap->phys_size))
+		return false;
+	
+	setPreviewFreq();
+
+	return true;
+}
+
+void SprdCameraHardware::deinitPreview()
+{
+	freePreviewMem();
+	camera_set_preview_mem(0, 0, 0);
+	restoreFreq();
+}
+
+//mJpegHeapSize/mRawHeapSize/mMiscHeapSize must be set before this function being called
+bool SprdCameraHardware::allocateCaptureMem(bool initJpegHeap)
+{	
+	uint32_t buffer_size = 0;
+	
+	LOGV("allocateCaptureMem, mJpegHeapSize = %d, mRawHeapSize = %d, mMiscHeapSize %d",
+			mJpegHeapSize, mRawHeapSize, mMiscHeapSize);
+
+	buffer_size = camera_get_size_align_page(mRawHeapSize);
+	LOGV("allocateCaptureMem:mRawHeap align size = %d . count %d ",buffer_size, kRawBufferCount);
+
+	mRawHeap = GetPmem(buffer_size, kRawBufferCount);
+	if(NULL == mRawHeap)
+		goto allocate_capture_mem_failed;
+	
+	if(NULL == mRawHeap->handle){
+		LOGE("allocateCaptureMem: Fail to GetPmem mRawHeap.");
+		goto allocate_capture_mem_failed;
+	}
+	
+	if (mMiscHeapSize > 0) {
+		buffer_size = camera_get_size_align_page(mMiscHeapSize);
+		mMiscHeap = GetPmem(buffer_size, kRawBufferCount);
+		if(NULL == mMiscHeap) {
+			goto allocate_capture_mem_failed;
+		}
+		
+		if(NULL == mMiscHeap->handle){
+			LOGE("allocateCaptureMem: Fail to GetPmem mMiscHeap.");
+			goto allocate_capture_mem_failed;
+		}
+	}
+
+	if (initJpegHeap) {		
+		// ???
+		mJpegHeap = NULL;		
+		
+		buffer_size = camera_get_size_align_page(mJpegHeapSize);		
+		mJpegHeap = new AshmemPool(buffer_size,
+		                           kJpegBufferCount,
+		                           0,
+		                           0,
+		                           "jpeg");
+		
+		if (!mJpegHeap->initialized()) {
+			LOGE("allocateCaptureMem: initializing mJpegHeap failed.");
+			goto allocate_capture_mem_failed;
+		}
+		
+		LOGV("allocateCaptureMem: initJpeg success");
+	}
+	
+	LOGV("allocateCaptureMem: X");
+	return true;
+
+allocate_capture_mem_failed:
+	freeCaptureMem();
+	
+	mJpegHeap = NULL;
+	mJpegHeapSize = 0;
+	
+	return false;
+}
+
+void SprdCameraHardware::freeCaptureMem()
+{
+	FreePmem(mRawHeap);
+	mRawHeap = NULL;
+	mRawHeapSize = 0;
+	
+	FreePmem(mMiscHeap);
+	mMiscHeap = NULL;
+	mMiscHeapSize = 0;
+
+	//mJpegHeap = NULL;
+}
+
+
+// Called with mLock held!
+bool SprdCameraHardware::initCapture(bool initJpegHeap)
+{
+	uint32_t local_width = 0, local_height = 0;
+	uint32_t mem_size0 = 0, mem_size1 = 0;
+
+	LOGV("initCapture E, %d", initJpegHeap);
+
+	if(!startCameraIfNecessary())
+		return false;
+
+    camera_set_dimensions(mRawWidth,
+                         mRawHeight,
+                         mPreviewWidth,
+                         mPreviewHeight,
+                         NULL,
+                         NULL);	
+
+	if (camera_capture_max_img_size(&local_width, &local_height))
+		return false;
+
+	if (camera_capture_get_buffer_size(mCameraId, local_width, local_height, &mem_size0, &mem_size1))
+		return false;
+
+	mRawHeapSize = mem_size0;
+	mMiscHeapSize = mem_size1;
+	mJpegHeapSize = mRawHeapSize;
+	mJpegHeap = NULL;
+
+	if (!allocateCaptureMem(initJpegHeap)) {
+		return false;
+	}
+
+	if (NULL != mMiscHeap) {
+		if (camera_set_capture_mem(0,
+								(uint32_t)mRawHeap->phys_addr,
+								(uint32_t)mRawHeap->data,
+								(uint32_t)mRawHeap->phys_size,
+								(uint32_t)mMiscHeap->phys_addr,
+								(uint32_t)mMiscHeap->data,
+								(uint32_t)mMiscHeap->phys_size))
+			return false;
+	} else {
+		if (camera_set_capture_mem(0,
+								(uint32_t)mRawHeap->phys_addr,
+								(uint32_t)mRawHeap->data,
+								(uint32_t)mRawHeap->phys_size,
+								0,
+								0,
+								0))
+			return false;		
+	}
+	
+	LOGV("initCapture X success");
+	return true;
+}
+
+void SprdCameraHardware::deinitCapture()
+{
+	camera_set_capture_mem(0, 0, 0, 0, 0, 0, 0);							
+	freeCaptureMem();	
+}
+
+void SprdCameraHardware::changeEmcFreq(char flag)
+{
+	int fp_emc_freq = -1;
+	fp_emc_freq = open("/sys/emc/emc_freq", O_WRONLY);
+	
+	if (fp_emc_freq > 0) {
+		write(fp_emc_freq, &flag, sizeof(flag));
+		close(fp_emc_freq);
+		LOGV("changeEmcFreq: %c \n", flag);
+	} else {
+		LOGV("changeEmcFreq: changeEmcFreq failed \n");
+	}
+}
+
+void SprdCameraHardware::setPreviewFreq()
+{
+	
+}
+
+void SprdCameraHardware::restoreFreq()
+{
+
+}
+
+status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
+{
+	LOGV("startPreview E");
+
+	if (isPreviewing()) {
+		LOGE("startPreview is already in progress, doing nothing.");
+		LOGV("mLock:startPreview E.\n");
+		return NO_ERROR;		
+	}			
+
+#if STOP_PREVIEW_BEFORE_CAPTURE
+	// We check for these two states explicitly because it is possible
+	// for startPreview() to be called in response to a raw or JPEG
+	// callback, but before we've updated the state from SPRD_WAITING_RAW
+	// or SPRD_WAITING_JPEG to SPRD_IDLE.  This is because in camera_cb(),
+	// we update the state *after* we've made the callback.  See that
+	// function for an explanation.
+	if (isCapturing()) {
+		WaitForCaptureDone();
+	}		
+
+    if (isCapturing() || isPreviewing()) {
+		//LOGE("startPreview X Camera state is %s, expecting SPRD_IDLE!",
+		//getCameraStateStr(mCaptureState));
+		LOGV("mLock:startPreview E.\n");
+		return INVALID_OPERATION;
+    }		
+#endif
+
+	setRecordingMode(isRecording);
+
+	if (!initPreview()) {
+		LOGE("startPreview X initPreview failed.  Not starting preview.");
+		LOGV("mLock:startPreview E.\n");
+		deinitPreview();
+		return UNKNOWN_ERROR;
+	}
+
+    if (!initCapture(mData_cb != NULL)) {
+		deinitCapture();
+		LOGE("initCapture failed. Not taking picture.");
+		return UNKNOWN_ERROR;
+    }
+
+
+	setCameraState(SPRD_INTERNAL_PREVIEW_REQUESTED, STATE_PREVIEW);
+	camera_ret_code_type qret = camera_start_preview(camera_cb, this);
+	LOGV("camera_start_preview X");
+	if (qret != CAMERA_SUCCESS) {
+		LOGE("startPreview failed: sensor error.");
+		setCameraState(SPRD_ERROR, STATE_PREVIEW);
+		deinitPreview();
+		return UNKNOWN_ERROR;
+	}
+
+	bool result = WaitForPreviewStart();
+
+	LOGV("startPreview X,mRecordingMode=%d.",isRecordingMode());
+	
+	return result ? NO_ERROR : UNKNOWN_ERROR;
+}
+
+void SprdCameraHardware::stopPreviewInternal()
+{
+	LOGV("stopPreviewInternal E");
+
+    if (!isPreviewing()) {
+		LOGE("Preview not in progress!");
+		return;
+    }		
+
+	setCameraState(SPRD_INTERNAL_PREVIEW_STOPPING, STATE_PREVIEW);
+
+	if(CAMERA_SUCCESS != camera_stop_preview()) {
+		setCameraState(SPRD_ERROR, STATE_PREVIEW);
+		deinitPreview();
+		LOGE("stopPreviewInternal: fail to camera_stop_preview().");
+		return;
+	}
+
+	WaitForPreviewStop();	
+	deinitPreview();
+	deinitCapture();
+    LOGV("stopPreviewInternal: X Preview has stopped.");	
+}
+
+takepicture_mode SprdCameraHardware::getCaptureMode()
+{
+	takepicture_mode mode = CAMERA_NORMAL_MODE;
+	
+    if(1 == mParameters.getInt("hdr")) {
+        mode = CAMERA_HDR_MODE;
+    }	
+
+	LOGI("cap mode %d.\n", mode);
+
+	return mode;
+}
+
+status_t SprdCameraHardware::cancelPictureInternal()
+{
+	bool result = true;
+	
+	LOGV("cancelPictureInternal: E, state = %s", getCameraStateStr(getCaptureState()));
+	
+	switch (getCaptureState()) {
+	case SPRD_INTERNAL_RAW_REQUESTED:
+	case SPRD_WAITING_RAW:
+	case SPRD_WAITING_JPEG:
+		LOGD("camera state is %s, stopping picture.", getCameraStateStr(getCaptureState()));
+		setCameraState(SPRD_INTERNAL_CAPTURE_STOPPING, STATE_CAPTURE);
+		if (0 != camera_stop_capture()) {
+			LOGE("cancelPictureInternal: camera_stop_capture failed!");
+			return UNKNOWN_ERROR;
+		}
+		
+		result = WaitForCaptureDone();
+		break;
+	
+	default:
+		LOGV("not taking a picture (state %s)", getCameraStateStr(getCaptureState()));
+		break;
+	}
+	
+	LOGV("cancelPictureInternal: X");
+	return result ? NO_ERROR : UNKNOWN_ERROR;
+}
+
+status_t SprdCameraHardware::initDefaultParameters()
+{
+	LOGV("initDefaultParameters E");
+	SprdCameraParameters p;
+
+	SprdCameraParameters::ConfigType config = (1 == mCameraId) 
+			? SprdCameraParameters::kFrontCameraConfig
+			: SprdCameraParameters::kBackCameraConfig;
+	
+	p.setDefault(config);
+	
+    if (setParameters(p) != NO_ERROR) {
+		LOGE("Failed to set default parameters?!");
+		return UNKNOWN_ERROR;
+    }
+	
+    LOGV("initDefaultParameters X.");
+    return NO_ERROR;
+}
+
+status_t SprdCameraHardware::setCameraParameters()
+{
+	LOGV("setCameraParameters: E");
+
+	// Because libqcamera is broken, for the camera_set_parm() calls
+	// SprdCameraHardware camera_cb() is called synchronously,
+	// so we cannot wait on a state change.  Also, we have to unlock
+	// the mStateLock, because camera_cb() acquires it.
+
+	if(true != startCameraIfNecessary())
+	    return UNKNOWN_ERROR;
+
+	//wxz20120316: check the value of preview-fps-range. //CR168435
+	int min,max;
+	mParameters.getPreviewFpsRange(&min, &max);
+	if((min > max) || (min < 0) || (max < 0)){
+		LOGE("Error to FPS range: mix: %d, max: %d.", min, max);
+		return UNKNOWN_ERROR;
+	}
+	LOGV("setCameraParameters: preview fps range: min = %d, max = %d", min, max);
+
+	//check preview size
+	int w,h;
+	mParameters.getPreviewSize(&w, &h);
+	if((w < 0) || (h < 0)){
+		mParameters.setPreviewSize(640, 480);
+		return UNKNOWN_ERROR;
+	}
+	LOGV("setCameraParameters: preview size: wxmax", w, h);
+
+	// Default Rotation - none
+	int rotation = mParameters.getInt("rotation");
+
+    // Rotation may be negative, but may not be -1, because it has to be a
+    // multiple of 90.  That's why we can still interpret -1 as an error,
+    if (rotation == -1) {
+        LOGV("rotation not specified or is invalid, defaulting to 0");
+        rotation = 0;
+    }
+    else if (rotation % 90) {
+        LOGV("rotation %d is not a multiple of 90 degrees!  Defaulting to zero.",
+             rotation);
+        rotation = 0;
+    }
+    else {
+        // normalize to [0 - 270] degrees
+        rotation %= 360;
+        if (rotation < 0) rotation += 360;
+    }
+	
+    SET_PARM(CAMERA_PARM_ENCODE_ROTATION, rotation);
+    if (1 == mParameters.getInt("sensororientation")){
+    	SET_PARM(CAMERA_PARM_ORIENTATION, 1); //for portrait
+	} 
+	else {
+    	SET_PARM(CAMERA_PARM_ORIENTATION, 0); //for landscape
+	}
+	
+    rotation = mParameters.getInt("sensorrotation");
+    if (-1 == rotation)		
+        rotation = 0;
+	
+    SET_PARM(CAMERA_PARM_SENSOR_ROTATION, rotation);
+	
+	int is_mirror = (mCameraId == 1) ? 1 : 0;
+	int ret = 0;
+
+	SprdCameraParameters::Size preview_size = {0};
+	SprdCameraParameters::Rect preview_rect = {0};
+	int area[4 * SprdCameraParameters::kFocusZoneMax + 1] = {0};
+
+	preview_size.width = mPreviewWidth;
+	preview_size.height = mPreviewHeight;
+
+	ret = camera_get_preview_rect(&preview_rect.x, &preview_rect.y, 
+								&preview_rect.width, &preview_rect.height);
+	if(ret) {
+		LOGV("coordinate_convert: camera_get_preview_rect failed, return \n");
+		return UNKNOWN_ERROR;
+	}	
+	
+	mParameters.getFocusAreas(&area[1], &area[0], &preview_size, &preview_rect,
+					kCameraInfo[mCameraId].orientation, is_mirror);
+	SET_PARM(CAMERA_PARM_FOCUS_RECT, (int32_t)area);
+
+	if (0 == mCameraId) {			
+		SET_PARM(CAMERA_PARM_AF_MODE, mParameters.getFocusMode());
+#ifndef CONFIG_CAMERA_788		
+		SET_PARM(CAMERA_PARM_FLASH, mParameters.getFlashMode());
+#endif		
+	}
+
+	SET_PARM(CAMERA_PARM_WB, mParameters.getWhiteBalance());
+	SET_PARM(CAMERA_PARM_CAMERA_ID, mParameters.getCameraId());
+	SET_PARM(CAMERA_PARM_JPEGCOMP, mParameters.getJpegQuality());
+	SET_PARM(CAMERA_PARM_THUMBCOMP, mParameters.getJpegThumbnailQuality());
+	SET_PARM(CAMERA_PARM_EFFECT, mParameters.getEffect());
+	SET_PARM(CAMERA_PARM_SCENE_MODE, mParameters.getSceneMode());
+
+	mZoomLevel = mParameters.getZoom();
+	SET_PARM(CAMERA_PARM_ZOOM, mZoomLevel);
+	SET_PARM(CAMERA_PARM_BRIGHTNESS, mParameters.getBrightness());
+	SET_PARM(CAMERA_PARM_CONTRAST, mParameters.getContrast());
+	SET_PARM(CAMERA_PARM_EXPOSURE_COMPENSATION, mParameters.getExposureCompensation());
+	SET_PARM(CAMERA_PARM_ANTIBANDING, mParameters.getAntiBanding());
+	SET_PARM(CAMERA_PARM_ISO, mParameters.getIso());
+	SET_PARM(CAMERA_PARM_DCDV_MODE, mParameters.getRecordingHint());
+
+	int ns_mode = mParameters.getInt("nightshot-mode");
+	if (ns_mode < 0) ns_mode = 0;
+	SET_PARM(CAMERA_PARM_NIGHTSHOT_MODE, ns_mode);
+
+	int luma_adaptation = mParameters.getInt("luma-adaptation");
+	if (luma_adaptation < 0) luma_adaptation = 0;
+	SET_PARM(CAMERA_PARM_LUMA_ADAPTATION, luma_adaptation);
+
+	double focal_len = atof(mParameters.get("focal-length")) * 1000;
+	SET_PARM(CAMERA_PARM_FOCAL_LENGTH,  (int32_t)focal_len);
+
+	int th_w, th_h, th_q;
+	th_w = mParameters.getInt("jpeg-thumbnail-width");
+	if (th_w < 0) LOGW("property jpeg-thumbnail-width not specified");
+
+	th_h = mParameters.getInt("jpeg-thumbnail-height");
+	if (th_h < 0) LOGW("property jpeg-thumbnail-height not specified");
+
+	th_q = mParameters.getInt("jpeg-thumbnail-quality");
+	if (th_q < 0) LOGW("property jpeg-thumbnail-quality not specified");
+
+	if (th_w >= 0 && th_h >= 0 && th_q >= 0) {
+		LOGI("setting thumbnail dimensions to %dx%d, quality %d", th_w, th_h, th_q);
+		
+		int ret = camera_set_thumbnail_properties(th_w, th_h, th_q);
+		
+		if (ret != CAMERA_SUCCESS) {
+			LOGE("camera_set_thumbnail_properties returned %d", ret);
+			}
+	}
+
+	camera_encode_properties_type encode_properties = {0};
+	// Set Default JPEG encoding--this does not cause a callback
+	encode_properties.quality = mParameters.getInt("jpeg-quality");
+	
+	if (encode_properties.quality < 0) {
+		LOGW("JPEG-image quality is not specified "
+		"or is negative, defaulting to %d",
+		encode_properties.quality);
+		encode_properties.quality = 100;
+	}
+	else LOGV("Setting JPEG-image quality to %d",
+			encode_properties.quality);
+	
+	encode_properties.format = CAMERA_JPEG;
+	encode_properties.file_size = 0x0;
+	camera_set_encode_properties(&encode_properties);
+
+	LOGV("setCameraParameters: X");
+	return NO_ERROR;	
+}
+
+void SprdCameraHardware::getPictureFormat(int * format)
+{
+	*format = mPictureFormat;
+}
+
+////////////////////////////////////////////////////////////////////////////
+// message handler
+/////////////////////////////////////////////////////////////////////////////
+#define PARSE_LOCATION(what,type,fmt,desc) do {                                           \
+                pt->what = 0;                                                              \
+                const char *what##_str = mParameters.get("gps-"#what);                    \
+                LOGV("%s: GPS PARM %s --> [%s]", __func__, "gps-"#what, what##_str); \
+                if (what##_str) {                                                         \
+                    type what = 0;                                                        \
+                    if (sscanf(what##_str, fmt, &what) == 1)                              \
+                        pt->what = what;                                                   \
+                    else {                                                                \
+                        LOGE("GPS " #what " %s could not"                                 \
+                              " be parsed as a " #desc,                                   \
+                              what##_str);                                                \
+                        result = false;                                          \
+                    }                                                                     \
+                }                                                                         \
+                else {                                                                    \
+                    LOGW("%s: GPS " #what " not specified: "               \
+                          "defaulting to zero in EXIF header.", __func__);                          \
+                    result = false;                                              \
+               }                                                                          \
+            }while(0)
+            
+bool SprdCameraHardware::getCameraLocation(camera_position_type *pt)
+{
+	bool result = true;
+	
+	PARSE_LOCATION(timestamp, long, "%ld", "long");
+	if (0 == pt->timestamp) 
+		pt->timestamp = time(NULL);
+	
+	PARSE_LOCATION(altitude, double, "%lf", "double float");
+	PARSE_LOCATION(latitude, double, "%lf", "double float");
+	PARSE_LOCATION(longitude, double, "%lf", "double float");
+	
+	pt->process_method = mParameters.get("gps-processing-method");
+
+	LOGV("%s: setting image location result %d,  ALT %lf LAT %lf LON %lf",
+			__func__, result, pt->altitude, pt->latitude, pt->longitude);
+			
+	return result;
+}
+
+bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32_t phy_addr)
+{
+	if (!mPreviewWindow || !mGrallocHal || 0 == phy_addr) {
+		return false;
+	}
+
+	LOGV("%s: size = %dx%d, addr = %d", __func__, width, height, phy_addr);
+	
+	buffer_handle_t 	*buf_handle = NULL;
+	int 				stride = 0;
+	void 				*vaddr = NULL;
+	int					ret = 0;
+
+	ret = mPreviewWindow->dequeue_buffer(mPreviewWindow, &buf_handle, &stride);
+	if (0 != ret) {
+		LOGE("%s: failed to dequeue gralloc buffer!", __func__);
+		return false;
+	}
+
+	ret = mGrallocHal->lock(mGrallocHal, *buf_handle, GRALLOC_USAGE_SW_WRITE_OFTEN,
+							0, 0, width, height, &vaddr);
+	//if the ret is 0 and the vaddr is NULL, whether the unlock should be called?
+	if (0 != ret || NULL == vaddr)
+	{
+		LOGE("%s: failed to lock gralloc buffer", __func__);
+		return false;
+	}
+
+	ret = camera_copy_data_virtual(width, height, phy_addr, (uint32_t)vaddr);
+	mGrallocHal->unlock(mGrallocHal, *buf_handle);
+	
+	if(0 != ret) {
+		LOGE("%s: camera_copy_data_virtual() failed.", __func__);
+		return false;
+	}
+
+	ret = mPreviewWindow->enqueue_buffer(mPreviewWindow, buf_handle);
+	if(0 != ret) {
+		LOGE("%s: enqueue_buffer() failed.", __func__);
+		return false;
+	}		
+	
+	return true;
+}
+
+void SprdCameraHardware::receivePreviewFDFrame(camera_frame_type *frame)
+{
+    Mutex::Autolock cbLock(&mPreviewCbLock);
+
+	if (NULL == frame) {
+		LOGE("receivePreviewFDFrame: invalid frame pointer");
+		return;
+	}	
+			
+    ssize_t offset = frame->buf_id;
+    camera_frame_metadata_t metadata;
+    camera_face_t face_info[FACE_DETECT_NUM];
+    uint32_t k = 0;
+
+   /* if(1 == mParameters.getInt("smile-snap-mode")){*/
+    LOGV("receive face_num %d.",frame->face_num);
+    metadata.number_of_faces = frame->face_num;
+    if((0 != frame->face_num)&&(frame->face_num<=FACE_DETECT_NUM)) {
+       for(k=0 ; k<frame->face_num ; k++) {
+            face_info[k].id = k;
+            face_info[k].rect[0] = (frame->face_ptr->sx*2000/mPreviewWidth)-1000;
+            face_info[k].rect[1] = (frame->face_ptr->sy*2000/mPreviewHeight)-1000;
+            face_info[k].rect[2] = (frame->face_ptr->ex*2000/mPreviewWidth)-1000;
+            face_info[k].rect[3] = (frame->face_ptr->ey*2000/mPreviewHeight)-1000;
+            LOGV("smile level %d.\n",frame->face_ptr->smile_level);
+
+            face_info[k].score = frame->face_ptr->smile_level;
+            frame->face_ptr++;
+       }
+    }
+	
+    metadata.faces = &face_info[0];
+    if(mMsgEnabled&CAMERA_MSG_PREVIEW_METADATA) {
+        LOGV("smile capture msg is enabled.");
+        if(camera_get_rot_set()) {
+            mData_cb(CAMERA_MSG_PREVIEW_METADATA,mPreviewHeap->camera_memory,(kPreviewBufferCount+offset),&metadata,mUser);
+        } else {
+            mData_cb(CAMERA_MSG_PREVIEW_METADATA,mPreviewHeap->camera_memory,offset,&metadata,mUser);
+        }
+    } else {
+        LOGV("smile capture msg is disabled.");
+    }
+}
+
+void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
+{
+	Mutex::Autolock cbLock(&mPreviewCbLock);
+
+	if (NULL == frame) {
+		LOGE("receivePreviewFrame: invalid frame pointer");
+		return;
+	}	
+	
+	ssize_t offset = frame->buf_id;
+	camera_frame_metadata_t metadata;
+	camera_face_t face_info[FACE_DETECT_NUM];
+	uint32_t k = 0;
+
+	int width, height, frame_size, offset_size;		
+
+	width = frame->dx;/*mPreviewWidth;*/
+	height = frame->dy;/*mPreviewHeight;*/
+	LOGV("receivePreviewFrame: width=%d, height=%d \n",width, height);
+
+	if (!displayOneFrame(width, height, frame->buffer_phy_addr))
+	{
+		LOGE("%s: displayOneFrame failed!", __func__);
+	}
+
+#ifdef CONFIG_CAMERA_ISP
+	send_img_data(2, mPreviewWidth, mPreviewHeight, (char *)frame->buf_Virt_Addr, frame->dx * frame->dy * 3 /2);
+#endif
+
+	if(mData_cb != NULL)
+	{
+		LOGV("receivePreviewFrame mMsgEnabled: 0x%x",mMsgEnabled);
+		if (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME) {
+			if(camera_get_rot_set()) {
+				mData_cb(CAMERA_MSG_PREVIEW_FRAME,mPreviewHeap->camera_memory,(kPreviewBufferCount+offset),NULL,mUser);
+			} else {
+				mData_cb(CAMERA_MSG_PREVIEW_FRAME,mPreviewHeap->camera_memory,offset,NULL,mUser);
+			}
+		}
+
+		if ((mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) && isRecordingMode()) {
+			nsecs_t timestamp = systemTime();/*frame->timestamp;*/
+			LOGV("test timestamp = %lld, mIsStoreMetaData: %d.",timestamp, mIsStoreMetaData);
+			if(mIsStoreMetaData) {
+				uint32_t *data = (uint32_t *)mMetadataHeap->data + offset * METADATA_SIZE / 4;
+				*data++ = kMetadataBufferTypeCameraSource;
+				*data++ = frame->buffer_phy_addr;
+				*data = (uint32_t)frame->buf_Virt_Addr;
+				mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mMetadataHeap, offset, mUser);
+			}
+			else {
+				//mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap->mBuffers[offset], mUser);
+				if(camera_get_rot_set()) {
+					mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap->camera_memory, (kPreviewBufferCount+offset), mUser);
+				} else {
+					mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap->camera_memory, offset, mUser);
+				}
+			}
+		//LOGV("receivePreviewFrame: record index: %d, offset: %x, size: %x, frame->buf_Virt_Addr: 0x%x.", offset, off, size, (uint32_t)frame->buf_Virt_Addr);
+		}
+		else {
+			if(CAMERA_SUCCESS != camera_release_frame(offset)){
+				LOGE("receivePreviewFrame: fail to camera_release_frame().offset: %d.", offset);
+			}
+		}
+		// When we are doing preview but not recording, we need to
+		// release every preview frame immediately so that the next
+		// preview frame is delivered.  However, when we are recording
+		// (whether or not we are also streaming the preview frames to
+		// the screen), we have the user explicitly release a preview
+		// frame via method releaseRecordingFrame().  In this way we
+		// allow a video encoder which is potentially slower than the
+		// preview stream to skip frames.  Note that we call
+		// camera_release_frame() in this method because we first
+		// need to check to see if mPreviewCallback != NULL, which
+		// requires holding mCallbackLock.
+
+	}
+	else
+		LOGE("receivePreviewFrame: mData_cb is null.");
+
+}
+
+//can not use callback lock?
+void SprdCameraHardware::notifyShutter()
+{
+	LOGV("notifyShutter: E");
+	print_time();
+
+	LOGV("notifyShutter mMsgEnabled: 0x%x.", mMsgEnabled);
+	
+	if (mMsgEnabled & CAMERA_MSG_SHUTTER)		
+		mNotify_cb(CAMERA_MSG_SHUTTER, 0, 0, mUser);
+	
+	print_time();
+	LOGV("notifyShutter: X");
+}
+
+
+// Pass the pre-LPM raw picture to raw picture callback.
+// This method is called by a libqcamera thread, different from the one on
+// which startPreview() or takePicture() are called.
+void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
+{
+	LOGV("receiveRawPicture: E");
+	
+	print_time();
+
+	Mutex::Autolock cbLock(&mCaptureCbLock);
+
+	if (NULL == frame) {
+		LOGE("receiveRawPicture: invalid frame pointer");
+		return;
+	}		
+
+	if(SPRD_INTERNAL_CAPTURE_STOPPING == getCaptureState()) {
+		LOGV("receiveRawPicture: warning: capture state = SPRD_INTERNAL_CAPTURE_STOPPING, return \n");
+		return;
+	}
+
+	void *vaddr = NULL;
+	uint32_t phy_addr = 0;
+	uint32_t width = mPreviewWidth;
+	uint32_t height = mPreviewHeight;	
+/*
+	phy_addr = getRedisplayMem();
+
+	if(0 == phy_addr) {
+		LOGE("%s: get review memory failed", __func__);
+		goto callbackraw;
+	}		
+	
+	if( 0 != camera_get_data_redisplay(phy_addr, width, height, frame->buffer_phy_addr, 
+									frame->buffer_uv_phy_addr, frame->dx, frame->dy)) {
+		LOGE("%s: Fail to camera_get_data_redisplay.", __func__);
+		goto callbackraw;
+	}
+		
+	if (!displayOneFrame(width, height, phy_addr))
+	{
+		LOGE("%s: displayOneFrame failed", __func__);
+	}
+*/
+callbackraw:
+	if (mData_cb!= NULL) {
+		// Find the offset within the heap of the current buffer.
+		ssize_t offset = (uint32_t)frame->buf_Virt_Addr;
+		offset -= (uint32_t)mRawHeap->data;
+		ssize_t frame_size = 0;
+
+		if(CAMERA_RGB565 == frame->format)
+			frame_size = frame->dx * frame->dy * 2;        // for RGB565
+		else if(CAMERA_YCBCR_4_2_2 == frame->format)
+			frame_size = frame->dx * frame->dy * 2;        //for YUV422
+		else if(CAMERA_YCBCR_4_2_0 == frame->format)
+			frame_size = frame->dx * frame->dy * 3 / 2;          //for YUV420
+		else
+			frame_size = frame->dx * frame->dy * 2;
+		
+		if (offset + frame_size <= (ssize_t)mRawHeap->phys_size) {
+			offset /= frame_size;
+			
+			LOGV("mMsgEnabled: 0x%x, offset: %d.",mMsgEnabled, (uint32_t)offset);
+			
+			if (mMsgEnabled & CAMERA_MSG_RAW_IMAGE) {
+				mData_cb(CAMERA_MSG_RAW_IMAGE, mRawHeap->camera_memory, offset, NULL, mUser);
+			}
+			
+			if(mMsgEnabled & CAMERA_MSG_RAW_IMAGE_NOTIFY) {
+				LOGV("mMsgEnabled & CAMERA_MSG_RAW_IMAGE_NOTIFY");
+				mNotify_cb(CAMERA_MSG_RAW_IMAGE_NOTIFY, 0,0,mUser);
+			}
+		}
+		else 
+			LOGE("receiveRawPicture: virtual address %p is out of range!", frame->buf_Virt_Addr);
+	}
+	else
+		LOGV("Raw-picture callback was canceled--skipping.");
+	
+	print_time();
+	LOGV("receiveRawPicture: X");
+}
+    
+// Encode the post-LPM raw picture.
+
+// This method is called by a libqcamera thread, different from the one on
+// which startPreview() or takePicture() are called.			
+void SprdCameraHardware::receivePostLpmRawPicture(camera_frame_type *frame)
+{
+	LOGV("receivePostLpmRawPicture: E");
+	print_time();
+
+	Mutex::Autolock cbLock(&mCaptureCbLock);
+	
+	if (NULL == frame) {
+		LOGE("receivePostLpmRawPicture: invalid frame pointer");
+		return;
+	}		
+
+	if (mData_cb!= NULL) {
+		bool encode_location = true;
+		camera_position_type pt = {0};
+
+		encode_location = getCameraLocation(&pt);
+		if (encode_location) {			
+			if (camera_set_position(&pt, NULL, NULL) != CAMERA_SUCCESS) {
+				LOGE("receiveRawPicture: camera_set_position: error");
+				// return;  // not a big deal
+			}
+		}
+		else
+			LOGV("receiveRawPicture: not setting image location");
+
+		mJpegSize = 0;
+
+		camera_handle_type camera_handle;
+		if(CAMERA_SUCCESS != camera_encode_picture(frame, &camera_handle, camera_cb, this)) {
+			setCameraState(SPRD_ERROR, STATE_CAPTURE);
+			FreePmem(mRawHeap);
+			mRawHeap = NULL;
+			LOGE("receivePostLpmRawPicture: fail to camera_encode_picture().");
+		}
+	}
+	else {
+		LOGV("JPEG callback was cancelled--not encoding image.");
+		// We need to keep the raw heap around until the JPEG is fully
+		// encoded, because the JPEG encode uses the raw image contained in
+		// that heap.
+	}
+	
+	print_time();
+	LOGV("receivePostLpmRawPicture: X");
+}
+		
+
+void SprdCameraHardware::receiveJpegPictureFragment( JPEGENC_CBrtnType *encInfo)
+{	
+	Mutex::Autolock cbLock(&mCaptureCbLock);
+	
+	if (NULL == encInfo) {
+		LOGE("receiveJpegPictureFragment: invalid enc info pointer");
+		return;
+	}	
+	
+    camera_encode_mem_type *enc = (camera_encode_mem_type *)encInfo->outPtr;
+
+    uint8_t *base = (uint8_t *)mJpegHeap->mHeap->base();
+    uint32_t size = encInfo->size;
+    uint32_t remaining = mJpegHeap->mHeap->virtualSize();
+    uint32_t i = 0;
+    uint8_t *temp_ptr,*src_ptr;
+    remaining -= mJpegSize;
+	
+	LOGV("receiveJpegPictureFragment E.");
+    LOGV("receiveJpegPictureFragment: (status %d size %d remaining %d mJpegSize %d)",
+         encInfo->status,
+         size, remaining,mJpegSize);
+
+    if (size > remaining) {
+		LOGE("receiveJpegPictureFragment: size %d exceeds what "
+		 	"remains in JPEG heap (%d), truncating",
+		 	size,
+		 	remaining);
+		size = remaining;
+    }
+
+    //camera_handle.mem.encBuf[index].used_len = 0;
+	LOGV("receiveJpegPictureFragment : base + mJpegSize: %x, enc->buffer: %x, size: %x", (uint32_t)(base + mJpegSize), (uint32_t)enc->buffer, size) ;
+
+	memcpy(base + mJpegSize, enc->buffer, size);
+    mJpegSize += size;
+
+	LOGV("receiveJpegPictureFragment X.");
+}
+            
+void SprdCameraHardware::receiveJpegPosPicture(void)//(camera_frame_type *frame)
+{
+	LOGV("receiveJpegPosPicture: E");
+	print_time();
+	
+	Mutex::Autolock cbLock(&mCaptureCbLock);	
+
+	if (mData_cb!= NULL) {
+		bool encode_location = true;
+		camera_position_type pt = {0};
+
+		encode_location = getCameraLocation(&pt);
+		if (encode_location) {
+			if (camera_set_position(&pt, NULL, NULL) != CAMERA_SUCCESS) {
+				LOGE("%s: camera_set_position: error", __func__);
+				// return;  // not a big deal
+			}
+		}
+		else
+			LOGV("%s: not setting image location", __func__);
+
+		mJpegSize = 0;
+	}
+	else {
+		LOGV("%s: JPEG callback was cancelled--not encoding image.", __func__);
+		// We need to keep the raw heap around until the JPEG is fully
+		// encoded, because the JPEG encode uses the raw image contained in
+		// that heap.
+		deinitCapture();
+	}
+	
+	print_time();
+	LOGV("%s: receiveJpegPosPicture: free mCallbackLock!", __func__);
+}				
+
+// This method is called by a libqcamera thread, different from the one on
+// which startPreview() or takePicture() are called.
+void SprdCameraHardware::receiveJpegPicture(void)
+{
+	LOGV("receiveJpegPicture: E image (%d bytes out of %d)",
+				mJpegSize, mJpegHeap->mBufferSize);
+	print_time();
+	Mutex::Autolock cbLock(&mCaptureCbLock);
+
+	int index = 0;
+
+	//if (mJpegPictureCallback) {
+	if (mData_cb) {
+		LOGV("receiveJpegPicture: mData_cb.");
+		// The reason we do not allocate into mJpegHeap->mBuffers[offset] is
+		// that the JPEG image's size will probably change from one snapshot
+		// to the next, so we cannot reuse the MemoryBase object.
+		LOGV("receiveJpegPicture: mMsgEnabled: 0x%x.", mMsgEnabled);
+		
+		// mJpegPictureCallback(buffer, mPictureCallbackCookie);
+		if (mMsgEnabled & CAMERA_MSG_COMPRESSED_IMAGE){
+			camera_memory_t *mem = mGetMemory_cb(-1, mJpegSize, 1, 0);
+			memcpy(mem->data, mJpegHeap->mHeap->base(), mJpegSize);
+			//mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,buffer, mUser );
+			mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,mem, 0, NULL, mUser );
+			mem->release(mem);
+		}		
+	}
+	else 
+		LOGV("JPEG callback was cancelled--not delivering image.");
+
+	// NOTE: the JPEG encoder uses the raw image contained in mRawHeap, so we need
+	// to keep the heap around until the encoding is complete.
+	LOGV("receiveJpegPicture: free the Raw and Jpeg mem. 0x%x, 0x%x", mRawHeap, mMiscHeap);
+	print_time();
+	LOGV("receiveJpegPicture: X callback done.");
+}
+
+void SprdCameraHardware::receiveJpegPictureError(void)
+{
+	LOGV("receiveJpegPictureError.");
+	print_time();
+	Mutex::Autolock cbLock(&mCaptureCbLock);
+
+	int index = 0;
+	if (mData_cb) {
+		LOGV("receiveJpegPicture: mData_cb.");
+		if (mMsgEnabled & CAMERA_MSG_COMPRESSED_IMAGE){
+			mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,NULL, 0, NULL, mUser );
+		}
+	} else 
+		LOGV("JPEG callback was cancelled--not delivering image.");
+	
+	// NOTE: the JPEG encoder uses the raw image contained in mRawHeap, so we need
+	// to keep the heap around until the encoding is complete.
+	
+	print_time();
+	LOGV("receiveJpegPictureError: X callback done.");
+}
+
+void SprdCameraHardware::receiveCameraExitError(void)
+{
+	Mutex::Autolock cbPreviewLock(&mPreviewCbLock);
+	Mutex::Autolock cbCaptureLock(&mCaptureCbLock);	
+	
+	if((mMsgEnabled & CAMERA_MSG_ERROR) && (mData_cb != NULL)) {
+		LOGE("HandleErrorState");
+		mNotify_cb(CAMERA_MSG_ERROR, 0,0,mUser);
+	}
+	
+	LOGE("HandleErrorState:don't enable error msg!");
+}
+
+void SprdCameraHardware::receiveTakePictureError(void)
+{
+	Mutex::Autolock cbLock(&mCaptureCbLock);
+	
+	LOGE("camera cb: invalid state %s for taking a picture!",
+		 getCameraStateStr(getCaptureState()));
+
+	if ((mMsgEnabled & CAMERA_MSG_RAW_IMAGE) && (NULL != mData_cb))
+		mData_cb(CAMERA_MSG_RAW_IMAGE, NULL, 0 , NULL, mUser);
+
+	if ((mMsgEnabled & CAMERA_MSG_COMPRESSED_IMAGE) && (NULL != mData_cb))
+		mData_cb(CAMERA_MSG_COMPRESSED_IMAGE, NULL, 0, NULL, mUser);
+}
+
+
+//transite from 'from' state to 'to' state and signal the waitting thread. if the current state is not 'from', transite to SPRD_ERROR state
+//should be called from the callback
+SprdCameraHardware::Sprd_camera_state
+SprdCameraHardware::transitionState(SprdCameraHardware::Sprd_camera_state from, 
+									SprdCameraHardware::Sprd_camera_state to,
+									SprdCameraHardware::state_owner owner, bool lock)
+{
+	volatile SprdCameraHardware::Sprd_camera_state *which_ptr = NULL;
+	LOGV("transitionState: owner = %d, lock = %d", owner, lock);
+	
+	//if (lock) mStateLock.lock();
+		
+	switch (owner) {
+	case STATE_CAMERA:
+		which_ptr = &mCameraState.camera_state;
+		break;
+
+	case STATE_PREVIEW:
+		which_ptr = &mCameraState.preview_state;
+		break;
+
+	case STATE_CAPTURE:
+		which_ptr = &mCameraState.capture_state;
+		break;		
+
+	default:
+		LOGV("changeState: error owner");
+		break;
+	}
+
+	if (NULL != which_ptr) {		
+		if (from != *which_ptr) {
+			to = SPRD_ERROR;
+		}
+		
+		LOGV("changeState: %s --> %s", getCameraStateStr(from),
+								   getCameraStateStr(to));	
+
+		if (*which_ptr != to) {
+			*which_ptr = to;
+			mStateWait.signal();			
+		}
+	}	
+
+	//if (lock) mStateLock.unlock();
+
+	return to;
+}
+
+void SprdCameraHardware::HandleStartPreview(camera_cb_type cb, 
+											 int32_t parm4)
+{
+
+	LOGV("HandleStartPreview in: cb = %d, parm4 = 0x%x, state = %s", 
+				cb, parm4, getCameraStateStr(getPreviewState()));
+	
+	switch(cb) {
+	case CAMERA_RSP_CB_SUCCESS:
+		transitionState(SPRD_INTERNAL_PREVIEW_REQUESTED, 
+					SPRD_PREVIEW_IN_PROGRESS, 
+					STATE_PREVIEW);
+		break;
+	
+	case CAMERA_EVT_CB_FRAME:
+		LOGV("CAMERA_EVT_CB_FRAME");
+		switch (getPreviewState()) {
+		case SPRD_PREVIEW_IN_PROGRESS:			
+	        receivePreviewFrame((camera_frame_type *)parm4);
+			break;
+
+		case SPRD_INTERNAL_PREVIEW_STOPPING:
+            LOGV("camera cb: discarding preview frame "
+                 "while stopping preview");			
+			break;
+
+		default:
+            LOGV("HandleStartPreview: invalid state");			
+			break;
+			}			
+		break;
+
+	case CAMERA_EVT_CB_FD:
+		LOGV("CAMERA_EVT_CB_FD");
+		if (isPreviewing()) {
+	    	receivePreviewFDFrame((camera_frame_type *)parm4);		
+		}
+		break;
+	
+	case CAMERA_EXIT_CB_FAILED:			//Execution failed or rejected
+		LOGE("SprdCameraHardware::camera_cb: @CAMERA_EXIT_CB_FAILURE(%d) in state %s.",
+				parm4, getCameraStateStr(getPreviewState()));
+		transitionState(getPreviewState(), SPRD_ERROR, STATE_PREVIEW);
+		receiveCameraExitError();
+		break;
+		
+	default:
+		transitionState(getPreviewState(), SPRD_ERROR, STATE_PREVIEW);
+		LOGE("unexpected cb %d for CAMERA_FUNC_START_PREVIEW.", cb);		
+		break;
+	}
+
+	LOGV("HandleStartPreview out, state = %s", getCameraStateStr(getPreviewState()));		
+}
+
+void SprdCameraHardware::HandleStopPreview(camera_cb_type cb, 										   
+										  int32_t parm4)
+{
+	LOGV("HandleStopPreview in: cb = %d, parm4 = 0x%x, state = %s", 
+				cb, parm4, getCameraStateStr(getPreviewState()));
+	
+	transitionState(SPRD_INTERNAL_PREVIEW_STOPPING, 
+				SPRD_IDLE, 
+				STATE_PREVIEW);
+
+	LOGV("HandleStopPreview out, state = %s", getCameraStateStr(getPreviewState()));		
+}
+
+void SprdCameraHardware::HandleTakePicture(camera_cb_type cb, 										   
+										 	 int32_t parm4)
+{
+	LOGV("HandleTakePicture in: cb = %d, parm4 = 0x%x, state = %s", 
+				cb, parm4, getCameraStateStr(getCaptureState()));
+
+	switch (cb) {
+	case CAMERA_RSP_CB_SUCCESS:		
+		LOGV("HandleTakePicture: CAMERA_RSP_CB_SUCCESS");
+		transitionState(SPRD_INTERNAL_RAW_REQUESTED, 
+					SPRD_WAITING_RAW, 
+					STATE_CAPTURE);		
+		break;
+
+	case CAMERA_EVT_CB_SNAPSHOT_DONE:
+		LOGV("HandleTakePicture: CAMERA_EVT_CB_SNAPSHOT_DONE");
+		notifyShutter();
+		receiveRawPicture((camera_frame_type *)parm4);
+		break;
+
+	case CAMERA_EXIT_CB_DONE:
+		LOGV("HandleTakePicture: CAMERA_EXIT_CB_DONE");
+		if (SPRD_WAITING_RAW == getCaptureState())
+		{
+			transitionState(SPRD_WAITING_RAW, 
+						((NULL != mData_cb) ? SPRD_WAITING_JPEG : SPRD_IDLE), 
+						STATE_CAPTURE);	
+	        // It's important that we call receiveRawPicture() before
+	        // we transition the state because another thread may be
+	        // waiting in cancelPicture(), and then delete this object.
+	        // If the order were reversed, we might call
+	        // receiveRawPicture on a dead object.		
+			receivePostLpmRawPicture((camera_frame_type *)parm4);		
+		}
+		break;
+
+	case CAMERA_EXIT_CB_FAILED:			//Execution failed or rejected
+		LOGE("SprdCameraHardware::camera_cb: @CAMERA_EXIT_CB_FAILURE(%d) in state %s.",
+				parm4, getCameraStateStr(getCaptureState()));
+		transitionState(getCaptureState(), SPRD_ERROR, STATE_CAPTURE);
+		receiveCameraExitError();
+		break;		
+
+	default:	
+		LOGE("HandleTakePicture: unkown cb = %d", cb);
+		transitionState(getCaptureState(), SPRD_ERROR, STATE_CAPTURE);
+		receiveTakePictureError();
+		break;			
+	}
+
+	LOGV("HandleTakePicture out, state = %s", getCameraStateStr(getCaptureState()));		
+}
+
+void SprdCameraHardware::HandleCancelPicture(camera_cb_type cb, 										   
+										 	 int32_t parm4)
+{
+	LOGV("HandleCancelPicture in: cb = %d, parm4 = 0x%x, state = %s", 
+				cb, parm4, getCameraStateStr(getCaptureState()));
+
+	{
+		Mutex::Autolock cbLock(&mCaptureCbLock);		
+	}
+
+	transitionState(SPRD_INTERNAL_CAPTURE_STOPPING, 
+				SPRD_IDLE, 
+				STATE_CAPTURE);	
+
+	
+	
+	LOGV("HandleCancelPicture out, state = %s", getCameraStateStr(getCaptureState()));	
+}
+
+void SprdCameraHardware::HandleEncode(camera_cb_type cb, 										   
+								  		int32_t parm4)
+{
+	LOGV("HandleEncode in: cb = %d, parm4 = 0x%x, state = %s", 
+				cb, parm4, getCameraStateStr(getCaptureState()));
+	
+	switch (cb) {
+	case CAMERA_RSP_CB_SUCCESS:
+        // We already transitioned the camera state to
+        // SPRD_WAITING_JPEG when we called
+        // camera_encode_picture().		
+		break;
+		
+	case CAMERA_EXIT_CB_DONE:
+		LOGV("HandleEncode: CAMERA_EXIT_CB_DONE");
+		if (SPRD_WAITING_JPEG == getCaptureState()) {
+	        // Receive the last fragment of the image.
+	        receiveJpegPictureFragment((JPEGENC_CBrtnType *)parm4);
+			LOGV("CAMERA_EXIT_CB_DONE MID.");
+	        receiveJpegPicture();
+			
+			transitionState(SPRD_WAITING_JPEG, 
+						SPRD_IDLE, 
+						STATE_CAPTURE);				
+		}
+		break;
+
+	case CAMERA_EXIT_CB_FAILED:		
+		LOGV("HandleEncode: CAMERA_EXIT_CB_FAILED");
+		transitionState(getCaptureState(), SPRD_ERROR, STATE_CAPTURE);
+		receiveCameraExitError();
+		break;		
+
+	default:	
+		LOGV("HandleEncode: unkown error = %d", cb);
+		transitionState(getCaptureState(), SPRD_ERROR, STATE_CAPTURE);
+		receiveJpegPictureError();
+		break;	
+	}
+
+	LOGV("HandleEncode out, state = %s", getCameraStateStr(getCaptureState()));
+}
+
+void SprdCameraHardware::HandleFocus(camera_cb_type cb, 										   
+								  int32_t parm4)
+{
+	LOGV("HandleFocus in: cb = %d, parm4 = 0x%x, state = %s", 
+				cb, parm4, getCameraStateStr(getPreviewState()));
+	
+    if (NULL == mNotify_cb) {
+		LOGE("HandleFocus: mNotify_cb is NULL");
+        return;
+    }
+
+    switch (cb) {
+    case CAMERA_RSP_CB_SUCCESS:
+		LOGV("camera cb: autofocus has started.");
+        break;
+
+    case CAMERA_EXIT_CB_DONE:
+        LOGV("camera cb: autofocus succeeded.");
+        LOGV("camera cb: autofocus mNotify_cb start.");	
+		if (mMsgEnabled & CAMERA_MSG_FOCUS)
+            mNotify_cb(CAMERA_MSG_FOCUS, 1, 0, mUser);
+		else
+			LOGE("camera cb: mNotify_cb is null.");
+	
+   		LOGV("camera cb: autofocus mNotify_cb ok.");	
+
+    case CAMERA_EXIT_CB_ABORT:
+		LOGE("camera cb: autofocus aborted");
+		break;	
+
+    case CAMERA_EXIT_CB_FAILED:
+        LOGE("camera cb: autofocus failed");
+        if (mMsgEnabled & CAMERA_MSG_FOCUS)
+            mNotify_cb(CAMERA_MSG_FOCUS, 0, 0, mUser);		
+		break;
+	
+    defaut:			
+        LOGE("camera cb: unknown cb %d for " 
+		"CAMERA_FUNC_START_FOCUS!", cb);
+        if (mMsgEnabled & CAMERA_MSG_FOCUS)
+            mNotify_cb(CAMERA_MSG_FOCUS, 0, 0, mUser);		
+		break;
+    }
+
+	LOGV("HandleFocus out, state = %s", getCameraStateStr(getCaptureState()));
+}
+
+void SprdCameraHardware::HandleStartCamera(camera_cb_type cb, 										   
+								  		int32_t parm4)
+{
+	LOGV("HandleCameraStart in: cb = %d, parm4 = 0x%x, state = %s", 
+				cb, parm4, getCameraStateStr(getCameraState()));	
+
+	transitionState(SPRD_INIT, SPRD_IDLE, STATE_CAMERA);	
+
+	LOGV("HandleCameraStart out, state = %s", getCameraStateStr(getCameraState()));
+}
+
+void SprdCameraHardware::HandleStopCamera(camera_cb_type cb, int32_t parm4)
+{
+	LOGV("HandleStopCamera in: cb = %d, parm4 = 0x%x, state = %s", 
+				cb, parm4, getCameraStateStr(getCameraState()));
+	
+	transitionState(SPRD_INTERNAL_STOPPING, SPRD_INIT, STATE_CAMERA);
+	
+	LOGV("HandleStopCamera out, state = %s", getCameraStateStr(getCameraState()));		
+}
+
+void SprdCameraHardware::camera_cb(camera_cb_type cb,
+                                           const void *client_data,
+                                           camera_func_type func,
+                                           int32_t parm4)
+{
+	SprdCameraHardware *obj = (SprdCameraHardware *)client_data;
+	
+    switch(func) {
+    // This is the commonest case.
+	case CAMERA_FUNC_START_PREVIEW:
+	    obj->HandleStartPreview(cb, parm4);		
+		break;
+		
+	case CAMERA_FUNC_STOP_PREVIEW:
+	    obj->HandleStopPreview(cb, parm4);
+	    break;
+		
+	case CAMERA_FUNC_RELEASE_PICTURE:
+		obj->HandleCancelPicture(cb, parm4);		 
+	    break;
+		
+	case CAMERA_FUNC_TAKE_PICTURE:
+		obj->HandleTakePicture(cb, parm4);
+	    break;
+		
+	case CAMERA_FUNC_ENCODE_PICTURE:
+	    obj->HandleEncode(cb, parm4);
+	    break;
+		
+	case CAMERA_FUNC_START_FOCUS:
+		obj->HandleFocus(cb, parm4);
+		break;
+
+	case CAMERA_FUNC_START:
+		obj->HandleStartCamera(cb, parm4);
+	    break;
+		
+	case CAMERA_FUNC_STOP:
+		obj->HandleStopCamera(cb, parm4);
+		break;		
+		
+    default:
+        // transition to SPRD_ERROR ?
+        LOGE("Unknown camera-callback status %d", cb);
+		break;
+	}
+}	
+
+////////////////////////////////////////////////////////////////////////////////////////
+//memory related
+////////////////////////////////////////////////////////////////////////////////////////
+SprdCameraHardware::MemPool::MemPool(int buffer_size, int num_buffers,
+                                         int frame_size,
+                                         int frame_offset,
+                                         const char *name) :
+    mBufferSize(buffer_size),
+    mNumBuffers(num_buffers),
+    mFrameSize(frame_size),
+    mFrameOffset(frame_offset),
+    mBuffers(NULL), mName(name)
+{
+    // empty
+}
+
+void SprdCameraHardware::MemPool::completeInitialization()
+{
+    // If we do not know how big the frame will be, we wait to allocate
+    // the buffers describing the individual frames until we do know their
+    // size.
+
+    if (mFrameSize > 0) {
+        mBuffers = new sp<MemoryBase>[mNumBuffers];
+        for (int i = 0; i < mNumBuffers; i++) {
+            mBuffers[i] = new
+                MemoryBase(mHeap,
+                           i * mBufferSize + mFrameOffset,
+                           mFrameSize);
+        }
+    }
+}
+
+SprdCameraHardware::AshmemPool::AshmemPool(int buffer_size, int num_buffers,
+                                               int frame_size,
+                                               int frame_offset,
+                                               const char *name) :
+    SprdCameraHardware::MemPool(buffer_size,
+                                    num_buffers,
+                                    frame_size,
+                                    frame_offset,
+                                    name)
+{
+        LOGV("constructing MemPool %s backed by ashmem: "
+             "%d frames @ %d bytes, offset %d, "
+             "buffer size %d",
+             mName,
+             num_buffers, frame_size, frame_offset, buffer_size);
+
+        int page_mask = getpagesize() - 1;
+        int ashmem_size = buffer_size * num_buffers;
+        ashmem_size += page_mask;
+        ashmem_size &= ~page_mask;
+
+        mHeap = new MemoryHeapBase(ashmem_size);
+
+        completeInitialization();
+}
+	
+SprdCameraHardware::MemPool::~MemPool()
+{
+    LOGV("destroying MemPool %s", mName);
+    if (mFrameSize > 0)
+        delete [] mBuffers;
+    mHeap.clear();
+    LOGV("destroying MemPool %s completed", mName);
+}
+
+status_t SprdCameraHardware::MemPool::dump(int fd, const Vector<String16> &args) const
+{
+    const size_t SIZE = 256;
+    char buffer[SIZE];
+    String8 result;
+
+    snprintf(buffer, 255, "SprdCameraHardware::AshmemPool::dump\n");
+    result.append(buffer);
+    if (mName) {
+        snprintf(buffer, 255, "mem pool name (%s)\n", mName);
+        result.append(buffer);
+    }
+    if (mHeap != 0) {
+        snprintf(buffer, 255, "heap base(%p), size(%d), flags(%d), device(%s)\n",
+                 mHeap->getBase(), mHeap->getSize(),
+                 mHeap->getFlags(), mHeap->getDevice());
+        result.append(buffer);
+    }
+    snprintf(buffer, 255, "buffer size (%d), number of buffers (%d),"
+             " frame size(%d), and frame offset(%d)\n",
+             mBufferSize, mNumBuffers, mFrameSize, mFrameOffset);
+    result.append(buffer);
+    write(fd, result.string(), result.size());
+    return NO_ERROR;
+}
+
+/////////////////////////////////////////////////////////////////////////////////
 
 /** Close this device */
 
@@ -3457,7 +2950,7 @@ static int HAL_camera_device_set_parameters(struct camera_device *dev,
 {
     LOGV("%s", __func__);
     String8 str(parms);
-    CameraParameters p(str);
+    SprdCameraParameters p(str);
     return obj(dev)->setParameters(p);
 }
 
@@ -3466,7 +2959,7 @@ char *HAL_camera_device_get_parameters(struct camera_device *dev)
 {
     LOGV("%s", __func__);
     String8 str;
-    CameraParameters parms = obj(dev)->getParameters();
+    SprdCameraParameters parms = obj(dev)->getParameters();
     str = parms.flatten();
     return strdup(str.string());
 }
@@ -3508,36 +3001,12 @@ static int HAL_camera_device_dump(struct camera_device *dev, int fd)
 
 static int HAL_getNumberOfCameras()
 {
-    int num=0;
-   	char propBuf_atv[10];
-
-    LOGV("%s", __func__);
-
-    property_get("sys.camera.atv", propBuf_atv, "0");
-	LOGD("HAL_getNumberOfCameras: property_atv: %s.", propBuf_atv);
-    if((0 == strcmp(propBuf_atv, "1"))){
-		num = sizeof(sCameraInfo3) / sizeof(sCameraInfo3[0]);
-    }
-    else{
-        num = sizeof(sCameraInfo) / sizeof(sCameraInfo[0]);
-    }
-
-    LOGV("HAL_getNumberOfCameras,%d.\n",num);
-    return num;
+	return SprdCameraHardware::getNumberOfCameras();
 }
 
 static int HAL_getCameraInfo(int cameraId, struct camera_info *cameraInfo)
 {
-    char propBuf_atv[10];
-    property_get("sys.camera.atv", propBuf_atv, "0");
-    LOGD("HAL_getCameraInfo: property_atv: %s.", propBuf_atv);
-    if((0 == strcmp(propBuf_atv, "1"))){
-		memcpy(cameraInfo, &sCameraInfo3[cameraId], sizeof(CameraInfo));
-    }
-    else{
-        memcpy(cameraInfo, &sCameraInfo[cameraId], sizeof(CameraInfo));
-    }
-    return 0;
+	return SprdCameraHardware::getCameraInfo(cameraId, cameraInfo);
 }
 
 #define SET_METHOD(m) m : HAL_camera_device_##m

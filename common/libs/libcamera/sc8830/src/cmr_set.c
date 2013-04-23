@@ -130,8 +130,6 @@ uint32_t camera_flash_mode_to_status(enum cmr_flash_mode f_mode)
 {
 	struct camera_context    *cxt = camera_get_cxt();
 	uint32_t                 status = FLASH_STATUS_MAX;
-	int                      ret = CAMERA_SUCCESS;
-	uint32_t		  autoflash = 0; 
 
 	switch (f_mode) {
 	case CAMERA_FLASH_MODE_OFF:
@@ -148,12 +146,7 @@ uint32_t camera_flash_mode_to_status(enum cmr_flash_mode f_mode)
 	#endif
 		break;
 	case CAMERA_FLASH_MODE_AUTO:
-		ret = Sensor_Ioctl(SENSOR_IOCTL_FLASH, (uint32_t)&autoflash);
-		if(ret){
-			autoflash = 1;
-			CMR_LOGE("Failed to read auto flash mode, %d", ret);
-		}
-		if(autoflash){
+		if(cxt->cmr_set.auto_flash){
 			status = FLASH_OPEN;
 		}else {
 			status = FLASH_CLOSE;
@@ -505,11 +498,10 @@ int camera_preview_start_set(void)
 	uint32_t                 skip, skip_num;
 	int                      ret = CAMERA_SUCCESS;
 
-	CMR_LOGV("Sensor workmode %d", cxt->sn_cxt.preview_mode);
-
-	ret = Sensor_SetMode(cxt->sn_cxt.preview_mode);
+	CMR_LOGV("Sensor workmode %d", cxt->sn_cxt.capture_mode);
+	ret = Sensor_SetMode(cxt->sn_cxt.capture_mode);
 	if (ret) {
-		CMR_LOGE("Sensor can't work at this mode %d", cxt->sn_cxt.preview_mode);
+		CMR_LOGE("Sensor can't work at this mode %d", cxt->sn_cxt.capture_mode);
 		goto exit;
 	}
 	ret = Sensor_StreamOff();//wait for set mode done
@@ -518,8 +510,23 @@ int camera_preview_start_set(void)
 		goto exit;
 	}
 
+	if (INVALID_SET_WORD != set->brightness) {
+		ret = camera_set_brightness(set->brightness, &skip, &skip_num);
+		CMR_RTN_IF_ERR(ret);
+	}
+
+	if (INVALID_SET_WORD != set->contrast) {
+		ret = camera_set_contrast(set->contrast, &skip, &skip_num);
+		CMR_RTN_IF_ERR(ret);
+	}
+
 	if (INVALID_SET_WORD != set->effect) {
 		ret = camera_set_effect(set->effect, &skip, &skip_num);
+		CMR_RTN_IF_ERR(ret);
+	}
+
+	if (INVALID_SET_WORD != set->expo_compen) {
+		ret = camera_set_ev(set->expo_compen, &skip, &skip_num);
 		CMR_RTN_IF_ERR(ret);
 	}
 
@@ -530,21 +537,6 @@ int camera_preview_start_set(void)
 
 	if (INVALID_SET_WORD != set->scene_mode) {
 		ret = camera_set_scene(set->scene_mode, &skip, &skip_num);
-		CMR_RTN_IF_ERR(ret);
-	}
-
-	if (INVALID_SET_WORD != set->contrast) {
-		ret = camera_set_contrast(set->contrast, &skip, &skip_num);
-		CMR_RTN_IF_ERR(ret);
-	}
-
-	if (INVALID_SET_WORD != set->brightness) {
-		ret = camera_set_brightness(set->brightness, &skip, &skip_num);
-		CMR_RTN_IF_ERR(ret);
-	}
-
-	if (INVALID_SET_WORD != set->expo_compen) {
-		ret = camera_set_ev(set->expo_compen, &skip, &skip_num);
 		CMR_RTN_IF_ERR(ret);
 	}
 
@@ -596,7 +588,7 @@ int camera_snapshot_start_set(void)
 	} else {
 	
 	}
-	if ((CAMERA_HDR_MODE == cxt->cap_mode) && (HDR_CAP_NUM == cxt->total_cap_num)) {
+	if (HDR_CAP_NUM == cxt->total_cap_num) {
 		ret = camera_set_hdr_ev(SENSOR_HDR_EV_LEVE_0);
 	}
 	return ret;
@@ -606,8 +598,8 @@ int camera_snapshot_stop_set(void)
 {
 	int                      ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
-	
-	if ((CAMERA_HDR_MODE == cxt->cap_mode) && (HDR_CAP_NUM == cxt->total_cap_num)) {
+
+	if (HDR_CAP_NUM == cxt->total_cap_num) {
 		camera_set_hdr_ev(SENSOR_HDR_EV_LEVE_1);
 	}
 	if (cxt->cmr_set.flash) {
@@ -728,32 +720,28 @@ int camera_set_ctrl(camera_parm_type id,
 		&& (CAMERA_PARM_ISO != id)
 		&& (CAMERA_PARM_SENSOR_ROTATION != id)
 		&& (CAMERA_PARM_ORIENTATION != id)
+		&& (CAMERA_PARM_PREVIEW_MODE != id)
 		&& (CAMERA_PARM_THUMBCOMP != id)
 		&& (CAMERA_PARM_JPEGCOMP != id)
-		&& (CAMERA_PARM_DCDV_MODE != id)
-		&& (CAMERA_PARM_SHOT_NUM != id)
-		&& (CAMERA_PARM_PREVIEW_MODE != id)) {
+		&& (CAMERA_PARM_DCDV_MODE != id)) {
 		return ret;
 	}
 
-	CMR_LOGI("ID %d or parm %d . camera status %d", id, parm, cxt->camera_status);
+	CMR_LOGI("ID %d or parm %d . camera preview_status %d, capture_status=%d", 
+		id, parm, cxt->preview_status, cxt->capture_status);
 
 	if (id >= CAMERA_PARM_MAX || INVALID_SET_WORD == parm) {
 		return CAMERA_INVALID_PARM;
 	}
 
 	switch (id) {
-	case CAMERA_PARM_SHOT_NUM:
-		cxt->total_cap_num = parm;
-		CMR_LOGI("cap num is %d.",parm);
-		break;
 	case CAMERA_PARM_DCDV_MODE:
 		cxt->is_dv_mode = parm;
 		CMR_LOGI("camera mode %d.",parm);
 		break;
 	case CAMERA_PARM_EXPOSURE_COMPENSATION:
 		if (parm != cxt->cmr_set.expo_compen) {
-			if (CMR_PREVIEW == cxt->camera_status) {
+			if (CMR_PREVIEW == cxt->preview_status) {
 				if (before_set) {
 					ret = (*before_set)(RESTART_LIGHTLY);
 					CMR_RTN_IF_ERR(ret);
@@ -770,7 +758,7 @@ int camera_set_ctrl(camera_parm_type id,
 		break;
 		
 	case CAMERA_PARM_ENCODE_ROTATION: /* 0, 90, 180, 270 degrees */
-		/*if (CMR_CAPTURE == cxt->camera_status || CMR_CAPTURE_SLICE == cxt->camera_status) {
+		/*if (CMR_CAPTURE == cxt->preview_status || CMR_CAPTURE_SLICE == cxt->camera_status) {
 			
 		}
 		cxt->cap_rot = 0;//(uint32_t)camera_get_rot_angle(parm);*/
@@ -779,7 +767,7 @@ int camera_set_ctrl(camera_parm_type id,
 
 
 	case CAMERA_PARM_SENSOR_ROTATION: /* 0, 90, 180, 270 degrees */
-		if (CMR_PREVIEW == cxt->camera_status) {
+		if (CMR_PREVIEW == cxt->preview_status) {
 			uint32_t tmp_rot = parm;
 			camera_set_rot_angle(&tmp_rot);
 			if(tmp_rot == cxt->prev_rot){
@@ -817,7 +805,7 @@ int camera_set_ctrl(camera_parm_type id,
 		
 	case CAMERA_PARM_CONTRAST:    /* contrast */
 		if (parm != cxt->cmr_set.contrast) {
-			if (CMR_PREVIEW == cxt->camera_status) {
+			if (CMR_PREVIEW == cxt->preview_status) {
 				if (before_set) {
 					ret = (*before_set)(RESTART_LIGHTLY);
 					CMR_RTN_IF_ERR(ret);
@@ -835,7 +823,7 @@ int camera_set_ctrl(camera_parm_type id,
 		
 	case CAMERA_PARM_BRIGHTNESS:/* brightness */
 		if (parm != cxt->cmr_set.brightness) {
-			if (CMR_PREVIEW == cxt->camera_status) {
+			if (CMR_PREVIEW == cxt->preview_status) {
 				if (before_set) {
 					ret = (*before_set)(RESTART_LIGHTLY);
 					CMR_RTN_IF_ERR(ret);
@@ -853,7 +841,7 @@ int camera_set_ctrl(camera_parm_type id,
 		
 	case CAMERA_PARM_WB:              /* use camera_wb_type */
 		if (parm != cxt->cmr_set.wb_mode) {
-			if (CMR_PREVIEW == cxt->camera_status) {
+			if (CMR_PREVIEW == cxt->preview_status) {
 				if (before_set) {
 					ret = (*before_set)(RESTART_LIGHTLY);
 					CMR_RTN_IF_ERR(ret);
@@ -871,7 +859,7 @@ int camera_set_ctrl(camera_parm_type id,
 
 	case CAMERA_PARM_EFFECT:          /* use camera_effect_type */
 		if (parm != cxt->cmr_set.effect) {
-			if (CMR_PREVIEW == cxt->camera_status) {
+			if (CMR_PREVIEW == cxt->preview_status) {
 				if (before_set) {
 					ret = (*before_set)(RESTART_LIGHTLY);
 					CMR_RTN_IF_ERR(ret);
@@ -889,7 +877,7 @@ int camera_set_ctrl(camera_parm_type id,
 
 	case CAMERA_PARM_SCENE_MODE:          /* use camera_scene_mode_type */
 		if (parm != cxt->cmr_set.scene_mode) {
-			if (CMR_PREVIEW == cxt->camera_status) {
+			if (CMR_PREVIEW == cxt->preview_status) {
 				if (before_set) {
 					ret = (*before_set)(RESTART_LIGHTLY);
 					CMR_RTN_IF_ERR(ret);
@@ -909,7 +897,7 @@ int camera_set_ctrl(camera_parm_type id,
 		if (parm != cxt->zoom_level) {
 			CMR_LOGV("Set zoom level %d", parm);
 			cxt->zoom_level = parm;
-			if (CMR_PREVIEW == cxt->camera_status) {
+			if (CMR_PREVIEW == cxt->preview_status) {
 				if (before_set) {
 					ret = (*before_set)(RESTART_LIGHTLY);
 					CMR_RTN_IF_ERR(ret);
@@ -947,7 +935,7 @@ int camera_set_ctrl(camera_parm_type id,
 		break;
 
 	case CAMERA_PARM_NIGHTSHOT_MODE:  /* Night shot mode, snapshot at reduced FPS */
-		if (CMR_PREVIEW == cxt->camera_status) {
+		if (CMR_PREVIEW == cxt->preview_status) {
 
 		}
 
@@ -956,7 +944,7 @@ int camera_set_ctrl(camera_parm_type id,
 
 	case CAMERA_PARM_ANTIBANDING:   /* Use camera_anti_banding_type */
 		if (parm != cxt->cmr_set.flicker_mode) {
-			if (CMR_PREVIEW == cxt->camera_status) {
+			if (CMR_PREVIEW == cxt->preview_status) {
 				if (before_set) {
 					ret = (*before_set)(RESTART_LIGHTLY);
 					CMR_RTN_IF_ERR(ret);
@@ -978,7 +966,7 @@ int camera_set_ctrl(camera_parm_type id,
 
 	case CAMERA_PARM_AF_MODE:
 		CMR_LOGV("Set AF Mode %d", parm);
-		if (CMR_PREVIEW == cxt->camera_status) {
+		if (CMR_PREVIEW == cxt->preview_status) {
 			
 		}
 		cxt->cmr_set.af_mode = (uint32_t)parm;
@@ -986,7 +974,7 @@ int camera_set_ctrl(camera_parm_type id,
 
 	case CAMERA_PARM_ISO:
 		if (parm != cxt->cmr_set.iso) {
-			if (CMR_PREVIEW == cxt->camera_status) {
+			if (CMR_PREVIEW == cxt->preview_status) {
 				if (before_set) {
 					ret = (*before_set)(RESTART_LIGHTLY);
 					CMR_RTN_IF_ERR(ret);
@@ -1007,9 +995,9 @@ int camera_set_ctrl(camera_parm_type id,
 		CMR_LOGV("parm=%d, cxt->cmr_set.video_mode = %d \n", parm, cxt->cmr_set.video_mode);
 		if (parm != cxt->cmr_set.video_mode) {
 
-			CMR_LOGV("cxt->camera_status = %d \n", cxt->camera_status);
+			CMR_LOGV("cxt->preview_status = %d \n", cxt->preview_status);
 
-			if (CMR_PREVIEW == cxt->camera_status) {
+			if (CMR_PREVIEW == cxt->preview_status) {
 
 				if (before_set) {
 					ret = (*before_set)(RESTART_LIGHTLY);
@@ -1169,6 +1157,7 @@ int camera_autofocus_stop(void)
 
 	pthread_mutex_lock(&cxt->cmr_set.set_mutex);
 	cxt->cmr_set.af_cancelled = 1;
+	cxt->cmr_set.bflash = 1;
 	pthread_mutex_unlock(&cxt->cmr_set.set_mutex);
 
 	CMR_LOGV("af_cancelled %d", cxt->cmr_set.af_cancelled);
