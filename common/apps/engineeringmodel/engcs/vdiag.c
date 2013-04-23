@@ -77,11 +77,10 @@ int get_user_diag_buf(char* buf,int len)
 			ext_data_buf[ext_buf_len++] = buf[i];
 		}else if (ext_buf_len > 0 && ext_buf_len < DATA_EXT_DIAG_SIZE){
 			ext_data_buf[ext_buf_len]=buf[i];
+			ext_buf_len++;
 			if ( buf[i] == 0x7e ){
 				is_find = 1;
 				break;
-			}else {
-				ext_buf_len++;
 			}
 		}
 	}

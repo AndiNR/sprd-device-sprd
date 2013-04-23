@@ -164,6 +164,7 @@ LOCAL_SRC_FILES     := eng_pcclient.c  \
 			bt_eut.c \
 			wifi_eut.c \
 			gps_eut.c \
+			adc_calibration.c\
 
 LOCAL_MODULE := engpcclient
 LOCAL_MODULE_TAGS := optional

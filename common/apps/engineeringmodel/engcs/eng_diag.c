@@ -30,7 +30,7 @@ extern void eng_check_factorymode_fornand(void);
 extern void eng_check_factorymode_formmc(void);
 extern int parse_vb_effect_params(void *audio_params_ptr, unsigned int params_size);
 extern int SetAudio_pga_parameter_eng(AUDIO_TOTAL_T *aud_params_ptr, unsigned int params_size, uint32_t vol_level);
-
+extern int eng_battery_calibration(char *data,unsigned int count,char *out_msg,int out_len);
 extern  struct eng_bt_eutops bt_eutops;
 extern  struct eng_wifi_eutops wifi_eutops;
 extern	struct eng_gps_eutops gps_eutops;
@@ -144,6 +144,12 @@ int eng_diag_parse(char *buf,int len)
 				ret = CMD_COMMON;
 			}
 			break;
+		case DIAG_CMD_GETVOLTAGE:
+			ret = CMD_USER_GETVOLTAGE;
+			break;
+		case DIAG_CMD_APCALI:
+			ret = CMD_USER_APCALI;
+			break;
 		default:
 			ENG_LOG("%s: Default\n",__FUNCTION__);
 			ret = CMD_COMMON;
@@ -182,6 +188,13 @@ int eng_diag_user_handle(int type, char *buf,int len)
 		case CMD_USER_AUDIO:
 			memset(eng_audio_diag_buf,0,sizeof(eng_audio_diag_buf));
 			rlen=eng_diag_audio(buf, len, eng_audio_diag_buf);
+			break;
+		case CMD_USER_GETVOLTAGE:
+		case CMD_USER_APCALI:
+			rlen = eng_battery_calibration(buf,len,eng_diag_buf,sizeof(eng_diag_buf));
+			eng_diag_len = rlen;
+			eng_diag_write2pc(get_vser_fd());
+			return 0;
 			break;
 		default:
 			break;
