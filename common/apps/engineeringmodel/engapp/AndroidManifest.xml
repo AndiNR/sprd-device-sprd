@@ -291,6 +291,7 @@
 	<receiver android:name="AutoAnswerReceiver">
             <intent-filter>
       	      <action android:name="android.intent.action.BOOT_COMPLETED" />
+              <action android:name="com.android.modemassert.MODEM_STAT_CHANGE" />
             </intent-filter>
        </receiver>
 
