@@ -59,6 +59,15 @@ public class AutoAnswerReceiver extends BroadcastReceiver {
             }
             /* Modify 20130311 Spreadst of 127737 start the slog when boot end */
         }
+        // 2013/4/23@spreast for bug138559 start
+        if (intent.getAction().equals("com.android.modemassert.MODEM_STAT_CHANGE")) {
+            Log.e(TAG, "modem state changed:" + intent.getExtra("modem_stat"));
+            String mode = SystemProperties.get("ro.product.hardware");
+            if (mode != null && mode.contains("77")) {
+                atSlog(context);
+            }
+        }
+        // 2013/4/23@spreast for bug138559 end
     }
 
     private void atSlog(Context context) {
