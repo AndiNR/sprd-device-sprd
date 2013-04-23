@@ -105,13 +105,13 @@ const RAM_NV_CONFIG*	ramDisk_Init(void)
 	uint32 cnt = 2;
 
 	if (!(fp = fopen(RAMDISK_CFG, "r"))) {
-		printf("NVITEM: use default config!\n");
+		NVITEM_PRINT("NVITEM: use default config!\n");
 		return _ramdiskCfg;
 	}
 
 	cnt = 0;
 	memset(_ramdiskCfg,0,sizeof(_ramdiskCfg));
-	printf("NVITEM:\tpartId\toriginImage\t\tbackupImage\t\tlength\n");
+	NVITEM_PRINT("NVITEM:\tpartId\toriginImage\t\tbackupImage\t\tlength\n");
 	while(fgets(line, sizeof(line), fp)) {
 		line[strlen(line)-1] = '\0';
 		if (line[0] == '#' || line[0] == '\0'){
@@ -127,16 +127,16 @@ const RAM_NV_CONFIG*	ramDisk_Init(void)
 		){
 			continue;
 		}
-		printf("NVITEM:\t0x%8x\t%32s\t%32s\t0x%8x\n",_ramdiskCfg[cnt].partId,_ramdiskCfg[cnt].image_path,_ramdiskCfg[cnt].imageBak_path,_ramdiskCfg[cnt].image_size);
+		NVITEM_PRINT("NVITEM:\t0x%8x\t%32s\t%32s\t0x%8x\n",_ramdiskCfg[cnt].partId,_ramdiskCfg[cnt].image_path,_ramdiskCfg[cnt].imageBak_path,_ramdiskCfg[cnt].image_size);
 		cnt++;
 		if(RAMNV_NUM <= cnt){
-			printf("NVITEM: Max support %d disk, this config has too many disk item!!!\n",RAMNV_NUM);
+			NVITEM_PRINT("NVITEM: Max support %d disk, this config has too many disk item!!!\n",RAMNV_NUM);
 			break;
 		}
 	}
 	fclose(fp);
 	_ramdiskCfg[cnt].partId = 0;
-	printf("NVITEM get config finished! \n");
+	NVITEM_PRINT("NVITEM get config finished! \n");
 	return _ramdiskCfg;
 }
 
@@ -199,12 +199,12 @@ BOOLEAN		ramDisk_Read(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 	//check crc
 	if(ret == size){
 		if(_chkEcc(buf, size)){
-			printf("NVITEM partId%x:%s read success!\n",_ramdiskCfg[idx].partId,firstName);
+			NVITEM_PRINT("NVITEM partId%x:%s read success!\n",_ramdiskCfg[idx].partId,firstName);
 			return 1;
 		}
-		printf("NVITEM partId%x:%s ECC error!\n",_ramdiskCfg[idx].partId,firstName);
+		NVITEM_PRINT("NVITEM partId%x:%s ECC error!\n",_ramdiskCfg[idx].partId,firstName);
 	}
-	printf("NVITEM partId%x:%s read error!\n",_ramdiskCfg[idx].partId,firstName);
+	NVITEM_PRINT("NVITEM partId%x:%s read error!\n",_ramdiskCfg[idx].partId,firstName);
 // 2 read second image
 	memset(buf,0xFF,size);
 	fileHandle = open(secondName, O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
@@ -212,11 +212,11 @@ BOOLEAN		ramDisk_Read(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 	close(fileHandle);
 
 	if(ret != size){
-		printf("NVITEM partId%x:%s read error!\n",_ramdiskCfg[idx].partId,secondName);
+		NVITEM_PRINT("NVITEM partId%x:%s read error!\n",_ramdiskCfg[idx].partId,secondName);
 		return 1;
 	}
 	if(!_chkEcc(buf, size)){
-		printf("NVITEM partId%x:%s ECC error!\n",_ramdiskCfg[idx].partId,secondName);
+		NVITEM_PRINT("NVITEM partId%x:%s ECC error!\n",_ramdiskCfg[idx].partId,secondName);
 		return 1;
 	}
 
@@ -225,7 +225,7 @@ BOOLEAN		ramDisk_Read(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 	fsync(fileHandle);
 	close(fileHandle);
 
-	printf("NVITEM  partId%x:%s read success!\n",_ramdiskCfg[idx].partId,secondName);
+	NVITEM_PRINT("NVITEM  partId%x:%s read success!\n",_ramdiskCfg[idx].partId,secondName);
 	return 1;
 
 }
@@ -256,19 +256,19 @@ BOOLEAN		ramDisk_Write(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 	fileHandle = open(_ramdiskCfg[idx].imageBak_path, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
 	if(size != write(fileHandle, buf, size)){
 		ret =0;
-		printf("NVITEM partId%x:bakup image write fail!\n",_ramdiskCfg[idx].partId);
+		NVITEM_PRINT("NVITEM partId%x:bakup image write fail!\n",_ramdiskCfg[idx].partId);
 	}
 	fsync(fileHandle);
 	close(fileHandle);
 // 3 write origin image
 	fileHandle = open(_ramdiskCfg[idx].image_path, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
 	if(size != write(fileHandle, buf, size)){
-		printf("NVITEM partId%x:origin image write fail!\n",_ramdiskCfg[idx].partId);
+		NVITEM_PRINT("NVITEM partId%x:origin image write fail!\n",_ramdiskCfg[idx].partId);
 		ret = 0;
 	}
 	fsync(fileHandle);
 	close(fileHandle);
-	printf("NVITEM partId%x:image write finished %d!\n",_ramdiskCfg[idx].partId,ret);
+	NVITEM_PRINT("NVITEM partId%x:image write finished %d!\n",_ramdiskCfg[idx].partId,ret);
 	return ret;
 
 }

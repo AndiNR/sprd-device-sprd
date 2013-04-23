@@ -56,10 +56,10 @@ do
 
 	memset(cmd, 0, sizeof(cmd));
 	sprintf(cmd, "%d,%d,%s",ENG_AT_NOHANDLE_CMD,1,NVSYN_CMD);
-	printf("NVITEM:engapi_write: %s !!!\n",cmd);
+	NVITEM_PRINT("NVITEM:engapi_write: %s !!!\n",cmd);
 
 	if(strlen(cmd) != engapi_write(fd, cmd, strlen(cmd))){
-		printf("NVITEM: engapi_write : wirte fail !!!\n");
+		NVITEM_PRINT("NVITEM: engapi_write : wirte fail !!!\n");
 		engapi_close(fd);
 		close(channel_fd);
 		continue;
@@ -67,7 +67,7 @@ do
 
 	memset(cmd, 0, sizeof(cmd));
 	engapi_read(fd, cmd, sizeof(cmd));
-	printf("NVITEM: engapi_read: %s !!!\n",cmd);
+	NVITEM_PRINT("NVITEM: engapi_read: %s !!!\n",cmd);
 
 	if(strcasestr(cmd,"OK") != NULL)
 	{

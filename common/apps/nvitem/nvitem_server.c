@@ -11,7 +11,7 @@ static void *pSaveTask(void* ptr)
 	do
 	{
 		waiteEvent();
-		printf("pSaveTask up\n");
+		NVITEM_PRINT("pSaveTask up\n");
 		saveToDisk();
 	}while(1);
 	return 0;
@@ -35,11 +35,11 @@ int main(void)
 	do
 	{
 		channel_open();
-		printf("NVITEM:channel open\n");
+		NVITEM_PRINT("NVITEM:channel open\n");
 		_initPacket();
 		_syncInit();
 		syncAnalyzer();
-		printf("NVITEM:channel close\n");
+		NVITEM_PRINT("NVITEM:channel close\n");
 		channel_close();
 	}while(1);
 	return 0;
