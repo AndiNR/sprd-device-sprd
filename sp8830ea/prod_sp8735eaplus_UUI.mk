@@ -24,11 +24,33 @@ PRODUCT_AAPT_CONFIG := hdpi
 
 PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
+	universe_ui_support=true\
 	ro.com.android.dataroaming=false \
-	persist.msms.phone_count=2 \
-	persist.msms.phone_default=0 \
-	persist.sys.sprd.modemreset=1 \
-	universe_ui_support=true
+	persist.sys.sprd.modemreset=2 \
+       ro.msms.phone_count=2 \
+ 	persist.msms.phone_default=0 \
+	ro.modem.t.enable=1 \
+	ro.modem.t.dev=/dev/cproc_td \
+	ro.modem.t.tty=/dev/stty_td \
+	ro.modem.t.eth=seth_td \
+	ro.modem.t.snd=1 \
+	ro.modem.t.diag=/dev/slog_td \
+	ro.modem.t.loop=/dev/spipe_td0 \
+	ro.modem.t.nv=/dev/spipe_td1 \
+	ro.modem.t.assert=/dev/spipe_td2 \
+	ro.modem.t.vbc=/dev/spipe_td6 \
+	ro.modem.t.msms.count=1 \
+	ro.modem.w.enable=1 \
+	ro.modem.w.dev=/dev/cproc_w \
+	ro.modem.w.tty=/dev/stty_w \
+	ro.modem.w.eth=seth_w \
+	ro.modem.w.snd=2 \
+	ro.modem.w.diag=/dev/slog_w \
+	ro.modem.w.loop=/dev/spipe_w0 \
+	ro.modem.w.nv=/dev/spipe_w1 \
+	ro.modem.w.assert=/dev/spipe_w2 \
+	ro.modem.w.vbc=/dev/spipe_w6 \
+	ro.modem.w.msms.count=1 
 
 
 # Set default USB interface

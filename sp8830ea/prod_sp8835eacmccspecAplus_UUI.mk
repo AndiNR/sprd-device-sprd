@@ -26,10 +26,21 @@ PRODUCT_AAPT_CONFIG := hdpi
 PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
 	ro.com.android.dataroaming=false \
-	persist.msms.phone_count=2 \
+	persist.sys.sprd.modemreset=2 \
+	universe_ui_support=true \
+	ro.msms.phone_count=2 \
 	persist.msms.phone_default=0 \
-	persist.sys.sprd.modemreset=1 \
-	universe_ui_support=true
+	ro.modem.t.enable=1 \
+	ro.modem.t.dev=/dev/cproc_td \
+	ro.modem.t.tty=/dev/stty_td \
+	ro.modem.t.eth=seth_td \
+	ro.modem.t.snd=1 \
+	ro.modem.t.diag=/dev/slog_td \
+	ro.modem.t.loop=/dev/spipe_td0 \
+	ro.modem.t.nv=/dev/spipe_td1 \
+	ro.modem.t.assert=/dev/spipe_td2 \
+	ro.modem.t.vbc=/dev/spipe_td6 \
+	ro.modem.t.msms.count=2
 
 # Set default USB interface
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
