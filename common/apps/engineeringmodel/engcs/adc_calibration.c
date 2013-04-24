@@ -298,28 +298,16 @@ int  ap_adc_process(int adc_cmd, char * src, int size, MSG_AP_ADC_CNF * pMsgADC)
 	switch (adc_cmd)
 	{
 		case AP_ADC_CALIB:
-		{
-			PrintStr("AP_ADC_CALIB:\n");
 			ap_adc_calibration(pMsgADC);
-		}
 		break;
 		case AP_ADC_LOAD:
-		{       
-			PrintStr("AP_ADC_LOAD:\n");
 			ap_adc_load(pMsgADC);
-		}
 		break;
 		case AP_ADC_SAVE:
-		{
-			PrintStr("AP_ADC_SAVE:\n");
 			ap_adc_save(lpApADCReq, pMsgADC);
-		}
 		break;
 		case AP_GET_VOLT:
-		{
-			PrintStr("AP_GET_VOLT:\n");
 			ap_get_voltage(pMsgADC);
-		}
 		break;
 		default:
 		return 0;
