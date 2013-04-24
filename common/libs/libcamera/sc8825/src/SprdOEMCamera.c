@@ -1839,7 +1839,8 @@ int camera_set_frame_type(camera_frame_type *frame_type, struct frm_info* info)
 				0, 0);
 	}
 	frame_type->format = CAMERA_YCBCR_4_2_0;
-        frame_type->timestamp = info->sec * 1000000000LL + info->usec * 1000;
+    frame_type->timestamp = info->sec * 1000000000LL + info->usec * 1000;
+    frame_type->cap_mode = g_cxt->cap_mode;
 
 	CMR_LOGV("index 0x%x, addr 0x%x 0x%x, w h %d %d, format %d, sec %d usec %d",
 		info->frame_id,

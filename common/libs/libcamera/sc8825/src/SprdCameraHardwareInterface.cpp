@@ -1514,7 +1514,7 @@ callbacks:
 
 }
 
-void SprdCameraHardware::notifyShutter()
+void SprdCameraHardware::notifyShutter(camera_frame_type *frame)
 {
         LOGV("notifyShutter: E");
         print_time();
@@ -1524,8 +1524,13 @@ void SprdCameraHardware::notifyShutter()
         mShutterCallback(mPictureCallbackCookie);*/
         //if(mNotify_cb)
         LOGV("notifyShutter mMsgEnabled: 0x%x.", mMsgEnabled);
-        if (mMsgEnabled & CAMERA_MSG_SHUTTER)
-                mNotify_cb(CAMERA_MSG_SHUTTER, 0, 0, mUser);
+		if(CAMERA_CONTINUE_SHOT_MODE != frame->cap_mode){
+			if (mMsgEnabled & CAMERA_MSG_SHUTTER)
+        		mNotify_cb(CAMERA_MSG_SHUTTER, 0, 0, mUser);
+		}
+		else{
+			mNotify_cb(CAMERA_MSG_SHUTTER, 0, 0, mUser);
+		}
         print_time();
         LOGV("notifyShutter: X");
 }
@@ -2723,7 +2728,7 @@ LOGV("start to getCameraStateStr.");
                                QCS_WAITING_RAW);
                 }
                 else if (cb == CAMERA_EVT_CB_SNAPSHOT_DONE) {
-                    obj->notifyShutter();
+                    obj->notifyShutter((camera_frame_type *)parm4);
                     // Received pre-LPM raw picture. Notify callback now.
                     obj->receiveRawPicture((camera_frame_type *)parm4);
                 }

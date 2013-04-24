@@ -212,6 +212,9 @@ typedef struct {
 	/*face detect*/
 	uint32_t face_num;
 	morpho_FaceRect *face_ptr;
+
+    /*cap mode*/
+    takepicture_mode         cap_mode;
 } camera_frame_type;
 
 typedef enum

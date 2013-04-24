@@ -282,7 +282,7 @@ private:
     Sprd_camera_state change_state(Sprd_camera_state new_state, 
                                        bool lock = true);
 
-    void notifyShutter();
+    void notifyShutter(camera_frame_type *frame);
     void receiveJpegPictureFragment(JPEGENC_CBrtnType *encInfo);
     void receiveJpegPosPicture(void);
     void receivePostLpmRawPicture(camera_frame_type *frame);
