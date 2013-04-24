@@ -2,16 +2,9 @@ LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := busybox
-ifeq ($(BOARD_SP7710GA),true)
-LOCAL_MODULE_TAGS := optional
-else
 LOCAL_MODULE_TAGS := debug
-endif
 LOCAL_MODULE_CLASS := EXECUTABLES
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_SRC_FILES := $(LOCAL_MODULE)
 include $(BUILD_PREBUILT)
 
-ifeq ($(BOARD_SP7710GA),true)
-CUSTOM_MODULES += busybox
-endif
