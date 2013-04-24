@@ -62,7 +62,9 @@ enum dcam_parm_id {
 	CAPTURE_MODE = 0x1000,
 	CAPTURE_SKIP_NUM,
 	CAPTURE_SENSOR_SIZE,
-	CAPTURE_FRM_ID_BASE
+	CAPTURE_FRM_ID_BASE,
+
+	PATH_FRM_DECI = 0x2000,
 };
 
 static char               dev_name[50] = "/dev/video0";
@@ -248,6 +250,7 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *config)
 	uint32_t                 pxl_fmt;
 	uint32_t                 cfg_id = config->channel_id;
 	enum v4l2_buf_type       buf_type;
+	struct v4l2_streamparm   stream_parm;
 	
 	CMR_CHECK_FD;
 
@@ -255,6 +258,14 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *config)
 		return -1;
 
 	CMR_LOGV("channel_id %d", config->channel_id);
+
+	stream_parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	stream_parm.parm.capture.capability = PATH_FRM_DECI;
+
+	stream_parm.parm.capture.reserved[0] = config->channel_id;
+	stream_parm.parm.capture.reserved[1] = config->chn_deci_factor;
+	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
+	CMR_LOGV("channel_id=%d, deci_factor=%d, ret = %d \n", config->channel_id, config->chn_deci_factor, ret);
 
 	if (CHN_1 == cfg_id) {
 		buf_type  = V4L2_BUF_TYPE_VIDEO_CAPTURE;

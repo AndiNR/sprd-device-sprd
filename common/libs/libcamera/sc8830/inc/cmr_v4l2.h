@@ -69,6 +69,7 @@ struct sn_cfg {
 
 struct cap_cfg {
 	uint32_t                            channel_id;
+	uint32_t                            chn_deci_factor;
 	struct img_frm_cap                  cfg;
 };
 
@@ -96,7 +97,7 @@ void cmr_v4l2_evt_reg(cmr_evt_cb  v4l2_event_cb);
 int cmr_v4l2_if_cfg(struct sensor_if *sn_if);
 int cmr_v4l2_sn_cfg(struct sn_cfg *config);
 int cmr_v4l2_cap_cfg(struct cap_cfg *config);
-int cmr_v4l2_buff_cfg (struct buffer_cfg *buf_cfg);
+int cmr_v4l2_buff_cfg(struct buffer_cfg *buf_cfg);
 int cmr_v4l2_cap_start(uint32_t skip_num);
 int cmr_v4l2_cap_stop(void);
 int cmr_v4l2_cap_resume(uint32_t channel_id, uint32_t skip_number, uint32_t deci_factor);
