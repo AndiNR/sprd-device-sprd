@@ -62,15 +62,23 @@ public class AutoAnswerReceiver extends BroadcastReceiver {
         // 2013/4/23@spreast for bug138559 start
         if (intent.getAction().equals("com.android.modemassert.MODEM_STAT_CHANGE")) {
             Log.e(TAG, "modem state changed:" + intent.getExtra("modem_stat"));
-            String mode = SystemProperties.get("ro.product.hardware");
-            if (mode != null && mode.contains("77")) {
-                atSlog(context);
+            if (intent.getExtra("modem_stat").equals("modem_alive")) {
+                String mode = SystemProperties.get("ro.product.hardware");
+                if (mode != null && mode.contains("77")) {
+                    while(!atSlog(context)){
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
             }
         }
         // 2013/4/23@spreast for bug138559 end
     }
 
-    private void atSlog(Context context) {
+    private boolean atSlog(Context context) {
         mEf = new engfetch();
         mSocketID = mEf.engopen();
         mATline = new String();
@@ -91,7 +99,7 @@ public class AutoAnswerReceiver extends BroadcastReceiver {
             outputBufferStream.writeBytes(mATline);
         } catch (IOException e) {
             Log.e(TAG, "writeBytes() error!");
-            return;
+            return false;
         }
         mEf.engwrite(mSocketID, outputBuffer.toByteArray(), outputBuffer.toByteArray().length);
 
@@ -102,6 +110,9 @@ public class AutoAnswerReceiver extends BroadcastReceiver {
         mATResponse = new String(inputBytes, 0, showlen);
 
         Log.d(TAG, "AT response:" + mATResponse);
+        if (mATResponse.contains("OK")) {
+            return true;
+        }
         /* Modify 20130311 Spreadst of 127737 start the slog when boot start */
 //        if (mATResponse.contains("OK")) {
 //            Toast.makeText(context, "Success!", Toast.LENGTH_SHORT).show();
@@ -109,6 +120,7 @@ public class AutoAnswerReceiver extends BroadcastReceiver {
 //            Toast.makeText(context, "Fail!", Toast.LENGTH_SHORT).show();
 //        }
         mEf.engclose(mSocketID);
+        return false;
         /* Modify 20130311 Spreadst of 127737 start the slog when boot end  */
     }
 }
