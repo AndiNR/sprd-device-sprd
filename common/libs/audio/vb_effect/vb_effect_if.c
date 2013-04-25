@@ -234,6 +234,7 @@ int create_vb_effect_params(void)
         ret = do_parse(aud_params_ptr, 4*sizeof(AUDIO_TOTAL_T));
         munmap((void *)aud_params_ptr, 4*sizeof(AUDIO_TOTAL_T));
         close(fd_src_paras);
+        fd_src_paras = -1;
     }
 
     ALOGI("create_vb_effect_params...done");
