@@ -3,63 +3,66 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/types.h>
+#include "engopt.h"
+#include "cutils/properties.h"
+#include "private/android_filesystem_config.h"
 #include "eng_diag.h"
+#include "calibration.h"
 
 #define CONFIG_AP_ADC_CALIBRATION
 #ifdef CONFIG_AP_ADC_CALIBRATION
 
-#define BATTERY_VOL_PATH	"/sys/class/power_supply/battery/voltage_now"
-#define BATTERY_ADC_PATH	"/sys/class/power_supply/battery/real_time_vbat_adc"
-#define BATTER_CALI_CONFIG_FILE	"/productinfo/adv_data"
-typedef enum
+void	initialize_ctrl_file(void)
 {
-    DIAG_AP_CMD_ADC  = 0x0001,
-    DIAG_AP_CMD_LOOP,
-    MAX_DIAG_AP_CMD
-} DIAG_AP_CMD_E;
+	CALI_INFO_DATA_T	cali_info;
+	int ret;
 
+	int fd = open(CALI_CTRL_FILE_PATH,O_RDWR);
 
-#define AP_ADC_CALIB    1
-#define AP_ADC_LOAD     2
-#define AP_ADC_SAVE     3
-#define	AP_GET_VOLT	4
-#define AP_DIAG_LOOP	5
-
-typedef struct
+	if(fd < 0){
+	    fd = open(CALI_CTRL_FILE_PATH,O_RDWR|O_CREAT);
+	}
+	if(fd < 0){
+		ALOGE("%s open %s failed\n",__func__,CALI_CTRL_FILE_PATH);
+		return;
+	}
+	ret = read(fd,&cali_info,sizeof(cali_info));
+	if(ret < 0){
+		ALOGE(" %s read failed...\n",__func__);
+		close(fd);
+		return;
+	}
+	if(cali_info.magic!=CALI_MAGIC){
+		memset(&cali_info,0xff,sizeof(cali_info));
+		cali_info.magic = CALI_MAGIC;
+		lseek(fd,SEEK_SET,0);
+		write(fd,&cali_info,sizeof(cali_info));
+	}
+	close(fd);
+}
+void	disable_calibration(void)
 {
-    unsigned int     	adc[2];           // calibration of ADC, two test point
-    unsigned int 	battery[2];       // calibraton of battery(include resistance), two test point
-    unsigned int    	reserved[8];      // reserved for feature use.
-} AP_ADC_T;
+	CALI_INFO_DATA_T        cali_info;
+        int ret;
 
-typedef struct {
-    unsigned short  cmd;        // DIAG_AP_CMD_E
-    unsigned short  length;   // Length of structure 
-} TOOLS_DIAG_AP_CMD_T;
+        int fd = open(CALI_CTRL_FILE_PATH,O_RDWR);
 
-typedef struct {
-    unsigned int operate; // 0: Get ADC   1: Load ADC    2: Save ADC 
-    unsigned int parameters[12];
-}TOOLS_AP_ADC_REQ_T;
-
-typedef struct {
-    unsigned short status;   // ==0: success, != 0: fail
-    unsigned short length;   // length of  result
-} TOOLS_DIAG_AP_CNF_T;
-
-typedef struct
-{
-    MSG_HEAD_T  msg_head;
-    TOOLS_DIAG_AP_CNF_T diag_ap_cnf;
-    TOOLS_AP_ADC_REQ_T ap_adc_req;
-}MSG_AP_ADC_CNF;
-static unsigned char g_usb_buf_dest[8*1024];
-
+        if(fd < 0)
+                return;
+        if(cali_info.magic!=CALI_MAGIC)
+		cali_info.magic = CALI_MAGIC;
+	if(cali_info.cali_flag != CALI_COMP)
+		cali_info.cali_flag = CALI_COMP;
+	lseek(fd,SEEK_SET,0);
+	write(fd,&cali_info,8);
+	close(fd);
+}
 static int AccessADCDataFile(unsigned char flag, char *lpBuff, int size)
 {
 	int fd = -1;
 	int ret = 0;
-	return 1;
+	CALI_INFO_DATA_T        cali_info;
 
 	fd = open(BATTER_CALI_CONFIG_FILE,O_RDWR);
 	if(flag == 1){
@@ -68,11 +71,23 @@ static int AccessADCDataFile(unsigned char flag, char *lpBuff, int size)
 			if(fd < 0)
 				return 0;
 		}
-		ret = write(fd,lpBuff,size);
+		ret = read(fd,&cali_info,sizeof(cali_info));
+		
+		if(size < sizeof(cali_info.adc_para))
+			memcpy(&cali_info.adc_para,lpBuff,size);
+		else	
+			memcpy(&cali_info.adc_para,lpBuff,sizeof(cali_info.adc_para));
+		lseek(fd,SEEK_SET,0);
+		ret = write(fd,&cali_info,sizeof(cali_info));
 	} else {
 		if(fd < 0)
 			return 0;
-		ret = read(fd,lpBuff,size);
+		ret = read(fd,&cali_info,sizeof(cali_info));
+
+		if(size < sizeof(cali_info.adc_para))
+			memcpy(lpBuff,&cali_info.adc_para,size);
+		else	
+			memcpy(lpBuff,&cali_info.adc_para,sizeof(cali_info.adc_para));
 	}
 	close(fd);
 
@@ -280,7 +295,7 @@ static unsigned int ap_get_voltage(MSG_AP_ADC_CNF *pMsgADC)
         voltage >>= 4;
 
 	para = (int *)(Msg +1);
-        *para = (voltage/10000)<<16;
+        *para = (voltage/10000);
 	pMsgADC->msg_head.len = 12;
 
         return voltage;

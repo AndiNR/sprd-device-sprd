@@ -232,6 +232,7 @@ void *eng_vdiag_thread(void *x)
 		ALOGE("eng_vdiag invalid input\n");
 		return NULL;
 	}
+	initialize_ctrl_file();
 	/*open usb/usart*/
 	ser_fd = open( s_connect_ser_path[param->connect_type], O_RDONLY);
 	if(ser_fd > 0){
