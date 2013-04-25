@@ -154,7 +154,6 @@ static vbc_ctrl_thread_para_t st_vbc_ctrl_thread_para[VBC_PIPE_COUNT] = {0};
 
 static uint32_t android_cur_device = 0x0;   // devices value the same as audiosystem.h
 static int s_is_active = 0;
-static int fd_audio_para = -1;
 static int android_sim_num = 0;
 
 /* Transfer packet by vbpipe, packet format as follows.*/
