@@ -170,7 +170,10 @@ static int gralloc_alloc_ionbuffer_locked(alloc_device_t* dev, size_t size, int 
     	err = ioctl(ion_fd, ION_IOC_ALLOC, &ionAllocData);
     	if(err)
 	{
-		ALOGE("ION_IOC_ALLOC fail");
+		if(is_overlay)
+			ALOGI("overlay is not opened or not enough overlay ion memory, result is:%d" , err);
+		else
+			ALOGE("ION_IOC_ALLOC fail");
 		if(is_cached) close(ion_fd);
 		return -ENOMEM;
     	}
@@ -514,7 +517,7 @@ static int alloc_device_alloc(alloc_device_t* dev, int w, int h, int format, int
 			}
 		} else {
 			if(preferIon) {
-				ALOGW("================allocat  ion memory for rgba reserved buffer size too small,need to alloc normal buffer");
+				ALOGI("================allocat  ion memory for rgba reserved buffer size too small,need to alloc normal buffer");
 				goto AllocNormalBuffer;
 			}
 		}
