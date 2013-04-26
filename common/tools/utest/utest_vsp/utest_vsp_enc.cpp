@@ -65,8 +65,10 @@ static int enc_init(unsigned int width, unsigned int height, int format,
     	MMCodecBuffer StreamMemBfr;
 	MMEncVideoInfo encInfo;
 
+        INFO("enc_init IN\n"); 
 
 	InterMemBfr.common_buffer_ptr = pbuf_inter;
+    	InterMemBfr.common_buffer_ptr_phy = pbuf_inter_phy;
     	InterMemBfr.size = size_inter;
 
 	ExtraMemBfr.common_buffer_ptr = pbuf_extra;
@@ -89,6 +91,8 @@ static int enc_init(unsigned int width, unsigned int height, int format,
 static void enc_set_parameter(int format, int framerate, int cbr, int bitrate, int qp)
 {
 	MMEncConfig encConfig;
+INFO("enc_set_parameter 0\n"); 
+    
 	MP4EncGetConf(&encConfig);
 
 	encConfig.h263En = (format == 0) ? 1 : 0;
@@ -101,6 +105,9 @@ static void enc_set_parameter(int format, int framerate, int cbr, int bitrate, i
 	encConfig.profileAndLevel = 1;
 
 	MP4EncSetConf(&encConfig);
+
+    INFO("enc_set_parameter 1\n"); 
+
 }
 
 
@@ -370,6 +377,8 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
 		goto err;
 	}        
 
+        INFO("pbuf_inter: %x\n", pbuf_inter); 
+
 	size_extra = width * height * 3/2 * 2;
 	pmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
 	pmem_extra->get_phy_addr_from_ion(&phy_addr, &size);
@@ -380,7 +389,8 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
 		ERR("Failed to alloc extra memory\n");
 		goto err;
 	}
-
+        INFO("pbuf_inter: %x\n", pbuf_extra); 
+        
         size_stream = ONEFRAME_BITSTREAM_BFR_SIZE;
 	pmem_stream = new MemoryHeapIon("/dev/ion", size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
 	pmem_stream->get_phy_addr_from_ion(&phy_addr, &size);
@@ -391,6 +401,8 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
 		ERR("Failed to alloc stream memory\n");
 		goto err;
 	}
+
+        INFO("pbuf_stream: %x\n", pbuf_stream); 
     
 	if (enc_init(width, height, format, pbuf_inter, pbuf_inter_phy, size_inter, pbuf_extra, pbuf_extra_phy, size_extra, pbuf_stream, pbuf_stream_phy, size_stream) != 0)
 	{
@@ -398,7 +410,7 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
 		goto err;
 	}
 
-
+INFO("enc_init end\n"); 
 
 	/* step 2 - set vsp  and get header */
 	enc_set_parameter(format, framerate, cbr, bitrate, qp);
@@ -504,8 +516,9 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
 
 		INFO("frame %d: time = %dms, type = %s, size = %d ", framenum_bs, duration, type2str(type), frame_size);
 #if defined(CALCULATE_PSNR)        
-                INFO("psnr (%2.2f %2.2f %2.2f)\n", psnr_y, psnr_u, psnr_v);
-#endif        
+                INFO("psnr (%2.2f %2.2f %2.2f)", psnr_y, psnr_u, psnr_v);
+#endif   
+                INFO("\n");
 
 
 		if (frames != 0)
@@ -528,8 +541,9 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
 		INFO("average time = %dms, average bitrate = %dkbps", time_total_ms/framenum_bs, bs_total_len*8*framerate/framenum_bs/1000);
 
         #if defined(CALCULATE_PSNR)        
-                INFO(", average psnr (%2.2f %2.2f %2.2f)\n", psnr_total[0]/framenum_bs, psnr_total[1]/framenum_bs, psnr_total[2]/framenum_bs);
+                INFO(", average psnr (%2.2f %2.2f %2.2f)", psnr_total[0]/framenum_bs, psnr_total[1]/framenum_bs, psnr_total[2]/framenum_bs);
 #endif        
+                INFO("\n");
 
 	}
 

@@ -60,15 +60,15 @@ void yuv420p_to_yuv420sp(unsigned char* py_src, unsigned char* pu_src, unsigned 
 	}
 }
 
-void yuv420p_to_yvu420sp(unsigned char* py_src, unsigned char* pu_src, unsigned char* pv_src, unsigned char* py_dst, unsigned char* pvu_dst, unsigned int width, unsigned int height)
+void yuv420p_to_yvu420sp(unsigned char* py_src, unsigned char* pu_src, unsigned char* pv_src, unsigned char* py_dst, unsigned char* puv_dst, unsigned int width, unsigned int height)
 {
 	unsigned int i;
 
 	memcpy(py_dst, py_src, width*height);
 	for (i=0; i<width*height/4; i++)
 	{
-		*pvu_dst ++ = *pv_src ++;
-		*pvu_dst ++ = *pu_src ++;
+		*puv_dst ++ = *pu_src ++;
+		*puv_dst ++ = *pv_src ++;
 	}
 }
 
