@@ -16222,6 +16222,7 @@
         mmsport="9201"
         user="mmsiusacellgsm"
         password="mmsiusacellgsm"
+        mmsc="http://mms.iusacell3g.com/"
         type="mms"
     />
     <!-- Moldova Unité -->
