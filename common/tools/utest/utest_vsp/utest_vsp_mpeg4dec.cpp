@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-
+#include <linux/ion.h>
 #include <binder/MemoryHeapIon.h>
 using namespace android;
 
@@ -93,14 +93,24 @@ static void usage()
 }
 
 
-static int dec_init(int format, unsigned char* pheader_buffer, unsigned int header_size, unsigned char* pbuf_inter, unsigned int size_inter, MMCodecBuffer extra_mem[])
+static int dec_init(int format, unsigned char* pheader_buffer, unsigned int header_size, 
+    unsigned char* pbuf_inter, unsigned char* pbuf_inter_phy, unsigned int size_inter, 
+    unsigned char* pbuf_extra, unsigned char* pbuf_extra_phy, unsigned int size_extra)
 {
-	MMCodecBuffer codec_buf;
+	MMCodecBuffer InterMemBfr;
+	MMCodecBuffer ExtraMemBfr;
 	MMDecVideoFormat video_format;
 	int ret;
 
-	codec_buf.int_buffer_ptr = pbuf_inter;
-    	codec_buf.int_size = size_inter;
+        INFO("dec_init IN\n"); 
+
+	InterMemBfr.common_buffer_ptr = pbuf_inter;
+    	InterMemBfr.common_buffer_ptr_phy = pbuf_inter_phy;
+    	InterMemBfr.size = size_inter;
+
+	ExtraMemBfr.common_buffer_ptr = pbuf_extra;
+	ExtraMemBfr.common_buffer_ptr_phy = pbuf_extra_phy;
+    	ExtraMemBfr.size	= size_extra;
 
 	video_format.video_std = format;
 	video_format.i_extra = header_size;
@@ -108,11 +118,13 @@ static int dec_init(int format, unsigned char* pheader_buffer, unsigned int head
 	video_format.frame_width = 0;
     	video_format.frame_height = 0;
 
-	ret = MP4DecInit(&codec_buf,&video_format);
+	ret = MP4DecInit(&InterMemBfr,&video_format);
 	if (ret == 0)
 	{
-		MP4DecMemInit(extra_mem);
+		MP4DecMemInit(&ExtraMemBfr);
 	}
+
+        INFO("dec_init OUT\n"); 
 
 	return ret;
 }
@@ -123,7 +135,7 @@ static int dec_decode_frame(unsigned char* pframe, unsigned int size, int* frame
     	MMDecOutput dec_out;
 	int ret;
 
-	dec_in.pStream = pframe;
+	dec_in.pStream_phy= pframe;
     	dec_in.dataLen = size;
     	dec_in.beLastFrm = 0;
     	dec_in.expected_IVOP = 0;
@@ -183,6 +195,9 @@ static int detect_format(unsigned char* pbuffer, unsigned int size)
 
 	int confidence[5];
 	int i;
+
+    	INFO("size: %d, pbuffer:%0x, %0x, %0x, %0x, %0x, %0x, %0x, %0x\n", size, pbuffer[0], pbuffer[1], pbuffer[2], pbuffer[3], pbuffer[4], pbuffer[5], pbuffer[6], pbuffer[7]);
+
 	for (i=0; i<5; i++)
 	{
 		confidence[i] = sniff_format(pbuffer, size, table_startcode1[i], table_maskcode1[i]);
@@ -257,11 +272,6 @@ static const char* type2str(int type)
 sp<MemoryHeapIon> pmem_extra = NULL;
 sp<MemoryHeapIon> pmem_extra_cachable = NULL;
 
-static int FlushCache(void* aUserData,int* vaddr,int* paddr,int size)
-{
-    return pmem_extra_cachable->flush_ion_buffer((void *)vaddr,(void* )paddr,size);
-}
-
 int main(int argc, char **argv)
 {
 	char* filename_bs = NULL;
@@ -282,9 +292,6 @@ int main(int argc, char **argv)
 	// bitstream buffer, read from bs file
 	unsigned char buffer_data[ONEFRAME_BITSTREAM_BFR_SIZE];
 	int buffer_size = 0;
-	sp<MemoryHeapIon> pmem_bs = NULL;
-	unsigned char* pframe_buffer = NULL;
-	unsigned char* pframe_buffer_phy = NULL;
 
 	// yuv420sp buffer, decode from bs buffer
 	sp<MemoryHeapIon> pmem_yuv420sp = NULL;
@@ -303,14 +310,24 @@ int main(int argc, char **argv)
 
 
 	// VSP buffer
+	sp<MemoryHeapIon> pmem_extra = NULL;
+	unsigned char* pbuf_extra = NULL;
+	unsigned char* pbuf_extra_phy = NULL;
+    
+    	sp<MemoryHeapIon> pmem_inter = NULL;
 	unsigned char* pbuf_inter = NULL;
-	unsigned int size_inter = 0;
-	
-        MMCodecBuffer extra_mem[MAX_MEM_TYPE];
-        memset(extra_mem, 0, sizeof(extra_mem));
+	unsigned char* pbuf_inter_phy = NULL;
+
+        sp<MemoryHeapIon> pmem_stream = NULL;
+	unsigned char* pbuf_stream = NULL;
+	unsigned char* pbuf_stream_phy = NULL;
+    
+	unsigned int size_extra = 0;
+        unsigned int size_inter = 0;
+        unsigned int size_stream = 0;
+        
 	int phy_addr = 0;
 	int size = 0;
-
 
 
 	/* parse argument */
@@ -396,16 +413,16 @@ int main(int argc, char **argv)
 
 	
 	/* bs buffer */
-	pmem_bs = new MemoryHeapIon("/dev/ion", ONEFRAME_BITSTREAM_BFR_SIZE, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
-        if (pmem_bs->getHeapID() < 0)
+	pmem_stream = new MemoryHeapIon("/dev/ion", ONEFRAME_BITSTREAM_BFR_SIZE, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+        if (pmem_stream->getHeapID() < 0)
         {
                   ERR("Failed to alloc bitstream pmem buffer\n");
 		goto err;
         }
-	pmem_bs->get_phy_addr_from_ion(&phy_addr, &size);
-	pframe_buffer = (unsigned char*)pmem_bs->base();
-	pframe_buffer_phy = (unsigned char*)phy_addr;
-	if (pframe_buffer == NULL)
+	pmem_stream->get_phy_addr_from_ion(&phy_addr, &size);
+	pbuf_stream = (unsigned char*)pmem_stream->base();
+	pbuf_stream_phy = (unsigned char*)phy_addr;
+	if (pbuf_stream == NULL)
 	{
 		ERR("Failed to alloc bitstream pmem buffer\n");
 		goto err;
@@ -460,55 +477,40 @@ int main(int argc, char **argv)
 
 
 	/* step 1 - init vsp */
-	size_inter = 500 * 1024;
-	pbuf_inter = (unsigned char*)vsp_malloc(size_inter * sizeof(unsigned char), 4);
+	size_inter = MP4DEC_INTERNAL_BUFFER_SIZE;
+	pmem_inter = new MemoryHeapIon("/dev/ion", size_inter, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+	if (pmem_inter->getHeapID() == NULL)
+	{
+		ERR("Failed to alloc inter memory\n");
+		goto err;
+	}
+
+        pmem_inter->get_phy_addr_from_ion(&phy_addr, &size);
+	pbuf_inter = (unsigned char*)pmem_inter->base();
+	pbuf_inter_phy = (unsigned char*)phy_addr;
 	if (pbuf_inter == NULL)
 	{
 		ERR("Failed to alloc inter memory\n");
 		goto err;
 	}
 
-	extra_mem[SW_CACHABLE].size = 1000 * 1024;
-	extra_mem[SW_CACHABLE].common_buffer_ptr = (unsigned char*)vsp_malloc(extra_mem[SW_CACHABLE].size * sizeof(unsigned char), 4);
-	if (extra_mem[SW_CACHABLE].common_buffer_ptr == NULL)
-	{
-		ERR("Failed to alloc cache memory\n");
-		goto err;
-	}
-	extra_mem[HW_NO_CACHABLE].size = 5000 * 1024;
-	pmem_extra = new MemoryHeapIon("/dev/ion", extra_mem[HW_NO_CACHABLE].size, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+	size_extra = 5000 * 1024;
+	pmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
         if (pmem_extra->getHeapID() < 0)
         {
                     ERR("Failed to alloc extra memory\n");
 		goto err;
         }
 	pmem_extra->get_phy_addr_from_ion(&phy_addr, &size);
-	extra_mem[HW_NO_CACHABLE].common_buffer_ptr= (unsigned char*)pmem_extra->base();
-	extra_mem[HW_NO_CACHABLE].common_buffer_ptr_phy= (unsigned char*)phy_addr;
-	if (extra_mem[HW_NO_CACHABLE].common_buffer_ptr == NULL)
+	pbuf_extra = (unsigned char*)pmem_extra->base();
+	pbuf_extra_phy = (unsigned char*)phy_addr;
+	if (pbuf_extra == NULL)
 	{
 		ERR("Failed to alloc extra memory\n");
 		goto err;
 	}
 
-        extra_mem[HW_CACHABLE].size = 8000 * 1024;
-	pmem_extra_cachable = new MemoryHeapIon("/dev/ion", extra_mem[HW_CACHABLE].size, 0, (1<<31) |ION_HEAP_CARVEOUT_MASK);
-        if (pmem_extra_cachable->getHeapID() < 0)
-            {
-                ERR("Failed to alloc extra memory\n");
-		goto err;
-            }
-	pmem_extra_cachable->get_phy_addr_from_ion(&phy_addr, &size);
-	extra_mem[HW_CACHABLE].common_buffer_ptr= (unsigned char*)pmem_extra_cachable->base();
-	extra_mem[HW_CACHABLE].common_buffer_ptr_phy= (unsigned char*)phy_addr;
-	if (extra_mem[HW_CACHABLE].common_buffer_ptr == NULL)
-	{
-		ERR("Failed to alloc extra memory\n");
-		goto err;
-	}
-
-        MP4Dec_RegFlushCacheCB(FlushCache);
-	if (dec_init(format, NULL, 0, pbuf_inter, size_inter, extra_mem) != 0)
+	if (dec_init(format, NULL, 0, pbuf_inter, pbuf_inter_phy, size_inter, pbuf_extra, pbuf_extra_phy, size_extra) != 0)
 	{
 		ERR("Failed to init VSP\n");
 		goto err;
@@ -549,7 +551,7 @@ int main(int argc, char **argv)
 
 
 			// read a bitstream frame
-			memcpy(pframe_buffer, ptmp, frame_size);
+			memcpy(pbuf_stream, ptmp, frame_size);
 
 			ptmp += frame_size;
 			buffer_size -= frame_size;
@@ -565,7 +567,7 @@ int main(int argc, char **argv)
 			MP4DecSetCurRecPic(pyuv420sp, pyuv420sp_phy, NULL);
 			framenum_bs ++;
 			int64_t start = systemTime();
-			int ret = dec_decode_frame(pframe_buffer, frame_size, &frame_effective, &width_new, &height_new, &type);
+			int ret = dec_decode_frame(pbuf_stream_phy, frame_size, &frame_effective, &width_new, &height_new, &type);
 			int64_t end = systemTime();
 			unsigned int duration = (unsigned int)((end-start) / 1000000L);
 			time_total_ms += duration;
@@ -638,33 +640,16 @@ int main(int argc, char **argv)
 
 
 err:
-	if (extra_mem[HW_NO_CACHABLE].common_buffer_ptr != NULL)
-	{
-    	        pmem_extra.clear();
-		extra_mem[HW_NO_CACHABLE].common_buffer_ptr = NULL;
-	}
-
-        if (extra_mem[HW_CACHABLE].common_buffer_ptr != NULL)
-	{
-    	        pmem_extra_cachable.clear();
-		extra_mem[HW_CACHABLE].common_buffer_ptr = NULL;
-	}
-    
-	if (extra_mem[SW_CACHABLE].common_buffer_ptr != NULL)
-	{
-		vsp_free(extra_mem[SW_CACHABLE].common_buffer_ptr);
-		extra_mem[SW_CACHABLE].common_buffer_ptr = NULL;
-	}
 	if (pbuf_inter != NULL)
 	{
-		vsp_free(pbuf_inter);
+		pmem_inter.clear();
 		pbuf_inter = NULL;
 	}
 
-	if (pframe_buffer != NULL)
+	if (pbuf_stream != NULL)
 	{
-		pmem_bs.clear();
-		pframe_buffer = NULL;
+		pmem_stream.clear();
+		pbuf_stream = NULL;
 	}
 	if (pyuv[0] != NULL)
 	{
