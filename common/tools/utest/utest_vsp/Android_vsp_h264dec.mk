@@ -15,6 +15,7 @@ LOCAL_SRC_FILES := utest_vsp_h264dec.cpp util.c
 
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/../../../../../../vendor/sprd/proprietories-source/opencore/codecs_v2/video/avc_h264_sprd/$(strip $(TARGET_BOARD_PLATFORM))/dec/include
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../../../../../vendor/sprd/proprietories-source/opencore/codecs_v2/video/vsp/$(strip $(TARGET_BOARD_PLATFORM))/inc
 
 LOCAL_SHARED_LIBRARIES := libutils libbinder
 LOCAL_STATIC_LIBRARIES := libsprdavcdecoder

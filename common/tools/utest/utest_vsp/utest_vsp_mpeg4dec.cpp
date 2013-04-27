@@ -640,6 +640,12 @@ int main(int argc, char **argv)
 
 
 err:
+        if (pbuf_extra != NULL)
+	{
+		pmem_extra.clear();
+		pbuf_extra = NULL;
+	}
+    
 	if (pbuf_inter != NULL)
 	{
 		pmem_inter.clear();
