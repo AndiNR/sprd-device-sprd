@@ -8,12 +8,17 @@ LOCAL_C_INCLUDES    +=  $(LOCAL_PATH) \
 			device/sprd/common/apps/engineeringmodel/engcs
 LOCAL_SRC_FILES:= \
 	nvitem_buf.c \
-	nvitem_channel.c \
 	nvitem_fs.c \
 	nvitem_os.c \
 	nvitem_packet.c \
 	nvitem_server.c \
-	nvitem_sync.c
+	nvitem_sync.c	
+
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
+LOCAL_SRC_FILES += nvitem_channe_spipe.c
+else
+LOCAL_SRC_FILES += nvitem_channel.c
+endif
 
 LOCAL_SHARED_LIBRARIES := \
     libhardware_legacy \
