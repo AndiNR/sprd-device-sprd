@@ -779,7 +779,8 @@ int eng_diag_factorymode(char *buf,int len, char *rsp)
 {
 	char *pdata=NULL;
 	MSG_HEAD_T *head_ptr=NULL;
-	
+	char value[PROPERTY_VALUE_MAX];
+
 	head_ptr = (MSG_HEAD_T *)(buf+1);		
 	pdata = buf + DIAG_HEADER_LENGTH + 1; //data content;
 
@@ -787,6 +788,17 @@ int eng_diag_factorymode(char *buf,int len, char *rsp)
 
 	switch(*pdata) {
 		case 0x00:
+			ENG_LOG("%s: should close the vser,gser\n",__FUNCTION__);
+			property_get("persist.sys.usb.config",value,"mass_storage");
+			//we only care the vser,gser,disable them.
+			if(strstr(value,"adb") != NULL){//if has adb
+				property_set("sys.usb.config","mass_storage,adb");
+				property_set("persist.sys.usb.config","mass_storage,adb");
+			}else{
+				property_set("sys.usb.config","mass_storage");
+				property_set("persist.sys.usb.config","mass_storage");
+			}
+
 		case 0x01:
 			eng_sql_string2int_set(ENG_TESTMODE, *pdata);
 			#ifdef CONFIG_EMMC
