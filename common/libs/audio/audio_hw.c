@@ -1742,7 +1742,10 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     int ret, val = 0;
 
     BLUE_TRACE("[in_set_parameters], kvpairs=%s devices:0x%x mode:%d ", kvpairs,adev->devices,adev->mode);
-
+    if (adev->call_start) {
+        ALOGI("Voice call, no need care.");
+        return 0;
+    }
     parms = str_parms_create_str(kvpairs);
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_INPUT_SOURCE, value, sizeof(value));
