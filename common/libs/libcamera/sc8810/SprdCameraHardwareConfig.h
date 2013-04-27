@@ -321,6 +321,7 @@ struct config_element sprd_front_camera_hardware_config[] = {
         {"focus-distances", "2.0,2.5,3.75,Infinity"},
 	{"max-num-detected-faces-hw", "0"},
 	{"smile-snap-mode","0"},
+	{"ycbcr", "0"},
 	{"hdr-supported","false"},
        {"null-window","0"}
 };
@@ -424,6 +425,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"max-num-focus-areas", "3"},
 #endif
 	{"smile-snap-mode","0"},
+	{"ycbcr", "0"},
 	{"hdr-supported","false"},
        {"null-window","0"}
 };
