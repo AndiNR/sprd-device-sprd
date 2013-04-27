@@ -137,6 +137,7 @@ PRODUCT_COPY_FILES := \
 	device/sprd/partner/brcm/gps/gps.default.so:/system/lib/hw/gps.default.so
 
 BOARD_WLAN_DEVICE_REV       := bcm4330_b2
+WLAN_FEATURE_CUST           := cmcc
 $(call inherit-product, hardware/broadcom/wlan/bcmdhd/firmware/bcm4330/device-bcm.mk)
 $(call inherit-product, $(BOARDDIR)/../common/apps/engineeringmodel/module.mk)
 $(call inherit-product, $(BOARDDIR)/../common/apps/modemassert/module.mk)
