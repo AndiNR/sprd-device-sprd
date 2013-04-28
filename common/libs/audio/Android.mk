@@ -35,6 +35,10 @@ endif
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc7710)
 endif
 
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
+LOCAL_CFLAGS += -DAUDIO_SPIPE_TD
+endif
+
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
 	external/expat/lib \
