@@ -35,8 +35,6 @@ PRODUCT_PACKAGES := \
 	CalendarProvider \
 	SyncProvider \
 	bluetooth-health \
-	hostapd \
-	hcidump \
 	hciconfig \
 	hcitool \
 	hcidump \
