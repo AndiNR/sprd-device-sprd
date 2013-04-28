@@ -933,13 +933,16 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
 	return 0;
 }
 
-int main(void)
+int main (int argc, char** argv)
 {
 	int fd, rc, califlag=0;
 	int engtest=0;
 	char cmdline[ENG_CMDLINE_LEN];
 	eng_thread_t t1,t2, t3,t4, t5;
-
+	int opt;
+	int type;
+	char name[10];
+	int temp =0;
 #if 0
 	int index;
 	index = eng_sql_string2int_get("index");
@@ -954,6 +957,26 @@ int main(void)
 	system(cmdline);
 
 #endif
+
+	while ( -1 != (opt = getopt(argc, argv, "t:"))) {
+		switch (opt) {
+			case 't':
+				temp =1;
+				memset(name,0,10);
+				type = atoi(optarg);
+				if (type){
+					strcpy(name,"engtd");
+				} else {
+					strcpy(name,"engw");
+				}
+				break;
+			default:
+				exit(EXIT_FAILURE);
+		}
+	}
+
+	ALOGD("engpcclient temp =%d",temp);
+
 	eng_sqlite_create();
 
 	eng_parse_cmdline(&cmdparam);
@@ -976,39 +999,55 @@ int main(void)
 
 	set_vlog_priority();
 	
+	ENG_LOG("vlog thread start0");
+
 	if (0 != eng_thread_create( &t1, eng_vlog_thread, &cmdparam)){
 		ENG_LOG("vlog thread start error");
 	}
 
+	ENG_LOG("vlog thread start1");
 	if (0 != eng_thread_create( &t2, eng_vdiag_thread, &cmdparam)){
 		ENG_LOG("vdiag thread start error");
 	}
 
+	ENG_LOG("vlog thread start2");
 	if (0 != eng_thread_create( &t3, eng_modemreset_thread, NULL)){
 		ENG_LOG("vdiag thread start error");
 	}
 
+	ENG_LOG("vlog thread start3");
 	if (0 != eng_thread_create( &t4, eng_sd_log, NULL)){
 		ENG_LOG("sd log thread start error");
 	}
 
+	ENG_LOG("vlog thread start4");
+
 	if(cmdparam.califlag  != 1  || cmdparam.nativeflag  != 1)
 	{
-		rc = eng_pcclient_init();
+		if ( temp != 1) {
+			rc = eng_pcclient_init();
 
-		if(rc == -1) {
-			ENG_LOG("%s: init fail, exit\n",__func__);
-			return -1;
+			if(rc == -1) {
+				ENG_LOG("%s: init fail, exit\n",__func__);
+				return -1;
+			}
+
+			if (0 != eng_thread_create( &t5, eng_atauto_thread, NULL)){
+				ENG_LOG("atauto thread start error");
+			}
+
+			eng_pcclient_hdlr(NULL);
+		}else{
+			ENG_LOG(" engpcclient wihle1 ");
+			while(1){
+				sleep(10000);
+			}
 		}
-
-		if (0 != eng_thread_create( &t5, eng_atauto_thread, NULL)){
-			ENG_LOG("atauto thread start error");
-		}
-
-		eng_pcclient_hdlr(NULL);
 	}else{
 		/*calibration mode for native (AP dirrectily  communicates with PC tool)
-		    keep eng_pcclient thread alive*/
+		  keep eng_pcclient thread alive*/
+
+		ENG_LOG(" engpcclient wihle ");
 		while(1){
 			sleep(10000);
 		}

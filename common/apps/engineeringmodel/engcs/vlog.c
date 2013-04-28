@@ -28,7 +28,8 @@ static char* s_connect_ser_path[]={
 	NULL
 };
 static char* s_cp_pipe[]={
-	"/dev/vbpipe0", //cp_td
+	//"/dev/vbpipe0", //cp_td
+	"/dev/slog_td",	
 	NULL
 };
 
@@ -68,6 +69,8 @@ void *eng_vlog_thread(void *x)
 	struct eng_param * param = (struct eng_param *)x;
 	int i = 0;
 
+	ENG_LOG("eng_vlog  start\n");
+
 	if(param == NULL){
 		ALOGE("eng_vlog invalid input\n");
 		return NULL;
@@ -88,7 +91,7 @@ void *eng_vlog_thread(void *x)
 	 do{
 		pipe_fd = open(s_cp_pipe[param->cp_type], O_RDONLY);
 		if(pipe_fd < 0) {
-			ALOGE("eng_vlog cannot open vpipe0, times:%d\n", wait_cnt);
+			ALOGE("eng_vlog cannot open vpipe0, times:%d, %s\n", wait_cnt,strerror(errno));
 			
 			sleep(5);
 		}

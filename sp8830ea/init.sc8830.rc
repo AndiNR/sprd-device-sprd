@@ -91,8 +91,8 @@ service rawdatad /bin/rawdatad
 #    class main
 #    oneshot
 
-#service engpcclient /system/bin/engpcclient
-#    class main
+service engpcclient /system/bin/engpcclient -t 1
+    class main
 #    disabled
 #    oneshot
 
