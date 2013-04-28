@@ -8,6 +8,7 @@ ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 include $(LOCAL_PATH)/Android_vsp_enc.mk
 include $(LOCAL_PATH)/Android_vsp_mpeg4dec.mk
 include $(LOCAL_PATH)/Android_vsp_h264dec.mk
+include $(LOCAL_PATH)/Android_vsp_h264enc.mk
 
 endif
 
