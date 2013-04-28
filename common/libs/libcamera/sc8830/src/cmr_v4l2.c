@@ -269,8 +269,11 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *config)
 
 	if (CHN_1 == cfg_id) {
 		buf_type  = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	} else {
+	} else  if (CHN_2 == cfg_id) {
 		buf_type  = V4L2_BUF_TYPE_PRIVATE;
+	} else {
+		/* CHN_0 */
+		buf_type  = V4L2_BUF_TYPE_VIDEO_OUTPUT;
 	}
 
 	/* firstly, set the crop rectangle PATH1 module, this should be called before VIDIOC_TRY_FMT called */
