@@ -25,4 +25,10 @@
 /dev/vbpipe6            0660     media   audio
 
 /dev/slog_td            0666     system  system
-/dev/spipe_td*          0666     system  system
++/dev/spipe_td0          0666     system  system
++/dev/spipe_td1          0666     system  system
++/dev/spipe_td2          0666     system  system
++/dev/spipe_td3          0666     system  system
++/dev/spipe_td4          0666     system  system
++/dev/spipe_td5          0666     system  system
++/dev/spipe_td6          0660     media   audio

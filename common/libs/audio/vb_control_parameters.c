@@ -146,7 +146,11 @@ support multiple pipe:
 static char s_vbc_ctrl_pipe_info[VBC_PIPE_COUNT][VBC_PIPE_NAME_MAX_LEN] =
 {
 		//{"/dev/vbpipe5"},
+#ifdef AUDIO_SPIPE_TD
+		{"/dev/spipe_td6"}
+#else
 		{"/dev/vbpipe6"}
+#endif
 };
 
 static pthread_t s_vbc_ctrl_thread_id[VBC_PIPE_COUNT] ={0};
