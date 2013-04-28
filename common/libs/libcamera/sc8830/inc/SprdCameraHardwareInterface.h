@@ -234,7 +234,7 @@ private:
 	void                            restoreFreq();
 	bool                            displayOneFrame(uint32_t width, 
 							uint32_t height,
-							uint32_t phy_addr);
+							uint32_t phy_addr, char *frame_addr);
 	/* These constants reflect the number of buffers that libqcamera requires
 	for preview and raw, and need to be updated when libqcamera
 	changes.

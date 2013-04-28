@@ -564,6 +564,12 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 		strcat(file_name, ".raw");
 		CMR_LOGV("file name %s", file_name);
 		fp = fopen(file_name, "wb");
+
+		if(NULL == fp){
+			CMR_LOGV("aiden 1: can not open file: %s \n", file_name);
+			return 0;
+		}
+			
 		fwrite((void*)addr->addr_y, 1, width * height, fp);
 	        fclose(fp);
 
@@ -580,6 +586,11 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 		strcat(file_name, ".raw");
 		CMR_LOGV("file name %s", file_name);
 		fp = fopen(file_name, "wb");
+		if(NULL == fp){
+			CMR_LOGV("aiden 2: can not open file: %s \n", file_name);
+			return 0;
+		}
+
 		if (IMG_DATA_TYPE_YUV420 == img_fmt) {
 			fwrite((void*)addr->addr_u, 1, width * height / 2, fp);
 		} else {
@@ -594,6 +605,11 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 		CMR_LOGV("file name %s", file_name);
 
 		fp = fopen(file_name, "wb");
+		if(NULL == fp){
+			CMR_LOGV("aiden 3: can not open file: %s \n", file_name);
+			return 0;
+		}
+
 		fwrite((void*)addr->addr_y, 1, addr->addr_u, fp);
 	        fclose(fp);
 	} else if (IMG_DATA_TYPE_RAW == img_fmt) {
@@ -604,6 +620,11 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 		CMR_LOGV("file name %s", file_name);
 
 		fp = fopen(file_name, "wb");
+		if(NULL == fp){
+			CMR_LOGV("aiden 4: can not open file: %s \n", file_name);
+			return 0;
+		}
+
 		fwrite((void*)addr->addr_y, 1,  (uint32_t)(width * height * 5 / 4), fp);
 	        fclose(fp);
 	}

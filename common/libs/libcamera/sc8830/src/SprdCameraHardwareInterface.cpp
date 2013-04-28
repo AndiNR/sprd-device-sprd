@@ -1764,7 +1764,7 @@ bool SprdCameraHardware::getCameraLocation(camera_position_type *pt)
 	return result;
 }
 
-bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32_t phy_addr)
+bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32_t phy_addr, char *virtual_addr)
 {
 	if (!mPreviewWindow || !mGrallocHal || 0 == phy_addr) {
 		return false;
@@ -1786,13 +1786,16 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 	ret = mGrallocHal->lock(mGrallocHal, *buf_handle, GRALLOC_USAGE_SW_WRITE_OFTEN,
 							0, 0, width, height, &vaddr);
 	//if the ret is 0 and the vaddr is NULL, whether the unlock should be called?
+
+	
 	if (0 != ret || NULL == vaddr)
 	{
 		LOGE("%s: failed to lock gralloc buffer", __func__);
 		return false;
 	}
 
-	ret = camera_copy_data_virtual(width, height, phy_addr, (uint32_t)vaddr);
+	//ret = camera_copy_data_virtual(width, height, phy_addr, (uint32_t)vaddr);
+	memcpy(vaddr, virtual_addr, width*height*3/2);
 	mGrallocHal->unlock(mGrallocHal, *buf_handle);
 	
 	if(0 != ret) {
@@ -1873,7 +1876,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 	height = frame->dy;/*mPreviewHeight;*/
 	LOGV("receivePreviewFrame: width=%d, height=%d \n",width, height);
 
-	if (!displayOneFrame(width, height, frame->buffer_phy_addr))
+	if (!displayOneFrame(width, height, frame->buffer_phy_addr, (char *)frame->buf_Virt_Addr))
 	{
 		LOGE("%s: displayOneFrame failed!", __func__);
 	}
@@ -1991,7 +1994,7 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
 		goto callbackraw;
 	}
 		
-	if (!displayOneFrame(width, height, phy_addr))
+	if (!displayOneFrame(width, height, phy_addr, (char *)frame->buf_Virt_Addr))
 	{
 		LOGE("%s: displayOneFrame failed", __func__);
 	}

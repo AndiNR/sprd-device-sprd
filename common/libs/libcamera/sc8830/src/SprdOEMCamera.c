@@ -1881,9 +1881,9 @@ int camera_set_frame_type(camera_frame_type *frame_type, struct frm_info* info)
 		}
 		frame_type->dx = g_cxt->display_size.width;
 		frame_type->dy = g_cxt->display_size.height;
-#if 0
-		if (1 == g_cxt->pre_frm_cnt) {
-			camera_save_to_file(11,
+#if 1
+		if (( g_cxt->pre_frm_cnt > 5) && ( g_cxt->pre_frm_cnt < 8)) {
+			camera_save_to_file(g_cxt->pre_frm_cnt,
 					IMG_DATA_TYPE_YUV420,
 					frame_type->dx,
 					frame_type->dy,
