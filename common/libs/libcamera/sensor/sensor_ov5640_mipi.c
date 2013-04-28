@@ -626,8 +626,11 @@ LOCAL const SENSOR_REG_T ov5640_1280x960_setting[] = {
      {0x460c,0x22},
      {0x3824,0x02},	
      {0x460b,0x37},
-	 
+#ifdef CONFIG_ARCH_SC8825
      {0x3503,0x03}	// AEC/AGC off
+#else
+     {0x3503,0x00}	// AEC/AGC on
+#endif
 };
 LOCAL const SENSOR_REG_T ov5640_1280x960_jpeg_setting[] = {
      /*@@YUV_1280*960_15fps*/
@@ -748,8 +751,11 @@ LOCAL const SENSOR_REG_T ov5640_1600x1200_setting[] = {
      {0x460c,0x22},
      {0x3824,0x02},	
      {0x460b,0x37},
-	 
+#ifdef CONFIG_ARCH_SC8825
      {0x3503,0x03}	// AEC/AGC off
+#else
+     {0x3503,0x00}	// AEC/AGC on
+#endif
 };
 
 LOCAL const SENSOR_REG_T ov5640_1600x1200_jpeg_setting[] = {
@@ -809,7 +815,7 @@ LOCAL const SENSOR_REG_T ov5640_1600x1200_jpeg_setting[] = {
      {0x501f,0x00},
      {0x4713,0x02},
      {0x460b,0x35},
-     
+
      {0x3503,0x03}	// AEC/AGC off
 };
 
@@ -882,7 +888,12 @@ LOCAL const SENSOR_REG_T ov5640_2048x1536_setting[] = {
      //{0x3824,0x02},	
      {0x460b,0x37},
 */     
+
+#ifdef CONFIG_ARCH_SC8825
      {0x3503,0x03}	// AEC/AGC off
+#else
+     {0x3503,0x00}	// AEC/AGC on
+#endif
 };
 
 LOCAL const SENSOR_REG_T ov5640_2048x1536_jpeg_setting[] = {
@@ -1018,7 +1029,11 @@ LOCAL const SENSOR_REG_T ov5640_2592x1944_setting[] = {
      {0x3824,0x02},	
      {0x460b,0x37},
   
+#ifdef CONFIG_ARCH_SC8825
      {0x3503,0x03}	// AEC/AGC off
+#else
+     {0x3503,0x00}	// AEC/AGC on
+#endif
 };
 
 LOCAL const SENSOR_REG_T ov5640_2592x1944_jpeg_setting[] = {
