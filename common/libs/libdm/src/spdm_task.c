@@ -234,7 +234,7 @@ static void * dmtask(void *arg)
 					if ( (gbl_req_ptr->buf[17]&0x30) == 0x30)
 					{
 						mState = SPRD_DM_STATE_CONTINUE;
-						spdm_openDialogCb(2, "是否接受手机增强售后服务? ", "DM Message", 30);
+						spdm_openDialogCb(2, "是否接受手机增强售后服务? ", "DM Message", 150);  // wait user response at most 150 secs
 					
 						break;
 					}
