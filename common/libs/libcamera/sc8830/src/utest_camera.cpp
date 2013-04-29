@@ -104,8 +104,7 @@ static int utest_dcam_param_set(int argc, char **argv)
 			}
 		} else if (strcmp(argv[i], "-h") == 0 && (i < argc-1)) {
 			cmr_cxt_ptr->capture_height = atoi(argv[++i]);
-			if((0 >= cmr_cxt_ptr->capture_height) ||
-				(cmr_cxt_ptr->capture_height % 16)) {
+			if((0 >= cmr_cxt_ptr->capture_height)) {
 				ERR("the height of captured picture is invalid");
 				return -1;
 			}

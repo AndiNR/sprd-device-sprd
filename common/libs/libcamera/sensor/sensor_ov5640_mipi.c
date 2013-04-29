@@ -1394,7 +1394,7 @@ LOCAL uint32_t _ov5640_Identify(uint32_t param)
 			     pid_value, ver_value);
 		if (ov5640_VER_VALUE == ver_value) {
 			ret_value = SENSOR_SUCCESS;
-			SENSOR_PRINT("this is ov5640 sensor !");
+			SENSOR_PRINT("this is ov5640 yuv mipi sensor !");
 		} else {
 			SENSOR_PRINT("this is OV%x%x sensor !", pid_value, ver_value);
 		}
@@ -2116,7 +2116,13 @@ int OV5640_get_sysclk(void)
 	temp2 = temp1 & 0x03;
 	sclk_rdiv = sclk_rdiv_map[temp2];
 
+	SENSOR_PRINT("temp1 = 0x%x, temp2 = 0x%x, sclk_rdiv = 0x%x, Multiplier = 0x%x, PreDiv = 0x%x \n",
+		temp1, temp2, sclk_rdiv, Multiplier, PreDiv);
+
 	VCO = 2400 * Multiplier / PreDiv;//if MCLK = 24M, then XVCLK = 2400
+
+	SENSOR_PRINT("VCO = 0x%x, SysDiv = 0x%x, Pll_rdiv = 0x%x, Bit_div2x = 0x%x, sclk_rdiv = 0x%x \n",
+		VCO, SysDiv, Pll_rdiv, Bit_div2x, sclk_rdiv);
 
 	sysclk = VCO / SysDiv / Pll_rdiv * 2 / Bit_div2x / sclk_rdiv;
 

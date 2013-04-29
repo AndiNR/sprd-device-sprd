@@ -1449,7 +1449,7 @@ LOCAL uint32_t _ov5640_Identify(uint32_t param)
 			     pid_value, ver_value);
 		if (ov5640_VER_VALUE == ver_value) {
 			ret_value = SENSOR_SUCCESS;
-			SENSOR_PRINT("SENSOR: this is ov5640 sensor ! \n");
+			SENSOR_PRINT("SENSOR: this is ov5640 yuv ccir sensor  ! \n");
 		} else {
 			SENSOR_PRINT("this is OV%x%x sensor !", pid_value, ver_value);
 		}

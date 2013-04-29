@@ -306,7 +306,16 @@ int camera_isp_init(void)
 	struct isp_video_limit   isp_limit;
 	SENSOR_EXP_INFO_T		 *sensor_info_ptr;
 
-	//return ret; // aiden debug
+	CMR_LOGV("inited, %d, tool_cap_raw_mode=%d \n", ctrl->isp_inited, g_cxt->tool_cap_raw_mode);
+
+	CMR_PRINT_TIME;
+#if 0
+	if(CAMERA_TOOL_CAP_RAW_ENABLE == g_cxt->tool_cap_raw_mode){
+		/* tmp solution for isp init fail */
+		CMR_LOGV("Tool Raw Mode, no need ISP ");
+		return ret; // aiden debug
+	}
+#endif
 	if (0 == ctrl->sensor_inited || V4L2_SENSOR_FORMAT_RAWRGB != g_cxt->sn_cxt.sn_if.img_fmt) {
 		CMR_LOGI("No need to init ISP %d %d", ctrl->sensor_inited, g_cxt->sn_cxt.sn_if.img_fmt);
 		goto exit;
@@ -3354,9 +3363,13 @@ int camera_capture_init_raw(void)
 
 	sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode];
 
+	CMR_LOGV("capture_mode=%d, w=%d, h=%d",
+		g_cxt->sn_cxt.capture_mode, sensor_mode->width, sensor_mode->height);
+
 	sensor_cfg.sn_size.width  = sensor_mode->width;
 	sensor_cfg.sn_size.height = sensor_mode->height;
 	sensor_cfg.frm_num        = 1;
+
 	ret = cmr_v4l2_sn_cfg(&sensor_cfg);
 	if (ret) {
 		CMR_LOGE("Failed to set V4L2 the size of sensor");

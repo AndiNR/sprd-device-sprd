@@ -1048,7 +1048,7 @@ LOCAL uint32_t _ov5640_Identify(uint32_t param)
 		if (ov5640_VER_VALUE == ver_value) {
 			Sensor_InitRawTuneInfo();
 			ret_value = SENSOR_SUCCESS;
-			SENSOR_PRINT("SENSOR_OV5640: this is ov5640 sensor !");
+			SENSOR_PRINT("SENSOR_OV5640: this is ov5640 mipi raw sensor !");
 		} else {
 			SENSOR_PRINT
 			    ("SENSOR_OV5640: Identify this is OV%x%x sensor !", pid_value, ver_value);
