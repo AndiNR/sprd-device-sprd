@@ -1774,7 +1774,7 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
 
     //width = 640;
     //height = 480;
-    width  = mPreviewWidth;
+    width  = mPreviewWidth + mPreviewWidth%4;
     height = mPreviewHeight;
 
 
@@ -1800,11 +1800,11 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
             if(NULL == vaddr){
                 ALOGE("Fail to get gralloc buffer.");
                 goto callbackraw;
+            }else {
+                //ALOGI("OK to get gralloc buffer. vaddr: 0x%x, frame_addr: 0x%x, frame->buf_Virt_Addr: 0x%x.", (uint32_t)vaddr, (uint32_t)frame_addr, (uint32_t)frame->buf_Virt_Addr);
             }
-            else{
-            //ALOGI("OK to get gralloc buffer. vaddr: 0x%x, frame_addr: 0x%x, frame->buf_Virt_Addr: 0x%x.", (uint32_t)vaddr, (uint32_t)frame_addr, (uint32_t)frame->buf_Virt_Addr);
-			}
 
+            ALOGV("width %d, height %d, stride %d, frame->dx %d, frame->dy %.", width, height, stride, frame->dx, frame->dy);
 #ifdef USE_ION_MEM
             if( 0 != camera_get_data_redisplay(phy_addr, width, height, frame->buffer_phy_addr, frame->dx, frame->dy)){
                 ALOGE("Fail to camera_get_data_redisplay.");
@@ -1827,7 +1827,6 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
             if(stride != width){
                 dst_addr = vaddr;
                 src_addr = tmp_vir_addr;
-                ALOGE("receivePreviewFrame, src_width %d", src_width);
                 for(i=0;i<height*3/2;i++) {
                     memcpy(dst_addr,src_addr,width);
                     dst_addr =(void*)((uint32_t)dst_addr+stride);
