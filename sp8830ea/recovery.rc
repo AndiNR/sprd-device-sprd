@@ -67,6 +67,6 @@ on property:service.adb.root=1
 service engpcclient /system/bin/engpcclient
     user root
 
-service nvitem /system/bin/nvm_daemon
+service nvitem /system/bin/nvitemd
     user root
 
