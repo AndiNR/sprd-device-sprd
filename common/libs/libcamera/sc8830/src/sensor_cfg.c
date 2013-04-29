@@ -57,6 +57,7 @@ const SENSOR_INFO_T* main_sensor_infor_tab[]=
 {
 #ifdef CONFIG_BACK_CAMERA_MIPI
 	&g_ov5640_mipi_yuv_info,
+	//&g_ov5640_mipi_raw_info, // aiden tmp 
 	&g_s5k5ccgx_yuv_info_mipi,
 	&g_s5k4e1ga_mipi_raw_info,
 	&g_hi351_mipi_yuv_info,

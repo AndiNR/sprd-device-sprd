@@ -61,7 +61,7 @@ extern "C"
 #define CMR_EVT_CAP_EXIT                             (CMR_EVT_CAP_BASE + 1)
 #define CMR_EVT_CAP_TX_DONE                          (CMR_EVT_CAP_BASE + 2)
 #define CMR_EVT_CAP_START_CAP                        (CMR_EVT_CAP_BASE + 3)
-
+#define CMR_EVT_CAP_RAW_TX_DONE                      (CMR_EVT_CAP_BASE + 4)
 
 #define CAMERA_OEM_MSG_QUEUE_SIZE                    50
 #define CAMERA_AF_MSG_QUEUE_SIZE                     5
@@ -260,8 +260,11 @@ struct camera_context {
 	volatile uint32_t        is_working;
 	uint32_t                 preview_status;
 	uint32_t                 capture_status;
+	uint32_t                 capture_raw_status;
 	uint32_t                 is_take_picture;
 	pthread_mutex_t          take_mutex;
+	pthread_mutex_t          take_raw_mutex;
+	uint32_t                 chn_0_status;
 	uint32_t                 chn_1_status;
 	uint32_t                 chn_2_status;
 	uint32_t                 recover_status;
@@ -347,6 +350,7 @@ struct camera_context {
 	/*for setting*/
 	struct camera_settings   cmr_set;
 	uint32_t                 orientation;
+	uint32_t                 tool_cap_raw_mode;
 };
 
 uint32_t camera_get_rot_angle(uint32_t degree);

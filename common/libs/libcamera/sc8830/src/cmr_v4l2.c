@@ -312,6 +312,8 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *config)
 			config->cfg.need_binning = 1;
 		}
 		CMR_RTN_IF_ERR(ret);
+	} else {
+		CMR_LOGV("fourcc not founded dst_img_fmt=0x%x \n", config->cfg.dst_img_fmt);
 	}
 
 exit:
@@ -335,8 +337,10 @@ int cmr_v4l2_buff_cfg (struct buffer_cfg *buf_cfg)
 
 	if (CHN_1 == buf_cfg->channel_id) {
 		v4l2_buf.type  = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	} else {
+	} else if (CHN_2 == buf_cfg->channel_id) {
 		v4l2_buf.type  = V4L2_BUF_TYPE_PRIVATE;
+	} else {
+		v4l2_buf.type  = V4L2_BUF_TYPE_VIDEO_OUTPUT;
 	}
 
 	/* firstly , set the base index for each channel */
@@ -591,11 +595,13 @@ static void* cmr_v4l2_thread_proc(void* data)
 					frame.channel_id = CHN_1;
 				} else if (V4L2_BUF_TYPE_PRIVATE == buf.type) {
 					frame.channel_id = CHN_2;
+				} else if (V4L2_BUF_TYPE_VIDEO_OUTPUT == buf.type) {
+					frame.channel_id = CHN_0;
 				} else {
 					continue;
 				}
 
-				CMR_LOGV("TX got one frame! buf_type 0x%x, id 0x%x", buf.type, buf.index);
+				CMR_LOGV("TX got one frame! buf_type 0x%x, id 0x%x, evt_id 0x%x", buf.type, buf.index, evt_id);
 				frame.height   = buf.reserved;
 				frame.frame_id = buf.index;
 				frame.sec      = buf.timestamp.tv_sec;

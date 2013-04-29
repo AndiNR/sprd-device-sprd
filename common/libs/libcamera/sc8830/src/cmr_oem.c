@@ -566,7 +566,7 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 		fp = fopen(file_name, "wb");
 
 		if(NULL == fp){
-			CMR_LOGV("aiden 1: can not open file: %s \n", file_name);
+			CMR_LOGV("can not open file: %s \n", file_name);
 			return 0;
 		}
 			
@@ -587,7 +587,7 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 		CMR_LOGV("file name %s", file_name);
 		fp = fopen(file_name, "wb");
 		if(NULL == fp){
-			CMR_LOGV("aiden 2: can not open file: %s \n", file_name);
+			CMR_LOGV("can not open file: %s \n", file_name);
 			return 0;
 		}
 
@@ -606,7 +606,7 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 
 		fp = fopen(file_name, "wb");
 		if(NULL == fp){
-			CMR_LOGV("aiden 3: can not open file: %s \n", file_name);
+			CMR_LOGV("can not open file: %s \n", file_name);
 			return 0;
 		}
 
@@ -621,7 +621,7 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 
 		fp = fopen(file_name, "wb");
 		if(NULL == fp){
-			CMR_LOGV("aiden 4: can not open file: %s \n", file_name);
+			CMR_LOGV("can not open file: %s \n", file_name);
 			return 0;
 		}
 
