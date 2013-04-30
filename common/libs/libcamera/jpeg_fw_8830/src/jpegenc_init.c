@@ -177,7 +177,7 @@ PUBLIC void JpegEnc_HwTopRegCfg(void)
 	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_CTRL_OFFSET, cmd, "GLB_CTRL: enable JPEG encoder");
 	
 	//VSP_CFG1
-        jpeg_fw_codec->uv_interleaved = (jpeg_fw_codec->YUV_Info_0.v_data_ptr == NULL)?0:1;//1: uv_interleaved, two plane, 0: three plane
+        jpeg_fw_codec->uv_interleaved = (jpeg_fw_codec->YUV_Info_0.v_data_ptr == NULL)?1:0;//1: uv_interleaved, two plane, 0: three plane
 	cmd = (((!jpeg_fw_codec->uv_interleaved) << 27)) | (jpeg_fw_codec->input_mcu_info << 24) | ((jpeg_fw_codec->mcu_num_y & 0x3ff) << 12) | (jpeg_fw_codec->mcu_num_x & 0x3ff);
 	JPG_WRITE_REG(JPG_GLB_REG_BASE+MB_CFG_OFFSET, cmd, "uv_interleaved, input mcu infor, mcu max number x and y");
 	
@@ -231,9 +231,9 @@ PUBLIC void JpegEnc_HwTopUpdateYUVAddr(uint32 y_phy_addr,uint32_t u_phy_addr,uin
 	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR1_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_0.u_data_ptr), "Source U0 Frame buffer ");
 	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR6_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_0.v_data_ptr), "Source V0 Frame buffer ");
 
-	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR0_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_1.y_data_ptr), "Source Y1 Frame buffer ");
-	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR1_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_1.u_data_ptr), "Source U1 Frame buffer ");
-	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR6_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_1.v_data_ptr), "Source V1 Frame buffer ");
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR2_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_1.y_data_ptr), "Source Y1 Frame buffer ");
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR3_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_1.u_data_ptr), "Source U1 Frame buffer ");
+	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_FRM_ADDR7_OFFSET, (uint32)(jpeg_fw_codec->YUV_Info_1.v_data_ptr), "Source V1 Frame buffer ");
 
 	SCI_TRACE_LOW("jpeg, update yu addr,0x%x,0x%x.\n",y_phy_addr,u_phy_addr);
 }
