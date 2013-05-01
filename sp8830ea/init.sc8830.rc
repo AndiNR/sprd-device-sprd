@@ -93,18 +93,18 @@ service sprd_monitor /system/bin/sprd_monitor
 
 service engpcclient /system/bin/engpcclient -t 1
     class main
-#    disabled
-#    oneshot
+    disabled
+    oneshot
 
-#service engservice /system/bin/engservice
-#    class main
-#    disabled
-#    oneshot
+service engservice /system/bin/engservice
+    class main
+    disabled
+    oneshot
 
-#service engmodemclient /system/bin/engmodemclient
-#    class main
-#    disabled
-#    oneshot
+service engmodemclient /system/bin/engmodemclient
+    class main
+    disabled
+    oneshot
 
 #service engsetmacaddr /system/bin/engsetmacaddr
 #    class main
