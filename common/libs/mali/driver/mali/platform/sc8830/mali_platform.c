@@ -70,6 +70,7 @@ _mali_osk_errcode_t mali_platform_deinit(void)
 
 _mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
 {
+	#if 0
 	switch(power_mode)
 	{
 	case MALI_POWER_MODE_ON:
@@ -105,6 +106,7 @@ _mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
 		}
 		break;
 	};
+	#endif
 	MALI_SUCCESS;
 }
 
