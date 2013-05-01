@@ -34,7 +34,7 @@ extern "C"
 
 #define CMR_LOGE(format,...) ALOGE(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
 
-#define CMR_LOGI(format,...) ALOGI(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
+#define CMR_LOGI(format,...) ALOGE(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
 
 #define CMR_LOGW(format,...) ALOGW(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
 
@@ -106,6 +106,7 @@ enum restart_mode {
 	RESTART_LIGHTLY = 0,
 	RESTART_MIDDLE,
 	RESTART_HEAVY,
+	RESTART_ZOOM,
 	RESTART_MAX
 };
 

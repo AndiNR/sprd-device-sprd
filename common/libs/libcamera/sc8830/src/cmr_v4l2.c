@@ -65,6 +65,8 @@ enum dcam_parm_id {
 	CAPTURE_FRM_ID_BASE,
 
 	PATH_FRM_DECI = 0x2000,
+	PATH_PAUSE    = 0x2001,
+	PATH_RESUME   = 0x2002,
 };
 
 static char               dev_name[50] = "/dev/video0";
@@ -419,37 +421,41 @@ parameters for v4l2_ext_controls
                        V4L2_CTRL_CLASS_CAMERA, etc;
  count,          pause/resume control , 0 means pause, 1 means resume;
  error_idx,      channel id;
- reserved[0],    skip number;
+ reserved[0],    channel id;
  reserved[1],    deci_factor;
  struct v4l2_ext_control *controls;
 */
 int cmr_v4l2_cap_resume(uint32_t channel_id, uint32_t skip_number, uint32_t deci_factor)
 {
 	int                      ret = 0;
-	struct v4l2_ext_controls ext_ctl;
-
+	struct v4l2_streamparm   stream_parm;
+	
 	CMR_CHECK_FD;
-	bzero(&ext_ctl, sizeof(struct v4l2_ext_controls));
-	ext_ctl.ctrl_class  = V4L2_CTRL_CLASS_CAMERA;
-	ext_ctl.count       = 1;
-	ext_ctl.error_idx   = channel_id;
-	ext_ctl.reserved[0] = skip_number;
-	ext_ctl.reserved[1] = deci_factor;
-	ret = ioctl(fd, VIDIOC_S_EXT_CTRLS, &ext_ctl);
+
+	CMR_LOGV("channel_id %d", channel_id);
+
+	stream_parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	stream_parm.parm.capture.capability = PATH_RESUME;
+
+	stream_parm.parm.capture.reserved[0] = channel_id;
+	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
 	return ret;
 }
 
 int cmr_v4l2_cap_pause(uint32_t channel_id)
 {
 	int                      ret = 0;
-	struct v4l2_ext_controls ext_ctl;
-
+	struct v4l2_streamparm   stream_parm;
+	
 	CMR_CHECK_FD;
-	bzero(&ext_ctl, sizeof(struct v4l2_ext_controls));
-	ext_ctl.ctrl_class = V4L2_CTRL_CLASS_CAMERA;
-	ext_ctl.count      = 0;
-	ext_ctl.error_idx  = channel_id;
-	ret = ioctl(fd, VIDIOC_S_EXT_CTRLS, &ext_ctl);
+
+	CMR_LOGV("channel_id %d", channel_id);
+
+	stream_parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	stream_parm.parm.capture.capability = PATH_PAUSE;
+
+	stream_parm.parm.capture.reserved[0] = channel_id;
+	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
 	return ret;
 }
 

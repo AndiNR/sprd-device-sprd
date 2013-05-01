@@ -899,7 +899,7 @@ int camera_set_ctrl(camera_parm_type id,
 			cxt->zoom_level = parm;
 			if (CMR_PREVIEW == cxt->preview_status) {
 				if (before_set) {
-					ret = (*before_set)(RESTART_LIGHTLY);
+					ret = (*before_set)(RESTART_ZOOM);
 					CMR_RTN_IF_ERR(ret);
 				}
 				skip_mode = IMG_SKIP_HW;
@@ -910,7 +910,7 @@ int camera_set_ctrl(camera_parm_type id,
 				}
 				CMR_RTN_IF_ERR(ret);
 				if (after_set) {
-					ret = (*after_set)(RESTART_LIGHTLY, skip_mode, skip_number);
+					ret = (*after_set)(RESTART_ZOOM, skip_mode, skip_number);
 					CMR_RTN_IF_ERR(ret);
 				}
 			}

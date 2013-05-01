@@ -1295,7 +1295,9 @@ int camera_before_set_internal(enum restart_mode re_mode)
 		}
 		break;
 	case RESTART_LIGHTLY:
-		ret = cmr_v4l2_cap_pause(CHN_1);
+		break;
+	case RESTART_ZOOM:
+		ret = cmr_v4l2_cap_pause(CHN_2);
 		break;
 	default:
 		break;
@@ -1369,12 +1371,22 @@ int camera_after_set_internal(enum restart_mode re_mode)
 */
 		break;
 	case RESTART_LIGHTLY:
+		break;
+	case RESTART_ZOOM:
+
 		ret = camera_preview_weak_init(g_cxt->preview_fmt);
 		if (ret) {
-			CMR_LOGE("Failed to init dcam when preview");
+			CMR_LOGE("Failed to init preview when preview");
 			return -CAMERA_FAILED;
 		}
-		ret = cmr_v4l2_cap_resume(CHN_1, skip_number_l, 0);
+
+		ret = camera_capture_init();
+		if (ret) {
+			CMR_LOGE("Failed to init capture when preview");
+			return -CAMERA_FAILED;
+		}
+
+		ret = cmr_v4l2_cap_resume(CHN_2, skip_number_l, 0);
 		break;
 	default:
 		CMR_LOGE("Wrong re-start mode");
