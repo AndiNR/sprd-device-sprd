@@ -82,10 +82,10 @@ service rawdatad /bin/rawdatad
     oneshot
 
 #telephony service
-#service sprd_monitor /system/bin/sprd_monitor
-#    class main
-#    user root
-#    oneshot
+service sprd_monitor /system/bin/sprd_monitor
+    class main
+    user root
+    oneshot
 
 #service modemd /system/bin/modemd
 #    class main
@@ -110,15 +110,19 @@ service engpcclient /system/bin/engpcclient -t 1
 #    class main
 #    oneshot
 
-#service phoneserver /system/bin/phoneserver
-#    class main
-#    disabled
-#    oneshot
+service phoneserver /system/bin/phoneserver
+    class main
+    user root
+    group radio system shell
+    disabled
+    oneshot
 
-#service phoneserver_2sim /system/bin/phoneserver_2sim
-#    class main
-#    disabled
-#    oneshot
+service phoneserver_2sim /system/bin/phoneserver_2sim
+    class main
+    user root
+    group radio system shell
+    disabled
+    oneshot
 
 #service vcharged /bin/vcharged
 #    class core
@@ -135,20 +139,20 @@ service engpcclient /system/bin/engpcclient -t 1
 #    user root
 #    oneshot
 #rild service
-#service ril-daemon /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -- -n 0
-#    class main
-#    socket rild stream 660 root radio
-#    socket rild-debug stream 660 radio system
-#    user root
-#    group radio cache inet misc audio sdcard_rw log
+service ril-daemon /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -- -n 0
+    class main
+    socket rild stream 660 root radio
+    socket rild-debug stream 660 radio system
+    user root
+    group radio cache inet misc audio sdcard_rw log
 
-#service ril-daemon1 /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -- -n 1
-#    class main
-#    socket rild1 stream 660 root radio
-#    socket rild-debug1 stream 660 radio system
-#    disabled
-#    user root
-#    group radio cache inet misc audio sdcard_rw log
+service ril-daemon1 /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -- -n 1
+    class main
+    socket rild1 stream 660 root radio
+    socket rild-debug1 stream 660 radio system
+    disabled
+    user root
+    group radio cache inet misc audio sdcard_rw log
 
 #on property:persist.msms.phone_count=2
 #    start ril-daemon1
@@ -409,3 +413,41 @@ on boot
     insmod /system/lib/modules/ltr_558als.ko
     chown system system /dev/ltr_558als
     chmod 0664 /dev/ltr_558als
+
+    symlink /dev/slog_td /dev/vbpipe0
+    symlink /dev/spipe_td1 /dev/vbpipe1
+    symlink /dev/spipe_td2 /dev/vbpipe2
+    symlink /dev/spipe_td3 /dev/vbpipe3
+    symlink /dev/spipe_td6 /dev/vbpipe6
+    symlink /dev/stty_td0 /dev/ts0710mux0
+    symlink /dev/stty_td1 /dev/ts0710mux1
+    symlink /dev/stty_td2 /dev/ts0710mux2
+    symlink /dev/stty_td3 /dev/ts0710mux3
+    symlink /dev/stty_td4 /dev/ts0710mux4
+    symlink /dev/stty_td5 /dev/ts0710mux5
+    symlink /dev/stty_td6 /dev/ts0710mux6
+    symlink /dev/stty_td7 /dev/ts0710mux7
+    symlink /dev/stty_td8 /dev/ts0710mux8
+    symlink /dev/stty_td9 /dev/ts0710mux9
+    symlink /dev/stty_td10 /dev/ts0710mux10
+    symlink /dev/stty_td11 /dev/ts0710mux11
+    symlink /dev/stty_td12 /dev/ts0710mux12
+    symlink /dev/stty_td13 /dev/ts0710mux13
+    symlink /dev/stty_td14 /dev/ts0710mux14
+    symlink /dev/stty_td15 /dev/ts0710mux15
+    symlink /dev/stty_td16 /dev/ts0710mux16
+    symlink /dev/stty_td17 /dev/ts0710mux17
+    symlink /dev/stty_td18 /dev/ts0710mux18
+    symlink /dev/stty_td19 /dev/ts0710mux19
+    symlink /dev/stty_td20 /dev/ts0710mux20
+    symlink /dev/stty_td21 /dev/ts0710mux21
+    symlink /dev/stty_td22 /dev/ts0710mux22
+    symlink /dev/stty_td23 /dev/ts0710mux23
+    symlink /dev/stty_td24 /dev/ts0710mux24
+    symlink /dev/stty_td25 /dev/ts0710mux25
+    symlink /dev/stty_td26 /dev/ts0710mux26
+    symlink /dev/stty_td27 /dev/ts0710mux27
+    symlink /dev/stty_td28 /dev/ts0710mux28
+    symlink /dev/stty_td29 /dev/ts0710mux29
+    symlink /dev/stty_td30 /dev/ts0710mux30
+    symlink /dev/stty_td31 /dev/ts0710mux31
