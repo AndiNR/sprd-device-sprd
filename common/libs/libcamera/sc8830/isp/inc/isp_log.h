@@ -41,13 +41,7 @@ extern   "C"
 #define ISP_DEBUG_ARGS    __FUNCTION__,__LINE__
 #endif
 
-#define ISP_LOG(format,...) ALOGE(ISP_DEBUG_STR format, ISP_DEBUG_ARGS, ##__VA_ARGS__)
-
-#define ISP_TRAC(_x_) ISP_LOG _x_
-#define ISP_RETURN_IF_FAIL(exp,warning) do{if(exp) {ISP_TRAC(warning); return exp;}}while(0)
-#define ISP_TRACE_IF_FAIL(exp,warning) do{if(exp) {ISP_TRAC(warning);}}while(0)
-
-//#define ISP_USER_DRV_DEBUG	0
+#define ISP_LOG(format,...) LOGE(ISP_DEBUG_STR format, ISP_DEBUG_ARGS, ##__VA_ARGS__)
 
 /*------------------------------------------------------------------------------*
 *					Data Structures				*

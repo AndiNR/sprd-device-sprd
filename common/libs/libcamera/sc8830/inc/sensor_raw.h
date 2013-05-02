@@ -153,15 +153,18 @@ struct sensor_awb_param{
 	struct sensor_awb_coord win[SENSOR_AWB_NUM];
 	struct sensor_awb_coord cali[SENSOR_CMC_NUM];
 	uint32_t cali_num;
+	uint32_t cali_index;
+	uint32_t cali_std;
+	uint32_t cali_zone;
 	uint16_t r_gain[SENSOR_AWB_NUM];
 	uint16_t g_gain[SENSOR_AWB_NUM];
 	uint16_t b_gain[SENSOR_AWB_NUM];
 	uint16_t reserved0;
-	uint32_t cali_zone;
 	uint32_t target_zone;
 	uint32_t smart;
 	uint32_t quick_mode;
 };
+
 
 struct sensor_bpc_param{
 	uint16_t flat_thr;
