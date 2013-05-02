@@ -4562,7 +4562,7 @@ LOCAL void MMIDM_releaseReplaceContent(DMXML_TAG_REPLACE_T* replace_tag)
         if(PNULL != replace_tag->CmdId.tagContent)
         {
             SCI_FREE(replace_tag->CmdId.tagContent);
-            replace_tag->CmdId.tagContent == PNULL;
+            replace_tag->CmdId.tagContent = PNULL;
         }
 }
 /*****************************************************************************/
