@@ -2138,6 +2138,7 @@ LOCAL BOOLEAN MMIDM_BuildResult(char* result_buf, uint16 buf_size)
                 if(PNULL==  ptr->tagContent)
                 {
                     SCI_FREE(ptr);
+		    ptr= PNULL;  //coverity-47450. free ptr and set to PNULL.
                     SCI_TRACE_LOW("MMIDM_BuildResult PNULL==  ptr->tagContent");
                     ret = FALSE;
                     break;
