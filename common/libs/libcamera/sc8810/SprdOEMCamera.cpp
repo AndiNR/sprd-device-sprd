@@ -3690,10 +3690,10 @@ void* camera_start_focus (void *client_data)
 	//s_af_is_stop = 0;
 
          if(0 == callback)
-         	{
+         {
 		ALOGV("SPRD OEM:camera_start_focus fail,callbcak is NULL!");
 		goto CAMERA_AF_END;
-         	}
+         }
 
 	//if(CAMERA_FOCUS_MODE_MACRO == g_cam_params.focus_mode)
 	if(2 == g_cam_params.focus_mode)
@@ -3896,11 +3896,15 @@ camera_ret_code_type camera_stop_focus (void)
 
 camera_ret_code_type camera_cancel_autofocus (void)
 {
+	uint16_t focus_param[26] = {0};
+
         s_af_is_cancel = 1;
          ALOGV("SPRD OEM:camera_cancel_autofocus!s_af_is_stop=%d.", s_af_is_stop);
-         while(!s_af_is_stop) {
-                  ALOGV("SPRD OEM:camera_cancel_autofocus,wait af finish!");
-		usleep(50000);
+         if(!s_af_is_stop) {
+		focus_param[25] = 0xabcd;
+		if(0 != camera_set_ctrl(V4L2_CID_FOCUS_AUTO, (int32_t) &focus_param[0])){
+			ALOGE("SPRD OEM:camera_cancel_autofocus, cancel fail!");
+		}
 	}
          s_af_is_cancel = 0;
          ALOGV("SPRD OEM:camera_cancel_autofocus!s_af_is_stop=%d, s_af_is_cancel=%d.", s_af_is_stop, s_af_is_cancel);
