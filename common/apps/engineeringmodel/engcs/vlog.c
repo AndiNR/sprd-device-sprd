@@ -28,8 +28,8 @@ static char* s_connect_ser_path[]={
 	NULL
 };
 static char* s_cp_pipe[]={
-	//"/dev/vbpipe0", //cp_td
-	"/dev/slog_td",	
+	"/dev/vbpipe0", //cp_td
+//	"/dev/slog_td",	
 	NULL
 };
 
