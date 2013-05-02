@@ -61,7 +61,7 @@ typedef enum mali_mmu_entry_flags
 	MALI_MMU_FLAGS_MASK = 0x1FF,
 } mali_mmu_entry_flags;
 
-#ifdef SPRD_MEM_OPTIMIZATION
+#ifdef SPRD_MEM_OPT_PAGE_TABLE_SHRINK
 // pde length should not exceed 1024 for 32bit address space
 #define ARCH_MALI_PDE_LENGTH   (ARCH_MALI_MEMORY_SIZE_DEFAULT>>22)
 #endif
@@ -81,7 +81,7 @@ struct mali_page_directory
 {
 	u32 page_directory; /**< Physical address of the memory session's page directory */
 	mali_io_address page_directory_mapped; /**< Pointer to the mapped version of the page directory into the kernel's address space */
-#ifdef SPRD_MEM_OPTIMIZATION
+#ifdef SPRD_MEM_OPT_PAGE_TABLE_SHRINK
 	mali_io_address page_entries_mapped[1+ARCH_MALI_PDE_LENGTH]; /**< Pointers to the page tables which exists in the page directory mapped into the kernel's address space */
 	u32   page_entries_usage_count[1+ARCH_MALI_PDE_LENGTH]; /**< Tracks usage count of the page table pages, so they can be releases on the last reference */
 #else

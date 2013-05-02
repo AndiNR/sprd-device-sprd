@@ -31,7 +31,7 @@
 #include "mali_osk_list.h"
 #include "mali_osk_bitops.h"
 
-#ifdef SPRD_MEM_OPTIMIZATION
+#ifdef SPRD_MEM_OPT_UMP_DEFRAGMENTIZE
 #include <linux/string.h>
 #endif
 
@@ -429,7 +429,7 @@ _mali_osk_errcode_t mali_memory_core_resource_dedicated_memory(_mali_osk_resourc
 	MALI_SUCCESS;
 }
 
-#ifdef SPRD_MEM_OPTIMIZATION
+#ifdef SPRD_MEM_OPT_UMP_DEFRAGMENTIZE
 DEFINE_SPINLOCK(ump_block_buf_lock);
 #define SPRD_UMP_BLOCK_BUF_LEN 16384
 #define SPRD_UMP_BLOCK_BUF_NUM 3
@@ -513,7 +513,7 @@ static mali_physical_memory_allocation_result ump_memory_commit(void* ctx, mali_
 		return MALI_MEM_ALLOC_INTERNAL_FAILURE;
 	}
 
-#ifdef SPRD_MEM_OPTIMIZATION
+#ifdef SPRD_MEM_OPT_UMP_DEFRAGMENTIZE
 	ump_blocks = _do_ump_block_alloc(sizeof(*ump_blocks)*nr_blocks);
 #else
 	ump_blocks = _mali_osk_malloc(sizeof(*ump_blocks)*nr_blocks);
@@ -526,7 +526,7 @@ static mali_physical_memory_allocation_result ump_memory_commit(void* ctx, mali_
 
 	if (UMP_DD_INVALID == ump_dd_phys_blocks_get(ump_mem, ump_blocks, nr_blocks))
 	{
-#ifdef SPRD_MEM_OPTIMIZATION
+#ifdef SPRD_MEM_OPT_UMP_DEFRAGMENTIZE
 		_do_ump_block_free(ump_blocks);
 #else
 		_mali_osk_free(ump_blocks);
@@ -549,7 +549,7 @@ static mali_physical_memory_allocation_result ump_memory_commit(void* ctx, mali_
 			/* unmap all previous blocks (if any) */
 			mali_allocation_engine_unmap_physical(engine, descriptor, ret_allocation->initial_offset, size_allocated, (_mali_osk_mem_mapregion_flags_t)0 );
 
-#ifdef SPRD_MEM_OPTIMIZATION
+#ifdef SPRD_MEM_OPT_UMP_DEFRAGMENTIZE
 			_do_ump_block_free(ump_blocks);
 #else
 			_mali_osk_free(ump_blocks);
@@ -572,7 +572,7 @@ static mali_physical_memory_allocation_result ump_memory_commit(void* ctx, mali_
 			/* unmap all previous blocks (if any) */
 			mali_allocation_engine_unmap_physical(engine, descriptor, ret_allocation->initial_offset, size_allocated, (_mali_osk_mem_mapregion_flags_t)0 );
 
-#ifdef SPRD_MEM_OPTIMIZATION
+#ifdef SPRD_MEM_OPT_UMP_DEFRAGMENTIZE
 			_do_ump_block_free(ump_blocks);
 #else
 			_mali_osk_free(ump_blocks);
@@ -583,7 +583,7 @@ static mali_physical_memory_allocation_result ump_memory_commit(void* ctx, mali_
 		*offset += _MALI_OSK_MALI_PAGE_SIZE;
 	}
 
-#ifdef SPRD_MEM_OPTIMIZATION
+#ifdef SPRD_MEM_OPT_UMP_DEFRAGMENTIZE
 	_do_ump_block_free(ump_blocks);
 #else
 	_mali_osk_free( ump_blocks );
@@ -957,7 +957,7 @@ _mali_osk_errcode_t _mali_ukk_init_mem( _mali_uk_init_mem_s *args )
 {
 	MALI_DEBUG_ASSERT_POINTER(args);
 	MALI_CHECK_NON_NULL(args->ctx, _MALI_OSK_ERR_INVALID_ARGS);
-#ifdef SPRD_MEM_OPTIMIZATION
+#ifdef SPRD_MEM_OPT_PAGE_TABLE_SHRINK
 	args->memory_size       = ARCH_MALI_MEMORY_SIZE_DEFAULT;
 	args->mali_address_base = ARCH_MALI_MEMORY_BASE_DEFAULT;
 #else
