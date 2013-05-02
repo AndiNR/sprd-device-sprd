@@ -12,7 +12,19 @@
 
 #define CONFIG_AP_ADC_CALIBRATION
 #ifdef CONFIG_AP_ADC_CALIBRATION
-
+static	int	vbus_charger_disconnect = 0;
+void	disconnect_vbus_charger(void)
+{
+	int fd;
+	if(vbus_charger_disconnect == 0){
+		vbus_charger_disconnect = 1;
+		fd = open(CHARGER_STOP_PATH,O_RDWR);
+		if(fd > 0){
+			write(fd,"1",2);
+			close(fd);
+		}	
+	}
+}
 void	initialize_ctrl_file(void)
 {
 	CALI_INFO_DATA_T	cali_info;
@@ -295,7 +307,7 @@ static unsigned int ap_get_voltage(MSG_AP_ADC_CNF *pMsgADC)
         voltage >>= 4;
 
 	para = (int *)(Msg +1);
-        *para = (voltage/10000);
+        *para = (voltage/10);
 	pMsgADC->msg_head.len = 12;
 
         return voltage;
@@ -362,6 +374,7 @@ int eng_battery_calibration(char *data,int count,char *out_msg,int out_len)
 		adc_cmd = is_adc_calibration(out_msg, out_len, data, count );
 
                 if (adc_cmd != 0){
+			disconnect_vbus_charger();
 			switch(adc_cmd)
 			{
 				case AP_DIAG_LOOP:

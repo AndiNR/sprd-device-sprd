@@ -1,9 +1,10 @@
 #ifndef __CALIBRATION_H__
 
-#define BATTERY_VOL_PATH	"/sys/class/power_supply/battery/voltage_now"
-#define BATTERY_ADC_PATH	"/sys/class/power_supply/battery/real_time_vbat_adc"
+#define	BATTERY_VOL_PATH	"/sys/class/power_supply/battery/real_time_voltage"
+#define	BATTERY_ADC_PATH	"/sys/class/power_supply/battery/real_time_vbat_adc"
 #define	CALI_CTRL_FILE_PATH	"/dev/block/mmcblk0p24"
-#define BATTER_CALI_CONFIG_FILE	CALI_CTRL_FILE_PATH
+#define	CHARGER_STOP_PATH	"/dev/class/power_supply/battery/stop_charge"
+#define	BATTER_CALI_CONFIG_FILE	CALI_CTRL_FILE_PATH
 typedef enum
 {
     DIAG_AP_CMD_ADC  = 0x0001,
