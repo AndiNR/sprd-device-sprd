@@ -128,6 +128,7 @@ typedef enum
     CAMERA_FLASH_MODE_OFF = 0,
     CAMERA_FLASH_MODE_ON = 1,
     CAMERA_FLASH_MODE_TORCH = 2,
+    CAMERA_FLASH_MODE_AUTO = 3,
     CAMERA_FLASH_MODE_MAX
 } camera_flash_mode_type;
 
@@ -235,6 +236,7 @@ const struct str_map exposure_compensation_map[] = {
         { "on", 			CAMERA_FLASH_MODE_ON },
         { "off", 			CAMERA_FLASH_MODE_OFF },
 	{ "torch", 			CAMERA_FLASH_MODE_TORCH },
+	{ "auto", 			CAMERA_FLASH_MODE_AUTO },
         { NULL, 0 }
    };
 
@@ -408,7 +410,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
         {"horizontal-view-angle", "54"},
         {"vertical-view-angle", "54"},
 #ifndef CONFIG_CAMERA_788
-	{"flash-mode-values", "off,on,torch"},
+	{"flash-mode-values", "off,on,torch,auto"},
 	{"flash-mode", "off"},
 	{"flash-mode-supported", "true"},
 #endif
