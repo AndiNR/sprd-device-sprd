@@ -18,20 +18,6 @@ VLX=$3
 OUTDIR=$4
 JOBS=$5
 
-FLIST='
-fdl1.bin
-fdl2.bin
-u-boot-spl-16k.bin
-u-boot.bin
-u-boot_autopoweron.bin
-boot.img
-system.img
-userdata.img
-recovery.img
-cache.img
-installed-files.txt
-'
-
 LOG=$OUTDIR/$PROD-$VAR-$VLX.build.log
 PAK=$OUTDIR/$PROD-$VAR-$VLX.tar.gz
 
@@ -72,7 +58,7 @@ fi
 
 cd $ANDROID_PRODUCT_OUT
 cp obj/KERNEL/vmlinux symbols/
-tar zcf $PAK $FLIST 2>/dev/null
+find . -name "*.img" -o -name "*.bin" -o -name "installed-files.txt" -maxdepth 1| xargs tar -zcf $PAK 2>/dev/null
 cd -
 
 echo "==== ====" >> $LOG
