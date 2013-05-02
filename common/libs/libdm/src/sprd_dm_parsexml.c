@@ -4508,52 +4508,52 @@ LOCAL void MMIDM_releaseStatusContent(DMXML_TAG_STATUS_T* status_tag)
         if(PNULL != status_tag->cmd.tagContent)
         {
             SCI_FREE(status_tag->cmd.tagContent);
-            status_tag->cmd.tagContent == PNULL;
+            status_tag->cmd.tagContent = PNULL;
         }
         if(PNULL != status_tag->CmdId.tagContent)
         {
             SCI_FREE(status_tag->CmdId.tagContent);
-            status_tag->CmdId.tagContent == PNULL;
+            status_tag->CmdId.tagContent = PNULL;
         }
         if(PNULL != status_tag->cmdRef.tagContent)
         {
             SCI_FREE(status_tag->cmdRef.tagContent);
-            status_tag->cmdRef.tagContent == PNULL;
+            status_tag->cmdRef.tagContent = PNULL;
         }
         if(PNULL != status_tag->data.tagContent)
         {
             SCI_FREE(status_tag->data.tagContent);
-            status_tag->data.tagContent == PNULL;
+            status_tag->data.tagContent = PNULL;
         }
         if(PNULL != status_tag->msgRef.tagContent)
         {
             SCI_FREE(status_tag->msgRef.tagContent);
-            status_tag->msgRef.tagContent == PNULL;
+            status_tag->msgRef.tagContent = PNULL;
         }
         if(PNULL != status_tag->sourceRef.tagContent)
         {
             SCI_FREE(status_tag->sourceRef.tagContent);
-            status_tag->sourceRef.tagContent == PNULL;
+            status_tag->sourceRef.tagContent = PNULL;
         }
         if(PNULL != status_tag->targetRef.tagContent)
         {
             SCI_FREE(status_tag->targetRef.tagContent);
-            status_tag->targetRef.tagContent == PNULL;
+            status_tag->targetRef.tagContent = PNULL;
         }
         if(PNULL != status_tag->chal.meta.format.tagContent)
         {
             SCI_FREE(status_tag->chal.meta.format.tagContent);
-            status_tag->chal.meta.format.tagContent == PNULL;
+            status_tag->chal.meta.format.tagContent = PNULL;
         }
         if(PNULL != status_tag->chal.meta.nextnonce.tagContent)
         {
             SCI_FREE(status_tag->chal.meta.nextnonce.tagContent);
-            status_tag->chal.meta.nextnonce.tagContent == PNULL;
+            status_tag->chal.meta.nextnonce.tagContent = PNULL;
         }
         if(PNULL != status_tag->chal.meta.type.tagContent)
         {
             SCI_FREE(status_tag->chal.meta.type.tagContent);
-            status_tag->chal.meta.type.tagContent == PNULL;
+            status_tag->chal.meta.type.tagContent = PNULL;
         }
 }
 
