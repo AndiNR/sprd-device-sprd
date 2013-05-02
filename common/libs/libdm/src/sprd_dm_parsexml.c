@@ -4474,32 +4474,32 @@ LOCAL void MMIDM_releaseResultContent(DMXML_TAG_RESULT_T* result_tag)
     if(PNULL != result_tag->cmd.tagContent)
     {
         SCI_FREE(result_tag->cmd.tagContent);
-        result_tag->cmd.tagContent == PNULL;
+        result_tag->cmd.tagContent = PNULL;
     }
     if(PNULL != result_tag->CmdId.tagContent)
     {
         SCI_FREE(result_tag->CmdId.tagContent);
-        result_tag->CmdId.tagContent == PNULL;
+        result_tag->CmdId.tagContent = PNULL;
     }
     if(PNULL != result_tag->cmdRef.tagContent)
     {
         SCI_FREE(result_tag->cmdRef.tagContent);
-        result_tag->cmdRef.tagContent == PNULL;
+        result_tag->cmdRef.tagContent = PNULL;
     }
     if(PNULL != result_tag->msgRef.tagContent)
     {
         SCI_FREE(result_tag->msgRef.tagContent);
-        result_tag->msgRef.tagContent == PNULL;
+        result_tag->msgRef.tagContent = PNULL;
     }
     if(PNULL != result_tag->sourceRef.tagContent)
     {
         SCI_FREE(result_tag->sourceRef.tagContent);
-        result_tag->sourceRef.tagContent == PNULL;
+        result_tag->sourceRef.tagContent = PNULL;
     }
     if(PNULL != result_tag->targetRef.tagContent)
     {
         SCI_FREE(result_tag->targetRef.tagContent);
-        result_tag->targetRef.tagContent == PNULL;
+        result_tag->targetRef.tagContent = PNULL;
     }
 }
 
