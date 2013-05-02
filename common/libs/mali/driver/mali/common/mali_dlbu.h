@@ -14,7 +14,7 @@
 #include "mali_osk.h"
 #include "mali_group.h"
 
-#ifdef SPRD_MEM_OPTIMIZATION
+#ifdef SPRD_MEM_OPT_PAGE_TABLE_SHRINK
 #define MALI_DLB_VIRT_ADDR 0x00000400 /* master tile virtual address fixed at this value and mapped into every session */
 #else
 #define MALI_DLB_VIRT_ADDR 0xFFF00000 /* master tile virtual address fixed at this value and mapped into every session */
