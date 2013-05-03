@@ -219,13 +219,13 @@ int eng_linuxcmd_keypad(char *req, char *rsp)
 		keycode++;
 		ENG_LOG("%s: keycode = %s\n",__FUNCTION__, keycode);
 		fd = open(ENG_KEYPAD_PATH, O_RDWR);
-		if(fd > 0) {
+		if(fd >= 0) {
 			ENG_LOG("%s: send keycode to emulator\n",__FUNCTION__);
 			write(fd, keycode, strlen(keycode));
 		} else {
 			ENG_LOG("%s: open %s fail [%s]\n",__FUNCTION__, ENG_KEYPAD_PATH, strerror(errno));
 		}
-		if(fd > 0)
+		if(fd >= 0)
 			close(fd);
 		sprintf(rsp, "%s%s", SPRDENG_OK, ENG_STREND);
 		ret = 0;

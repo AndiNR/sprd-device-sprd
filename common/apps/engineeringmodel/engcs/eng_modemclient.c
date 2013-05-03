@@ -2401,7 +2401,7 @@ int eng_monitor_open(void)
 	//connect to server
 	soc_fd = eng_client(ENG_SOCKET_PORT, SOCK_STREAM);
 
-	while(soc_fd <= 0) {
+	while(soc_fd < 0) {
 	    ENG_LOG ("%s: opening engmode server socket failed\n", __FUNCTION__);
 		ENG_LOG("%s: soc_fd=%d",__func__, soc_fd);
 		usleep(50*1000);

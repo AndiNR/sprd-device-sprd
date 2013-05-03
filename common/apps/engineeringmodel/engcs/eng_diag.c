@@ -928,7 +928,7 @@ int is_audio_at_cmd_need_to_handle(char *buf,int len){
 		at_tok_equel_start(&ptr);
 		at_tok_nextint(&ptr,&cmd_type);
 		ENG_LOG("%s,SADM4AP :value = 0x%02x",__FUNCTION__,cmd_type);
-		for ( i = 0; i < sizeof(at_sadm_cmd_to_handle); i += 1 ) {
+		for ( i = 0; i < sizeof(at_sadm_cmd_to_handle)/sizeof(int); i += 1 ) {
 			if(-1==at_sadm_cmd_to_handle[i]){
 				ENG_LOG("end of at_sadm_cmd_to_handle");
 				return 0;
