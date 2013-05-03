@@ -130,10 +130,10 @@ service phoneserver_2sim /system/bin/phoneserver_2sim
 #    disabled
 #    oneshot
 
-#service charge /bin/charge
-#    class charger
-#    user root
-#    oneshot
+service charge /bin/charge
+    class charger
+    user root
+    oneshot
 
 #service engtest /system/bin/engtest
 #    user root
