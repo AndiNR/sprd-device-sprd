@@ -33,7 +33,8 @@ PRODUCT_PROPERTY_OVERRIDES := \
         ro.build.product.lowmem=1 \
 	universe_ui_support=true \
         ro.callfirewall.disabled=true \
-	ro.device.support.vt=0
+	ro.device.support.vt=0 \
+	zram_for_android.enable=true
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1
