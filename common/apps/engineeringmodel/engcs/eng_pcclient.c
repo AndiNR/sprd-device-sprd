@@ -743,6 +743,7 @@ void eng_check_factorymode_fornand(void)
 		fd=open(ENG_FACOTRYMODE_FILE, O_RDWR|O_CREAT|O_TRUNC);
 		if(fd > 0)
 			close(fd);
+/*
 		if (strstr(config_property, "adb")) { 
 			property_set("sys.usb.config","adb,vser,gser");
 			property_set("persist.sys.usb.config","mass_storage,adb,vser,gser");
@@ -750,8 +751,11 @@ void eng_check_factorymode_fornand(void)
 			property_set("sys.usb.config","vser,gser");
 			property_set("persist.sys.usb.config","vser,gser");
 		}
+*/
+		property_set("sys.usb.config","mass_storage,adb,vser,gser");
+		property_set("persist.sys.usb.config","mass_storage,adb,vser,gser");
 	} else if (status == 0) {
-		if (strstr(config_property, "vser,gser")) {
+		/*if (strstr(config_property, "vser,gser")) {
 			if (strstr(config_property, "adb")) {
 				property_set("sys.usb.config","adb");
 				property_set("persist.sys.usb.config","adb");
@@ -759,7 +763,7 @@ void eng_check_factorymode_fornand(void)
 				property_set("sys.usb.config","");
 				property_set("persist.sys.usb.config","");
 			}
-		} 
+		}*/
 		remove(ENG_FACOTRYMODE_FILE);
 	} else {
 		remove(ENG_FACOTRYMODE_FILE);
@@ -794,6 +798,8 @@ void eng_check_factorymode_formmc(void)
 	if(fd >= 0) {
 		if((status==1)||(status == ENG_SQLSTR2INT_ERR)) {
 			sprintf(status_buf, "%s", "1");
+			property_set("sys.usb.config","mass_storage,adb,vser,gser");
+			property_set("persist.sys.usb.config","mass_storage,adb,vser,gser");
 		} else if (status == 0) {
 			sprintf(status_buf, "%s", "0");
 		} else {
