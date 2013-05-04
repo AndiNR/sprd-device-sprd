@@ -1379,7 +1379,7 @@ int camera_after_set_internal(enum restart_mode re_mode)
 			CMR_LOGE("Failed to init preview when preview");
 			return -CAMERA_FAILED;
 		}
-
+#if 1
 		ret = camera_capture_init();
 		if (ret) {
 			CMR_LOGE("Failed to init capture when preview");
@@ -1387,6 +1387,7 @@ int camera_after_set_internal(enum restart_mode re_mode)
 		}
 
 		ret = cmr_v4l2_cap_resume(CHN_2, skip_number_l, 0);
+#endif
 		break;
 	default:
 		CMR_LOGE("Wrong re-start mode");
@@ -3660,6 +3661,9 @@ int camera_capture_ability(SENSOR_MODE_INFO_T *sn_mode,
 			g_cxt->isp_cxt.drop_slice_num);
 	} else {
 		tmp_width = (uint32_t)(g_cxt->v4l2_cxt.sc_factor * img_cap->src_img_rect.width);
+		img_cap->dst_img_size.width   = img_cap->src_img_rect.width;
+		img_cap->dst_img_size.height  = img_cap->src_img_rect.height;
+#if 0
 		if (g_cxt->capture_size.width <= g_cxt->v4l2_cxt.sc_capability) {
 			/* if the capture size is smaller than the scale capability,
 				just set the output as capture_size*/
@@ -3693,6 +3697,7 @@ int camera_capture_ability(SENSOR_MODE_INFO_T *sn_mode,
 				img_cap->dst_img_size.height  = img_cap->src_img_rect.height;
 			}
 		}
+#endif
 	}
 
 	g_cxt->cap_orig_size.width    = img_cap->dst_img_size.width;
