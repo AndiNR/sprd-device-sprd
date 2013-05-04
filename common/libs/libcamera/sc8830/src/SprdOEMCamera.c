@@ -778,7 +778,9 @@ void *camera_cap_thread_proc(void *data)
 		case CMR_EVT_CAP_TX_DONE:
 			CMR_PRINT_TIME;
 			struct frm_info *data = (struct frm_info *)message.data;
-
+			if (0 == data) {
+				break;
+			}
 			if (!IS_CAP_FRM(data->frame_id)) {
 				CMR_LOGE("capture: wrong frame id %d, drop this frame", data->frame_id);
 				break;
@@ -834,7 +836,10 @@ void *camera_cap_thread_proc(void *data)
 		}
 		
 		if (1 == message.alloc_flag) {
+			if(message.data) {
 			free(message.data);
+				message.data = 0;
+			}
 		}
 
 		if(cap_thread_exit_flag) {
@@ -1379,7 +1384,7 @@ int camera_after_set_internal(enum restart_mode re_mode)
 			CMR_LOGE("Failed to init preview when preview");
 			return -CAMERA_FAILED;
 		}
-#if 1
+
 		ret = camera_capture_init();
 		if (ret) {
 			CMR_LOGE("Failed to init capture when preview");
@@ -1387,7 +1392,6 @@ int camera_after_set_internal(enum restart_mode re_mode)
 		}
 
 		ret = cmr_v4l2_cap_resume(CHN_2, skip_number_l, 0);
-#endif
 		break;
 	default:
 		CMR_LOGE("Wrong re-start mode");
