@@ -41,7 +41,7 @@ extern   "C"
 #define ISP_DEBUG_ARGS    __FUNCTION__,__LINE__
 #endif
 
-#define ISP_LOG(format,...) LOGE(ISP_DEBUG_STR format, ISP_DEBUG_ARGS, ##__VA_ARGS__)
+#define ISP_LOG(format,...) ALOGE(ISP_DEBUG_STR format, ISP_DEBUG_ARGS, ##__VA_ARGS__)
 
 /*------------------------------------------------------------------------------*
 *					Data Structures				*
