@@ -20,8 +20,6 @@ LOCAL_SRC_FILES += gsp_hal.c
 
 	
 
-LOCAL_C_INCLUDES := $(LOCAL_PATH)/../../../../../../vendor/sprd/proprietories-source/opencore/codecs_v2/video/m4v_h263_sprd/$(strip $(TARGET_BOARD_PLATFORM))/enc/include
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../../../../../vendor/sprd/proprietories-source/opencore/codecs_v2/video/vsp/$(strip $(TARGET_BOARD_PLATFORM))/inc
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL/usr/include/video
 
 LOCAL_SHARED_LIBRARIES := libutils libbinder
