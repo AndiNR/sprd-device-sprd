@@ -2431,6 +2431,13 @@ LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param)
 	param = param&0xffff;
 	SENSOR_PRINT("%d,%d.",cap_mode,param);
 	if (SENSOR_MODE_PREVIEW_ONE >= param) {
+		int ae_ag_ctrl;
+		//turn off AE/AG
+		ae_ag_ctrl = Sensor_ReadReg(0x3503);
+		SENSOR_PRINT("before, ae_ag_ctrl 0x%x", ae_ag_ctrl);
+		ae_ag_ctrl = ae_ag_ctrl | 0x03;
+		Sensor_WriteReg(0x3503, ae_ag_ctrl);
+		SENSOR_PRINT("after, ae_ag_ctrl 0x%x", ae_ag_ctrl);
 		s_capture_shutter = OV5640_get_shutter();
 		s_capture_VTS = OV5640_get_VTS();
 		_ov5640_ReadGain(param);
@@ -2502,7 +2509,15 @@ LOCAL uint32_t _ov5640_pick_out_jpeg_stream(uint32_t param)
 
 LOCAL uint32_t _ov5640_after_snapshot(uint32_t param)
 {
+	int ae_ag_ctrl;
 	Sensor_SetMode(param);
+	/*AEC/AGC on*/
+	ae_ag_ctrl = Sensor_ReadReg(0x3503);
+	SENSOR_PRINT("before, ae_ag_ctrl 0x%x", ae_ag_ctrl);
+	ae_ag_ctrl = ae_ag_ctrl & 0xFC;
+	SENSOR_PRINT("after, ae_ag_ctrl 0x%x", ae_ag_ctrl);
+	Sensor_WriteReg(0x3503, ae_ag_ctrl);
+
 	return SENSOR_SUCCESS;
 }
 
