@@ -312,6 +312,12 @@ static void process_modem_state_message(char *message,int size)
 			}
 			
 			if(reset_status==1){
+				int pid;
+				pid = get_task_pid(MONITOR_APP);
+				if((pid > 0)&&(!first_alive)){
+					kill(pid, SIGUSR1);
+					printf("Send SIGUSR1 to MONITOR_APP\n");
+				}
 				printf("modem_state2 = MODEM_STA_BOOT\n");
 				modem_state = MODEM_STA_BOOT;
 			}
