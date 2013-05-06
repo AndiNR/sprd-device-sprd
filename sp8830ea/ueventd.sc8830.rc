@@ -1,6 +1,7 @@
 /dev/sprd_scale         0660     system      audio
 /dev/sprd_rotation      0660     system      audio
 /dev/sprd_dcam          0660     system      audio
+/dev/sprd_gsp         	0660     system      graphics
 /dev/sprd_isp           0660     system      audio
 /dev/sprd_vsp           0660     system      audio
 /dev/sprd_jpg           0660     system      audio
