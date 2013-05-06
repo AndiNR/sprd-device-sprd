@@ -29,10 +29,11 @@ enum channel_num {
 	CHN_0 = 0,
 	CHN_1,
 	CHN_2,
+	CHN_MAX
 };
 
 enum channel_status {
-	CHN_IDLE = 2,
+	CHN_IDLE = 0,
 	CHN_BUSY
 };
 

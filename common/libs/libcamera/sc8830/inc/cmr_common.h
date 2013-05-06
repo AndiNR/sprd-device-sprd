@@ -48,6 +48,7 @@ extern "C"
 #define RAWRGB_BIT_WIDTH                   10
 #define CMR_ZOOM_FACTOR                    2
 #define CMR_SLICE_HEIGHT                   256//128
+#define CMR_SCALING_TH                     2048
 #define CMR_IMG_CNT_MAX                    8
 #define CMR_JPEG_COMPRESS_FACTOR           2
 #define CMR_JPEG_SZIE(w,h)                 (uint32_t)((w)*(h)/CMR_JPEG_COMPRESS_FACTOR)

@@ -108,6 +108,7 @@ struct scale_frame {
 	uint32_t                fid;
 	uint32_t                width;
 	uint32_t                height;
+	uint32_t                height_uv;
 	uint32_t                yaddr;
 	uint32_t                uaddr;
 	uint32_t                vaddr;

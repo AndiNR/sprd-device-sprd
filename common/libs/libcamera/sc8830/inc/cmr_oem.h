@@ -161,6 +161,8 @@ struct v4l2_context {
 	struct process_status    proc_status;
 	uint32_t                 sc_capability;
 	uint32_t                 sc_factor;
+	uint32_t                 chn_status[CHN_MAX];
+	uint32_t                 chn_frm_deci[CHN_MAX];
 };
 
 struct sensor_context {

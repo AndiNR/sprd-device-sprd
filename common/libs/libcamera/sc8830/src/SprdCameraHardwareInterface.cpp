@@ -1413,6 +1413,7 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 	if (isPreviewing()) {
 		LOGE("startPreview is already in progress, doing nothing.");
 		LOGV("mLock:startPreview E.\n");
+		setRecordingMode(isRecording);
 		return NO_ERROR;		
 	}			
 
