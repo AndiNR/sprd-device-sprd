@@ -451,3 +451,40 @@ on boot
     symlink /dev/stty_td29 /dev/ts0710mux29
     symlink /dev/stty_td30 /dev/ts0710mux30
     symlink /dev/stty_td31 /dev/ts0710mux31
+
+#create symlink
+service smd_symlink /system/bin/ext_symlink.sh -u
+    user root
+    disabled
+    oneshot
+
+#data on
+service data_on /system/bin/ext_data.sh  -u
+    user root
+    disabled
+    oneshot
+
+#data off
+service data_off /system/bin/ext_data.sh  -d
+    user root
+    disabled
+    oneshot
+
+#kill app
+service kill_phone /system/bin/ext_kill.sh  -m
+    user root
+    disabled
+    oneshot
+
+#change owner
+service chown_service /system/bin/ext_chown.sh  -c
+    class main
+    user root
+    oneshot
+
+#set mac addr
+service set_mac /system/bin/ext_chown.sh  -e
+    user root
+    disabled
+    oneshot
+
