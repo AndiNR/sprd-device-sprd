@@ -90,20 +90,25 @@ static void hardware_broadcom_bt_test(char* buf)
 		ALOGE("hardware_broadcom_bt_test START");
 		bteut(OPEN_BT, req);
 		if (!strcmp(req,EUT_BT_OK)) {
-			memcpy(socket_write_buf,TEST_OK,SOCKET_BUF_LEN);
+			memcpy(socket_write_buf,TEST_OK,strlen(TEST_OK));
+                        socket_write_buf[strlen(TEST_OK)] = '\0';
 		} else {
-			memcpy(socket_write_buf,TEST_ERROR,SOCKET_BUF_LEN);
+			memcpy(socket_write_buf,TEST_ERROR,strlen(TEST_ERROR));
+                        socket_write_buf[strlen(TEST_ERROR)] = '\0';
 		}
 	} else if (0 == strncmp(buf+TYPE_OFFSET,"STOP",strlen("STOP"))) {
 		ALOGE("hardware_broadcom_bt_test STOP");
 		bteut(CLOSE_BT, req);
 		if (!strcmp(req,EUT_BT_OK)) {
-			memcpy(socket_write_buf,TEST_OK,SOCKET_BUF_LEN);
+			memcpy(socket_write_buf,TEST_OK,strlen(TEST_OK));
+                        socket_write_buf[strlen(TEST_OK)] = '\0';
 		} else {
-			memcpy(socket_write_buf,TEST_ERROR,SOCKET_BUF_LEN);
+			memcpy(socket_write_buf,TEST_ERROR,strlen(TEST_ERROR));
+                        socket_write_buf[strlen(TEST_ERROR)] = '\0';
 		}
 	} else {
-		memcpy(socket_write_buf,TEST_ERROR,SOCKET_BUF_LEN);
+		memcpy(socket_write_buf,TEST_ERROR,strlen(TEST_ERROR));
+                socket_write_buf[strlen(TEST_ERROR)] = '\0';
 	}
 }
 
