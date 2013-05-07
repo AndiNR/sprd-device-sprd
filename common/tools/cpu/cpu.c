@@ -345,6 +345,7 @@ int main(int argc, char *argv[])
 				printf("Usage: %s [-v] [-i interval] [-p pid_list] [-n name_list]\n", argv[0]);
 				exit(0);
 			}
+			break;
 				
 		case 'n':
 			check_process = 1;
