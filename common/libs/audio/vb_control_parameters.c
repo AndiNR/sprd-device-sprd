@@ -126,11 +126,17 @@ typedef struct
 }parameters_head_t;
 
 #define VBC_PIPE_NAME_MAX_LEN 16
+
+#ifdef AUDIO_SPIPE_TD
+#define VBC_PIPE_COUNT 2  
+#else
 #define VBC_PIPE_COUNT 1//one pipe used in one cp
+#endif
 
 typedef struct
 {
 	char vbpipe[VBC_PIPE_NAME_MAX_LEN];//vbpipe5/vbpipe6
+	int vbchannel_id;
 	int vbpipe_fd;
 	int vbpipe_pre_fd;
 	int is_exit;
@@ -142,14 +148,28 @@ different modem is corresponding to different pipe and all pipes use the only vb
 support multiple pipe:
 1. change VBC_PIPE_COUNT
 2. change the definition of s_vbc_ctrl_pipe_info.
+3. change channel_id for different cp .On sharp, 0 for cp0,  1 for cp1,2 for ap
 */
-static char s_vbc_ctrl_pipe_info[VBC_PIPE_COUNT][VBC_PIPE_NAME_MAX_LEN] =
+#ifdef AUDIO_SPIPE_TD
+#define VBC_ARM_CHANNELID 2
+#else
+#define VBC_ARM_CHANNELID 1
+#endif
+
+typedef struct
+{
+    char s_vbc_ctrl_pipe_name[VBC_PIPE_NAME_MAX_LEN];
+    int channel_id;
+}vbc_ctrl_pipe__para_t;
+
+static vbc_ctrl_pipe__para_t s_vbc_ctrl_pipe_info[VBC_PIPE_COUNT] =
 {
 		//{"/dev/vbpipe5"},
 #ifdef AUDIO_SPIPE_TD
-		{"/dev/spipe_td6"}
+		{{"/dev/spipe_td6"},1},
+		{{"/dev/spipe_w6"},0}
 #else
-		{"/dev/vbpipe6"}
+		{{"/dev/vbpipe6"},0}  
 #endif
 };
 
@@ -716,7 +736,7 @@ int SetParas_Volume_Incall(int fd_pipe,struct tiny_audio_device *adev)
 	return ret;
 }
 
-int SetParas_Switch_Incall(int fd_pipe,struct tiny_audio_device *adev)
+int SetParas_Switch_Incall(int fd_pipe,int vbchannel_id,struct tiny_audio_device *adev)
 {
 	int ret = 0;
 	parameters_head_t write_common_head;
@@ -727,8 +747,10 @@ int SetParas_Switch_Incall(int fd_pipe,struct tiny_audio_device *adev)
 	if(ret < 0){
 		return ret;
 	}
-    mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, !swtich_ctrl_paras.is_switch);
-	ALOGW("%s, VBC %s dsp...",__func__,(swtich_ctrl_paras.is_switch)?"Switch control to":"Get control back from");
+
+	mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, vbchannel_id);
+	ALOGW("%s, vbchannel_id : %d , VBC %s dsp...",__func__,vbchannel_id,(swtich_ctrl_paras.is_switch)?"Switch control to":"Get control back from");
+
 	Write_Rsp2cp(fd_pipe,VBC_CMD_SWITCH_CTRL);
 	MY_TRACE("%s send rsp to cp...",__func__);
 	return ret;
@@ -772,7 +794,8 @@ int vbc_ctrl_open(struct tiny_audio_device *adev)
     s_is_active = 1;
     while(i<VBC_PIPE_COUNT)
     {
-        memcpy(st_vbc_ctrl_thread_para[i].vbpipe, s_vbc_ctrl_pipe_info[i], VBC_PIPE_NAME_MAX_LEN);
+        memcpy(st_vbc_ctrl_thread_para[i].vbpipe, s_vbc_ctrl_pipe_info[i].s_vbc_ctrl_pipe_name, VBC_PIPE_NAME_MAX_LEN);
+        st_vbc_ctrl_thread_para[i].vbchannel_id = s_vbc_ctrl_pipe_info[i].channel_id;
         st_vbc_ctrl_thread_para[i].adev = adev;
         st_vbc_ctrl_thread_para[i].vbpipe_fd = -1;
         st_vbc_ctrl_thread_para[i].vbpipe_pre_fd = -1;
@@ -855,7 +878,7 @@ RESTART:
                 ALOGE("VBC_CMD_HAL_RESTART Error: vbpipe_name(%s), vbpipe_fd(%d) open failed, %s ", para->vbpipe, para->vbpipe_fd,strerror(errno));   //cp crash
                 if(adev->call_start &&
                         (adev->cur_vbpipe_fd==para->vbpipe_pre_fd/*only current vbpipe need to close*/)){                  //cp crash during call
-                    mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);  //switch to arm
+                    mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch to arm
                     pthread_mutex_lock(&adev->lock);
                     force_all_standby(adev);
                     pcm_close(adev->pcm_modem_ul);
@@ -903,7 +926,7 @@ RESTART:
                 }
                 else
                 {
-                    mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);  //switch to arm
+                    mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch to arm
                     pthread_mutex_lock(&adev->lock);
                     force_all_standby(adev);
                     pcm_close(adev->pcm_modem_ul);
@@ -975,7 +998,7 @@ RESTART:
                 adev->call_prestop = 1;
                 write_common_head.cmd_type = VBC_CMD_RSP_CLOSE;     //ask cp to read vaudio data, "call_prestop" will stop to write pcm data again.
                 WriteParas_Head(para->vbpipe_fd, &write_common_head);
-                mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);  //switch vbc to arm
+                mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch vbc to arm
                 if(adev->call_start){  //if mediaserver crashed, audio will reopen, "call_start" value is 0, should bypass all the settings.
                     ALOGW("VBC_CMD_HAL_CLOSE, try lock");
                     pthread_mutex_lock(&adev->lock);
@@ -1040,7 +1063,7 @@ RESTART:
             case VBC_CMD_SWITCH_CTRL:
             {
                 MY_TRACE("VBC_CMD_SWITCH_CTRL IN.");
-                ret = SetParas_Switch_Incall(para->vbpipe_fd,adev);
+                ret = SetParas_Switch_Incall(para->vbpipe_fd,para->vbchannel_id,adev);
                 if(ret < 0){
                     MY_TRACE("VBC_CMD_SWITCH_CTRL SetParas_Switch_Incall error.s_is_exit:%d ",para->is_exit);
                     para->is_exit = 1;
