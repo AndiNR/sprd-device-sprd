@@ -27,6 +27,15 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
 	ro.com.android.dataroaming=false \
 	persist.msms.phone_count=1 \
+	ro.modem.vlx.enable=1 \
+	ro.modem.vlx.tty=/dev/ts0710mux \
+	ro.modem.vlx.eth=veth \
+	ro.modem.vlx.snd=1 \
+	ro.modem.vlx.diag=/dev/vbpipe0 \
+	ro.modem.vlx.nv=/dev/vbpipe1 \
+	ro.modem.vlx.assert=/dev/vbpipe2 \
+	ro.modem.vlx.vbc=/dev/vbpipe6 \
+	ro.modem.vlx.msms.count=1 \
 	ro.nativemodem=true
 
 ifeq ($(TARGET_BUILD_VARIANT),user)

@@ -7,6 +7,10 @@ LOCAL_SRC_FILES:= \
 LOCAL_SHARED_LIBRARIES := \
 	libcutils
 
+ifeq ($(strip $(TARGET_USERIMAGES_USE_EXT4)),true)
+LOCAL_CFLAGS := -DCONFIG_EMMC
+endif
+
 LOCAL_MODULE := modemd
 
 LOCAL_MODULE_TAGS := optional

@@ -29,7 +29,17 @@ PRODUCT_PROPERTY_OVERRIDES := \
         zram.support=true \
 	persist.blcr.enable=0 \
         persist.sys.service.delay=false \
-        persist.sys.lowmem=16
+        persist.sys.lowmem=16 \
+	ro.modem.vlx.enable=1 \
+	ro.modem.vlx.tty=/dev/ts0710mux \
+	ro.modem.vlx.eth=veth \
+	ro.modem.vlx.snd=1 \
+	ro.modem.vlx.diag=/dev/vbpipe0 \
+	ro.modem.vlx.nv=/dev/vbpipe1 \
+	ro.modem.vlx.assert=/dev/vbpipe2 \
+	ro.modem.vlx.vbc=/dev/vbpipe6 \
+	ro.modem.vlx.msms.count=1
+
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1
 else

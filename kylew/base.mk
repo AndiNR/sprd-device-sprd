@@ -70,9 +70,9 @@ PRODUCT_PACKAGES += \
 	tinymix \
 	sensors.$(TARGET_BOARD)  \
 	$(MALI)\
-	modem_control \
-        nvitemd   \
-    mcom_monitor
+	nvm_daemon \
+	modemd \
+	mcom_monitor
 
 PRODUCT_PACKAGES += \
             $(BRCM_FM) \

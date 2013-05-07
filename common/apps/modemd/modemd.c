@@ -1,35 +1,1278 @@
+#define LOG_TAG 	"MODEMD"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <cutils/sockets.h>
+#include <ctype.h>
 #include <pthread.h>
+#include <dirent.h>
+#include <errno.h>
+#include <mtd/mtd-user.h>
+#include <sys/ioctl.h>
+#include <cutils/properties.h>
 #include <utils/Log.h>
 #include <signal.h>
 
-#define LOG_TAG 	"MODEMD"
+#define MODEMD_DEBUG
+
+#ifdef MODEMD_DEBUG
+#define MODEMD_LOGD(x...) ALOGD( x )
+#define MODEMD_LOGE(x...) ALOGE( x )
+#else
+#define MODEMD_LOGD(x...) do {} while(0)
+#define MODEMD_LOGE(x...) do {} while(0)
+#endif
+
+//#define TEST_MODEM
+
+#define VLX_MODEM	0x1212
+#define TD_MODEM	0x3434
+#define W_MODEM		0x5656
+
+#define VLX_MODEM_ENABLE	"ro.modem.vlx.enable"
+#define TD_MODEM_ENABLE		"ro.modem.t.enable"
+#define W_MODEM_ENABLE		"ro.modem.w.enable"
+
+#define TD_MODEM_BANK	"/proc/cpt/modem"
+#define TD_DSP_BANK	"/proc/cpt/dsp"
+#define W_MODEM_BANK	"/proc/cpw/modem"
+#define W_DSP_BANK	"/proc/cpw/dsp"
+
 #define MODEM_SOCKET_NAME	"modemd"
 #define MAX_CLIENT_NUM	10
-#define MODEM_PATH	"/dev/vbpipe2"
+#define VLX_ASSERT_DEV	"/dev/vbpipe2"
+#define VLX_RESET_DEV	"/dev/vbpipe0"
+#define TD_ASSERT_DEV	"/dev/spipe_td2"
+#define TD_WATCHDOG_DEV	"/proc/cpt/wdtirq"
+#define W_ASSERT_DEV	"/dev/spipe_w2"
+#define W_WATCHDOG_DEV	"/proc/cpw/wdtirq"
+
+#define TD_SIM_NUM	"ro.modem.t.msms.count"
+#define W_SIM_NUM	"ro.modem.w.msms.count"
+#define VLX_SIM_NUM	"ro.modem.vlx.msms.count"
+
+#define PHONE_APP		"com.android.phone"
+
+#define PROP_TTYDEV		"persist.ttydev"
+#define PHONE_APP_PROP		"sys.phone.app"
+#define MODEMRESET_PROPERTY	"persist.sys.sprd.modemreset"
+
+#ifdef CONFIG_EMMC
+/* see g_sprd_emmc_partition_cfg[] in u-boot/nand_fdl/fdl-2/src/fdl_partition.c */
+#define PARTITION_MODEM        "/dev/block/mmcblk0p2"
+#define PARTITION_DSP          "/dev/block/mmcblk0p3"
+#define PARTITION_FIX_NV1      "/dev/block/mmcblk0p4"
+#define PARTITION_FIX_NV2      "/dev/block/mmcblk0p5"
+#define PARTITION_RUNTIME_NV1  "/dev/block/mmcblk0p6"
+#define PARTITION_RUNTIME_NV2  "/dev/block/mmcblk0p7"
+#define PARTITION_PROD_INFO1   "/dev/block/mmcblk0p8"
+#define PARTITION_PROD_INFO2   "/dev/block/mmcblk0p9"
+#define EMMC_MODEM_SIZE        (8 * 1024 * 1024)
+#else
+#define PARTITION_MODEM        "modem"
+#define PARTITION_DSP          "dsp"
+#define F2R1_MODEM_SIZE        (3500 * 1024)
+#define F4R2_MODEM_SIZE        (8 * 1024 * 1024)
+#endif
+
+#define DATA_BUF_LEN    (2048 * 10)
+#define min(A,B)       (((A) < (B)) ? (A) : (B))
+
+#define MODEM_IMAGE_OFFSET  0
+#define MODEM_BANK          "guestOS_2_bank"
+#define DSP_IMAGE_OFFSET    0
+#define DSP_BANK            "dsp_bank"
 
 #define DATA_BUF_SIZE (128)
-static char log_data[DATA_BUF_SIZE];
+#define MODEM_SIZE        (8 * 1024 * 1024)
+
+#ifndef CONFIG_EMMC
+int modem_offset=0, dsp_offset=0;
+#endif
 static int  client_fd[MAX_CLIENT_NUM];
+char modem_mtd[256], dsp_mtd[256];
+int mcp_size = 512, modem_image_len = 0;
+unsigned char data[DATA_BUF_LEN];
 
-static void print_log_data(char *buf, int cnt)
+static char ttydev[12];
+static int ttydev_fd;
+static int s_dualSimMode = 0;
+static int is_assert = 0;
+
+static pthread_mutex_t         reset_mutex;
+static pthread_cond_t          reset_cond;
+static pthread_mutex_t         read_mutex;
+static pthread_cond_t          read_cond;
+
+/* helper function to get pid from process name */
+static int get_task_pid(char *name)
 {
-	int i;
+	DIR *d;
+	struct dirent *de;
+	char cmdline[1024];
 
-	if (cnt > DATA_BUF_SIZE)
-		cnt = DATA_BUF_SIZE;
+	d = opendir("/proc");
+	if (d == 0) return -1;
 
-	printf("received:\n");
-	for(i = 0; i < cnt; i++) {
-		printf("%c ", buf[i]);
+	while ((de = readdir(d)) != 0) {
+		if(isdigit(de->d_name[0])) {
+			int pid = atoi(de->d_name);
+			int fd, ret;
+			sprintf(cmdline, "/proc/%d/cmdline", pid);
+			fd = open(cmdline, O_RDONLY);
+			if (fd <= 0) continue;
+			ret = read(fd, cmdline, 1023);
+			close(fd);
+			if (ret < 0) ret = 0;
+			cmdline[ret] = 0;
+			if (strcmp(name, cmdline) == 0)
+				return pid;
+		}
 	}
-	printf("\n");
+	return -1;
 }
+
+static int stop_engservice(void)
+{
+	MODEMD_LOGD("stop engservice!");
+
+	property_set("ctl.stop", "engservice");
+	property_set("ctl.stop", "engmodemclient");
+	property_set("ctl.stop", "engpcclient");
+
+	return 0;
+}
+
+static int start_engservice(void)
+{
+	MODEMD_LOGD("start engservice!");
+
+	property_set("ctl.start", "engservice");
+	property_set("ctl.start", "engmodemclient");
+	property_set("ctl.start", "engpcclient");
+
+	return 0;
+}
+
+static int stop_phser(int modem)
+{
+	switch(modem) {
+	case TD_MODEM:
+		MODEMD_LOGD("stop td phoneserver!");
+		property_set("ctl.stop", "phoneserver_t");
+		break;
+	case W_MODEM:
+		MODEMD_LOGD("stop w phoneserver!");
+		property_set("ctl.stop", "phoneserver_w");
+		break;
+	default:
+	case VLX_MODEM:
+		MODEMD_LOGD("stop vlx phoneserver!");
+		property_set("ctl.stop", "phoneserver_vlx");
+		break;
+	}
+	return 0;
+}
+
+static int start_phser(int modem)
+{
+	switch(modem) {
+	case TD_MODEM:
+		MODEMD_LOGD("start td phoneserver!");
+		property_set("ctl.start", "phoneserver_t");
+		break;
+	case W_MODEM:
+		MODEMD_LOGD("start w phoneserver!");
+		property_set("ctl.start", "phoneserver_w");
+		break;
+	default:
+	case VLX_MODEM:
+		MODEMD_LOGD("start vlx phoneserver!");
+		property_set("ctl.start", "phoneserver_vlx");
+		break;
+	}
+	return 0;
+}
+
+static int stop_rild(int modem)
+{
+	char phoneCount[5] = {0};
+
+	/* stop rild */
+	if(modem == TD_MODEM) {
+		MODEMD_LOGD("stop td rild!");
+		property_get(TD_SIM_NUM, phoneCount, "");
+		if(!strcmp(phoneCount, "2")) {
+			property_set("ctl.stop", "tril-daemon");
+			property_set("ctl.stop", "tril-daemon1");
+		} else {
+			property_set("ctl.stop", "tril-daemon");
+		}
+	} else if(modem == W_MODEM) {
+		MODEMD_LOGD("stop w rild!");
+		property_get(W_SIM_NUM, phoneCount, "");
+		if(!strcmp(phoneCount, "2")) {
+			property_set("ctl.stop", "wril-daemon");
+			property_set("ctl.stop", "wril-daemon1");
+		} else {
+			property_set("ctl.stop", "wril-daemon");
+		}
+	} else if(modem == VLX_MODEM) {
+		MODEMD_LOGD("stop vlx rild!");
+		property_get(VLX_SIM_NUM, phoneCount, "");
+		if(!strcmp(phoneCount, "2")) {
+			property_set("ctl.stop", "ril-daemon");
+			property_set("ctl.stop", "ril-daemon1");
+		} else {
+			property_set("ctl.stop", "ril-daemon");
+		}
+	}
+
+	return 0;
+}
+
+static int start_rild(int modem)
+{
+	char phoneCount[5] = {0};
+
+	/* start rild */
+	if(modem == TD_MODEM) {
+		MODEMD_LOGD("start td rild!");
+		property_get(TD_SIM_NUM, phoneCount, "");
+		if(!strcmp(phoneCount, "2")) {
+			property_set("ctl.start", "tril-daemon");
+			property_set("ctl.start", "tril-daemon1");
+		} else {
+			property_set("ctl.start", "tril-daemon");
+		}
+	} else if(modem == W_MODEM) {
+		MODEMD_LOGD("start w rild!");
+		property_get(W_SIM_NUM, phoneCount, "");
+		if(!strcmp(phoneCount, "2")) {
+			property_set("ctl.start", "wril-daemon");
+			property_set("ctl.start", "wril-daemon1");
+		} else {
+			property_set("ctl.start", "wril-daemon");
+		}
+	} else if(modem == VLX_MODEM) {
+		MODEMD_LOGD("start vlx rild!");
+		property_get(VLX_SIM_NUM, phoneCount, "");
+		if(!strcmp(phoneCount, "2")) {
+			property_set("ctl.start", "ril-daemon");
+			property_set("ctl.start", "ril-daemon1");
+		} else {
+			property_set("ctl.start", "ril-daemon");
+		}
+	}
+
+	return 0;
+}
+
+static int stop_service(int modem)
+{
+	pid_t pid;
+	char pid_str[32] = {0};
+
+	MODEMD_LOGD("enter stop_service!");
+
+	/* stop eng */
+	stop_engservice();
+
+	/* stop phoneserver */
+	stop_phser(modem);
+
+	/* close ttydev */
+	if (modem == VLX_MODEM) {
+		if (ttydev_fd >= 0)
+			close(ttydev_fd);
+	}
+
+	/* stop rild */
+	stop_rild(modem);
+
+	/* restart com.android.phone */
+	pid = get_task_pid(PHONE_APP);
+	if (pid > 0) {
+		MODEMD_LOGD("restart %s (%d)!", PHONE_APP, pid);
+		snprintf(pid_str, sizeof(pid_str), "%d", pid);
+		property_set(PHONE_APP_PROP, pid_str);
+	}
+	property_set("ctl.start", "kill_phone");
+
+	return 0;
+}
+
+static int start_service(int modem, int restart)
+{
+	char mux_2sim_swap[]="echo 1 > /proc/mux_mode";
+	char mux_3sim_swap[]="echo 2 > /proc/mux_mode";
+	char phoneCount[5];
+	char path[32];
+
+	MODEMD_LOGD("enter start_service!");
+
+	/* open vuart/ttyNK for vlx modem */
+	if(modem == VLX_MODEM) {
+		property_get(PROP_TTYDEV, ttydev, "ttyNK3");
+		sprintf(path, "/dev/%s", ttydev);
+		MODEMD_LOGD("open tty dev: %s", path);
+		ttydev_fd = open(path, O_RDWR);
+		if (ttydev_fd < 0)
+			MODEMD_LOGE("Failed to open %s!\n", path);
+
+		property_get(VLX_SIM_NUM, phoneCount, "");
+		if(!strcmp(phoneCount, "2"))
+			system(mux_2sim_swap);
+		else if(!strcmp(phoneCount, "3"))
+			system(mux_3sim_swap);
+	}
+
+	/*start phoneserver*/
+	start_phser(modem);
+
+	/*start eng*/
+	start_engservice();
+
+	if(restart == 1) {
+		MODEMD_LOGD("restart rild!");
+		start_rild(modem);
+
+		MODEMD_LOGD("restart mediaserver!");
+		property_set("ctl.restart", "media");
+	} else {
+		MODEMD_LOGD("start rild!");
+		start_rild(modem);
+	}
+
+	return 0;
+}
+
+/******************************************************
+ *
+ ** vlx interface begain
+ *
+ *****************************************************/
+int write_proc_file(char *file, int offset, char *string)
+{
+	int fd, stringsize, res = -1;
+
+	fd = open(file, O_RDWR);
+	if (fd < 0) {
+		MODEMD_LOGE("Unknown file %s", file);
+		return 0;
+	}
+
+	if (lseek(fd, offset, SEEK_SET) != offset) {
+		MODEMD_LOGE("Cant lseek file %s", file);
+		goto leave;
+	}
+
+	stringsize = strlen(string);
+	if (write(fd, string, stringsize) != stringsize) {
+		MODEMD_LOGE("Could not write %s in %s", string, file);
+		goto leave;
+	}
+
+	res = 0;
+	MODEMD_LOGD("Wrote %s in file %s", string, file);
+leave:
+	close(fd);
+
+	return res;
+}
+
+char *loadOpenFile(int fd, int *fileSize)
+{
+	char *buf;
+
+	*fileSize = lseek(fd, 0, SEEK_END);
+	if (*fileSize < 0) {
+		MODEMD_LOGE("loadOpenFile error");
+		return 0;
+	}
+
+	buf = (char *)malloc((*fileSize) + 1);
+	if (buf == 0) {
+		MODEMD_LOGE("Malloc failed");
+		return 0;
+	}
+
+	if (lseek(fd, 0, SEEK_SET) < 0) {
+		MODEMD_LOGE("lseek error");
+		return 0;
+	}
+
+	MODEMD_LOGE("file size %d", *fileSize);
+
+	if (read(fd, buf, *fileSize) != *fileSize) {
+		free(buf);
+		buf = 0;
+	} else
+		buf[*fileSize] = 0;
+
+	return buf;
+}
+
+char *loadFile(char *pathName, int *fileSize)
+{
+	int fd;
+	char *buf;
+
+	MODEMD_LOGD("pathName = %s", pathName);
+	fd = open(pathName, O_RDONLY);
+	if (fd < 0) {
+		MODEMD_LOGE("open file %s failed", pathName);
+		return 0;
+	}
+
+	buf = loadOpenFile(fd, fileSize);
+	close(fd);
+
+	return buf;
+}
+
+int check_proc_file(char *file, char *string)
+{
+	int filesize;
+	char *buf;
+
+	buf = loadFile(file, &filesize);
+	if (!buf) {
+		MODEMD_LOGE("failed to load %s", file);
+		return -1;
+	}
+
+	MODEMD_LOGD("check proc file buf = %s", buf);
+	if (strstr(buf, string)) {
+		MODEMD_LOGD("String found <%s> in <%s>", string, file);
+		return 0;
+	}
+
+	MODEMD_LOGD("failed to find %s in %s", string, file);
+	return 1;
+}
+
+int loadimage(char *fin, int offsetin, char *fout, int offsetout, int size)
+{
+	int res = -1, fdin, fdout, bufsize, i, rsize, rrsize, wsize;
+	char buf[8192];
+#ifdef TEST_MODEM
+	int fd_modem_dsp;
+#endif
+#ifndef CONFIG_EMMC
+	mtd_info_t      meminfo;
+	int             bad_info = 1;
+	int             n;
+	unsigned long long      offset = 0;
+	unsigned long long      start_pos = 0;
+	unsigned long long      bpos=0;
+#endif
+	MODEMD_LOGD("Loading %s in bank %s:%d %d", fin, fout, offsetout, size);
+
+	fdin = open(fin, O_RDONLY, 0);
+	fdout = open(fout, O_RDWR, 0);
+	if (fdin < 0) {
+		MODEMD_LOGE("failed to open %s", fin);
+		return -1;
+	}
+	if (fdout < 0) {
+		MODEMD_LOGE("failed to open %s", fout);
+		return -1;
+	}
+
+#ifndef CONFIG_EMMC
+	if (ioctl(fdin, MEMGETINFO, &meminfo) != 0) {
+		MODEMD_LOGD("get MEMGETINFO error !\r\n");
+		goto leave;
+	}
+	MODEMD_LOGD("meminfo: erasesize = 0x%x,writesize = 0x%x\r\n",meminfo.erasesize,meminfo.writesize);
+
+#endif
+
+#ifdef TEST_MODEM
+	if (size == modem_image_len)
+		fd_modem_dsp = open("/data/local/tmp/modem.bin", O_RDWR | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO);
+	else
+		fd_modem_dsp = open("/data/local/tmp/dsp.bin", O_RDWR | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO);
+#endif
+
+	if (lseek(fdin, offsetin, SEEK_SET) != offsetin) {
+		MODEMD_LOGE("failed to lseek %d in %s", offsetin, fin);
+		goto leave;
+	}
+
+	if (lseek(fdout, offsetout, SEEK_SET) != offsetout) {
+		MODEMD_LOGE("failed to lseek %d in %s", offsetout, fout);
+		goto leave;
+	}
+
+#ifndef CONFIG_EMMC
+	start_pos = offsetin/*+modem_offset*/;
+	bpos = start_pos;
+	MODEMD_LOGD("loadimage: offsetin=0x%x, modem_offset=0x%x, dsp_ofset=0x%x\n", offsetin, modem_offset, dsp_offset);
+#endif
+
+	for (i = 0; size > 0; i += min(size, sizeof(buf))) {
+#ifndef CONFIG_EMMC
+		while((bpos % meminfo.erasesize)==0x0) {
+			bad_info =ioctl(fdin, MEMGETBADBLOCK, &bpos) ;
+			if(bad_info > 0 ) {
+				MODEMD_LOGD("skip bad block 0x%x \r\n", bpos&(~(meminfo.erasesize - 1)));
+				//bpos = (bpos + meminfo.erasesize)&(~(meminfo.erasesize - 1));
+				bpos += meminfo.erasesize;
+				if (lseek(fdin, bpos, SEEK_SET) != bpos) {
+					MODEMD_LOGD("bpos=0x%x \r\n", bpos);
+					goto leave;
+				}
+			} else
+				break;
+		}
+#endif
+		rsize = min(size, sizeof(buf));
+		rrsize = read(fdin, buf, rsize);
+		if (rrsize != rsize) {
+			MODEMD_LOGE("failed to read %s", fin);
+			goto leave;
+		}
+		wsize = write(fdout, buf, rsize);
+#ifdef TEST_MODEM
+		wsize = write(fd_modem_dsp, buf, rsize);
+#endif
+		if (wsize != rsize) {
+			MODEMD_LOGE("failed to write %s [wsize = %d  rsize = %d  remain = %d]",
+					fout, wsize, rsize, size);
+			goto leave;
+		}
+		size -= rsize;
+#ifndef CONFIG_EMMC
+		bpos = lseek(fdin, 0, SEEK_CUR);
+		if (bpos == (off_t) -1) {
+			goto leave;
+		}
+#endif
+	}
+
+	res = 0;
+leave:
+	close(fdin);
+	close(fdout);
+#ifdef TEST_MODEM
+	fsync(fd_modem_dsp);
+	close(fd_modem_dsp);
+#endif
+	return res;
+}
+
+int copyfile(const char *src, const char *dst)
+{
+	int ret, length, srcfd, dstfd;
+	struct stat statbuf;
+
+	if ((src == NULL) || (dst == NULL))
+		return -1;
+
+	if (strcmp(src, dst) == 0)
+		return -1;
+
+	if (strcmp(src, "/proc/mtd") == 0) {
+		ret = DATA_BUF_LEN;
+		length = ret;
+	} else {
+		ret = stat(src, &statbuf);
+		if (ret == ENOENT) {
+			MODEMD_LOGE("src file is not exist\n");
+			return -1;
+		}
+		length = statbuf.st_size;
+	}
+
+	if (length == 0) {
+		MODEMD_LOGE("src file length is 0\n");
+		return -1;
+	}
+
+	memset(data, 0, DATA_BUF_LEN);
+	srcfd = open(src, O_RDONLY);
+	if (srcfd < 0) {
+		MODEMD_LOGE("open %s error\n", src);
+		return -1;
+	}
+
+	ret = read(srcfd, data, length);
+	close(srcfd);
+
+	if (ret <= 0) {
+		MODEMD_LOGE("read error length = %d  ret = %d\n", length, ret);
+		return -1;
+	}
+
+	if (access(dst, 0) == 0)
+		remove(dst);
+
+	dstfd = open(dst, O_RDWR | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO);
+	if (dstfd < 0) {
+		MODEMD_LOGE("create %s error\n", dst);
+		return -1;
+	}
+
+	ret = write(dstfd, data, length);
+	close(dstfd);
+	if (ret != length) {
+		MODEMD_LOGE("write error length = %d  ret = %d\n", length, ret);
+		return -1;
+	}
+
+	return length;
+}
+
+/* cat /proc/mtd */
+char *get_proc_mtd(void)
+{
+	int fd, fileSize;
+	char *buf;
+
+	copyfile("/proc/mtd", "/data/local/tmp/mtd.txt");
+	fd = open("/data/local/tmp/mtd.txt", O_RDONLY);
+	if (fd < 0) {
+		MODEMD_LOGE("can not open /data/local/tmp/mtd.txt\n");
+		return 0;
+	}
+
+	fileSize = lseek(fd, 0, SEEK_END);
+	if (fileSize < 0) {
+		MODEMD_LOGE("fileSize is error\n");
+		return 0;
+	}
+	buf = (char *)malloc((fileSize) + 1);
+	if (buf == 0) {
+		MODEMD_LOGE("Malloc buffer failed\n");
+		return 0;
+	}
+	if (lseek(fd, 0, SEEK_SET) < 0) {
+		MODEMD_LOGE("lseek header error\n");
+		return 0;
+	}
+	if (read(fd, buf, fileSize) != fileSize) {
+		free(buf);
+		buf = 0;
+	} else
+		buf[fileSize] = 0;
+	close(fd);
+	return buf;
+}
+
+int get_mcp_size(char *buf)
+{
+	char *pos;
+	int pos_len;
+	char number[8];
+	int nandsize;
+
+	if (buf == 0)
+		return 0;
+
+	pos = strstr(buf, "MiB");
+	if (pos == 0) {
+		MODEMD_LOGE("failed to find MiB\n");
+		return 0;
+	}
+	pos_len = 0;
+	while (*pos != ' ') {
+		pos--;
+		pos_len++;
+	}
+	pos++;
+	pos_len--;
+	memset(number, 0, 8);
+	strncpy(number, pos, pos_len);
+	nandsize = atoi(number);
+
+	return nandsize;
+}
+
+void get_mtd_partition(char *buf, char *name, char *mtdpath)
+{
+	char *pos;
+	int pos_len;
+
+	pos = strstr(buf, name);
+	if (pos == 0)
+		MODEMD_LOGE("failed to find %s\n", name);
+	while (*pos != ':') {
+		pos--;
+	}
+	pos_len = 0;
+	while (*pos != 'm') {
+		pos--;
+		pos_len++;
+	}
+	strcpy(mtdpath, "/dev/mtd/");
+	strncat(mtdpath, pos, pos_len);
+}
+
+int vlx_reboot_init(void)
+{
+	char *mtdbuf = NULL;
+	int ret;
+
+	ret = pthread_mutex_init(&reset_mutex, NULL);
+	if (ret) {
+		MODEMD_LOGE("Failed to init reset_mutex : %d", ret);
+		exit(-1);
+	}
+	pthread_cond_init(&reset_cond, NULL);
+
+	ret = pthread_mutex_init(&read_mutex, NULL);
+	if (ret) {
+		MODEMD_LOGE("Failed to init read_mutex : %d", ret);
+		exit(-1);
+	}
+	pthread_cond_init(&read_cond, NULL);
+
+
+#ifdef CONFIG_EMMC
+	modem_image_len = EMMC_MODEM_SIZE;
+	MODEMD_LOGD("modem length : %d", modem_image_len);
+
+	memset(modem_mtd, 0, 256);
+	strcpy(modem_mtd, PARTITION_MODEM);
+	MODEMD_LOGD("modem emmc dev : %s", modem_mtd);
+
+	memset(dsp_mtd, 0, 256);
+	strcpy(dsp_mtd, PARTITION_DSP);
+	MODEMD_LOGD("dsp emmc dev : %s\n", dsp_mtd);
+#else //#ifdef CONFIG_EMMC
+	mtdbuf = get_proc_mtd();
+	mcp_size = get_mcp_size(mtdbuf);
+	if (mcp_size >= 512)
+		modem_image_len = F4R2_MODEM_SIZE;
+	else
+		modem_image_len = F2R1_MODEM_SIZE;
+
+	MODEMD_LOGD("mcp size : %d  modem length : %d", mcp_size, modem_image_len);
+
+	memset(modem_mtd, 0, 256);
+	get_mtd_partition(mtdbuf, PARTITION_MODEM, modem_mtd);
+	MODEMD_LOGD("modem mtd dev : %s", modem_mtd);
+
+	memset(dsp_mtd, 0, 256);
+	get_mtd_partition(mtdbuf, PARTITION_DSP, dsp_mtd);
+	MODEMD_LOGD("dsp mtd dev : %s", dsp_mtd);
+
+	if (mtdbuf != 0)
+		free(mtdbuf);
+#endif //#ifdef CONFIG_EMMC
+
+	return 0;
+}
+
+int load_vlx_modem_img(int is_modem_assert)
+{
+	char guest_dir[256] = "/proc/nk/guest-02";
+	char buf[256] = {0};
+	int modem = VLX_MODEM;
+	int i, ret;
+
+	MODEMD_LOGD("Check and load vlx modem img");
+
+	sprintf(buf, "%s/status", guest_dir);
+	MODEMD_LOGD("check reboot buf = %s", buf);
+
+	if (check_proc_file(buf, "not started") == 0) {
+
+		/* load modem */
+		memset(buf, 0, 256);
+		sprintf(buf, "%s/%s", guest_dir, MODEM_BANK);
+		MODEMD_LOGD("modem bank buf = %s", buf);
+		/* gillies set modem_image_len 0x600000 */
+		loadimage(modem_mtd, MODEM_IMAGE_OFFSET, buf, 0x1000, modem_image_len);
+
+		/* load dsp */
+		memset(buf, 0, 256);
+		sprintf(buf, "%s/%s", guest_dir, DSP_BANK);
+		MODEMD_LOGD("dsp bank buf = %s", buf);
+
+		/* dsp is only 3968KB, 0x420000 is too big */
+		loadimage(dsp_mtd, DSP_IMAGE_OFFSET, buf, 0x20000, (3968 * 1024));
+
+		/* stop eng to release vbpipe0 */
+		stop_service(VLX_MODEM);
+
+		write_proc_file("/proc/nk/restart", 0, "2");
+		write_proc_file("/proc/nk/resume", 0, "2");
+
+		MODEMD_LOGD("wait for 20s\n");
+		sleep(20);
+
+		pthread_mutex_lock(&reset_mutex);
+		pthread_cond_signal(&reset_cond);
+		pthread_mutex_unlock(&reset_mutex);
+
+		if(is_modem_assert) {
+			/* info socket clients that modem is reset */
+			for(i = 0; i < MAX_CLIENT_NUM; i++) {
+				MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
+				if(client_fd[i] > 0) {
+					ret = write(client_fd[i], "Modem Alive",strlen("Modem Alive"));
+					MODEMD_LOGE("write %d bytes to client_fd[%d]:%d to info modem is alive",
+							ret, i, client_fd[i]);
+					if(ret < 0) {
+						MODEMD_LOGE("reset client_fd[%d]=-1",i);
+						close(client_fd[i]);
+						client_fd[i] = -1;
+					}
+				}
+			}
+		}
+
+		start_service(modem, 1);
+
+		return 1;
+	} else {
+		MODEMD_LOGD("guest seems started \n");
+	}
+
+	return 0;
+}
+
+static void *vlx_reset_thread(void *par)
+{
+	int retry_times;
+	int reset_fd, numWrite;
+	char cmdrst[2]={'z',0x0a};
+	char prop[5] = {0};
+	int is_reset = 0;
+
+	memset(prop, 0, sizeof(prop));
+	property_get(MODEMRESET_PROPERTY, prop, 0);
+	is_reset = atoi(prop);
+	if(!is_reset) {
+		MODEMD_LOGD("%s:modem reset is not enabled, just exit!", __func__);
+		return NULL;
+	}
+
+	reset_fd = open(VLX_RESET_DEV, O_WRONLY);
+	if (reset_fd < 0) {
+		MODEMD_LOGE("%s<%d>: open vpipe0 failed, error: %s",
+				__func__, __LINE__, strerror(errno));
+		exit(-1);
+	}
+
+	for(;;) {
+		MODEMD_LOGD("%s:wait for assert event...", __func__);
+
+		pthread_mutex_lock(&read_mutex);
+		pthread_cond_wait(&read_cond, &read_mutex);
+		pthread_mutex_unlock(&read_mutex);
+
+		if(!is_assert) {
+			close(reset_fd);
+			MODEMD_LOGD("%s: modem reset, wait for reload modem event...", __func__);
+			pthread_mutex_lock(&reset_mutex);
+			pthread_cond_wait(&reset_cond, &reset_mutex);
+			pthread_mutex_unlock(&reset_mutex);
+			MODEMD_LOGD("%s: wakeup, reopen vpipe0", __func__);
+			reset_fd = open(VLX_RESET_DEV, O_WRONLY);
+			if(reset_fd < 0) {
+				MODEMD_LOGE("%s<%d>: open vpipe0 failed, error: %s",
+						__func__, __LINE__, strerror(errno));
+				return NULL;
+			}
+			continue;
+		}
+
+		MODEMD_LOGD("%s:assert event occur", __func__);
+
+		retry_times = 0;
+
+write_again:
+		numWrite = write(reset_fd, cmdrst, sizeof(cmdrst));
+		if (numWrite == 0) {
+			goto write_again;
+		} else if (numWrite < 0) {
+			MODEMD_LOGE("%s: write vbpipe0 return %d, errno=%d(%s)",
+					__func__, numWrite, errno, strerror(errno));
+			if (errno == EPIPE) {
+				MODEMD_LOGE("peer side of vbpipe0 is down, reopen it");
+				close(reset_fd);
+				sleep(10);
+				reset_fd = open(VLX_RESET_DEV, O_WRONLY);
+				if(reset_fd < 0) {
+					MODEMD_LOGE("%s<%d>: open vpipe0 failed, error: %s",
+							__func__, __LINE__, strerror(errno));
+					return NULL;
+				}
+			}
+			sleep(1);
+			retry_times++;
+			if (retry_times > 5) {
+				MODEMD_LOGE("%s:retry fail", __func__);
+				continue;
+			} else {
+				goto write_again;
+			}
+		} else {
+			close(reset_fd);
+			MODEMD_LOGD("%s: write ^Z done, wait for reload modem event...", __func__);
+			pthread_mutex_lock(&reset_mutex);
+			pthread_cond_wait(&reset_cond, &reset_mutex);
+			pthread_mutex_unlock(&reset_mutex);
+			MODEMD_LOGD("%s: wakeup, reopen vpipe0", __func__);
+			reset_fd = open(VLX_RESET_DEV, O_WRONLY);
+			if(reset_fd < 0) {
+				MODEMD_LOGE("%s<%d>: open vpipe0 failed, error: %s",
+						__func__, __LINE__, strerror(errno));
+				return NULL;
+			}
+		}
+	}
+	close(reset_fd);
+}
+
+/* loop detect vlx modem state */
+static int detect_vlx_modem(void)
+{
+	pthread_t tid;
+	int ret, assert_fd, i;
+	int numRead;
+	char buf[DATA_BUF_SIZE] = {0};
+
+	pthread_create(&tid, NULL, vlx_reset_thread, buf);
+
+	assert_fd = open(VLX_ASSERT_DEV, O_RDONLY);
+	if (assert_fd < 0) {
+		MODEMD_LOGE("open %s failed, error: %s", VLX_ASSERT_DEV, strerror(errno));
+		exit(-1);
+	}
+
+	for(;;) {
+		memset(buf, 0, sizeof(buf));
+		numRead = read(assert_fd, buf, DATA_BUF_SIZE);
+		if (numRead == 0) {
+			MODEMD_LOGE("modem assert finished\n");
+
+			if(!is_assert) {
+				pthread_mutex_lock(&read_mutex);
+				pthread_cond_signal(&read_cond);
+				pthread_mutex_unlock(&read_mutex);
+			}
+
+			/* close */
+			close(assert_fd);
+
+			/* reload modem */
+			load_vlx_modem_img(is_assert);
+
+			is_assert = 0;
+
+			/* reopen */
+			assert_fd = open(VLX_ASSERT_DEV, O_RDONLY);
+			if (assert_fd < 0){
+				MODEMD_LOGE("open %s failed, error: %s", VLX_ASSERT_DEV, strerror(errno));
+				exit(-1);
+			}
+			continue;
+		} else if (numRead < 0) {
+			MODEMD_LOGE("numRead %d is lower than 0\n", numRead);
+			sleep(1);
+			continue;
+		} else {
+			if(strstr(buf, "Assert") != NULL) {
+				MODEMD_LOGE("modem assert happen, buf=%s", buf);
+
+				is_assert = 1;
+
+				/* info socket client that modem is assert */
+				/* include info slog to release vbpipe0 */
+				for(i = 0; i < MAX_CLIENT_NUM; i++) {
+					MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
+					if(client_fd[i] > 0) {
+						ret = write(client_fd[i], buf, numRead);
+						MODEMD_LOGE("write %d bytes to client_fd[%d]:%d to info modem is assert", ret, i, client_fd[i]);
+						if(ret < 0) {
+							MODEMD_LOGE("reset client_fd[%d]=-1",i);
+							close(client_fd[i]);
+							client_fd[i] = -1;
+						}
+					}
+				}
+
+				/* make sure vbpipe0 is released by other user */
+				sleep(2);
+
+				pthread_mutex_lock(&read_mutex);
+				pthread_cond_signal(&read_cond);
+				pthread_mutex_unlock(&read_mutex);
+			}
+		}
+	}
+	close(assert_fd);
+}
+/******************************************************
+ *
+ ** vlx interface end
+ *
+ *****************************************************/
+
+/******************************************************
+ *
+ ** sipc interface begin
+ *
+ *****************************************************/
+static int load_sipc_modem_img(int modem)
+{
+	char modem_partition[256] = {0};
+	char dsp_partition[256] = {0};
+	char modem_bank_buf[256] = {0};
+	char dsp_bank_buf[256] = {0};
+	int sipc_modem_image_len;
+	int sipc_dsp_image_len;
+	char alive_info[20];
+	int i, ret;
+
+	if(modem == TD_MODEM) {
+		sipc_modem_image_len = MODEM_SIZE;
+		sipc_dsp_image_len = MODEM_SIZE;
+		strcpy(modem_partition, PARTITION_MODEM);
+		strcpy(dsp_partition, PARTITION_DSP);
+		strcpy(modem_bank_buf, TD_MODEM_BANK);
+		strcpy(dsp_bank_buf, TD_DSP_BANK);
+	} else if(modem == W_MODEM) {
+		sipc_modem_image_len = MODEM_SIZE;
+		sipc_dsp_image_len = MODEM_SIZE;
+		strcpy(modem_partition, PARTITION_MODEM);
+		strcpy(dsp_partition, PARTITION_DSP);
+		strcpy(modem_bank_buf, W_MODEM_BANK);
+		strcpy(dsp_bank_buf, W_DSP_BANK);
+	}
+
+	/* load modem */
+	MODEMD_LOGD("load modem image from %s to %s, len=%d",
+			modem_partition, modem_bank_buf, sipc_modem_image_len);
+	loadimage(modem_partition, 0, modem_bank_buf, 0x1000, sipc_modem_image_len);
+
+	/* load dsp */
+	MODEMD_LOGD("load dsp image from %s to %s, len=%d",
+			dsp_partition, dsp_bank_buf, sipc_dsp_image_len);
+	loadimage(dsp_partition, 0, dsp_bank_buf, 0x20000, sipc_dsp_image_len);
+
+	stop_service(modem);
+
+	if(modem == TD_MODEM) {
+		write_proc_file("/proc/cpt/start", 0, "1");
+		strcpy(alive_info, "TD Modem Alive");
+	} else if(modem == W_MODEM) {
+		write_proc_file("/proc/cpw/start", 0, "1");
+		strcpy(alive_info, "W Modem Alive");
+	}
+	MODEMD_LOGD("wait for 20s\n");
+
+	sleep(20);
+
+	/* info socket clients that modem is reset */
+	for(i = 0; i < MAX_CLIENT_NUM; i++) {
+		MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
+		if(client_fd[i] > 0) {
+			ret = write(client_fd[i], alive_info,strlen(alive_info));
+			MODEMD_LOGE("write %d bytes to client_fd[%d]:%d to info modem is alive",
+					ret, i, client_fd[i]);
+			if(ret < 0) {
+				MODEMD_LOGE("reset client_fd[%d]=-1",i);
+				close(client_fd[i]);
+				client_fd[i] = -1;
+			}
+		}
+	}
+
+	start_service(modem, 1);
+
+	return 0;
+}
+
+/* loop detect sipc modem state */
+static void* detect_sipc_modem(void *param)
+{
+	char assert_dev[30] = {0};
+	char watchdog_dev[30] = {0};
+	int i, ret, assert_fd, watchdog_fd, max_fd;
+	fd_set rfds;
+	int numRead, numWrite;
+	char buf[DATA_BUF_SIZE];
+	char prop[5];
+	int is_reset = 0;
+	char cmdrst[2]={'z',0x0a};
+	int cmdrst_len = sizeof(cmdrst);
+	int modem = -1;
+
+	if(param != NULL)
+		modem = *((int *)param);
+
+	if(modem == TD_MODEM) {
+		snprintf(assert_dev, sizeof(assert_dev), "%s", TD_ASSERT_DEV);
+		snprintf(watchdog_dev, sizeof(watchdog_dev), "%s", TD_WATCHDOG_DEV);
+	} else if(modem == W_MODEM) {
+		snprintf(assert_dev, sizeof(assert_dev), "%s", W_ASSERT_DEV);
+		snprintf(watchdog_dev, sizeof(watchdog_dev), "%s", W_WATCHDOG_DEV);
+	} else
+		MODEMD_LOGE("%s: input wrong modem type!", __func__);
+
+	assert_fd = open(assert_dev, O_WRONLY);
+	if (assert_fd < 0) {
+		MODEMD_LOGE("open %s failed, error: %s", assert_dev, strerror(errno));
+		exit(-1);
+	}
+
+	watchdog_fd = open(watchdog_dev, O_RDONLY);
+	if (watchdog_fd < 0) {
+		MODEMD_LOGE("open %s failed, error: %s", watchdog_dev, strerror(errno));
+		exit(-1);
+	}
+
+	max_fd = watchdog_fd > assert_fd ? watchdog_fd : assert_fd;
+
+	FD_ZERO(&rfds);
+	FD_SET(assert_fd, &rfds);
+	FD_SET(watchdog_fd, &rfds);
+
+	for (;;) {
+		do {
+			ret = select(max_fd + 1, &rfds, NULL, NULL, 0);
+		} while(ret == -1 && errno == EINTR);
+		if (ret > 0) {
+			if (FD_ISSET(assert_fd, &rfds)) {
+				memset(buf, 0, sizeof(buf));
+				numRead = read(assert_fd, buf, DATA_BUF_SIZE);
+				if (numRead <= 0) {
+					MODEMD_LOGE("read %s return %d", assert_dev ,numRead);
+					sleep(1);
+					continue;
+				}
+
+				MODEMD_LOGD("buf=%s", buf);
+				if(strstr(buf, "TD Modem Assert")) {
+					MODEMD_LOGE("td modem assert happen");
+					/* info socket clients that modem is assert */
+					for(i = 0; i < MAX_CLIENT_NUM; i++) {
+						MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
+						if(client_fd[i] > 0) {
+							ret = write(client_fd[i], buf, numRead);
+							MODEMD_LOGE("write %d bytes to client_fd[%d]:%d", ret, i, client_fd[i]);
+							if(ret < 0) {
+								MODEMD_LOGE("reset client_fd[%d]=-1",i);
+								close(client_fd[i]);
+								client_fd[i] = -1;
+							}
+						}
+					}
+
+					memset(prop, 0, sizeof(prop));
+					property_get(MODEMRESET_PROPERTY, prop, 0);
+					is_reset = atoi(prop);
+					if(is_reset) {
+						load_sipc_modem_img(modem);
+					} else {
+						MODEMD_LOGE("td modem assert but wont reset");
+					}
+
+				} else if(strstr(buf, "W Modem Assert")) {
+					MODEMD_LOGE("w modem assert happen");
+					/* info socket clients that modem is assert */
+					for(i = 0; i < MAX_CLIENT_NUM; i++) {
+						MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
+						if(client_fd[i] > 0) {
+							ret = write(client_fd[i], buf, numRead);
+							MODEMD_LOGE("write %d bytes to client_fd[%d]:%d", ret, i, client_fd[i]);
+							if(ret < 0) {
+								MODEMD_LOGE("reset client_fd[%d]=-1",i);
+								close(client_fd[i]);
+								client_fd[i] = -1;
+							}
+						}
+					}
+
+					memset(prop, 0, sizeof(prop));
+					property_get(MODEMRESET_PROPERTY, prop, 0);
+					is_reset = atoi(prop);
+					if(is_reset) {
+						load_sipc_modem_img(modem);
+					} else {
+						MODEMD_LOGE("w modem assert but wont reset");
+					}
+				}
+
+				if (FD_ISSET(watchdog_fd, &rfds)) {
+					memset(buf, 0, sizeof(buf));
+					numRead = read(watchdog_fd, buf, DATA_BUF_SIZE);
+					if (numRead <= 0) {
+						MODEMD_LOGE("read %s return %d", watchdog_dev ,numRead);
+						sleep(1);
+						continue;
+					}
+
+					MODEMD_LOGE("buf=%s", buf);
+					if(strstr(buf, "TD Modem Hang")) {
+						MODEMD_LOGE("td modem hang up");
+						/* info socket clients that modem is hang up*/
+						for(i = 0; i < MAX_CLIENT_NUM; i++) {
+							MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
+							if(client_fd[i] > 0) {
+								ret = write(client_fd[i], buf, numRead);
+								MODEMD_LOGE("write %d bytes to client_fd[%d]:%d", ret, i, client_fd[i]);
+								if(ret < 0) {
+									MODEMD_LOGE("reset client_fd[%d]=-1",i);
+									close(client_fd[i]);
+									client_fd[i] = -1;
+								}
+							}
+						}
+
+						memset(prop, 0, sizeof(prop));
+						property_get(MODEMRESET_PROPERTY, prop, 0);
+						is_reset = atoi(prop);
+						if(is_reset) {
+							load_sipc_modem_img(modem);
+						} else {
+							MODEMD_LOGE("td modem hang up but wont reset");
+						}
+					} else if(strstr(buf, "W Modem Hang")) {
+						MODEMD_LOGE("w modem hang up");
+						/* info socket clients that modem is hang up*/
+						for(i = 0; i < MAX_CLIENT_NUM; i++) {
+							MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
+							if(client_fd[i] > 0) {
+								ret = write(client_fd[i], buf, numRead);
+								MODEMD_LOGE("write %d bytes to client_fd[%d]:%d", ret, i, client_fd[i]);
+								if(ret < 0) {
+									MODEMD_LOGE("reset client_fd[%d]=-1",i);
+									close(client_fd[i]);
+									client_fd[i] = -1;
+								}
+							}
+						}
+
+						memset(prop, 0, sizeof(prop));
+						property_get(MODEMRESET_PROPERTY, prop, 0);
+						is_reset = atoi(prop);
+						if(is_reset) {
+							load_sipc_modem_img(modem);
+						} else {
+							MODEMD_LOGE("w modem hang up but wont reset");
+						}
+					}
+				}
+			}
+		}
+	}
+}
+/******************************************************
+ *
+ ** sipc interface end
+ *
+ *****************************************************/
 
 static void *modemd_listenaccept_thread(void *par)
 {
@@ -39,27 +1282,34 @@ static void *modemd_listenaccept_thread(void *par)
 		client_fd[i]=-1;
 
 	sfd = socket_local_server(MODEM_SOCKET_NAME,
-		ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+			ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
 	if (sfd < 0) {
-		ALOGE("%s: cannot create local socket server", __FUNCTION__);
+		MODEMD_LOGE("%s: cannot create local socket server", __FUNCTION__);
 		exit(-1);
 	}
 
 	for(; ;){
 
-		ALOGE("%s: Waiting for new connect ...", __FUNCTION__);
+		MODEMD_LOGD("%s: Waiting for new connect ...", __FUNCTION__);
 		if ( (n=accept(sfd,NULL,NULL)) == -1)
 		{
-			ALOGE("engserver accept error\n");
+			MODEMD_LOGE("engserver accept error\n");
 			continue;
 		}
 
-		ALOGE("%s: accept client n=%d",__FUNCTION__, n);
+		MODEMD_LOGD("%s: accept client n=%d",__FUNCTION__, n);
 		for(i=0; i<MAX_CLIENT_NUM; i++) {
 			if(client_fd[i]==-1){
 				client_fd[i]=n;
-				ALOGE("%s: fill %d to client[%d]\n",__FUNCTION__, n, i);
+				MODEMD_LOGD("%s: fill %d to client[%d]\n",__FUNCTION__, n, i);
 				break;
+			}
+			/* if client_fd arrray is full, just fill the new socket to the
+			 * last element */
+			if(i == MAX_CLIENT_NUM - 1) {
+				MODEMD_LOGD("%s: client array is full, just fill %d to client[%d]",
+						__FUNCTION__, n, i);
+				client_fd[i]=n;
 			}
 		}
 	}
@@ -67,11 +1317,11 @@ static void *modemd_listenaccept_thread(void *par)
 
 int main(int argc, char *argv[])
 {
-	int cfd, ret,modemfd, i;
-	ssize_t numRead;
-	char buf[DATA_BUF_SIZE];
-	pthread_t t1;
+	pthread_t tid, tid1, tid2;
+	int modem;
 	struct sigaction action;
+	int ret;
+	char modem_enable[5];
 
 	memset(&action, 0x00, sizeof(action));
 	action.sa_handler = SIG_IGN;
@@ -79,62 +1329,47 @@ int main(int argc, char *argv[])
 	sigemptyset(&action.sa_mask);
 	ret = sigaction (SIGPIPE, &action, NULL);
 	if (ret < 0) {
-		ALOGE("sigaction() failed!\n");
+		MODEMD_LOGE("sigaction() failed!\n");
 		exit(1);
 	}
 
-	modemfd = open(MODEM_PATH, O_RDONLY);
+	pthread_create(&tid, NULL, (void*)modemd_listenaccept_thread, NULL);
 
-	if (modemfd < 0){
-		ALOGE("cannot open vbpipe for check modem state\n");
-		exit(-1);
+	property_get(VLX_MODEM_ENABLE, modem_enable, "");
+	if(!strcmp(modem_enable, "1")) {
+		MODEMD_LOGD("VLX modem is enabled");
+		modem = VLX_MODEM;
+		vlx_reboot_init();
+		start_service(modem, 0);
+		detect_vlx_modem();
+
+	} else {
+		MODEMD_LOGD("VLX modem is not enabled");
 	}
 
-	pthread_create(&t1, NULL, (void*)modemd_listenaccept_thread, NULL);
-
-	for(;;) {
-		numRead = read(modemfd, buf, DATA_BUF_SIZE);
-		if (numRead == 0){
-			ALOGE("read nothing from modem state\n");
-			/* close and reopen */
-			close(modemfd);
-			sleep(10);
-			modemfd = open(MODEM_PATH, O_RDONLY);
-			if (modemfd < 0){
-				ALOGE("cannot open modem state pipe\n");
-				exit(-1);
-			}
-			continue;
-		} else if (numRead < 0) {
-			ALOGE("numRead %d is lower than 0\n", numRead);
-                        continue;
-		}
-		ALOGE("modem assert happen\n");
-		print_log_data(buf, numRead);
-
-		for(i=0; i<MAX_CLIENT_NUM; i++) {
-			ALOGE("client_fd[%d]=%d\n",i, client_fd[i]);
-			if(client_fd[i] > 0) {
-				ret = write(client_fd[i], buf, numRead);
-				ALOGE("write %d bytes to client socket [%d] to reset modem\n", ret, client_fd[i]);
-				close(client_fd[i]);
-				client_fd[i]=-1;
-			}
-		}
-		/*
-		while ((numRead = read(cfd, buf, BUF_SIZE)) > 0){
-			write(STDOUT_FILENO, "MODEM: ", 6);
-			if (write(STDOUT_FILENO, buf, numRead) != numRead)
-				printf("partial/failed write\n");
-		}
-		if (numRead == -1){
-			printf("read error\n");
-			exit(-1);
-		}
-		*/
+	property_get(TD_MODEM_ENABLE, modem_enable, "");
+	if(!strcmp(modem_enable, "1")) {
+		MODEMD_LOGD("TD modem is enabled");
+		modem = TD_MODEM;
+		start_service(modem, 0);
+		pthread_create(&tid1, NULL, (void*)detect_sipc_modem, &modem);
+	} else {
+		MODEMD_LOGD("TD modem is not enabled");
 	}
 
-	ALOGE("MODEM close client socket\n");
-	close(cfd);
+	property_get(W_MODEM_ENABLE, modem_enable, "");
+	if(!strcmp(modem_enable, "1")) {
+		MODEMD_LOGD("WCDMA modem is enabled");
+		modem = W_MODEM;
+		start_service(modem, 0);
+		pthread_create(&tid2, NULL, (void*)detect_sipc_modem, &modem);
+	} else {
+		MODEMD_LOGD("WCDMA modem is not enabled");
+	}
+
+	do {
+		pause();
+	} while(1);
+
 	return 0;
 }

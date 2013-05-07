@@ -27,7 +27,16 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.device.support.abroad.apn=1\
 	persist.msms.phone_count=1 \
 	persist.blcr.enable=0 \
-	ro.nativemodem=true
+	ro.nativemodem=true \
+	ro.modem.vlx.enable=1 \
+	ro.modem.vlx.tty=/dev/ts0710mux \
+	ro.modem.vlx.eth=veth \
+	ro.modem.vlx.snd=1 \
+	ro.modem.vlx.diag=/dev/vbpipe0 \
+	ro.modem.vlx.nv=/dev/vbpipe1 \
+	ro.modem.vlx.assert=/dev/vbpipe2 \
+	ro.modem.vlx.vbc=/dev/vbpipe6 \
+	ro.modem.vlx.msms.count=1
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1

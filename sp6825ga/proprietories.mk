@@ -10,10 +10,7 @@ PRODUCT_PACKAGES := \
 	rild_sp \
 	libril_sp \
 	libreference-ril_sp \
-	sprd_monitor \
 	phoneserver \
-	phoneserver_2sim \
-	open_ttyNK \
 	akmd8963
 
 else
@@ -29,10 +26,8 @@ PROPMODS := \
 	system/bin/rild_sp \
 	system/lib/libril_sp.so \
 	system/lib/libreference-ril_sp.so \
-	system/bin/sprd_monitor \
 	system/bin/phoneserver \
-	system/bin/phoneserver_2sim \
-	system/bin/open_ttyNK
+
 
 PRODUCT_COPY_FILES := $(foreach f,$(PROPMODS),vendor/sprd/proprietories/sp8825ea/$(f):$(f))
 

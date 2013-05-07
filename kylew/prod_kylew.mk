@@ -27,7 +27,16 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
 	ro.com.android.dataroaming=false \
 	persist.msms.phone_count=1 \
-	persist.sys.sprd.modemreset=1
+	persist.sys.sprd.modemreset=1 \
+	ro.modem.vlx.enable=1 \
+	ro.modem.vlx.tty=/dev/ts0710mux \
+	ro.modem.vlx.eth=veth \
+	ro.modem.vlx.snd=1 \
+	ro.modem.vlx.diag=/dev/vbpipe0 \
+	ro.modem.vlx.nv=/dev/vbpipe1 \
+	ro.modem.vlx.assert=/dev/vbpipe2 \
+	ro.modem.vlx.vbc=/dev/vbpipe6 \
+	ro.modem.vlx.msms.count=1
 
 # Set default USB interface
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
