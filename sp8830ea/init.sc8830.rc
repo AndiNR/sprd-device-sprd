@@ -36,6 +36,12 @@ on post-fs-data
 
 on boot
     chown system system /sys/class/backlight/sprd_backlight/brightness
+
+    chmod 660 /proc/cpt/wdtirq
+    chmod 660 /proc/cpw/wdtirq
+    chown system root /proc/cpt/wdtirq
+    chown system root /proc/cpw/wdtirq
+
     insmod /system/lib/modules/ft5306_ts.ko
     insmod /system/lib/modules/bcmdhd.ko
 
@@ -78,51 +84,72 @@ on property:ro.debuggable=1
 #start rawdata daemon.
 service rawdatad /bin/rawdatad
     class core
-    user root
+    user system
     oneshot
 
-#telephony service
-service sprd_monitor /system/bin/sprd_monitor
-    class main
-    user root
-    oneshot
-
-#service modemd /system/bin/modemd
-#    class main
+#start nvitem daemon.
+#service nvm_daemon /system/bin/nvm_daemon
+#    class core
+#    user system
+#    group system radio shell
 #    oneshot
 
+service modemd /system/bin/modemd
+    class core
+    user system
+    group system radio shell
+    oneshot
+
 service engpcclient /system/bin/engpcclient -t 1
-    class main
+    class core
+    user system
+    group system radio shell
     disabled
     oneshot
 
 service engservice /system/bin/engservice
-    class main
+    class core
+    user system
+    group system
     disabled
     oneshot
 
 service engmodemclient /system/bin/engmodemclient
-    class main
+    class core
+    user system
+    group system radio
     disabled
     oneshot
 
 #service engsetmacaddr /system/bin/engsetmacaddr
 #    class main
+#    user system
 #    oneshot
 
-service phoneserver /system/bin/phoneserver
-    class main
+service phoneserver_vlx /system/bin/phoneserver -m vlx
+    class core
     user root
     group radio system shell
     disabled
     oneshot
 
-service phoneserver_2sim /system/bin/phoneserver_2sim
-    class main
+service phoneserver_t /system/bin/phoneserver -m t
+    class core
     user root
     group radio system shell
     disabled
     oneshot
+
+service phoneserver_w /system/bin/phoneserver -m w
+    class core
+    user root
+    group radio system shell
+    disabled
+    oneshot
+
+#service calibrationinit /system/bin/calibration_init
+#    class main
+#    oneshot
 
 #service vcharged /bin/vcharged
 #    class core
@@ -135,44 +162,56 @@ service charge /bin/charge
     user root
     oneshot
 
-#service engtest /system/bin/engtest
-#    user root
-#    oneshot
-#rild service
-service ril-daemon /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -- -n 0
-    class main
+#vlx rild service
+service ril-daemon /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -m vlx -n 0
+    class core
     socket rild stream 660 root radio
     socket rild-debug stream 660 radio system
+    disabled
     user root
     group radio cache inet misc audio sdcard_rw log
 
-service ril-daemon1 /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -- -n 1
-    class main
+service ril-daemon1 /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -m vlx -n 1
+    class core
     socket rild1 stream 660 root radio
     socket rild-debug1 stream 660 radio system
     disabled
     user root
     group radio cache inet misc audio sdcard_rw log
 
-#on property:persist.msms.phone_count=2
-#    start ril-daemon1
+#td rild service
+service tril-daemon /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -m t -n 0
+    class core
+    socket trild stream 660 root radio
+    socket trild-debug stream 660 radio system
+    disabled
+    user root
+    group radio cache inet misc audio sdcard_rw log
 
-#on property:ro.nativemodem=true
-#    symlink /dev/slog_td /dev/vbpipe0
-#    symlink /dev/spipe_td1 /dev/vbpipe1
-#    symlink /dev/spipe_td2 /dev/vbpipe2
-#    symlink /dev/spipe_td3 /dev/vbpipe3
-#    symlink /dev/spipe_td6 /dev/vbpipe6
+service tril-daemon1 /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -m t -n 1
+    class core
+    socket trild1 stream 660 root radio
+    socket trild-debug1 stream 660 radio system
+    disabled
+    user root
+    group radio cache inet misc audio sdcard_rw log
 
-#start nvitem daemon.
-#service nvm_daemon /system/bin/nvm_daemon
-#    class main
-#    user root
-#    oneshot
+#wcdma rild service
+service wril-daemon /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -m w -n 0
+    class core
+    socket wrild stream 660 root radio
+    socket wrild-debug stream 660 radio system
+    disabled
+    user root
+    group radio cache inet misc audio sdcard_rw log
 
-#service calibrationinit /system/bin/calibration_init
-#    class main
-#    oneshot
+service wril-daemon1 /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -m w -n 1
+    class core
+    socket wrild1 stream 660 root radio
+    socket wrild-debug1 stream 660 radio system
+    disabled
+    user root
+    group radio cache inet misc audio sdcard_rw log
 
 #service bootsound /system/bin/mplayer /system/media/bootsound
 #    user media
