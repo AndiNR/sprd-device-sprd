@@ -29,6 +29,15 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	persist.msms.phone_count=2 \
 	persist.msms.phone_default=0 \
 	persist.sys.sprd.modemreset=1 \
+	ro.modem.vlx.enable=1 \
+	ro.modem.vlx.tty=/dev/ts0710mux \
+	ro.modem.vlx.eth=veth \
+	ro.modem.vlx.snd=1 \
+	ro.modem.vlx.diag=/dev/vbpipe0 \
+	ro.modem.vlx.nv=/dev/vbpipe1 \
+	ro.modem.vlx.assert=/dev/vbpipe2 \
+	ro.modem.vlx.vbc=/dev/vbpipe6 \
+	ro.modem.vlx.msms.count=2 \
         universe_ui_support=true
 
 # Set default USB interface

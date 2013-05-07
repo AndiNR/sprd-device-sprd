@@ -41,6 +41,10 @@ PRODUCT_PACKAGES := \
 	bttest\
 	hostapd \
 	wpa_supplicant.conf \
+	calibration_init \
+	rawdatad \
+	nvm_daemon \
+	modemd\
 	audio.a2dp.default \
         SoundRecorder \
         libmorpho_facesolid.so
@@ -62,17 +66,12 @@ PRODUCT_PACKAGES += \
 	libstagefrighthw \
 	libstagefright_soft_mpeg4dec_sprd \
 	libstagefright_soft_h264dec_sprd \
-	rawdatad \
-	modem_control\
-	nvitemd \
 	charge \
 	vcharged \
 	poweroff_alarm \
 	preloadapp.sh \
 	mplayer \
 	sqlite3 \
-	modemd \
-	calibration_init \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \
 	camera.$(TARGET_PLATFORM) \
@@ -111,6 +110,7 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/scripts/ext_symlink.sh:system/bin/ext_symlink.sh \
 	$(BOARDDIR)/scripts/ext_data.sh:system/bin/ext_data.sh \
 	$(BOARDDIR)/scripts/ext_kill.sh:system/bin/ext_kill.sh \
+	$(BOARDDIR)/scripts/ext_chown.sh:system/bin/ext_chown.sh \
 	device/sprd/common/libs/mali/egl.cfg:system/lib/egl/egl.cfg \
 	device/sprd/common/libs/audio/audio_policy.conf:system/etc/audio_policy.conf \
 	device/sprd/common/res/media/media_codecs.xml:system/etc/media_codecs.xml \

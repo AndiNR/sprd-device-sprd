@@ -10,9 +10,7 @@ PRODUCT_PACKAGES := \
 	rild_sp \
 	libril_sp \
 	libreference-ril_sp \
-	sprd_monitor \
-	phoneserver \
-	phoneserver_2sim
+	phoneserver
 
 else
 # for spreadtrum customer proprietories modules: only support direct copy
@@ -27,9 +25,7 @@ PROPMODS := \
 	system/bin/rild_sp \
 	system/lib/libril_sp.so \
 	system/lib/libreference-ril_sp.so \
-	system/bin/sprd_monitor \
-	system/bin/phoneserver \
-	system/bin/phoneserver_2sim
+	system/bin/phoneserver
 
 PRODUCT_COPY_FILES := $(foreach f,$(PROPMODS),vendor/sprd/proprietories/nevistd/$(f):$(f))
 

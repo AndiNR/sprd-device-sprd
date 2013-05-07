@@ -12,7 +12,6 @@ PRODUCT_PACKAGES := \
 	libreference-ril_sp \
 	sprd_monitor \
 	phoneserver \
-	phoneserver_2sim \
 	akmd8975
 
 else
@@ -30,7 +29,6 @@ PROPMODS := \
 	system/lib/libreference-ril_sp.so \
 	system/bin/sprd_monitor \
 	system/bin/phoneserver \
-	system/bin/phoneserver_2sim \
 	system/bin/akmd8975
 
 PRODUCT_COPY_FILES := $(foreach f,$(PROPMODS),vendor/sprd/proprietories/sp7710/$(f):$(f))

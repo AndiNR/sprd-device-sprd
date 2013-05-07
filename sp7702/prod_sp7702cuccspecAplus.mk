@@ -33,7 +33,10 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	zram.support=true \
 	ro.build.product.lowmem=1 \
         universe_ui_support=true \
-        ro.callfirewall.disabled=true 
+        ro.callfirewall.disabled=true \
+	ro.modem.vlx.tty=/dev/ts0710mux \
+	ro.modem.vlx.eth=veth \
+	ro.modem.vlx.msms.count=2
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1
