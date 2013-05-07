@@ -1539,6 +1539,8 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 {
         Mutex::Autolock cbLock(&mCallbackLock);
         ssize_t offset = frame->buf_id;
+	bool is_release_frame = true;
+
 
         // Ignore the first frame--there is a bug in the VFE pipeline and that
         // frame may be bad.
@@ -1556,6 +1558,7 @@ if(PREVIEW_WINDOW_SET_OK == mSettingPreviewWindowState)
         int width, height, frame_size, offset_size;
         uint32_t i;
         void *src_addr,*dst_addr;
+	bool is_cancel_buffer = false;
 
         // mParameters.getPreviewSize(&width, &height);
         width  = mPreviewWidth;
@@ -1567,12 +1570,14 @@ if(PREVIEW_WINDOW_SET_OK == mSettingPreviewWindowState)
                 if(CAMERA_SUCCESS != camera_release_frame(frame->buf_id)){
                         ALOGE("receivePreviewFrame: fail 2 to camera_release_frame().offset: %d.", frame->buf_id);
                 }
-		return;
+		goto preview_release_frame;
 	}
 
         if (mPreviewWindow && mGrallocHal) {
                 buffer_handle_t *buf_handle;
                 int stride;
+
+
                 if (0 != mPreviewWindow->dequeue_buffer(mPreviewWindow, &buf_handle, &stride)) {
                         ALOGE("Could not dequeue gralloc buffer!\n");
                         goto callbacks;
@@ -1588,64 +1593,78 @@ if(PREVIEW_WINDOW_SET_OK == mSettingPreviewWindowState)
 
                         if((NULL == vaddr) || (NULL == frame_addr)){
                                 ALOGE("Fail to get gralloc buffer.");
-                                goto callbacks;
-						} else{
-							ALOGI("OK to get gralloc buffer. vaddr: 0x%x, frame_addr: 0x%x, frame->buf_Virt_Addr: 0x%x.", (uint32_t)vaddr, (uint32_t)frame_addr, (uint32_t)frame->buf_Virt_Addr);
-						}
+                                is_cancel_buffer = true;
+                                goto preview_grallochal_unlock;
+			} else{
+				ALOGI("OK to get gralloc buffer. vaddr: 0x%x, frame_addr: 0x%x, frame->buf_Virt_Addr: 0x%x.", (uint32_t)vaddr, (uint32_t)frame_addr, (uint32_t)frame->buf_Virt_Addr);
+			}
 
-						{
-							native_handle_t *pNativeHandle = (native_handle_t *)*buf_handle;
-							struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
-							uint32_t phy_addr =  (uint32_t)(private_h->phyaddr);
-							nsecs_t timestamp_old, timestamp_new;
-							int src_width;
+			{
+				native_handle_t *pNativeHandle = (native_handle_t *)*buf_handle;
+				struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
+				uint32_t phy_addr =  (uint32_t)(private_h->phyaddr);
+				nsecs_t timestamp_old, timestamp_new;
+				int src_width;
 
-							timestamp_old = systemTime();
+				timestamp_old = systemTime();
 
-							//ALOGE("wxz====: frame->buffer_phy_addr : 0x%x, phy_addr: 0x %x", frame->buffer_phy_addr, phy_addr);
+				//ALOGE("wxz====: frame->buffer_phy_addr : 0x%x, phy_addr: 0x %x", frame->buffer_phy_addr, phy_addr);
 #ifdef USE_ION_MEM
-							if(0 != camera_rotation_copy_data(width, height, frame->buffer_phy_addr, phy_addr)){
-							        ALOGE("fail to camera_rotation_copy_data() in receivePreviewFrame.");
-							        goto callbacks;
-							}
+				if(0 != camera_rotation_copy_data(width, height, frame->buffer_phy_addr, phy_addr)){
+				        ALOGE("fail to camera_rotation_copy_data() in receivePreviewFrame.");
+					is_cancel_buffer = true;
+				        goto preview_grallochal_unlock;
+				}
 #else
-							ALOGE("receivePreviewFrame cp buf_addr=0x%x,phy_addr=0x%x", \
-								  frame->buffer_phy_addr, vaddr);
-							if(stride != width){
-								dst_addr = vaddr;
-								src_addr = frame->buf_Virt_Addr;
-								src_width = width + width%4;
-								ALOGE("receivePreviewFrame, src_width %d", src_width);
-								for(i=0;i<height*3/2;i++) {
-									memcpy(dst_addr,src_addr,width);
-									dst_addr =(void*)((uint32_t)dst_addr+stride);
-									src_addr =(void*)((uint32_t)src_addr+src_width);
-								}
-							}else{
-								if(0 != camera_rotation_copy_data_virtual(width, height, frame->buffer_phy_addr, (uint32_t)vaddr)){
-								        ALOGE("fail to camera_rotation_copy_data() in receivePreviewFrame.");
-								        goto callbacks;
-								}
-							}
-							//memcpy(vaddr, frame_addr, width*height*3/2);
-							//ALOGV("receivePreviewFrame, copy to vaddr: src=%x, dst=%x, dstphy=%x \n", (uint32_t)frame_addr, (uint32_t)vaddr, phy_addr);
+				ALOGE("receivePreviewFrame cp buf_addr=0x%x,phy_addr=0x%x", \
+					  frame->buffer_phy_addr, vaddr);
+				if(stride != width){
+					dst_addr = vaddr;
+					src_addr = frame->buf_Virt_Addr;
+					src_width = width + width%4;
+					ALOGE("receivePreviewFrame, src_width %d", src_width);
+					for(i=0;i<height*3/2;i++) {
+						memcpy(dst_addr,src_addr,width);
+						dst_addr =(void*)((uint32_t)dst_addr+stride);
+						src_addr =(void*)((uint32_t)src_addr+src_width);
+					}
+				}else{
+					if(0 != camera_rotation_copy_data_virtual(width, height, frame->buffer_phy_addr, (uint32_t)vaddr)){
+					        ALOGE("fail to camera_rotation_copy_data() in receivePreviewFrame.");
+						is_cancel_buffer = true;
+					        goto preview_grallochal_unlock;
+					}
+				}
+				//memcpy(vaddr, frame_addr, width*height*3/2);
+				//ALOGV("receivePreviewFrame, copy to vaddr: src=%x, dst=%x, dstphy=%x \n", (uint32_t)frame_addr, (uint32_t)vaddr, phy_addr);
 #endif
-							timestamp_new = systemTime();
-							ALOGV("receivePreviewFrame %lld, %lld, time = %lld us \n",timestamp_old, timestamp_new, (timestamp_new-timestamp_old)/1000);
+				timestamp_new = systemTime();
+				ALOGV("receivePreviewFrame %lld, %lld, time = %lld us \n",timestamp_old, timestamp_new, (timestamp_new-timestamp_old)/1000);
 
-						}
+			}
+preview_grallochal_unlock:
                         mGrallocHal->unlock(mGrallocHal, *buf_handle);
                 }
-                else
+                else {
                         ALOGE("%s: could not obtain gralloc buffer", __func__);
+                        is_cancel_buffer = true;
+		}
 
-                if (0 != mPreviewWindow->enqueue_buffer(mPreviewWindow, buf_handle)) {
-                        ALOGE("Could not enqueue gralloc buffer!\n");
-                        goto callbacks;
-                }
-                else{
-                	ALOGI("OK to enqueue gralloc buffer!");
-                }
+		if (is_cancel_buffer) {
+			if (0 != mPreviewWindow->cancel_buffer(mPreviewWindow, buf_handle)) {
+	                        ALOGE("Could not cancel gralloc buffer!\n");
+	                        goto callbacks;
+	                }
+
+		} else {
+	                if (0 != mPreviewWindow->enqueue_buffer(mPreviewWindow, buf_handle)) {
+	                        ALOGE("Could not enqueue gralloc buffer!\n");
+	                        goto callbacks;
+	                }
+	                else{
+				ALOGI("OK to enqueue gralloc buffer!");
+	                }
+	        }
         }
 }
 }
@@ -1660,10 +1679,10 @@ callbacks:
 		if (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME) {
 			sprd_camera_memory_t *tempHeap = GetPmem("/dev/pmem_adsp", frame->dx * frame->dy * 3 /2, 1);
 			if(NULL == tempHeap)
-				return;
+				goto preview_release_frame;
 			if(NULL == tempHeap->handle){
 				ALOGE("Fail to GetPmem tempHeap.");
-				return;
+				goto preview_release_frame;
 			}
 
 			ALOGE("receivePreviewFrame buf_addr=0x%x,phy_addr=0x%x", \
@@ -1675,7 +1694,7 @@ callbacks:
 				if(0 != camera_convert_420_UV_VU(frame->buffer_phy_addr, tempHeap->phys_addr, frame->dx, frame->dy)){
 					ALOGE("fail to camera_rotation_copy_data() in CAMERA_MSG_PREVIEW_FRAME.");
 					FreePmem(tempHeap);
-					return;
+					goto preview_release_frame;
 				}
 			}
 			else
@@ -1699,6 +1718,8 @@ callbacks:
 
 		if ((mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) &&(mRecordingMode==1))
                 {
+			is_release_frame = false;
+
                         nsecs_t timestamp = systemTime();/*frame->timestamp;*/
                         ALOGV("CAMERA_MSG_VIDEO_FRAME test timestamp = %lld, mIsStoreMetaData: %d.",timestamp, mIsStoreMetaData);
 			if(mIsStoreMetaData) {
@@ -1712,27 +1733,29 @@ callbacks:
 				mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap->camera_memory, offset, mUser);
 			}
                 }
-		else {
-                        if(CAMERA_SUCCESS != camera_release_frame(offset)){
-                        ALOGE("receivePreviewFrame: fail to camera_release_frame().offset: %d.", offset);
-                }
-        }
-        // When we are doing preview but not recording, we need to
-        // release every preview frame immediately so that the next
-        // preview frame is delivered.  However, when we are recording
-        // (whether or not we are also streaming the preview frames to
-        // the screen), we have the user explicitly release a preview
-        // frame via method releaseRecordingFrame().  In this way we
-        // allow a video encoder which is potentially slower than the
-        // preview stream to skip frames.  Note that we call
-        // camera_release_frame() in this method because we first
-        // need to check to see if mPreviewCallback != NULL, which
-        // requires holding mCallbackLock.
+
+	        // When we are doing preview but not recording, we need to
+	        // release every preview frame immediately so that the next
+	        // preview frame is delivered.  However, when we are recording
+	        // (whether or not we are also streaming the preview frames to
+	        // the screen), we have the user explicitly release a preview
+	        // frame via method releaseRecordingFrame().  In this way we
+	        // allow a video encoder which is potentially slower than the
+	        // preview stream to skip frames.  Note that we call
+	        // camera_release_frame() in this method because we first
+	        // need to check to see if mPreviewCallback != NULL, which
+	        // requires holding mCallbackLock.
 
 	}
         else
                 ALOGE("receivePreviewFrame: mData_cb is null.");	
 
+preview_release_frame:
+	if (is_release_frame) {
+		if(CAMERA_SUCCESS != camera_release_frame(offset)){
+			ALOGE("receivePreviewFrame: fail to camera_release_frame().offset: %d.", offset);
+		}
+	}
 }	
 
 void SprdCameraHardware::notifyShutter()
