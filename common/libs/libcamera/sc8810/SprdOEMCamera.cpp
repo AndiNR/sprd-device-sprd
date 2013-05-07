@@ -1077,15 +1077,16 @@ void *camera_encoder_thread(void *client_data)
 		struct tm *p;
 		time(&timep);
 		p=gmtime(&timep);
-		sprintf(s_camera_info.datetime_buf, "%4d:%2d:%2d %2d:%2d:%2d", (1900+p->tm_year), (1+p->tm_mon),p->tm_mday,
+		sprintf(s_camera_info.datetime_buf, "%4d:%02d:%02d %02d:%02d:%02d", (1900+p->tm_year), (1+p->tm_mon),p->tm_mday,
 			p->tm_hour, p->tm_min, p->tm_sec);
 		s_camera_info.datetime_buf[19] = '\0';
 	 	g_jpegenc_params.datetime = s_camera_info.datetime_buf;
 
+
 		if(0 == g_position.timestamp)
 		time(&g_position.timestamp);
 		p=gmtime(&g_position.timestamp);
-		sprintf(s_camera_info.gps_date_buf, "%4d:%2d:%2d", (1900+p->tm_year), (1+p->tm_mon),p->tm_mday);
+		sprintf(s_camera_info.gps_date_buf, "%4d:%02d:%02d", (1900+p->tm_year), (1+p->tm_mon),p->tm_mday);
 		s_camera_info.gps_date_buf[10] = '\0';
 		g_jpegenc_params.gps_date = s_camera_info.gps_date_buf;
 		g_jpegenc_params.gps_hour = p->tm_hour;
