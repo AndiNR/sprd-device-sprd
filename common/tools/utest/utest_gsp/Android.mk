@@ -1,9 +1,11 @@
 ifneq ($(shell ls -d vendor/sprd/proprietories-source 2>/dev/null),)
 
+
+
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830xxx)
 
 
 
