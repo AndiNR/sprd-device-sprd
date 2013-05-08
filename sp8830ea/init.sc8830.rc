@@ -213,6 +213,14 @@ service wril-daemon1 /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -
     user root
     group radio cache inet misc audio sdcard_rw log
 
+#nvitemd
+service nvitemd /system/bin/nvitemd
+    class core
+    user root
+    group system radio shell
+    disabled
+    oneshot
+
 #service bootsound /system/bin/mplayer /system/media/bootsound
 #    user media
 #    group audio
