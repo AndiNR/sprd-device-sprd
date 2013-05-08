@@ -309,13 +309,10 @@ sprd_camera_memory_t* SprdCameraHardware::GetCachePmem(const char *device_name, 
 	}
 	camera_memory_t *camera_memory;
 	int paddr, psize;
-        int order = 0, acc = 1;
+        int  acc = buf_size *num_bufs ;
 
-	while(acc < buf_size * num_bufs) {
-		order++;
-		acc = acc*2;
-	}
-	acc = camera_get_size_align_page(acc);
+
+	//acc = camera_get_size_align_page(acc);
         MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc ,0 , (1<<31) | ION_HEAP_CARVEOUT_MASK);
 //        MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc ,MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
 
@@ -355,12 +352,10 @@ sprd_camera_memory_t* SprdCameraHardware::GetPmem(const char *device_name, int b
 	}
 	camera_memory_t *camera_memory;
 	int paddr, psize;
-        int order = 0, acc = 1;
-	while(acc < buf_size * num_bufs) {
-		order++;
-		acc = acc*2;
-	}
-	acc = camera_get_size_align_page(acc);
+        int acc = buf_size *num_bufs ;
+
+
+	//acc = camera_get_size_align_page(acc);
         MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc , MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
 
 	camera_memory = mGetMemory_cb(pHeapIon->getHeapID(), acc/num_bufs, num_bufs, NULL);
@@ -413,7 +408,6 @@ bool SprdCameraHardware::initPreview()
 {
         uint32_t page_size, buffer_size;
         uint32_t preview_buff_cnt = kPreviewBufferCount;
-        uint32_t width;
 
         if(true != startCameraIfNecessary())
                 return false;
@@ -426,11 +420,9 @@ bool SprdCameraHardware::initPreview()
         setCameraDimensions();
         ALOGV("initPreview: preview size=%dx%d", mPreviewWidth, mPreviewHeight);
 
-        width = mPreviewWidth;
-        width += mPreviewWidth%4;
-        mPreviewFrameSize = width * mPreviewHeight * 3 / 2;
-        buffer_size = camera_get_size_align_page(mPreviewWidth * mPreviewHeight *2);	
-        buffer_size = (mPreviewFrameSize + 256 - 1) & ~(256 - 1);
+
+        mPreviewFrameSize = mPreviewWidth * mPreviewHeight * 3 / 2;
+        buffer_size = camera_get_size_align_page(mPreviewFrameSize);
         if(mOrientation_parm)
         {
                 /* allocate 1 more buffer for rotation */
