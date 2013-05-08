@@ -320,7 +320,7 @@ struct config_element sprd_front_camera_hardware_config[] = {
 #endif
         {"focus-mode-values", "infinity"},
         {"focus-mode", "infinity"},
-        {"focus-distances", "2.0,2.5,3.75,Infinity"},
+        {"focus-distances", "2.0,2.5,Infinity"},
 	{"max-num-detected-faces-hw", "0"},
 	{"smile-snap-mode","0"},
 	{"ycbcr", "0"},
