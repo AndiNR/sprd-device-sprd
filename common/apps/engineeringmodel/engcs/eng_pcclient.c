@@ -1016,10 +1016,11 @@ int main (int argc, char** argv)
 		ENG_LOG("vdiag thread start error");
 	}
 
-	ENG_LOG("vlog thread start2");
-	if (0 != eng_thread_create( &t3, eng_modemreset_thread, NULL)){
-		ENG_LOG("vdiag thread start error");
-	}
+	//modem reset move to modemd
+	//ENG_LOG("vlog thread start2");
+	//if (0 != eng_thread_create( &t3, eng_modemreset_thread, NULL)){
+	//	ENG_LOG("vdiag thread start error");
+	//}
 
 	ENG_LOG("vlog thread start3");
 	if (0 != eng_thread_create( &t4, eng_sd_log, NULL)){
