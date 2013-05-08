@@ -334,8 +334,9 @@ int camera_scaling(HW_SCALE_DATA_FORMAT_E output_fmt,
 	ret = ioctl(fd, SCALE_IO_IS_DONE, &scale_frm);
 
 	exit:
-	if(fd > 0)
+	if(fd >= 0)
 	{
+		ioctl(fd, SCALE_IO_STOP, &scale_frm);
 		close(fd);
 	}
 	if (ret) {
