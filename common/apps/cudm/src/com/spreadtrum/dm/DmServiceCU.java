@@ -614,7 +614,9 @@ public class DmServiceCU extends Service {
     			if(isSimMatchCustomerPhone){
     				if(savedImsi.equals(getImsi(i))){
     					Log.d(TAG, "The saved imsi is equal to phone + "+i+" imsi , the savedImsi = " + savedImsi);
-    					setRegState(mContext, true);
+					if(mContext != null){
+    						setRegState(mContext, true);
+					}
     					return false;
     				}
     			}
@@ -1171,8 +1173,10 @@ public class DmServiceCU extends Service {
                                         String imsi = mTelephonyManager.getSubscriberId();
                                         Log.d(TAG, "The saved imsi is " + imsi);
                                         saveImsi(mContext,imsi);
-                                        setRegState(mContext, true);
-                                        stopListeningServiceState();
+					if(mContext != null){
+                                        	setRegState(mContext, true);
+                                        }
+    					stopListeningServiceState();
                                         break;
                                 default:
                                          Log.d(TAG, "sendMessageReceiver Send Error ");
