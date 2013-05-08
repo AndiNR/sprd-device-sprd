@@ -44,3 +44,5 @@
 /dev/spipe_w4          0666     system  system
 /dev/spipe_w5          0666     system  system
 /dev/spipe_w6          0660     media   audio
+
+/dev/vser              0660     system  system 
