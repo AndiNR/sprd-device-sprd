@@ -32,8 +32,8 @@ static char* s_connect_ser_path[]={
 	NULL
 };
 static char* s_cp_pipe[]={
-	"/dev/vbpipe0", //cp_td
-	//"/dev/slog_td",
+	"/dev/vbpipe0", //cp_td : slog_td
+	"/dev/slog_w", //cp_w
 	NULL
 };
 
@@ -250,7 +250,7 @@ void *eng_vdiag_thread(void *x)
 	do{
 		pipe_fd = open(s_cp_pipe[param->cp_type], O_WRONLY);
 		if(pipe_fd < 0) {
-			ENG_LOG("eng_vdiag cannot open vpipe(spipe), times:%d\n", wait_cnt);
+			ENG_LOG("eng_vdiag cannot open %s, times:%d\n", s_cp_pipe[param->cp_type], wait_cnt);
 			if(wait_cnt++ >= MAX_OPEN_TIMES){
 				ALOGE("eng_vdiag cannot open vpipe(spipe)\n");
 				return NULL;
