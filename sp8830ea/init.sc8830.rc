@@ -127,13 +127,6 @@ service engmodemclient /system/bin/engmodemclient
 #    user system
 #    oneshot
 
-service phoneserver_vlx /system/bin/phoneserver -m vlx
-    class core
-    user root
-    group radio system shell
-    disabled
-    oneshot
-
 service phoneserver_t /system/bin/phoneserver -m t
     class core
     user root
@@ -162,23 +155,6 @@ service charge /bin/charge
     class charger
     user root
     oneshot
-
-#vlx rild service
-service ril-daemon /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -m vlx -n 0
-    class core
-    socket rild stream 660 root radio
-    socket rild-debug stream 660 radio system
-    disabled
-    user root
-    group radio cache inet misc audio sdcard_rw log
-
-service ril-daemon1 /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -m vlx -n 1
-    class core
-    socket rild1 stream 660 root radio
-    socket rild-debug1 stream 660 radio system
-    disabled
-    user root
-    group radio cache inet misc audio sdcard_rw log
 
 #td rild service
 service tril-daemon /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -m t -n 0

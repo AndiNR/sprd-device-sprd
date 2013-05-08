@@ -34,9 +34,13 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	universe_ui_support=true \
         ro.callfirewall.disabled=true \
 	ro.device.support.vt=0 \
-	ro.modem.vlx.tty=/dev/ts0710mux \
-	ro.modem.vlx.eth=veth \
-	ro.modem.vlx.msms.count=2
+	ro.msms.phone_count=2 \
+	ro.modem.count=1 \
+	ro.modem.w.enable=1 \
+	ro.modem.w.tty=/dev/ts0710mux \
+	ro.modem.w.eth=veth \
+	ro.modem.w.id=0
+	ro.modem.w.count=2
 
 
 ifeq ($(TARGET_BUILD_VARIANT),user)

@@ -31,15 +31,18 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	persist.blcr.enable=0 \
         persist.sys.service.delay=false \
         persist.sys.lowmem=16 \
-	ro.modem.vlx.enable=1 \
-	ro.modem.vlx.tty=/dev/ts0710mux \
-	ro.modem.vlx.eth=veth \
-	ro.modem.vlx.snd=1 \
-	ro.modem.vlx.diag=/dev/vbpipe0 \
-	ro.modem.vlx.nv=/dev/vbpipe1 \
-	ro.modem.vlx.assert=/dev/vbpipe2 \
-	ro.modem.vlx.vbc=/dev/vbpipe6 \
-	ro.modem.vlx.msms.count=2
+	ro.msms.phone_count=2 \
+	ro.modem.count=1 \
+	ro.modem.t.enable=1 \
+	ro.modem.t.tty=/dev/ts0710mux \
+	ro.modem.t.eth=veth \
+	ro.modem.t.snd=1 \
+	ro.modem.t.diag=/dev/vbpipe0 \
+	ro.modem.t.nv=/dev/vbpipe1 \
+	ro.modem.t.assert=/dev/vbpipe2 \
+	ro.modem.t.vbc=/dev/vbpipe6 \
+	ro.modem.t.id=0 \
+	ro.modem.t.count=2
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1

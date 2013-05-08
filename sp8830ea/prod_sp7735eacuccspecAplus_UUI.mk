@@ -30,8 +30,9 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	universe_ui_support=true \
 	ro.msms.phone_count=2 \
 	persist.msms.phone_default=0 \
+	ro.modem.count=1 \
 	ro.modem.w.enable=1 \
-	ro.modem.w.dev=/dev/cproc_w \
+	ro.modem.w.dev=/dev/cpw \
 	ro.modem.w.tty=/dev/stty_w \
 	ro.modem.w.eth=seth_w \
 	ro.modem.w.snd=2 \
@@ -40,7 +41,8 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.modem.w.nv=/dev/spipe_w1 \
 	ro.modem.w.assert=/dev/spipe_w2 \
 	ro.modem.w.vbc=/dev/spipe_w6 \
-	ro.modem.w.msms.count=2
+	ro.modem.w.id=0 \
+	ro.modem.w.count=2
 
 
 

@@ -2,7 +2,9 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES:= \
-	modemd.c
+	modemd.c \
+	modemd_vlx.c \
+	modemd_sipc.c
 
 LOCAL_SHARED_LIBRARIES := \
 	libcutils

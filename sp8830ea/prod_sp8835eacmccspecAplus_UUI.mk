@@ -30,8 +30,9 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	universe_ui_support=true \
 	ro.msms.phone_count=2 \
 	persist.msms.phone_default=0 \
+	ro.modem.count=1 \
 	ro.modem.t.enable=1 \
-	ro.modem.t.dev=/dev/cproc_td \
+	ro.modem.t.dev=/dev/cpt \
 	ro.modem.t.tty=/dev/stty_td \
 	ro.modem.t.eth=seth_td \
 	ro.modem.t.snd=1 \
@@ -40,7 +41,8 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.modem.t.nv=/dev/spipe_td1 \
 	ro.modem.t.assert=/dev/spipe_td2 \
 	ro.modem.t.vbc=/dev/spipe_td6 \
-	ro.modem.t.msms.count=2
+	ro.modem.t.id=0 \
+	ro.modem.t.count=2
 
 # Set default USB interface
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
