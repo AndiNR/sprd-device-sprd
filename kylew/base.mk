@@ -61,6 +61,7 @@ PRODUCT_PACKAGES += \
 	charge \
 	poweroff_alarm \
 	mplayer \
+	sqlite3 \
 	gralloc.$(TARGET_PLATFORM) \
 	hwcomposer.$(TARGET_PLATFORM) \
 	camera.$(TARGET_PLATFORM) \

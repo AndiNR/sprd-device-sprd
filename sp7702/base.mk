@@ -59,6 +59,7 @@ PRODUCT_PACKAGES += \
 	charge \
 	poweroff_alarm \
 	mplayer \
+	sqlite3 \
 	calibration_init \
 	gralloc.$(TARGET_PLATFORM) \
     hwcomposer.$(TARGET_PLATFORM) \

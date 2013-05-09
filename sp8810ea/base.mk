@@ -68,6 +68,7 @@ PRODUCT_PACKAGES += \
 	vcharged \
 	poweroff_alarm \
 	mplayer \
+	sqlite3 \
 	modemd \
 	calibration_init \
 	gralloc.$(TARGET_PLATFORM) \
