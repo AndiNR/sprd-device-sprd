@@ -3054,7 +3054,7 @@ void *camera_af_thread_proc(void *data)
 			break;
 		case CMR_EVT_AF_START:
 			CMR_PRINT_TIME;
-			ret = camera_autofocus_start();
+			//ret = camera_autofocus_start();
 			if (CAMERA_INVALID_STATE == ret) {
 				camera_call_af_cb(CAMERA_EXIT_CB_ABORT,
 					message.data,
@@ -3352,6 +3352,7 @@ int camera_capture_init(void)
 		goto exit;
 	}
 	g_cxt->chn_2_status = CHN_BUSY;
+	SET_CHN_BUSY(CHN_2);
 
 	if (v4l2_cfg.cfg.need_isp && ISP_IDLE == g_cxt->isp_cxt.isp_state) {
 		isp_video_param.size.w = sensor_mode->width;
@@ -4122,6 +4123,13 @@ int camera_capture_yuv_process(struct frm_info *data)
 	int                      ret = CAMERA_SUCCESS;
 
 	TAKE_PIC_CANCEL;
+
+	CMR_LOGV("cap_zoom_mode %d, orig size %d %d, picture size %d %d",
+		g_cxt->cap_zoom_mode,
+		g_cxt->cap_orig_size.width,
+		g_cxt->cap_orig_size.height,
+		g_cxt->picture_size.width,
+		g_cxt->picture_size.height);
 
 	if (!NO_SCALING) {
 		//if scaling needed
