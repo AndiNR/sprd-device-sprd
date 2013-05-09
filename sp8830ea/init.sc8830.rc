@@ -218,7 +218,6 @@ service nvitemd /system/bin/nvitemd
     class core
     user root
     group system radio shell
-    disabled
     oneshot
 
 #service bootsound /system/bin/mplayer /system/media/bootsound
