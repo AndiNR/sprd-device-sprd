@@ -71,7 +71,7 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/sec_touchscreen.idc:system/usr/idc/sec_touchscreen.idc \
 	$(BOARDDIR)/ft5x0x_ts.idc:system/usr/idc/ft5x0x_ts.idc
 
-$(call inherit-product, frameworks/native/build/phone-hdpi-dalvik-heap.mk)
+$(call inherit-product, frameworks/native/build/phone-HD720-dalvik-heap.mk)
 
 # include classified configs
 $(call inherit-product, $(BOARDDIR)/base.mk)
