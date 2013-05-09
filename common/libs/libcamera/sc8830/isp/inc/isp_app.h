@@ -111,11 +111,11 @@ enum isp_alg_mode{
 	ISP_ALG_MAX
 };
 
-enum isp_ae_wditht{
-	ISP_AE_WDITHT_AVG=0x00,
-	ISP_AE_WDITHT_CENTER,
-	ISP_AE_WDITHT_CUSTOMER,
-	ISP_AE_WDITHT_MAX
+enum isp_ae_weight{
+	ISP_AE_WEIGHT_AVG=0x00,
+	ISP_AE_WEIGHT_CENTER,
+	ISP_AE_WEIGHT_CUSTOMER,
+	ISP_AE_WEIGHT_MAX
 };
 
 enum isp_flicker_mode{
@@ -199,6 +199,7 @@ enum isp_ctrl_cmd{
 	ISP_CTRL_FLASH_EG,
 	ISP_CTRL_VIDEO_MODE,
 	ISP_CTRL_AF_STOP,
+	ISP_CTRL_AE_TOUCH,
 	ISP_CTRL_MAX
 };
 
