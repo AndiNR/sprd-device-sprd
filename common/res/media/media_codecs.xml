@@ -95,6 +95,11 @@ Only the three quirks included above are recognized at this point:
 	    <MediaCodec name="OMX.PV.h263dec" type="video/3gpp">
 		<Quirk name="requires-allocate-on-output-ports" />
         </MediaCodec>
+	<MediaCodec name="OMX.sprdmix.h264.decoder" type="video/avc">
+            <Quirk name="requires-allocate-on-output-ports" />
+            <Quirk name="defers-output-buffer-allocation" />
+            <Quirk name="needs-flush-before-disable" />
+        </MediaCodec>
        	<MediaCodec name="OMX.PV.avcdec" type="video/avc">
 		<Quirk name="requires-allocate-on-output-ports" />
         </MediaCodec>
