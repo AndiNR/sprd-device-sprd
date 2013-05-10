@@ -927,6 +927,7 @@ void *stream_log_handler(void *arg)
 	stream_log_handler_started = 1;
 
 	info = stream_log_head;
+	FD_ZERO(&readset_tmp);
 	/*open all of the stream devices*/
 	while(info){
 		if(info->state != SLOG_STATE_ON){
