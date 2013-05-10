@@ -33,7 +33,6 @@ PRODUCT_PROPERTY_OVERRIDES := \
         zram.support=true \
         ro.build.product.lowmem=1 \
         ro.callfirewall.disabled=true \
-	zram_for_android.enable=true \
 	ro.modem.vlx.tty=/dev/ts0710mux \
 	ro.modem.vlx.eth=veth \
 	ro.modem.vlx.msms.count=2
