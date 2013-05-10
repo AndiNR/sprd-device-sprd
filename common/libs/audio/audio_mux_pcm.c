@@ -345,7 +345,7 @@ int mux_pcm_read(struct pcm *pcm_in, void *data, unsigned int count)
        ALOGE("mux_pcm_read out %d",bytes);
     }
     ALOGE(": function is mux_pcm_read out");
-    return (bytes !=count);
+    return bytes;
 }
 
 
