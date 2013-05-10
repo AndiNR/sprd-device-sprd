@@ -249,8 +249,8 @@ PUBLIC void JpegEnc_HwSubModuleCfg(void)
 
 	//BSM Module cfg
 	cmd = (jpeg_fw_codec->pingpang_buf_len+3)>>2;
-	if(cmd > 0xFFFFF) {
-		cmd = 0xFFFFF;
+	if(cmd > 0x1FFFFF) {
+		cmd = 0x1FFFFF;
 	}
 	/*cmd = (0<<31) | ((jpeg_fw_codec->pingpang_buf_len+3)>>2);*/
 	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_CFG0_OFFSET, cmd, "BSM_CFG0: buffer0 for write, and the max buffer size");
