@@ -21,7 +21,7 @@ import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.TelephonyIntents;
 import com.android.internal.telephony.TelephonyProperties;
 
-public class networkmodeselect extends PreferenceActivity 
+public class networkmodeselect extends PreferenceActivity
 implements Preference.OnPreferenceChangeListener{
     private static final String LOG_TAG = "networkmodeselect";
     private static final boolean DBG = true;
@@ -298,6 +298,11 @@ implements Preference.OnPreferenceChangeListener{
                     }
                 }
             }
+            /*Add 20130129 Spreadst of 121769 check whether the dialog is dismiss start  */
+            if(mButtonPreferredNetworkMode.getDialog()!=null){
+                mButtonPreferredNetworkMode.getDialog().dismiss();
+            }
+            /*Add 20130129 Spreadst of 121769 check whether the dialog is dismiss end   */
             finish();
         }
 
