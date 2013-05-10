@@ -39,19 +39,12 @@ LOCAL uint32_t _ov8825_flash(uint32_t param);
 static uint32_t g_flash_mode_en = 0;
 static uint32_t g_af_slewrate = 1;
 
-LOCAL const SENSOR_REG_T ov8825_3264x2448_setting[] = {
-   //@@3264_2448_2lane_15fps_66.66Msysc
-     //@@1632_1224_2Lane_30fps_66.66Msys
-     //{0x0100, 0x00}, // sleep
+LOCAL const SENSOR_REG_T ov8825_common_init[] = {
 {0x0100, 0x00}, // software standby
-{SENSOR_WRITE_DELAY, 0xff},
 {0x0103, 0x01}, // software reset          
 // delay(5ms)                           
-{SENSOR_WRITE_DELAY, 0xff},
-{SENSOR_WRITE_DELAY, 0xff},
-{SENSOR_WRITE_DELAY, 0xff},
+{SENSOR_WRITE_DELAY, 0x0a},
 {0x3000, 0x16}, // strobe disable, frex dis
-{0x0100, 0x00}, // software standby
 {0x3001, 0x00},                            
 {0x3002, 0x6c}, // SCCB ID = 0x6c          
 {0x300d, 0x00}, // PLL2                    
@@ -272,13 +265,79 @@ LOCAL const SENSOR_REG_T ov8825_3264x2448_setting[] = {
 {0x3406, 0x01}, // MWB manual              
  // ISP                                  
 {0x5001, 0x01}, // MWB on                  
-{0x5000, 0x06}, // LENC off, BPC on, WPC on
+{0x5000, 0x06} // LENC off, BPC on, WPC on
+};
 
+LOCAL const SENSOR_REG_T ov8825_1632x1224_setting[] = {
+  //@@1632_1224_2Lane_30fps_66.66Msys
+//{0x0100, 0x00}, // sleep
+{0x3003, 0xce}, // PLL_CTRL0
+{0x3004, 0xd4}, // PLL_CTRL1
+{0x3005, 0x00}, // PLL_CTRL2
+{0x3006, 0x10}, // PLL_CTRL3
+{0x3007, 0x3b}, // PLL_CTRL4
+{0x3012, 0x81}, // SC_PLL CTRL_S0
+{0x3013, 0x39}, // SC_PLL CTRL_S1
+{0x3106, 0x11}, // SRB_CTRL
+{0x3600, 0x07}, // ANACTRL0
+{0x3601, 0x33}, // ANACTRL1
+{0x3602, 0xc2}, //
+{0x3700, 0x10}, // SENCTROL0 Sensor c
+{0x3702, 0x28}, // SENCTROL2 Sensor c
+{0x3703, 0x6c}, // SENCTROL3 Sensor c
+{0x3704, 0x8d}, // SENCTROL4 Sensor c
+{0x3705, 0x0a}, // SENCTROL5 Sensor c
+{0x3706, 0x27}, // SENCTROL6 Sensor c
+{0x3708, 0x40}, // SENCTROL8 Sensor c
+{0x3709, 0x20}, // SENCTROL9 Sensor c
+{0x370a, 0x33}, // SENCTROLA Sensor c
+{0x370e, 0x08}, // SENCTROLE Sensor c
+{0x3711, 0x07}, // SENCTROL11 Sensor
+{0x3712, 0x4e}, // SENCTROL12 Sensor
+{0x3724, 0x00}, // Reserved
+{0x3725, 0xd4}, // Reserved
+{0x3726, 0x00}, // Reserved
+{0x3727, 0xe1}, // Reserved
+{0x3800, 0x00}, // HS(HREF start High
+{0x3801, 0x00}, // HS(HREF start Low)
+{0x3802, 0x00}, // VS(Vertical start
+{0x3803, 0x00}, // VS(Vertical start
+{0x3804, 0x0c}, // HW = 3295
+{0x3805, 0xdf}, // HW
+{0x3806, 0x09}, // VH = 2459
+{0x3807, 0x9b}, // VH
+{0x3808, 0x06}, // ISPHO = 1632
+{0x3809, 0x60}, // ISPHO
+{0x380a, 0x04}, // ISPVO = 1224
+{0x380b, 0xc8}, // ISPVO
+{0x380c, 0x0d}, // HTS = 3516
+{0x380d, 0xbc}, // HTS
+{0x380e, 0x05}, // VTS = 1264
+{0x380f, 0xe8}, // VTS
+{0x3810, 0x00}, // HOFF = 8
+{0x3811, 0x08}, // HOFF
+{0x3812, 0x00}, // VOFF = 4
+{0x3813, 0x04}, // VOFF
+{0x3814, 0x31}, // X INC
+{0x3815, 0x31}, // Y INC
+{0x3820, 0x86}, // Timing Reg20:Vflip
+{0x3821, 0x11}, // Timing Reg21:Hmirr
+{0x3f00, 0x00}, // PSRAM Ctrl0
+{0x4005, 0x18}, // Gain trigger for B
+{0x404f, 0x8F}, // Auto BLC while mor
+{0x4600, 0x04}, // VFIFO Ctrl0
+{0x4601, 0x00}, // VFIFO Read ST High
+{0x4602, 0x78}, // VFIFO Read ST Low
+{0x4837, 0x15}, // MIPI PCLK PERIOD
+{0x5068, 0x00}, // HSCALE_CTRL
+{0x506a, 0x00} // VSCALE_CTRL
+//{0x0100, 0x01} // wake up
+};
+
+LOCAL const SENSOR_REG_T ov8825_3264x2448_setting[] = {
+   //@@3264_2448_2lane_15fps_66.66Msysc
 
 //3264 x 2448
-
-{SENSOR_WRITE_DELAY, 0xff},
-
 {0x3003, 0xce}, // PLL_CTRL0         
 {0x3004, 0xd4}, // PLL_CTRL1         
 {0x3005, 0x00}, // PLL_CTRL2         
@@ -321,7 +380,7 @@ LOCAL const SENSOR_REG_T ov8825_3264x2448_setting[] = {
 {0x380c, 0x0d}, // HTS = 3516        
 {0x380d, 0xbc}, // HTS               
 {0x380e, 0x05}, // VTS = 1264        
-{0x380f, 0xe8}, // VTS               
+{0x380f, 0xd4}, // VTS
 {0x3810, 0x00}, // HOFF = 8          
 {0x3811, 0x08}, // HOFF              
 {0x3812, 0x00}, // VOFF = 4          
@@ -382,16 +441,16 @@ LOCAL const SENSOR_REG_T ov8825_3264x2448_setting[] = {
 {0x380b, 0x90}, // ISPVO               
 {0x380c, 0x0e}, // HTS = 3584          
 {0x380d, 0x00}, // HTS                 
-{0x380e, 0x09}, // VTS = 2480          
-{0x380f, 0xb0}, // VTS                 
+{0x380e, 0x0b}, // VTS = 2480
+{0x380f, 0xa8}, // VTS
 {0x3810, 0x00}, // HOFF = 16           
 {0x3811, 0x10}, // HOFF                
 {0x3812, 0x00}, // VOFF = 6            
 {0x3813, 0x06}, // VOFF                
 {0x3814, 0x11}, // X INC               
 {0x3815, 0x11}, // Y INC               
-{0x3820, 0x80}, // Timing Reg20:Vflip  
-{0x3821, 0x16}, // Timing Reg21:Hmirror
+{0x3820, 0x86}, // Timing Reg20:Vflip
+{0x3821, 0x10}, // Timing Reg21:Hmirror
 {0x3f00, 0x02}, // PSRAM Ctrl0         
 {0x4005, 0x1A}, // Every frame do BLC  
 {0x404f, 0x7F}, //                     
@@ -406,8 +465,9 @@ LOCAL const SENSOR_REG_T ov8825_3264x2448_setting[] = {
 
 
 LOCAL SENSOR_REG_TAB_INFO_T s_ov8825_resolution_Tab_RAW[] = {
-	{PNULL, 0, 0, 24, SENSOR_IMAGE_FORMAT_RAW},
-	{ADDR_AND_LEN_OF_ARRAY(ov8825_3264x2448_setting), 3264, 2448, 24, SENSOR_IMAGE_FORMAT_RAW},
+	{ADDR_AND_LEN_OF_ARRAY(ov8825_common_init), 0, 0, 24, SENSOR_IMAGE_FORMAT_RAW},
+	{ADDR_AND_LEN_OF_ARRAY(ov8825_1632x1224_setting), 1632, 1224, 24, SENSOR_IMAGE_FORMAT_RAW},
+	//{ADDR_AND_LEN_OF_ARRAY(ov8825_3264x2448_setting), 3264, 2448, 24, SENSOR_IMAGE_FORMAT_RAW},
 	{ADDR_AND_LEN_OF_ARRAY(ov8825_3264x2448_setting), 3264, 2448, 24, SENSOR_IMAGE_FORMAT_RAW},
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
@@ -419,7 +479,8 @@ LOCAL SENSOR_REG_TAB_INFO_T s_ov8825_resolution_Tab_RAW[] = {
 
 LOCAL SENSOR_TRIM_T s_ov8825_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0},
-	{0, 0, 3264, 2448, 268, 82},
+	{0, 0, 1632, 1224, 264, 90},
+	//{0, 0, 3264, 2448, 268, 82},
 	{0, 0, 3264, 2448, 268, 82},
 	{0, 0, 0, 0, 0, 0},
 	{0, 0, 0, 0, 0, 0},
@@ -576,7 +637,7 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 
 	//bypass
 	//sensor_ptr->version_id=0x00000000;
-	sensor_ptr->blc_bypass=0x01;
+	sensor_ptr->blc_bypass=0x00;
 	sensor_ptr->nlc_bypass=0x01;
 	sensor_ptr->lnc_bypass=0x01;
 	sensor_ptr->ae_bypass=0x00;
@@ -584,15 +645,15 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->bpc_bypass=0x01;
 	sensor_ptr->denoise_bypass=0x01;
 	sensor_ptr->grgb_bypass=0x01;
-	sensor_ptr->cmc_bypass=0x01;
+	sensor_ptr->cmc_bypass=0x00;
 	sensor_ptr->gamma_bypass=0x00;
 	sensor_ptr->uvdiv_bypass=0x01;
 	sensor_ptr->pref_bypass=0x01;
-	sensor_ptr->bright_bypass=0x01;
-	sensor_ptr->contrast_bypass=0x01;
+	sensor_ptr->bright_bypass=0x00;
+	sensor_ptr->contrast_bypass=0x00;
 	sensor_ptr->hist_bypass=0x01;
 	sensor_ptr->auto_contrast_bypass=0x01;
-	sensor_ptr->af_bypass=0x01;
+	sensor_ptr->af_bypass=0x00;
 	sensor_ptr->edge_bypass=0x01;
 	sensor_ptr->fcs_bypass=0x01;
 	sensor_ptr->css_bypass=0x01;
@@ -1236,6 +1297,42 @@ LOCAL uint32_t _ov8825_Identify(uint32_t param)
 LOCAL uint32_t _ov8825_write_exposure(uint32_t param)
 {
 	uint32_t ret_value = SENSOR_SUCCESS;
+	uint16_t expsure_line=0x00;
+	uint16_t dummy_line=0x00;
+	uint16_t frame_len=0x00;
+	uint16_t frame_len_cur=0x00;
+	uint16_t value=0x00;
+	uint16_t value0=0x00;
+	uint16_t value1=0x00;
+	uint16_t value2=0x00;
+
+	expsure_line=param&0xffff;
+	//dummy_line=(param>>0x10)&0xffff;
+
+	SENSOR_PRINT("SENSOR_ov8825: write_exposure line:%d, dummy:%d", expsure_line, dummy_line);
+
+	//frame_len = ((expsure_line+4)> OV8825_MIN_FRAME_LEN_PRV) ? (expsure_line+4) : OV8825_MIN_FRAME_LEN_PRV;
+
+	//frame_len_cur = (Sensor_ReadReg(0x380e)&0xff)<<8;
+	//frame_len_cur |= Sensor_ReadReg(0x380f)&0xff;
+
+#if 0
+	if(frame_len_cur != frame_len){
+		value=(frame_len)&0xff;
+		ret_value = Sensor_WriteReg(0x380f, value);
+		value=(frame_len>>0x08)&0xff;
+		SENSOR_PRINT("SENSOR_ov8825:  0x380e:%d\n", value);
+		ret_value = Sensor_WriteReg(0x380e, value);
+	}
+#endif
+
+	value=(expsure_line<<0x04)&0xff;
+	ret_value = Sensor_WriteReg(0x3502, value);
+	value=(expsure_line>>0x04)&0xff;
+	ret_value = Sensor_WriteReg(0x3501, value);
+	value=(expsure_line>>0x0c)&0x0f;
+	ret_value = Sensor_WriteReg(0x3500, value);
+
 
 	return ret_value;
 }
@@ -1245,6 +1342,12 @@ LOCAL uint32_t _ov8825_write_gain(uint32_t param)
 	uint32_t ret_value = SENSOR_SUCCESS;
 	uint16_t value=0x00;
 
+	SENSOR_PRINT("SENSOR_ov8825: write_gain:0x%x", param);
+
+	value = param&0xff;
+	ret_value = Sensor_WriteReg(0x350b, value);/*0-7*/
+	value = (param>>0x08)&0x01;
+	ret_value = Sensor_WriteReg(0x350a, value);/*8*/
 
 	return ret_value;
 }
@@ -1256,7 +1359,13 @@ LOCAL uint32_t _ov8825_write_af(uint32_t param)
 	uint16_t reg_val = 0x0;
 
 	SENSOR_PRINT("SENSOR_ov8825: _write_af 0x%x", param);
-
+#if 0
+	value = (param&0xf)<<0x04;
+	value = value + 8 + (g_af_slewrate&0x7);
+	ret_value = Sensor_WriteReg(0x3618, value);
+	value = (param&0x3f0)>>0x04;
+	ret_value = Sensor_WriteReg(0x3619, value);
+#endif
 	return ret_value;
 }
 
@@ -1335,6 +1444,7 @@ LOCAL uint32_t _ov8825_BeforeSnapshot(uint32_t param)
 LOCAL uint32_t _ov8825_after_snapshot(uint32_t param)
 {
 	SENSOR_PRINT("SENSOR_ov8825: after_snapshot mode:%d", param);
+	Sensor_SetMode(param);
 	return SENSOR_SUCCESS;
 }
 

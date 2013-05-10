@@ -116,6 +116,17 @@ struct sensor_ae_tab_info{
 	struct sensor_ae_index index[SENSOR_ISO_NUM];
 };
 
+struct sensor_ae_histogram_segment {
+	uint8_t		min;
+	uint8_t		max;
+	uint16_t	weight;
+};
+
+struct sensor_ae_change_speed {
+	uint16_t	delta_lum;
+	uint16_t	delta_ev;
+};
+
 struct sensor_ae_param{
 	uint8_t skip_frame;
 	uint8_t normal_fix_fps;
@@ -128,6 +139,12 @@ struct sensor_ae_param{
 	uint8_t quick_mode;
 	uint8_t reserved0;
 	int8_t ev[16];
+	struct sensor_ae_change_speed *speed_dark_to_bright;
+	uint32_t			step_dark_to_bright;
+	struct sensor_ae_change_speed *speed_bright_to_dark;
+	uint32_t			step_bright_to_dark;
+	struct sensor_ae_histogram_segment *histogram_segment;
+	uint32_t			histogram_segment_num;
 };
 
 struct sensor_ae_tab{
