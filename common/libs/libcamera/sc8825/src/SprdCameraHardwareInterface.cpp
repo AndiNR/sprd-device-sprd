@@ -1280,16 +1280,25 @@ void SprdCameraHardware::HandleErrorState(void)
 void SprdCameraHardware::receivePreviewFDFrame(camera_frame_type *frame)
 {
     Mutex::Autolock cbLock(&mCallbackLock);
+    LOGE("get mCallbackLock");
+
     ssize_t offset = frame->buf_id;
     camera_frame_metadata_t metadata;
     camera_face_t face_info[FACE_DETECT_NUM];
     uint32_t k = 0;
 
-   /* if(1 == mParameters.getInt("smile-snap-mode")){*/
+    /* if(1 == mParameters.getInt("smile-snap-mode")){*/
+
+    if (mCameraState != QCS_PREVIEW_IN_PROGRESS) {
+        LOGV("fd:non preview.");
+        return;
+    }
+
     if (NULL == mFDAddr) {
          LOGV("already stop fd.");
          return;
     }
+
     LOGV("receive face_num %d.",frame->face_num);
     metadata.number_of_faces = frame->face_num;
     if((0 != frame->face_num)&&(frame->face_num<=FACE_DETECT_NUM)) {
@@ -1331,6 +1340,7 @@ void SprdCameraHardware::receivePreviewFDFrame(camera_frame_type *frame)
         LOGV("smile capture msg is disabled.");
     }
 /*    mParameters.set("smile-snap-mode",0);*/
+    LOGE("done !");
 }
 
 void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
@@ -1340,6 +1350,16 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
         camera_frame_metadata_t metadata;
         camera_face_t face_info[FACE_DETECT_NUM];
         uint32_t k = 0;
+
+       if ((mCameraState != QCS_PREVIEW_IN_PROGRESS)||(mSettingPreviewWindowState == PREVIEW_WINDOW_SET_IDLE)
+              || (mSettingPreviewWindowState == PREVIEW_WINDOW_SETTING)){
+              LOGE("directly return!");
+              if(CAMERA_SUCCESS != camera_release_frame(frame->buf_id)){
+                        LOGE("receivePreviewFrame: fail to camera_release_frame().offset: %d.", frame->buf_id);
+              }
+             return;
+       }
+
 
         // Ignore the first frame--there is a bug in the VFE pipeline and that
         // frame may be bad.
@@ -1469,10 +1489,19 @@ callbacks:
 #endif
                 }
 
-		if ((mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) &&(mRecordingMode==1))
-                {
+		if ((mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) &&(mRecordingMode==1)) {
                         nsecs_t timestamp = systemTime();/*frame->timestamp;*/
                         LOGV("test timestamp = %lld, mIsStoreMetaData: %d.",timestamp, mIsStoreMetaData);
+
+			if ((mCameraState != QCS_PREVIEW_IN_PROGRESS)||(mSettingPreviewWindowState == PREVIEW_WINDOW_SET_IDLE)
+			    || (mSettingPreviewWindowState == PREVIEW_WINDOW_SETTING)) {
+				LOGE("directly return!");
+				if(CAMERA_SUCCESS != camera_release_frame(frame->buf_id)){
+				LOGE("receivePreviewFrame: fail to camera_release_frame().offset: %d.", frame->buf_id);
+				}
+				return;
+			}
+
 			if(mIsStoreMetaData) {
 	                        uint32_t *data = (uint32_t *)mMetadataHeap->data + offset * METADATA_SIZE / 4;
 				*data++ = kMetadataBufferTypeCameraSource;

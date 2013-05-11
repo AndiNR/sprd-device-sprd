@@ -349,7 +349,12 @@ private:
         PREVIEW_WINDOW_SET_FAILED
     };
     PreviewWindowState mSettingPreviewWindowState;
-
+    enum RecordingState{
+	RECORDING_STOP,
+	RECORDING_STARTING,
+	RECORDING_RUNING
+    };
+    RecordingState mRecordingRunState;
 };
 
 }; // namespace android

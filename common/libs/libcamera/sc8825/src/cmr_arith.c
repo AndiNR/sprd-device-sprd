@@ -80,6 +80,7 @@ void *arithmetic_fd_thread_proc(void *data)
 	unsigned char       *p_format = (unsigned char*)IMAGE_FORMAT;
 	camera_frame_type   frame_type;
 	int                 fd_exit_flag = 0;
+	struct camera_context  *cxt = camera_get_cxt();
 
 	while (1) {
 		ret = cmr_msg_get(s_arith_cxt->fd_msg_que_handle, &message);
@@ -119,10 +120,12 @@ void *arithmetic_fd_thread_proc(void *data)
 					CMR_LOGI("face num %d,smile_level %d.",k,face_rect_ptr->smile_level);
 					face_rect_ptr++;
 				}
-				camera_call_cb(CAMERA_EVT_CB_FD,
-							camera_get_client_data(),
-							CAMERA_FUNC_START_PREVIEW,
-							(uint32_t)&frame_type);
+				if (cxt->arithmetic_cxt.fd_flag) {
+					camera_call_cb(CAMERA_EVT_CB_FD,
+								camera_get_client_data(),
+								CAMERA_FUNC_START_PREVIEW,
+								(uint32_t)&frame_type);
+				}
 			}
 			s_arith_cxt->fd_busy = 0;
 			pthread_mutex_unlock(&s_arith_cxt->fd_lock);
@@ -230,11 +233,6 @@ int arithmetic_fd_start(void *data_addr)
 
 	CMR_LOGI("0x%x.",(uint32_t)s_arith_cxt->addr);
 
-	pthread_mutex_lock(&s_arith_cxt->fd_lock);
-	if (NULL == s_arith_cxt->addr) {		
-		ret = ARITH_NO_MEM;
-	}
-	pthread_mutex_unlock(&s_arith_cxt->fd_lock);
 	CMR_LOGI("%d,%d.",ret,s_arith_cxt->fd_busy);
 	if (!ret && (1 != s_arith_cxt->fd_busy)) {
 		message.msg_type = ARITHMETIC_EVT_FD_START;
@@ -371,8 +369,8 @@ int arithmetic_hdr(struct img_addr *dst_addr,uint32_t width,uint32_t height)
 			CMR_LOGE("can't handle hdr.");
 			ret = ARITH_FAIL;
 	}
-	memcpy(dst_addr->addr_y,temp_addr0,size);
-	memcpy(dst_addr->addr_u,(temp_addr0+size),size/2);
+	memcpy((void *)dst_addr->addr_y,(void *)temp_addr0,size);
+	memcpy((void *)dst_addr->addr_u,(void *)(temp_addr0+size),size/2);
 /*	save_hdrdata(dst_addr,width,height);*/
 	pthread_mutex_unlock(&s_arith_cxt->hdr_lock);
 	if (ARITH_SUCCESS == ret) {
@@ -397,9 +395,9 @@ void arithmetic_hdr_data(struct img_addr *addr,uint32_t y_size,uint32_t uv_size,
 	}
 
 	if (s_hdr_cxt->mem_size >= (y_size+uv_size)) {
-		memcpy(s_hdr_cxt->addr[cap_cnt-1],addr->addr_y,y_size);
+		memcpy((void *)s_hdr_cxt->addr[cap_cnt-1],(void *)addr->addr_y,y_size);
 		uv_addr = s_hdr_cxt->addr[cap_cnt-1]+y_size;
-		memcpy(uv_addr,addr->addr_u,uv_size);
+		memcpy((void *)uv_addr,(void *)addr->addr_u,uv_size);
 	} else {
 		CMR_LOGE("mem size:0x%x,data size:0x%x.",s_hdr_cxt->mem_size,y_size);
 	}

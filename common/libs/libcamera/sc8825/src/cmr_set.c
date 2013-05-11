@@ -614,7 +614,7 @@ int camera_preview_stop_set(void)
 	int                      ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
 	/*Todo something if necessary after preview stopped*/
-	CMR_LOGI("flash process %d.",cxt->is_dv_mode);
+	CMR_LOGV("flash process %d.",cxt->is_dv_mode);
 	if (1 != cxt->is_dv_mode) {
 		ret = camera_flash_process(0);
 	}
@@ -1095,7 +1095,7 @@ int camera_autofocus_start(void)
 	uint32_t                 *ptr = (uint32_t*)&cxt->cmr_set.focus_zone_param[0];
 	uint32_t                 i = 0;
 	uint32_t                 zone_cnt = *ptr++;
-	SENSOR_EXT_FUN_PARAM_T   af_param = {0};
+	SENSOR_EXT_FUN_PARAM_T   af_param;
 
 	CMR_LOGV("zone_cnt %d, x y w h, %d %d %d %d", zone_cnt, ptr[0], ptr[1], ptr[2], ptr[3]);
 	CMR_PRINT_TIME;
@@ -1104,7 +1104,6 @@ int camera_autofocus_start(void)
 		CMR_RTN_IF_ERR(ret);
 	}
 
-	
 	if (cxt->cmr_set.flash) {
 		/*open flash*/
 		camera_set_flashdevice((uint32_t)FLASH_OPEN);
