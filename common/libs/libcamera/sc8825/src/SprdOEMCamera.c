@@ -2248,7 +2248,7 @@ void camera_rot_evt_cb(int evt, void* data)
 		message.alloc_flag = 1;
 		memcpy(message.data, data, sizeof(struct img_frm));
 		ret = cmr_msg_post(g_cxt->prev_msg_que_handle, &message);
-	} else {
+	} else if(IS_CAPTURE){
 		message.data = malloc(sizeof(struct img_frm));
 		if (NULL == message.data) {
 			CMR_LOGE("NO mem, Faile to alloc memory for one msg");
@@ -2258,6 +2258,9 @@ void camera_rot_evt_cb(int evt, void* data)
 		message.alloc_flag = 1;
 		memcpy(message.data, data, sizeof(struct img_frm));
 		ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
+	} else {
+		CMR_LOGV("It's not preview, nor capture!");
+		return;
 	}
 #else
 	message.data = malloc(sizeof(struct img_frm));
