@@ -28,6 +28,7 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	persist.msms.phone_count=1 \
 
 
+
 # Set default USB interface
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 	persist.sys.usb.config=mass_storage
@@ -44,7 +45,7 @@ PRODUCT_PACKAGES += \
 # packages files
 PRODUCT_PACKAGES += \
 
-#PRODUCT_COPY_FILES := \
+
 
 
 $(call inherit-product, frameworks/native/build/tablet-dalvik-heap.mk)

@@ -50,13 +50,19 @@ PRODUCT_PACKAGES += \
     ValidationTools \
     libsprddm \
     libvalidationtoolsjni \
-    vtserver
+    vtserver	\
+    libstagefright_mix_mpeg4dec_sprd \
+    libstagefright_m4vh263dec_hw_sprd \
+    libstagefright_m4vh263dec_sprd \
+    \
+    libstagefright_hard_mpeg4enc_sprd
 
 # prebuild files
 PRODUCT_PACKAGES += \
     ES_File_Explorer.apk
 
 PRODUCT_PACKAGES += \
+	nvitemd \
 	charge \
 	vcharged \
 	poweroff_alarm \
@@ -80,7 +86,12 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
             $(BRCM_FM) \
             $(SPRD_FM_APP)
-
+#We confirm(2012-12-26):we will only use maxscend
+#ifeq ($(BOARD_CMMB_HW), mxd)
+#PRODUCT_PACKAGES += $(MXD_CMMB_PLAYER)
+#else
+#PRODUCT_PACKAGES += $(SIANOMTV)
+#endif
 
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/init.rc:root/init.rc \
@@ -89,12 +100,17 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/ueventd.sc8830.rc:root/ueventd.sc8830.rc \
 	$(BOARDDIR)/fstab.sc8830:root/fstab.sc8830 \
 	$(BOARDDIR)/vold.fstab:system/etc/vold.fstab \
+	$(BOARDDIR)/nvitem.cfg:root/nvitem.cfg \
 	device/sprd/common/res/CDROM/adb.iso:system/etc/adb.iso \
 	device/sprd/common/libs/audio/apm/devicevolume.xml:system/etc/devicevolume.xml \
 	device/sprd/common/libs/audio/apm/formatvolume.xml:system/etc/formatvolume.xml \
         $(BOARDDIR)/hw_params/tiny_hw.xml:system/etc/tiny_hw.xml \
         $(BOARDDIR)/hw_params/codec_pga.xml:system/etc/codec_pga.xml \
         $(BOARDDIR)/hw_params/audio_para:system/etc/audio_para \
+	$(BOARDDIR)/scripts/ext_symlink.sh:system/bin/ext_symlink.sh \
+	$(BOARDDIR)/scripts/ext_data.sh:system/bin/ext_data.sh \
+	$(BOARDDIR)/scripts/ext_kill.sh:system/bin/ext_kill.sh \
+	$(BOARDDIR)/scripts/ext_chown.sh:system/bin/ext_chown.sh \
 	device/sprd/common/libs/mali/egl.cfg:system/lib/egl/egl.cfg \
 	device/sprd/common/libs/audio/audio_policy.conf:system/etc/audio_policy.conf \
 	device/sprd/common/res/media/media_codecs.xml:system/etc/media_codecs.xml \
