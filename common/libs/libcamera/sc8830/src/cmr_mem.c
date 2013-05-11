@@ -92,18 +92,18 @@ static const struct cap_size_to_mem back_cam_raw_mem_size_tab[IMG_SIZE_NUM] = {
 };
 #else
 static const struct cap_size_to_mem back_cam_mem_size_tab[IMG_SIZE_NUM] = {
-	{PIXEL_8P0_MEGA, (20 << 20), (36 << 20)},
-	{PIXEL_8P0_MEGA, (20 << 20), (36 << 20)},
-	{PIXEL_8P0_MEGA, (20 << 20), (36 << 20)},
-	{PIXEL_8P0_MEGA, (20 << 20), (36 << 20)},
-	{PIXEL_8P0_MEGA, (20 << 20), (36 << 20)},
+	{PIXEL_8P0_MEGA, (20 << 20), (50 << 20)},
+	{PIXEL_8P0_MEGA, (20 << 20), (50 << 20)},
+	{PIXEL_8P0_MEGA, (20 << 20), (50 << 20)},
+	{PIXEL_8P0_MEGA, (20 << 20), (50 << 20)},
+	{PIXEL_8P0_MEGA, (20 << 20), (50 << 20)},
 };
 static const struct cap_size_to_mem back_cam_raw_mem_size_tab[IMG_SIZE_NUM] = {
-	{PIXEL_8P0_MEGA, (20 << 20), (36 << 20)},
-	{PIXEL_8P0_MEGA, (20 << 20), (36 << 20)},
-	{PIXEL_8P0_MEGA, (20 << 20), (36 << 20)},
-	{PIXEL_8P0_MEGA, (20 << 20), (36 << 20)},
-	{PIXEL_8P0_MEGA, (20 << 20), (36 << 20)},
+	{PIXEL_1P3_MEGA, (20 << 20), (50 << 20)},
+	{PIXEL_2P0_MEGA, (20 << 20), (50 << 20)},
+	{PIXEL_3P0_MEGA, (20 << 20), (50 << 20)},
+	{PIXEL_5P0_MEGA, (20 << 20), (50 << 20)},
+	{PIXEL_8P0_MEGA, (20 << 20), (50 << 20)},
 };
 #endif
 
@@ -811,7 +811,6 @@ uint32_t get_jpeg_size(uint32_t width, uint32_t height, uint32_t thum_width, uin
 	(void)thum_width; (void)thum_height;
 
 	size = CMR_JPEG_SZIE(width, height)+JPEG_EXIF_SIZE;
-
 	return ADDR_BY_WORD(size);
 }
 uint32_t get_thum_yuv_size(uint32_t width, uint32_t height, uint32_t thum_width, uint32_t thum_height)

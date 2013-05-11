@@ -2732,7 +2732,8 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 
 		if (THUM_FROM_CAP != g_cxt->thum_from) {
 			if ((0 != g_cxt->thum_size.width) && (0 != g_cxt->thum_size.height)) {
-				ret = camera_convert_to_thumb();
+		//		ret = camera_convert_to_thumb();
+				thumb_exist = 0;
 				if (ret) {
 					thumb_exist = 0;
 					CMR_LOGE("Failed to get thumbnail, %d", ret);
@@ -2743,7 +2744,10 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 			}
 		}
 		CMR_PRINT_TIME;
-
+		ret = cmr_v4l2_free_frame(CHN_2, CAMERA_CAP0_ID_BASE + g_cxt->jpeg_cxt.index);
+		if (ret) {
+				CMR_LOGE("Failed to free frame %d, index %d", ret, g_cxt->jpeg_cxt.index);
+		}
 		ret = cmr_v4l2_cap_resume(CHN_2,
 				0,
 				g_cxt->v4l2_cxt.chn_frm_deci[CHN_2]);
@@ -3619,7 +3623,7 @@ int camera_capture_ability(SENSOR_MODE_INFO_T *sn_mode,
 			g_cxt->cap_original_fmt = IMG_DATA_TYPE_RAW;
 			g_cxt->cap_zoom_mode = ZOOM_POST_PROCESS;
 		} else {
-			if (cap_size->width < g_cxt->isp_cxt.width_limit) {
+			if (cap_size->width <= g_cxt->isp_cxt.width_limit) {
 				CMR_LOGV("Need ISP to work at video mode");
 				img_cap->need_isp = 1;
 				g_cxt->cap_original_fmt = IMG_DATA_TYPE_YUV420;

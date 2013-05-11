@@ -23,7 +23,7 @@
 
 #define JPEG_MSG_QUEUE_SIZE		  40
 #define JPEG_EXIT_THREAD_FLAG	  1
-#define JPEG_SLICE_HEIGHT         512
+#define JPEG_SLICE_HEIGHT         4096
 #define JPEG_BUF_RES_SIZE         256
 #define JPEG_DECODE_FW_BUF_SIZE   (20*1024)
 #define JPEG_EVT_ENC_START	      (1 << 16)
@@ -213,7 +213,7 @@ static uint32_t _quality_covert(uint32_t quality)
 	} else {
 		jq = JPEGENC_QUALITY_HIGH;
 	}
-
+	jq = JPEGENC_QUALITY_MIDDLE_LOW;
 	return jq;
 }
 

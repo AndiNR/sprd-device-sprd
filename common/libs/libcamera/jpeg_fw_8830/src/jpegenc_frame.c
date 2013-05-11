@@ -140,15 +140,15 @@ PUBLIC void START_HW_ENCODE(uint16 total_mcu_num)
 {
 	int32 cmd = 0;
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGEncCodec();
-	
+	ALOGE("total_mcu_num %x",total_mcu_num);
 	//VLC Module cfg
 	if(ALONE_MODE == jpeg_fw_codec->work_mode)
 	{
-		cmd = ((jpeg_fw_codec->mcu_num_y * jpeg_fw_codec->mcu_num_x)  & 0x1ffff);
+		cmd = ((jpeg_fw_codec->mcu_num_y * jpeg_fw_codec->mcu_num_x)  & 0xfffff);
 		JPG_WRITE_REG(JPG_VLC_REG_BASE+VLC_TOTAL_MCU_OFFSET, cmd, "VLC_CFG_OFF: total mcu number");
 	}else
 	{
-		cmd = (total_mcu_num & 0x1ffff);
+		cmd = (total_mcu_num & 0xfffff);
 		JPG_WRITE_REG(JPG_VLC_REG_BASE+VLC_TOTAL_MCU_OFFSET, cmd, "VLC_CFG_OFF: total mcu number of current slice");
 	}
 	
