@@ -2448,6 +2448,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     char *str;
     char value[32];
     int ret;
+    int val=0;
 
     BLUE_TRACE("adev_set_parameters, kvpairs : %s", kvpairs);
     parms = str_parms_create_str(kvpairs);
@@ -2466,6 +2467,25 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             adev->low_power = false;
         else
             adev->low_power = true;
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));                                                
+    if (ret >= 0) {
+        val = atoi(value);
+        pthread_mutex_lock(&adev->lock);
+        if((adev->mode == AUDIO_MODE_IN_CALL) && (adev->call_start) && ((adev->devices & AUDIO_DEVICE_OUT_ALL) != val)) {
+            adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
+            if(val&AUDIO_DEVICE_OUT_ALL) {
+                ALOGE("adev set device in val is %x",val);
+                adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
+                adev->devices |= val;
+                ret = at_cmd_route(adev);  //send at command to cp
+                if (ret < 0) {
+                    ALOGE("out_set_parameters at_cmd_route error(%d) ",ret);
+                }
+            }
+        }
+        pthread_mutex_unlock(&adev->lock);
     }
 
     str_parms_destroy(parms);
