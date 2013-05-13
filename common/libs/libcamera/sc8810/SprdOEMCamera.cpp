@@ -3899,16 +3899,16 @@ camera_ret_code_type camera_cancel_autofocus (void)
 {
 	uint16_t focus_param[26] = {0};
 
-        s_af_is_cancel = 1;
-         ALOGV("SPRD OEM:camera_cancel_autofocus!s_af_is_stop=%d.", s_af_is_stop);
-         if(!s_af_is_stop) {
+	s_af_is_cancel = 1;
+	ALOGV("SPRD OEM:camera_cancel_autofocus!s_af_is_stop=%d.", s_af_is_stop);
+	if(!s_af_is_stop) {
 		focus_param[25] = 0xabcd;
 		if(0 != camera_set_ctrl(V4L2_CID_FOCUS_AUTO, (int32_t) &focus_param[0])){
 			ALOGE("SPRD OEM:camera_cancel_autofocus, cancel fail!");
 		}
 	}
-         s_af_is_cancel = 0;
-         ALOGV("SPRD OEM:camera_cancel_autofocus!s_af_is_stop=%d, s_af_is_cancel=%d.", s_af_is_stop, s_af_is_cancel);
+	s_af_is_cancel = 0;
+	ALOGV("SPRD OEM:camera_cancel_autofocus!s_af_is_stop=%d, s_af_is_cancel=%d.", s_af_is_stop, s_af_is_cancel);
 	return CAMERA_SUCCESS;
 }
 void close_device(void)
@@ -3950,7 +3950,7 @@ camera_ret_code_type camera_stop_preview(void)
 	uint32_t num = 0;
 	ALOGV("camera_stop_preview: Start to stop preview thread.");
 
-    camera_fd_deinit();
+	camera_fd_deinit();
 
 	//stop camera preview thread
 	g_stop_preview_flag = 1;
@@ -3962,7 +3962,9 @@ camera_ret_code_type camera_stop_preview(void)
 		ALOGV("waiting the autofocus stop....s_af_is_stop=%d.", s_af_is_stop);
 		if(num >= 100){
 			//pthread_kill(g_af_thr, 9);
-			ALOGE("Fail: Force stop the autofocus!");
+			camera_cancel_autofocus();
+			usleep(2000);
+			ALOGV("warning: Force to cancel the autofocus!");
 			break;
 		}
 	} //wait preview thread stop
