@@ -121,7 +121,7 @@ on fs
     #mount yaffs2 mtd@system /system ro remount
     #mount yaffs2 mtd@userdata /data nosuid nodev
     #mount yaffs2 mtd@cache /cache nosuid nodev
-    mkdir /productinfo 0777 system system
+    mkdir /productinfo 0774 system system
 # ---------------------------- spreadtrum on fs section end
 
 on post-fs
