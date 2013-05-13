@@ -3,6 +3,8 @@ package com.spreadtrum.dm;
 
 import android.app.Service;
 import android.app.Notification;
+import android.app.NotificationManager;
+
 import android.content.Context;
 import android.content.Intent;
 import android.content.BroadcastReceiver;
@@ -332,9 +334,13 @@ public class DmService extends Service {
         mInstance = this;
         Log.d(TAG, "OnCreate: mInstance = " + mInstance);
 /**** set foreground **************/
+	NotificationManager mNotificationManager=null;
+        mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 	Notification notify = new Notification();
-	super.startForeground(0,notify);
+	notify.flags |= Notification.FLAG_FOREGROUND_SERVICE;
+	super.startForeground(10,notify);
         Log.d(TAG, "OnCreate: setForeground ");
+	mNotificationManager.notify(10, notify);
 /**** set foreground **************/
 
         mHandler = new DMHandler();
