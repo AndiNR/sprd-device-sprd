@@ -5448,7 +5448,7 @@
         mmsport="80"
         user="movistargt"
         password="movistargt"
-        mmsc="mms.movistar.gt"
+        mmsc="http://mms.movistar.gt"
         type="mms"
     />
     <!-- Guernsey Sure Mobile -->
