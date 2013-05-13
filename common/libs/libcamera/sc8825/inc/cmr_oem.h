@@ -44,17 +44,19 @@ extern "C"
 #define CMR_EVT_AF_EXIT                             (CMR_EVT_OEM_BASE + 11)
 #define CMR_EVT_AF_INIT                             (CMR_EVT_OEM_BASE + 12)
 #define CMR_EVT_AF_CANCEL                           (CMR_EVT_OEM_BASE + 13)
+#define CMR_EVT_CAP_CANCEL                          (CMR_EVT_OEM_BASE + 20)
 
-#define CMR_EVT_PREV_BASE        (CMR_EVT_OEM_BASE + 0x100)
-#define CMR_EVT_PREV_INIT          (CMR_EVT_OEM_BASE + 0x0)
-#define CMR_EVT_PREV_EXIT          (CMR_EVT_OEM_BASE + 0xF)
-#define CMR_EVT_PREV_V4L2_BASE          (CMR_EVT_PREV_BASE + 0x10)
-#define CMR_EVT_PREV_V4L2_TX_DONE        (CMR_EVT_PREV_V4L2_BASE + CMR_V4L2_TX_DONE - CMR_EVT_V4L2_BASE)
-#define CMR_EVT_PREV_V4L2_TX_NO_MEM       (CMR_EVT_PREV_V4L2_BASE +  CMR_V4L2_TX_NO_MEM - CMR_EVT_V4L2_BASE)
-#define CMR_EVT_PREV_V4L2_TX_ERR             (CMR_EVT_PREV_V4L2_BASE + CMR_V4L2_TX_ERROR - CMR_EVT_V4L2_BASE)
-#define CMR_EVT_PREV_V4L2_CSI2_ERR             (CMR_EVT_PREV_V4L2_BASE + CMR_V4L2_CSI2_ERR - CMR_EVT_V4L2_BASE)
-#define CMR_EVT_PREV_CVT_BASE                 (CMR_EVT_PREV_BASE + 0x20)
-#define CMR_EVT_PREV_CVT_ROT_DONE     (CMR_EVT_PREV_CVT_BASE + CMR_IMG_CVT_ROT_DONE - CMR_EVT_CVT_BASE)
+#define CMR_EVT_PREV_BASE                           (CMR_EVT_OEM_BASE + 0x100)
+#define CMR_EVT_PREV_INIT                           (CMR_EVT_OEM_BASE + 0x0)
+#define CMR_EVT_PREV_EXIT                           (CMR_EVT_OEM_BASE + 0xF)
+
+#define CMR_EVT_PREV_V4L2_BASE                      (CMR_EVT_PREV_BASE + 0x10)
+#define CMR_EVT_PREV_V4L2_TX_DONE                   (CMR_EVT_PREV_V4L2_BASE + CMR_V4L2_TX_DONE - CMR_EVT_V4L2_BASE)
+#define CMR_EVT_PREV_V4L2_TX_NO_MEM                 (CMR_EVT_PREV_V4L2_BASE +  CMR_V4L2_TX_NO_MEM - CMR_EVT_V4L2_BASE)
+#define CMR_EVT_PREV_V4L2_TX_ERR                    (CMR_EVT_PREV_V4L2_BASE + CMR_V4L2_TX_ERROR - CMR_EVT_V4L2_BASE)
+#define CMR_EVT_PREV_V4L2_CSI2_ERR                  (CMR_EVT_PREV_V4L2_BASE + CMR_V4L2_CSI2_ERR - CMR_EVT_V4L2_BASE)
+#define CMR_EVT_PREV_CVT_BASE                       (CMR_EVT_PREV_BASE + 0x20)
+#define CMR_EVT_PREV_CVT_ROT_DONE                   (CMR_EVT_PREV_CVT_BASE + CMR_IMG_CVT_ROT_DONE - CMR_EVT_CVT_BASE)
 
 #define CAMERA_OEM_MSG_QUEUE_SIZE                    50
 #define CAMERA_AF_MSG_QUEUE_SIZE                     5
@@ -254,6 +256,7 @@ struct camera_context {
 	pthread_mutex_t          data_mutex;
 	void*                    client_data;
 	uint32_t                 af_inited;
+	uint32_t                 af_is_stopping;
 	pthread_mutex_t          af_cb_mutex;
 	camera_cb_f_type         camera_af_cb;
 	uint32_t                 zoom_level;
@@ -263,6 +266,8 @@ struct camera_context {
 	pthread_mutex_t          prev_mutex;
 	sem_t                    af_sync_sem;
 	sem_t                   af_start_sync_sem;
+	sem_t                   af_cb_sync_sem;
+	sem_t                   af_cancel_sync_sem;
 	sem_t                    init_sem;
 	sem_t                    exit_sem;
 	sem_t                    start_sem;
