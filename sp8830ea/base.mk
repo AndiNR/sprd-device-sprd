@@ -55,7 +55,11 @@ PRODUCT_PACKAGES += \
     libstagefright_m4vh263dec_hw_sprd \
     libstagefright_m4vh263dec_sprd \
     \
-    libstagefright_hard_mpeg4enc_sprd
+    libstagefright_hard_mpeg4enc_sprd	\
+    \
+    libstagefright_mix_h264dec_sprd.so	\
+    libstagefright_avcdec_hw_sprd.so	\
+    libstagefright_avcdec_sprd.so
 
 # prebuild files
 PRODUCT_PACKAGES += \
