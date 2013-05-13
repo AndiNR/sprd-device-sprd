@@ -91,6 +91,7 @@ service glgps /system/bin/glgps -c /system/etc/gpsconfig.xml
 
 on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
+    write /sys/kernel/debug/fatal_dump/enable 1
 
 on property:ro.nativemodem=true
     symlink /dev/slog_td /dev/vbpipe0
