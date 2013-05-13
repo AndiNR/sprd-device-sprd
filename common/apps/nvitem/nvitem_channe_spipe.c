@@ -7,6 +7,7 @@
 #define NVSYN_CMD		"AT+NVSYNLINK=21,1000,5000,512"
 
 static int channel_fd = 0;
+char* channel_path;
 
 void channel_open(void)
 {
@@ -14,11 +15,9 @@ void channel_open(void)
 	char cmd[64];
 	int timeout=0;
 
-do
-{
 	do
 	{
-		channel_fd = open( CPIPE_NVITEMD_PATH, O_RDWR);
+		channel_fd = open( channel_path, O_RDWR);
 		if(-1 == channel_fd)
 		{
 			sleep(1);
@@ -30,58 +29,6 @@ do
 		}
 	}while(1);
 
-#if 0
-	do
-	{
-		if(30 < timeout)
-		{
-			break;
-		}
-		fd = engapi_open(0);
-		if(0 > fd)
-		{
-			sleep(1);
-			timeout++;
-			continue;
-		}
-		else
-		{
-			break;
-		}
-	}while(1);
-
-	if(0 > fd){
-		close(channel_fd);
-		continue;
-	}
-
-	memset(cmd, 0, sizeof(cmd));
-	sprintf(cmd, "%d,%d,%s",ENG_AT_NOHANDLE_CMD,1,NVSYN_CMD);
-	NVITEM_PRINT("NVITEM:engapi_write: %s !!!\n",cmd);
-
-	if(strlen(cmd) != engapi_write(fd, cmd, strlen(cmd))){
-		NVITEM_PRINT("NVITEM: engapi_write : wirte fail !!!\n");
-		engapi_close(fd);
-		close(channel_fd);
-		continue;
-	}
-
-	memset(cmd, 0, sizeof(cmd));
-	engapi_read(fd, cmd, sizeof(cmd));
-	NVITEM_PRINT("NVITEM: engapi_read: %s !!!\n",cmd);
-
-	if(strcasestr(cmd,"OK") != NULL)
-	{
-		engapi_close(fd);
-		return;
-	}
-
-	engapi_close(fd);
-	close(channel_fd);
-	sleep(1);
-	continue;
-#endif
-}while(1);
 }
 BOOLEAN channel_read(uint8* buf, uint32 size, uint32* hasRead)
 {

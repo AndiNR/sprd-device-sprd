@@ -7,7 +7,7 @@
 //----------------------------
 //	Init Sync module
 //----------------------------
-void syncInit(void);
+void _syncInit(void);
 
 //----------------------------
 //	analyzer packet buf

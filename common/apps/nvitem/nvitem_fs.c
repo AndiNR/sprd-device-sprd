@@ -98,13 +98,14 @@ static RAM_NV_CONFIG _ramdiskCfg[RAMNV_NUM+1] =
         {0,	"",							"",	0		}
 };
 
+char* config_path;
 const RAM_NV_CONFIG*	ramDisk_Init(void)
 {
 	FILE *fp;
 	char line[512];
 	uint32 cnt = 2;
 
-	if (!(fp = fopen(RAMDISK_CFG, "r"))) {
+	if (!(fp = fopen(config_path, "r"))) {
 		NVITEM_PRINT("NVITEM: use default config!\n");
 		return _ramdiskCfg;
 	}

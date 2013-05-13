@@ -17,11 +17,23 @@ static void *pSaveTask(void* ptr)
 	return 0;
 }
 
-int main(void)
+extern char* channel_path;
+extern char* config_path;
+int main(int argc, char *argv[])
 {
 #ifndef WIN32
 	pthread_t pTheadHandle;
 #endif
+	if(3 != argc)
+	{
+		NVITEM_PRINT("Usage:\n");
+		NVITEM_PRINT("\tnvitemd channelPath configPath\n");
+		return 0;
+	}
+	channel_path = argv[1];
+	config_path = argv[2];
+	NVITEM_PRINT("%s %s %s\n",argv[0],argv[1],argv[2]);
+
 	initEvent();
 	initBuf();
 

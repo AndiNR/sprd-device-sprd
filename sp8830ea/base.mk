@@ -104,7 +104,8 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/ueventd.sc8830.rc:root/ueventd.sc8830.rc \
 	$(BOARDDIR)/fstab.sc8830:root/fstab.sc8830 \
 	$(BOARDDIR)/vold.fstab:system/etc/vold.fstab \
-	$(BOARDDIR)/nvitem.cfg:root/nvitem.cfg \
+	$(BOARDDIR)/nvitem_td.cfg:root/nvitem_td.cfg \
+	$(BOARDDIR)/nvitem_w.cfg:root/nvitem_w.cfg \
 	device/sprd/common/res/CDROM/adb.iso:system/etc/adb.iso \
 	device/sprd/common/libs/audio/apm/devicevolume.xml:system/etc/devicevolume.xml \
 	device/sprd/common/libs/audio/apm/formatvolume.xml:system/etc/formatvolume.xml \
