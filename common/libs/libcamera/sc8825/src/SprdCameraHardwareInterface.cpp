@@ -418,8 +418,12 @@ bool SprdCameraHardware::initPreview()
                 LOGV("initPreview: rotation, increase buffer: %d \n", preview_buff_cnt);
         }
         mPreviewHeap = GetPmem("/dev/pmem_adsp", buffer_size, preview_buff_cnt);
-        if(NULL == mPreviewHeap)
-            return false;
+        if(NULL == mPreviewHeap) {
+                mNotify_cb(CAMERA_MSG_ERROR, NO_MEMORY, 0, mUser);
+                LOGE("initPreview: CAMERA_MSG_NO_MEMORY.");
+                return false;
+        }
+
         if(NULL == mPreviewHeap->handle){
                 LOGE("Fail to GetPmem mPreviewHeap. buffer_size: 0x%x.", buffer_size);
                 return false;
