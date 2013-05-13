@@ -705,7 +705,7 @@ write_again:
                 n = write(pipe_fd, cmdrst, 2);
                 ALOGD("%s: write vbpipe %d bytes RESET Modem\n",__func__, n);
                 if (n < 0) {
-                    if (errno == -EPIPE) {
+                    if (errno == EPIPE) {
                         ALOGD("peer side of vbpipe is down, reopen it");
                         close(pipe_fd);
                         sleep(10);
