@@ -58,7 +58,12 @@ extern "C"
 #define JPG_RELEASE     			_IO(SPRD_JPG_IOCTL_MAGIC, 6)
 #define JPG_START       			_IO(SPRD_JPG_IOCTL_MAGIC, 7)
 #define JPG_RESET       			_IO(SPRD_JPG_IOCTL_MAGIC, 8)
-#define JPG_ACQUAIRE_MBIO_DONE _IO(SPRD_JPG_IOCTL_MAGIC, 9)
+#define JPG_ACQUAIRE_MBIO_DONE _IOR(SPRD_JPG_IOCTL_MAGIC, 9,unsigned int)
+
+#define INTS_MBIO 3
+#define INTS_VLD 2
+#define INTS_VLC 1
+#define INTS_BSM 0
 
 #define TIME_OUT_CLK			0xffff
 

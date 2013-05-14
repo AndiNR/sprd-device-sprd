@@ -726,7 +726,7 @@ uint32_t JPEGENC_Poll_MEA_BSM_OneSlice(uint32_t time, uint32_t slice_num)
 			 }
 	}
 #else
-	ret = ioctl(jpg_fd,JPG_ACQUAIRE_MBIO_DONE,time);
+	ret = ioctl(jpg_fd,JPG_ACQUAIRE_MBIO_DONE,INTS_MBIO);
 	SCI_TRACE_LOW("after ioctl JPG_ACQUAIRE_MBIO_DONE ret %d",ret);
 //	if(0 == ret)
 //	{
@@ -836,7 +836,7 @@ static uint32_t _Encode_NextSlice(uint32_t time,JPEGENC_SLICE_NEXT_T *update_par
 		 }
 	}
 #else
-	ret = ioctl(jpg_fd,JPG_ACQUAIRE_MBIO_DONE,time);
+	ret = ioctl(jpg_fd,JPG_ACQUAIRE_MBIO_DONE,INTS_MBIO);
 	SCI_TRACE_LOW("after ioctl JPG_ACQUAIRE_MBIO_DONE ret %d",ret);
 //	if(0 == ret)
 //	{
@@ -913,7 +913,7 @@ while(1)
 #else
 	do
 	{
-		ret =  ioctl(jpg_fd,JPG_ACQUAIRE_MBIO_DONE,time);
+		ret =  ioctl(jpg_fd,JPG_ACQUAIRE_MBIO_DONE,INTS_VLC);
 		SCI_TRACE_LOW("after ioctl JPG_ACQUAIRE_MBIO_DONE ret %d",ret);
 	}while(!ret ); 
 #endif
