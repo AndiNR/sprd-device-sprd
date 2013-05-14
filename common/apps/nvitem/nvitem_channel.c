@@ -7,6 +7,8 @@
 #define NVSYN_CMD		"AT+NVSYNLINK=21,1000,5000,512"
 
 static int channel_fd = 0;
+char* channel_path;
+
 
 void channel_open(void)
 {
@@ -18,7 +20,7 @@ do
 {
 	do
 	{
-		channel_fd = open( CMUX_NVITEMD_PATH, O_RDWR);
+		channel_fd = open( channel_path, O_RDWR);
 		if(-1 == channel_fd)
 		{
 			sleep(1);
