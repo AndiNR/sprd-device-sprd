@@ -137,6 +137,7 @@ typedef struct
 {
 	char vbpipe[VBC_PIPE_NAME_MAX_LEN];//vbpipe5/vbpipe6
 	int vbchannel_id;
+	cp_type_t cp_type;
 	int vbpipe_fd;
 	int vbpipe_pre_fd;
 	int is_exit;
@@ -160,16 +161,17 @@ typedef struct
 {
     char s_vbc_ctrl_pipe_name[VBC_PIPE_NAME_MAX_LEN];
     int channel_id;
+    cp_type_t cp_type;
 }vbc_ctrl_pipe__para_t;
 
 static vbc_ctrl_pipe__para_t s_vbc_ctrl_pipe_info[VBC_PIPE_COUNT] =
 {
 		//{"/dev/vbpipe5"},
 #ifdef AUDIO_SPIPE_TD
-		{{"/dev/spipe_td6"},1},
-		{{"/dev/spipe_w6"},0}
+		{{"/dev/spipe_td6"},1,CP_TG},
+		{{"/dev/spipe_w6"},0,CP_W}
 #else
-		{{"/dev/vbpipe6"},0}  
+		{{"/dev/vbpipe6"},0,CP_TG}  
 #endif
 };
 
@@ -796,6 +798,7 @@ int vbc_ctrl_open(struct tiny_audio_device *adev)
     {
         memcpy(st_vbc_ctrl_thread_para[i].vbpipe, s_vbc_ctrl_pipe_info[i].s_vbc_ctrl_pipe_name, VBC_PIPE_NAME_MAX_LEN);
         st_vbc_ctrl_thread_para[i].vbchannel_id = s_vbc_ctrl_pipe_info[i].channel_id;
+	st_vbc_ctrl_thread_para[i].cp_type = s_vbc_ctrl_pipe_info[i].cp_type;
         st_vbc_ctrl_thread_para[i].adev = adev;
         st_vbc_ctrl_thread_para[i].vbpipe_fd = -1;
         st_vbc_ctrl_thread_para[i].vbpipe_pre_fd = -1;
@@ -988,6 +991,7 @@ RESTART:
                 adev->call_start = 1;
                 SetParas_OpenHal_Incall(para->vbpipe_fd);   //get sim card number
                 adev->cur_vbpipe_fd = para->vbpipe_fd;
+		adev->cp_type = para->cp_type;
                 pthread_mutex_unlock(&adev->lock);
                 MY_TRACE("VBC_CMD_HAL_OPEN OUT, cur_vbpipe_id:%d, vbpipe_name:%s.", adev->cur_vbpipe_fd, para->vbpipe);
             }

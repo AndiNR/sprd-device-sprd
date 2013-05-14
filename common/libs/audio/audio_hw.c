@@ -78,6 +78,7 @@
 /* ALSA cards for sprd */
 #define CARD_SPRDPHONE "sprdphone"
 #define CARD_VAUDIO    "VIRTUAL AUDIO"
+#define CARD_VAUDIO_W  "VIRTUAL AUDIO W"
 #define CARD_SCO    "bt-i2s"
 
 /* ALSA ports for sprd */
@@ -210,6 +211,12 @@ struct stream_routing_manager {
     bool             is_exit;
 };
 
+typedef enum {
+    CP_W,
+    CP_TG,
+    CP_MAX
+}cp_type_t;
+
 struct tiny_audio_device {
     struct audio_hw_device hw_device;
 
@@ -219,6 +226,7 @@ struct tiny_audio_device {
     int devices;
     volatile int device_switch;  /*changing device flag*/
     volatile int cur_vbpipe_fd;  /*current vb pipe id, if all pipes is closed this is -1.*/
+    cp_type_t  cp_type;
     struct pcm *pcm_modem_dl;
     struct pcm *pcm_modem_ul;
     volatile int call_start;
@@ -336,9 +344,10 @@ static const struct {
 /*
  * card define
  */
-static int s_tinycard = 0;
-static int s_vaudio = 0;
-static int s_sco=0;
+static int s_tinycard = -1;
+static int s_vaudio = -1;
+static int s_vaudio_w = -1;
+static int s_sco= -1;
 
 /**
  * NOTE: when multiple mutexes have to be acquired, always respect the following order:
@@ -384,6 +393,11 @@ static int out_dump_release(FILE **fd);
 
 #include "at_commands_generic.c"
 #include "mmi_audio_loop.c"
+
+static cp_type_t get_cur_cp_type( struct tiny_audio_device *adev )
+{
+    return adev->cp_type;
+}
 
 static  int  pcm_mixer(int16_t  *buffer, uint32_t samples)
 {
@@ -674,6 +688,7 @@ static int start_vaudio_output_stream(struct tiny_stream_out *out)
     unsigned int port = PORT_MM;
     struct pcm_config old_pcm_config;
     int ret=0;
+    cp_type_t cp_type;
     card = s_vaudio;
     old_pcm_config=out->config;
     out->config = pcm_config_vplayback;
@@ -681,6 +696,16 @@ static int start_vaudio_output_stream(struct tiny_stream_out *out)
     if(!out->buffer_vplayback){
         goto error;
     }
+
+    cp_type = get_cur_cp_type(out->dev);
+    if(cp_type == CP_TG) {
+	card = s_vaudio;
+    }
+    else if (cp_type == CP_W) {
+	card = s_vaudio_w;
+    }
+    BLUE_TRACE("start vaudio_output_stream cp_type is %d ,card is %d",cp_type, card);
+
     out->pcm_vplayback= pcm_open(card, port, PCM_OUT, &out->config);
 
     if (!pcm_is_ready(out->pcm_vplayback)) {
@@ -1247,8 +1272,8 @@ static ssize_t out_write_vaudio(struct tiny_stream_out *out, const void* buffer,
     frame_size = audio_stream_frame_size(&out->stream.common);
     in_frames = bytes / frame_size;
     out_frames = RESAMPLER_BUFFER_SIZE / frame_size;
-
     if(out->pcm_vplayback) {
+	BLUE_TRACE("out_write_vaudio in bytes is %d",bytes);
         out->resampler_vplayback->resample_from_input(out->resampler_vplayback,
                                                             (int16_t *)buffer,
                                                             &in_frames,
@@ -1256,6 +1281,7 @@ static ssize_t out_write_vaudio(struct tiny_stream_out *out, const void* buffer,
                                                             &out_frames);
         buf = out->buffer_vplayback;
         ret = pcm_write(out->pcm_vplayback, (void *)buf, out_frames*frame_size);
+	BLUE_TRACE("out_write_vaudio out out frames  is %d",out_frames);
     }
     else
         usleep(out_frames*1000*1000/out->config.rate);
@@ -1542,6 +1568,8 @@ static int start_input_stream(struct tiny_stream_in *in)
         ALOGI("record process sco module created is %s.", in->active_rec_proc ? "successful" : "failed");
     }
     else if(adev->call_start) {
+	int card=0;
+	cp_type_t cp_type = CP_MAX;
         in->active_rec_proc = 0;
 #ifdef AUDIO_MUX_PCM
                 in->mux_pcm = mux_pcm_open(s_vaudio,PORT_MM,PCM_IN,&pcm_config_vrec_vx);
@@ -1552,7 +1580,15 @@ static int start_input_stream(struct tiny_stream_in *in)
                     return -ENOMEM;
                 }
 #else
-                in->pcm = pcm_open(s_vaudio,PORT_MM,PCM_IN,&pcm_config_vrec_vx);      
+		cp_type = get_cur_cp_type(in->dev);
+		if(cp_type == CP_TG) {
+		    card = s_vaudio;
+		}
+		else if(cp_type == CP_W) {
+		    card = s_vaudio_w;
+		}
+
+                in->pcm = pcm_open(card,PORT_MM,PCM_IN,&pcm_config_vrec_vx);      
                 if (!pcm_is_ready(in->pcm)) {
                     ALOGE("voice-call rec cannot open pcm_in driver: %s", pcm_get_error(in->pcm));
                     pcm_close(in->pcm);   
@@ -3097,8 +3133,10 @@ static int adev_open(const hw_module_t* module, const char* name,
     s_tinycard = get_snd_card_number(CARD_SPRDPHONE);
     s_vaudio = get_snd_card_number(CARD_VAUDIO);
     s_sco = get_snd_card_number(CARD_SCO);
-    ALOGI("s_tinycard = %d, s_vaudio = %d,s_sco = %d", s_tinycard, s_vaudio,s_sco);
-    if (s_tinycard < 0 && s_vaudio < 0&&(s_sco < 0 )) {
+    s_vaudio_w = get_snd_card_number(CARD_VAUDIO_W);
+
+    ALOGI("s_tinycard = %d, s_vaudio = %d,s_sco = %d,s_vaudio_w is %d", s_tinycard, s_vaudio,s_sco,s_vaudio_w);
+    if (s_tinycard < 0 && s_vaudio < 0&&(s_sco < 0 ) && (s_vaudio_w < 0)) {
         ALOGE("Unable to load sound card, aborting.");
         goto ERROR;
     }
