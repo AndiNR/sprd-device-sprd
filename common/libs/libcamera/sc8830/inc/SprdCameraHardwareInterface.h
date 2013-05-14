@@ -289,6 +289,7 @@ private:
 	bool                            mIsFreqChanged;
 	int32_t                         mCameraId;
 	volatile camera_state           mCameraState;
+	int                             miSPreviewFirstFrame;
 };
 
 }; // namespace android
