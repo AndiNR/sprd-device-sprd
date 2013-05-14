@@ -64,6 +64,19 @@ namespace android {
 							LOGV("%s: set camera param: %s, %d", __func__, #x, y); \
 							camera_set_parm (x, y, NULL, NULL); \
 						} while(0)
+static nsecs_t s_start_timestamp = 0;
+static nsecs_t s_end_timestamp = 0;
+static int s_use_time = 0;
+
+#define GET_START_TIME do { \
+                             s_start_timestamp = systemTime(); \
+                       }while(0)
+#define GET_END_TIME do { \
+                             s_end_timestamp = systemTime(); \
+                       }while(0)
+#define GET_USE_TIME do { \
+                            s_use_time = (s_end_timestamp - s_start_timestamp)/1000000; \
+                     }while(0)
 
 ///////////////////////////////////////////////////////////////////
 //static members
@@ -174,7 +187,8 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mIsStoreMetaData(false),
 	mIsFreqChanged(false),
 	mZoomLevel(0),
-	mCameraId(cameraId)
+	mCameraId(cameraId),
+    miSPreviewFirstFrame(1)
 {
 	LOGV("openCameraHardware: E cameraId: %d.", cameraId);
 
@@ -263,8 +277,7 @@ status_t SprdCameraHardware::startPreview()
 	    return NO_ERROR;
 	}	
 
-	bool isRecordingMode = (mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) > 0 ? true : false;
-	
+	bool isRecordingMode = (mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) > 0 ? true : false;	
 	return startPreviewInternal(isRecordingMode);
 }
 
@@ -275,7 +288,6 @@ void SprdCameraHardware::stopPreview()
 
 	stopPreviewInternal();
 	setRecordingMode(false);
-	
 	LOGV("stopPreview: X");
 }
 
@@ -380,6 +392,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 
 status_t SprdCameraHardware::takePicture()
 {
+    GET_START_TIME;
 	LOGV("takePicture: E");
 	
     print_time();
@@ -1471,6 +1484,8 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 
 void SprdCameraHardware::stopPreviewInternal()
 {
+    nsecs_t start_timestamp = systemTime();
+    nsecs_t end_timestamp;
 	LOGV("stopPreviewInternal E");
 
     if (!isPreviewing()) {
@@ -1490,6 +1505,8 @@ void SprdCameraHardware::stopPreviewInternal()
 	WaitForPreviewStop();	
 	deinitPreview();
 	deinitCapture();
+    end_timestamp = systemTime();
+    LOGE("Stop Preview Time:%lld(ms).",(end_timestamp - start_timestamp)/1000000);
     LOGV("stopPreviewInternal: X Preview has stopped.");	
 }
 
@@ -1788,7 +1805,6 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 							0, 0, width, height, &vaddr);
 	//if the ret is 0 and the vaddr is NULL, whether the unlock should be called?
 
-	
 	if (0 != ret || NULL == vaddr)
 	{
 		LOGE("%s: failed to lock gralloc buffer", __func__);
@@ -1876,6 +1892,12 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 	width = frame->dx;/*mPreviewWidth;*/
 	height = frame->dy;/*mPreviewHeight;*/
 	LOGV("receivePreviewFrame: width=%d, height=%d \n",width, height);
+    if (miSPreviewFirstFrame) {
+        GET_END_TIME;
+        GET_USE_TIME;
+        LOGE("Launch Camera Time:%d(ms).",s_use_time);
+        miSPreviewFirstFrame = 0;
+    }
 
 	if (!displayOneFrame(width, height, frame->buffer_phy_addr, (char *)frame->buf_Virt_Addr))
 	{
@@ -2171,6 +2193,10 @@ void SprdCameraHardware::receiveJpegPosPicture(void)//(camera_frame_type *frame)
 // which startPreview() or takePicture() are called.
 void SprdCameraHardware::receiveJpegPicture(void)
 {
+    GET_END_TIME;
+    GET_USE_TIME;
+    LOGE("Capture Time:%d(ms).",s_use_time);
+
 	LOGV("receiveJpegPicture: E image (%d bytes out of %d)",
 				mJpegSize, mJpegHeap->mBufferSize);
 	print_time();
@@ -3092,6 +3118,7 @@ static int HAL_camera_device_open(const struct hw_module_t* module,
                                   struct hw_device_t** device)
 {
     LOGV("%s", __func__);
+    GET_START_TIME;
 
     int cameraId = atoi(id);
     if (cameraId < 0 || cameraId >= HAL_getNumberOfCameras()) {
@@ -3138,6 +3165,7 @@ static int HAL_camera_device_open(const struct hw_module_t* module,
 
 done:
     *device = (hw_device_t *)g_cam_device;
+
     LOGI("%s: opened camera %s (%p)", __func__, id, *device);
     return 0;
 }
