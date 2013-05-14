@@ -193,7 +193,7 @@ static int eng_pcclient_open_device()
 
 #endif
 
-static int eng_pcclient_init(void)
+static int eng_pcclient_init(char *name)
 {
 	int i;
 	struct termios ser_settings;
@@ -219,7 +219,7 @@ static int eng_pcclient_init(void)
 #endif
 	for ( i=0;i<eng_get_simcount();i++ ){
 		cs_sim_fds[i] = -1;
-		while((cs_sim_fds[i] = eng_at_open(i)) < 0){
+		while((cs_sim_fds[i] = eng_at_open(name,i)) < 0){
 			ENG_LOG(" %s: open server socket failed!, error[%d][%s]\n",\
 					__FUNCTION__, errno, strerror(errno));
 			usleep(500*1000);
@@ -573,20 +573,20 @@ int eng_atcali_hdlr(char* buf)
 	return -1;
 }
 
-static void eng_atcali_thread(void)
+static void eng_atcali_thread(char *name)
 {
 	int fd, n, ret;
 	fd_set readfds;
 
 	ENG_LOG("%s",__FUNCTION__);
 
-	while((cs_sim1_fd = eng_at_open(0)) < 0){
+	while((cs_sim1_fd = eng_at_open(name,0)) < 0){
 		ENG_LOG("%s: open server socket failed!, error[%d][%s]\n",\
 			__FUNCTION__, errno, strerror(errno));
 		usleep(500*1000);
 	}
 
-	eng_atauto_thread(NULL);
+	eng_atauto_thread(name);
 }
 
 static void *eng_atauto_thread(void *par)
@@ -595,10 +595,18 @@ static void *eng_atauto_thread(void *par)
 	int usb_status=0;
 	char buffer[32];
 	fd_set readfds;
+	char modem_dev[20];
 
-	while((fd=open(ENG_ATAUTO_DEV, O_RDWR|O_NONBLOCK)) < 0){
+	if (strcmp((char*)par,"engw") == 0){
+		sprintf(modem_dev,"%s",ENG_ATAUTO_DEVW);
+	} else {
+		sprintf(modem_dev,"%s",ENG_ATAUTO_DEVT);
+
+	}
+
+	while((fd=open(modem_dev, O_RDWR|O_NONBLOCK)) < 0){
 		ENG_LOG("%s: open %s failed!, error[%d][%s]\n",\
-			__func__,  ENG_ATAUTO_DEV, errno, strerror(errno));
+			__func__,  modem_dev, errno, strerror(errno));
 		usleep(500*1000);
 	}
 
@@ -948,7 +956,6 @@ int main (int argc, char** argv)
 	int opt;
 	int type;
 	char name[10];
-	int temp =0;
 #if 0
 	int index;
 	index = eng_sql_string2int_get("index");
@@ -967,7 +974,6 @@ int main (int argc, char** argv)
 	while ( -1 != (opt = getopt(argc, argv, "t:"))) {
 		switch (opt) {
 			case 't':
-				temp =1;
 				memset(name,0,10);
 				type = atoi(optarg);
 				if (type){
@@ -981,7 +987,7 @@ int main (int argc, char** argv)
 		}
 	}
 
-	ALOGD("engpcclient temp =%d",temp);
+	ALOGD("engpcclient name =%s",name);
 
 	eng_sqlite_create();
 
@@ -993,7 +999,7 @@ int main (int argc, char** argv)
 	}
 
 	if(cmdparam.califlag == 1 && cmdparam.nativeflag == 0){ //at handler in calibration mode
-		eng_atcali_thread();
+		eng_atcali_thread(name);
 		return 0;
 	}
 
@@ -1031,25 +1037,18 @@ int main (int argc, char** argv)
 
 	if(cmdparam.califlag  != 1  || cmdparam.nativeflag  != 1)
 	{
-		if ( temp != 1) {
-			rc = eng_pcclient_init();
+		rc = eng_pcclient_init(name);
 
-			if(rc == -1) {
-				ENG_LOG("%s: init fail, exit\n",__func__);
-				return -1;
-			}
-
-			if (0 != eng_thread_create( &t5, eng_atauto_thread, NULL)){
-				ENG_LOG("atauto thread start error");
-			}
-
-			eng_pcclient_hdlr(NULL);
-		}else{
-			ENG_LOG(" engpcclient wihle1 ");
-			while(1){
-				sleep(10000);
-			}
+		if(rc == -1) {
+			ENG_LOG("%s: init fail, exit\n",__func__);
+			return -1;
 		}
+
+		if (0 != eng_thread_create( &t5, eng_atauto_thread, name)){
+			ENG_LOG("atauto thread start error");
+		}
+
+		eng_pcclient_hdlr(NULL);
 	}else{
 		/*calibration mode for native (AP dirrectily  communicates with PC tool)
 		  keep eng_pcclient thread alive*/

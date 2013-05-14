@@ -32,7 +32,7 @@
 #define ENG_KEYPAD_PATH "/sys/devices/platform/sprd-keypad/emulate"
 #endif
 extern int eng_atdiag_hdlr(unsigned char *buf,int len, char* rsp);
-extern int eng_atdiag_euthdlr(char *buf,int len,char* rsp,int module_index);
+extern int eng_atdiag_euthdlr(unsigned char *buf,int len,char* rsp,int module_index);
 extern void eng_check_factorymode_fornand(void);
 extern void eng_check_factorymode_formmc(void);
 extern int turnoff_lcd_backlight(void);

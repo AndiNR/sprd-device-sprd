@@ -157,24 +157,47 @@ service modemd /system/bin/modemd
     group system radio shell
     oneshot
 
-service engpcclient /system/bin/engpcclient
-    class core
-    user system
-    group system radio shell
-    disabled
-    oneshot
-
-service engservice /system/bin/engservice
+service engservicet /system/bin/engservice -t 1
+    socket engtd stream 660 system system
     class core
     user system
     group system
     disabled
     oneshot
 
-service engmodemclient /system/bin/engmodemclient
+service engmodemclientt /system/bin/engmodemclient -t 1
     class core
     user system
     group system radio
+    disabled
+    oneshot
+
+service engpcclientt /system/bin/engpcclient -t 1
+    class core
+    user system
+    group system radio shell
+    disabled
+    oneshot
+
+service engservicew /system/bin/engservice -t 0
+    socket engw stream 660 system system
+    class core
+    user system
+    group system
+    disabled
+    oneshot
+
+service engmodemclientw /system/bin/engmodemclient -t 0
+    class core
+    user system
+    group system radio
+    disabled
+    oneshot
+
+service engpcclientw /system/bin/engpcclient -t 0
+    class core
+    user system
+    group system radio shell
     disabled
     oneshot
 

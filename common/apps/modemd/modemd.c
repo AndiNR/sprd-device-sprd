@@ -77,25 +77,51 @@ static int get_task_pid(char *name)
 	return -1;
 }
 
-static int stop_engservice(void)
+static int stop_engservice(int modem)
 {
 	MODEMD_LOGD("stop engservice!");
-
-	property_set("ctl.stop", "engservice");
-	property_set("ctl.stop", "engmodemclient");
-	property_set("ctl.stop", "engpcclient");
+	switch(modem){
+		case TD_MODEM:
+			property_set("ctl.stop", "engservicet");
+			property_set("ctl.stop", "engmodemclientt");
+			property_set("ctl.stop", "engpcclientt");
+			break;
+		case W_MODEM:
+			property_set("ctl.stop", "engservicew");
+			property_set("ctl.stop", "engmodemclientw");
+			property_set("ctl.stop", "engpcclientw");
+			break;
+		default:
+			property_set("ctl.stop", "engservicet");
+			property_set("ctl.stop", "engmodemclientt");
+			property_set("ctl.stop", "engpcclientt");
+			break;
+	}
 
 	return 0;
 }
 
-static int start_engservice(void)
+static int start_engservice(int modem)
 {
 	MODEMD_LOGD("start engservice!");
 
-	property_set("ctl.start", "engservice");
-	property_set("ctl.start", "engmodemclient");
-	property_set("ctl.start", "engpcclient");
-
+	switch(modem){
+		case TD_MODEM:
+			property_set("ctl.start", "engservicet");
+			property_set("ctl.start", "engmodemclientt");
+			property_set("ctl.start", "engpcclientt");
+			break;
+		case W_MODEM:
+			property_set("ctl.start", "engservicew");
+			property_set("ctl.start", "engmodemclientw");
+			property_set("ctl.start", "engpcclientw");
+			break;
+		default:
+			property_set("ctl.start", "engservicet");
+			property_set("ctl.start", "engmodemclientt");
+			property_set("ctl.start", "engpcclientt");
+			break;
+	}
 	return 0;
 }
 
@@ -195,7 +221,7 @@ int stop_service(int modem, int is_vlx)
 	MODEMD_LOGD("enter stop_service!");
 
 	/* stop eng */
-	stop_engservice();
+	stop_engservice(modem);
 
 	/* stop phoneserver */
 	stop_phser(modem);
@@ -315,7 +341,7 @@ int start_service(int modem, int is_vlx, int restart)
 	start_phser(modem);
 
 	/*start eng*/
-	start_engservice();
+	start_engservice(modem);
 
 	if(restart == 1) {
 		MODEMD_LOGD("restart rild!");

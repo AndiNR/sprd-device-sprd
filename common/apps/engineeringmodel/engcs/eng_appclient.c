@@ -59,16 +59,16 @@ static int eng_at_handshake( int fd, int type)
 	return -1;
 }
 
-int eng_at_open(int type)
+int eng_at_open(char *name,int type)
 {
 	int counter=0;
 	int err=-1;
 	int soc_fd=-1;
 
 	//connect to server
-	soc_fd = eng_client(ENG_SOCKET_PORT, SOCK_STREAM);
+	soc_fd = eng_client(name, SOCK_STREAM);
 	if (soc_fd < 0) {
-		ALOGE ("%s: opening engmode server socket failed", __FUNCTION__);
+		ALOGE ("%s: opening %s server socket failed", __FUNCTION__,name);
 		return err;
 	}
 
@@ -127,6 +127,7 @@ void eng_at_wtemp(int fd,int cmd)
 	
 }
 
+#if DEBUG
 /*
   * |-cmd id-|-param num-|-param1-|-param2-|---|
   */
@@ -139,10 +140,10 @@ int eng_appctest(void)
 	int fd;
 	int cmdlen=0;
 	int cmd;
-	
+
 	ENG_LOG("Run Engineer Mode PC2SERVER Client!\n");
 
-	fd = eng_at_open(0);
+	fd = eng_at_open("engtd",0);
 	
 	if(fd<0) {
 		ENG_LOG("ENG Open Failed!\n");
@@ -549,6 +550,6 @@ int eng_appctest(void)
 	exit(0);
 	
 }
-
+#endif
 
 
