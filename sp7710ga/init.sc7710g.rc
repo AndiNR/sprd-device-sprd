@@ -264,11 +264,10 @@ service wril-daemon1 /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -
 
 
 #nvitemd
-service nvitemd /system/bin/nvitemd
+service nvitemd /system/bin/nvitemd /dev/ts0710mux20 ./nvitem.cfg
     class core
-    user system
+    user root
     group system radio shell
-    disabled
     oneshot
 
 # create virtual SD card at /storage/sdcard0, based on the /data/media directory
