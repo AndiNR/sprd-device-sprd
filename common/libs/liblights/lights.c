@@ -78,7 +78,7 @@ static int set_light_backlight(struct light_device_t *dev,
         int err = 0;
         int brightness = rgb_to_brightness(state);
 
-        ALOGV("file:%s, func:%s, brightness=%d\n", __FILE__, __func__, brightness);
+        ALOGD("file:%s, func:%s, brightness=%d\n", __FILE__, __func__, brightness);
         if(NULL==LIGHT_BACKLIGHT) {
                 ALOGE("file:%s, func:%s, unsupported light!\n", __FILE__, __func__);
                 return -EINVAL;
@@ -101,7 +101,7 @@ static int set_light_keyboard(struct light_device_t* dev,
         int err = 0;
         int on = is_lit(state);
 
-        ALOGV("file:%s, func:%s, on=%d\n", __FILE__, __func__, on);
+        ALOGD("file:%s, func:%s, on=%d\n", __FILE__, __func__, on);
         if(NULL==LIGHT_KEYBOARD) {
                 ALOGE("file:%s, func:%s, unsupported light!\n", __FILE__, __func__);
                 return -EINVAL;
@@ -119,7 +119,7 @@ static int set_light_buttons(struct light_device_t* dev,
         int err = 0;
         int on = is_lit(state);
 
-        ALOGV("file:%s, func:%s, on=%d\n", __FILE__, __func__, on);
+        ALOGD("file:%s, func:%s, on=%d\n", __FILE__, __func__, on);
         if(NULL==LIGHT_BUTTONS) {
                 ALOGE("file:%s, func:%s, unsupported light!\n", __FILE__, __func__);
                 return -EINVAL;
