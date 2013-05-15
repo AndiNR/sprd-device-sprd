@@ -87,15 +87,18 @@ static int get_task_pid(char *name)
             int fd, ret;
             sprintf(cmdline, "/proc/%d/cmdline", pid);
             fd = open(cmdline, O_RDONLY);
-            if (fd <= 0) continue;
+            if (fd < 0) continue;
             ret = read(fd, cmdline, 1023);
             close(fd);
             if (ret < 0) ret = 0;
             cmdline[ret] = 0;
-            if (strcmp(name, cmdline) == 0)
-            return pid;
+            if (strcmp(name, cmdline) == 0) {
+                closedir(d);
+                return pid;
+            }
         }
     }
+    closedir(d);
     return -1;
 }
 static void print_log_data(char *buf, int cnt)
