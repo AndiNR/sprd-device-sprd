@@ -56,13 +56,11 @@
 
 /* detect assert/hangup interface */
 #define TD_ASSERT_PRO	"ro.modem.t.assert"
-#define TD_WATCHDOG_PRO	"ro.modem.t.wdt"
 #define W_ASSERT_PRO	"ro.modem.w.assert"
-#define W_WATCHDOG_PRO	"ro.modem.w.wdt"
 /* default value for detect assert/hangup interface */
 #define TD_ASSERT_DEV	"/dev/spipe_td2"
-#define TD_WATCHDOG_DEV	"/proc/cpt/wdtirq"
 #define W_ASSERT_DEV	"/dev/spipe_w2"
+#define TD_WATCHDOG_DEV	"/proc/cpt/wdtirq"
 #define W_WATCHDOG_DEV	"/proc/cpw/wdtirq"
 
 #define PHONE_APP		"com.android.phone"
