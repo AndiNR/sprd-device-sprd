@@ -1722,7 +1722,7 @@ int camera_take_picture_done(struct frm_info *data)
 			CAMERA_FUNC_TAKE_PICTURE,
 			0);
 	}
-
+	camera_takepic_done(g_cxt);
 	return ret;
 }
 
@@ -4455,6 +4455,8 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 	ret = jpeg_enc_add_eixf(&wexif_param,&wexif_output);
 	TAKE_PIC_CANCEL;
 	if (0 == ret) {
+		camera_wait_takepicdone(g_cxt);
+		CMR_LOGV("take pic done.");
 		encoder_type.buffer = (uint8_t *)wexif_output.output_buf_virt_addr;
 		encoder_param.size  = wexif_output.output_buf_size;
 		camera_call_cb(CAMERA_EXIT_CB_DONE,

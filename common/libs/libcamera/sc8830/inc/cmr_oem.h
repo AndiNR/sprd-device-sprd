@@ -288,6 +288,7 @@ struct camera_context {
 	sem_t                    exit_sem;
 	sem_t                    start_sem;
 	sem_t                    stop_sem;
+	sem_t                    takepicdone_sem;
 	uint32_t                 err_code;
 	uint32_t                 camera_id;
 	pthread_t                prev_thread;
@@ -373,6 +374,8 @@ int camera_wait_init(struct camera_context *p_cxt);
 int camera_init_done(struct camera_context *p_cxt);
 int camera_wait_exit(struct camera_context *p_cxt);
 int camera_exit_done(struct camera_context *p_cxt);
+int camera_wait_takepicdone(struct camera_context *p_cxt);
+int camera_takepic_done(struct camera_context *p_cxt);
 void camera_sensor_inf(struct sensor_if *cam_inf_ptr, SENSOR_INF_T *inf_ptr);
 int camera_set_sensormark(void);
 int camera_save_sensormark(void);
