@@ -167,10 +167,10 @@ void* detect_sipc_modem(void *param)
 
 	if(modem == TD_MODEM) {
 		property_get(TD_ASSERT_PRO, assert_dev, TD_ASSERT_DEV);
-		property_get(TD_WATCHDOG_PRO, watchdog_dev, TD_WATCHDOG_DEV);
+		snprintf(watchdog_dev, sizeof(watchdog_dev), "%s", TD_WATCHDOG_DEV);
 	} else if(modem == W_MODEM) {
 		property_get(W_ASSERT_PRO, assert_dev, W_ASSERT_DEV);
-		property_get(W_WATCHDOG_PRO, watchdog_dev, W_WATCHDOG_DEV);
+		snprintf(watchdog_dev, sizeof(watchdog_dev), "%s", W_WATCHDOG_DEV);
 	} else
 		MODEMD_LOGE("%s: input wrong modem type!", __func__);
 
