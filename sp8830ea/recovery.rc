@@ -68,6 +68,10 @@ on property:service.adb.root=1
 service engpcclient /system/bin/engpcclient
     user root
 
-service nvitem /system/bin/nvitemd
+#nvitemd
+service nvitemd_td /system/bin/nvitemd /dev/spipe_td1 ./nvitem_td.cfg
+    user root
+
+service nvitemd_w /system/bin/nvitemd /dev/spipe_w1 ./nvitem_w.cfg
     user root
 
