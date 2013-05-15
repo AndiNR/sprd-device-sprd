@@ -7,7 +7,17 @@
 /misc 		mtd 		misc
 /boot		mtd		boot
 /recovery	mtd		recovery
-/fixnv1		yaffs2		fixnv1
-/fixnv2      	yaffs2		fixnv2
-/runtimenv1	yaffs2		runtimenv1
-/runtimenv2	yaffs2		runtimenv2
+
+/fixnv1		yaffs2		fixnv1		#/sdcard
+/fixnv2      	yaffs2		fixnv2		#/sdcard
+/runtimenv1	yaffs2		runtimenv1		#/sdcard
+/runtimenv2	yaffs2		runtimenv2		#/sdcard
+
+/productinfo	yaffs2		productinfo
+
+/modem		mtd		modem		#/sdcard
+/vmjaluna	mtd		vmjaluna	#/sdcard
+/dsp		mtd		dsp		#/sdcard
+
+/uboot		mtd		2ndbl
+/spl		mtd		spl		#/sdcard
