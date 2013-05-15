@@ -45,6 +45,20 @@ static MODEM_STA_E modem_state = MODEM_STA_SHUTDOWN;
 static int flash_less_flag = 0xff;
 
 #define MONITOR_APP	"/system/bin/sprd_monitor"
+static int reset_modem_if_assert(void)
+{
+    char prop[16]={0};
+
+    property_get("persist.sys.sprd.modemreset", prop, "");
+
+    printf("modem reset: %s\n", prop);
+
+    if(!strncmp(prop, "1", 2)){
+	return 1;
+    }
+    return 0;
+}
+
 static int poweron_by_charger(void)
 {
     char charge_prop[16]={0};
@@ -311,7 +325,7 @@ static void process_modem_state_message(char *message,int size)
                                 }
 			}
 			
-			if(reset_status==1){
+			if((reset_status==1) || reset_modem_if_assert()){
 				int pid;
 				pid = get_task_pid(MONITOR_APP);
 				if((pid > 0)&&(!first_alive)){
