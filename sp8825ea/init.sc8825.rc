@@ -182,8 +182,7 @@ service calibrationinit /system/bin/calibration_init
 service vcharged /bin/vcharged
     class core
     user system
-    group system
-    disabled
+    group system shell
     oneshot
 
 service charge /bin/charge
