@@ -349,7 +349,7 @@ void delay_ms(int ms)
 static void try_to_connect_modem(int uart_fd)
 {
 	unsigned long hand_shake = 0x7E7E7E7E;
-	int buffer[16]={0};
+	char buffer[64]={0};
 	char *version_string = (char *)buffer;
 	char *data = version_string;
 	int modem_connect = 0;
@@ -414,6 +414,10 @@ static void try_to_connect_modem(int uart_fd)
 							break;
 						}
 						data++;
+						if ( (data - version_string) >= sizeof(buffer)) {
+							printf("invalid version: rubbish data in driver");
+							break;
+						}
 					}  else {
 						modem_connect += 2;
 					}
@@ -480,7 +484,7 @@ int download_image(int channel_fd,struct image_info *info,int productinfo_flag)
 		if(productinfo_flag){
 			int fd = open("/proc/cmdline", O_RDONLY);
 			memset(&test_buffer[16*1024+8],0,1024);
-			if(fd > 0){
+			if(fd >= 0){
 				read(fd, &test_buffer[16*1024+8], 1024);
 				close(fd);
 				printf("cmd_line : %s\n",(char *)&test_buffer[16*1024+8]);
@@ -637,7 +641,7 @@ int open_uart_device(int polling_mode,int speed)
 	fd = open( uart_dev, O_RDWR|O_NONBLOCK );         //| O_NOCTTY | O_NDELAY
     else
 	fd = open( uart_dev, O_RDWR);
-    if(fd > 0)
+    if(fd >= 0)
     	set_raw_data_speed(fd,speed);  
     return fd;
 }
@@ -682,7 +686,7 @@ reboot_modem:
         for(;;)
         {
             	modem_interface_fd = open(DLOADER_PATH, O_RDWR);
-                if(modem_interface_fd==0)
+                if(modem_interface_fd>=0)
                         break;
         }
     }
