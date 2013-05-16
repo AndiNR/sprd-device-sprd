@@ -34,7 +34,7 @@ on post-fs-data
     # Set indication (checked by vold) that we have finished this action
     setprop vold.post_fs_data_done 1
 
-on boot
+on early-boot
     chown system system /sys/class/backlight/sprd_backlight/brightness
 
     chmod 660 /proc/nk/resume
@@ -328,7 +328,7 @@ service slog /system/bin/slog
     class main
     user root
 
-on boot
+on early-boot
     chown system system /dev/iio:device0
     chown system system /sys/bus/iio/devices/trigger0/name
     chown system system /sys/bus/iio/devices/iio:device0/accl_bias
