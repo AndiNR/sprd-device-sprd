@@ -143,7 +143,7 @@ service engpcclientw /system/bin/engpcclient -t 0
     user system
     group system radio shell
     disabled
-    one shot
+    oneshot
 
 #service engsetmacaddr /system/bin/engsetmacaddr
 #    class main

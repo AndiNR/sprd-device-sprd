@@ -25,7 +25,7 @@
 
 /* stty interface property */
 #define TD_TTY_DEV_PRO "ro.modem.t.tty"
-#define W_TTY_DEV_PRO "ro.modem.t.tty"
+#define W_TTY_DEV_PRO "ro.modem.w.tty"
 
 /* cproc driver device node */
 #define TD_PROC_PRO	"ro.modem.t.dev"
