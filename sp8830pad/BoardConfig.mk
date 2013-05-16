@@ -26,7 +26,7 @@ TARGET_BOOTLOADER_BOARD_NAME := sp8830pad
 
 # config u-boot
 TARGET_NO_BOOTLOADER := false
-UBOOT_DEFCONFIG := sp8830
+UBOOT_DEFCONFIG := sp8830pad
 
 # Enable the optimized DEX
 ifneq ($(filter user, $(TARGET_BUILD_VARIANT)),)
