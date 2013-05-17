@@ -125,7 +125,7 @@ void *eng_vlog_thread(void *x)
 			continue;
 		}
 
-		ENG_LOG("peter:eng_vlog read %d\n", r_cnt);
+//		ENG_LOG("peter:eng_vlog read %d\n", r_cnt);
 		w_cnt = write(ser_fd, log_data, r_cnt);
 		if (w_cnt < 0) {
 			ENG_LOG("eng_vlog no log data write:%d ,%s\n", w_cnt, strerror(errno));
@@ -140,7 +140,7 @@ void *eng_vlog_thread(void *x)
 			vser_fd = ser_fd;
 			ENG_LOG("eng_vlog reopen usb serial:%d\n", ser_fd);
 		}
-		ENG_LOG("eng_vlog read %d, write %d\n", r_cnt, w_cnt);
+//		ENG_LOG("eng_vlog read %d, write %d\n", r_cnt, w_cnt);
 	}
 out:
 	close(pipe_fd);
