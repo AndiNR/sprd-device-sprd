@@ -2473,19 +2473,26 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     if (ret >= 0) {
         val = atoi(value);
         pthread_mutex_lock(&adev->lock);
-        if((adev->mode == AUDIO_MODE_IN_CALL) && (adev->call_start) && ((adev->devices & AUDIO_DEVICE_OUT_ALL) != val)) {
+        if((adev->mode == AUDIO_MODE_IN_CALL) && (adev->call_connected) && ((adev->devices & AUDIO_DEVICE_OUT_ALL) != val)) {
             adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
             if(val&AUDIO_DEVICE_OUT_ALL) {
                 ALOGE("adev set device in val is %x",val);
                 adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
                 adev->devices |= val;
+		pthread_mutex_unlock(&adev->lock);
                 ret = at_cmd_route(adev);  //send at command to cp
                 if (ret < 0) {
                     ALOGE("out_set_parameters at_cmd_route error(%d) ",ret);
                 }
             }
+	    else {
+		pthread_mutex_unlock(&adev->lock);
+	    }
+		
         }
-        pthread_mutex_unlock(&adev->lock);
+	else {
+	    pthread_mutex_unlock(&adev->lock);
+	}
     }
 
     str_parms_destroy(parms);
