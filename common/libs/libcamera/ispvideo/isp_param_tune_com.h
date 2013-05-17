@@ -4,7 +4,6 @@
  **				Dependencies					*
  **---------------------------------------------------------------------------*/
 #include <sys/types.h>
-//#include "isp_com.h"
 #include "sensor_drv_u.h"
 #include "sensor_raw.h"
 
@@ -28,6 +27,7 @@ typedef int32_t (*isp_fun)(void* param_ptr);
 
 #define ISP_END_ID 0xffff
 #define ISP_VERSION_0000_ID 0x0000
+#define ISP_VERSION_0001_ID 0x0001
 
 #define ISP_PACKET_VERIFY_ID 0x71717567
 #define ISP_PACKET_END_ID 0x69656e64
@@ -79,6 +79,7 @@ typedef int32_t (*isp_fun)(void* param_ptr);
 #define ISP_PACKET_HDR 0x0017
 #define ISP_PACKET_GLOBAL 0x0018
 #define ISP_PACKET_CHN 0x0019
+#define ISP_PACKET_LNC_PARAM 0x001a
 #define ISP_PACKET_MAX 0xFFFF
 
 #define ISP_VIDEO_YUV422_2FRAME (1<<0)
@@ -118,7 +119,7 @@ enum isp_parser_cmd{
 	ISP_MAIN_INFO,
 	ISP_READ_SENSOR_REG,
 	ISP_WRITE_SENSOR_REG,
-    ISP_PARSER_CMD_MAX
+	ISP_PARSER_CMD_MAX
 };
 
 enum isp_tune_param_level{
@@ -148,87 +149,58 @@ enum isp_tune_param_level{
 	ISP_TUNE_VIDEO_MODE,
 	ISP_TUNE_MAX
 };
-#if 0
-enum isp_ctrl_cmd{
-    ISP_CTRL_AWB_MODE,
-    ISP_CTRL_AE_MODE,
-    ISP_CTRL_AE_MEASURE_LUM,
-    ISP_CTRL_EV,
-    ISP_CTRL_FLICKER,
-    ISP_CTRL_SPECIAL_EFFECT,
-    ISP_CTRL_BRIGHTNESS,
-    ISP_CTRL_CONTRAST,
-    ISP_CTRL_HIST,
-    ISP_CTRL_AUTO_CONTRAST,
-    ISP_CTRL_SATURATION,
-    ISP_CTRL_AF,
-    ISP_CTRL_CSS,
-    ISP_CTRL_HDR,
-    ISP_CTRL_GLOBAL_GAIN,
-    ISP_CTRL_CHN_GAIN,
-    ISP_CTRL_EXIF,
-    ISP_CTRL_ISO,
-    ISP_CTRL_MAX
-};
-#endif
 
 struct isp_main_info{
-    char sensor_id[32];
-    uint32_t version_id;
-    uint32_t preview_format;
-    uint32_t preview_size;
-    uint32_t capture_format;
-    uint32_t capture_size;
-};
-
-struct isp_size_info{
-    uint32_t size_id;
-    uint32_t width;
-    uint32_t height;
+	char sensor_id[32];
+	uint32_t version_id;
+	uint32_t preview_format;
+	uint32_t preview_size;
+	uint32_t capture_format;
+	uint32_t capture_size;
 };
 
 struct isp_version_info{
-    uint32_t version_id;
-    uint32_t srtuct_size;
-    uint32_t reserve;
+	uint32_t version_id;
+	uint32_t srtuct_size;
+	uint32_t reserve;
 };
 
 struct isp_param_info{
-    char main_type[32];
-    char sub_type[32];
-    char third_type[32];
-    uint32_t data_type;
-    uint32_t data_num;
-    uint32_t addr_offset;
+	char main_type[32];
+	char sub_type[32];
+	char third_type[32];
+	uint32_t data_type;
+	uint32_t data_num;
+	uint32_t addr_offset;
 };
 
 struct isp_parser_up_data{
-    uint32_t format;
-    uint32_t pattern;
-    uint32_t width;
-    uint32_t height;
-    uint32_t* buf_addr;
-    uint32_t buf_len;
+	uint32_t format;
+	uint32_t pattern;
+	uint32_t width;
+	uint32_t height;
+	uint32_t* buf_addr;
+	uint32_t buf_len;
 };
 
 struct isp_parser_buf_in{
-    uint32_t buf_addr;
-    uint32_t buf_len;
+	uint32_t buf_addr;
+	uint32_t buf_len;
 };
 
 struct isp_parser_buf_rtn{
-    uint32_t buf_addr;
-    uint32_t buf_len;
+	uint32_t buf_addr;
+	uint32_t buf_len;
 };
 
 struct isp_parser_cmd_param{
-    enum isp_parser_cmd cmd;
-    uint32_t param[48]; // capture param format/width/height
+	enum isp_parser_cmd cmd;
+	uint32_t param[48]; // capture param format/width/height
 };
 
 struct isp_param_fun{
-    uint32_t cmd;
-    int32_t (*param_fun)(void* param_ptr);
+	uint32_t cmd;
+	int32_t (*param_fun)(void* param_ptr);
 };
 
 uint32_t ispParserGetSizeID(uint32_t width, uint32_t height);

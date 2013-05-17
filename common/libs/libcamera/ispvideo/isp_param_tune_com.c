@@ -4,6 +4,8 @@
  **---------------------------------------------------------------------------*/
 #include "isp_param_tune_com.h"
 #include "isp_param_tune_v0000.h"
+#include "isp_param_tune_v0001.h"
+#include "isp_param_size.h"
 #include "isp_app.h"
 /**---------------------------------------------------------------------------*
  **				Compiler Flag					*
@@ -16,17 +18,6 @@ extern   "C"
 /**---------------------------------------------------------------------------*
 **				Micro Define					*
 **----------------------------------------------------------------------------*/
-#define ISP_SIZE_NUM 0x08
-struct isp_size_info s_isp_size_info[ISP_SIZE_NUM]={
-	{ISP_SIZE_640x480, 640, 480},
-	{ISP_SIZE_800x600, 800, 600},
-	{ISP_SIZE_1280x960, 1280, 960},
-	{ISP_SIZE_1280x1024, 1280, 1024},
-	{ISP_SIZE_1600x1200, 1600, 1200},
-	{ISP_SIZE_2048x1536, 2048, 1536},
-	{ISP_SIZE_2592x1944, 2592, 1944},
-	{ISP_SIZE_3264x2448, 3264, 2448}
-};
 
 /**---------------------------------------------------------------------------*
 *				Data Prototype					*
@@ -165,6 +156,11 @@ static int32_t _ispParserDownParam(void* in_param_ptr)
 			fun_ptr=ispGetDownParamFunV0000(module_id);
 			break;
 		}
+		case ISP_VERSION_0001_ID:
+		{
+			fun_ptr=ispGetDownParamFunV0001(module_id);
+			break;
+		}		
 		default :
 		{
 			break;
@@ -233,6 +229,7 @@ static int32_t _ispParserUpMainInfo(void* rtn_param_ptr)
 	uint32_t* data_addr=NULL;
 	uint32_t data_len =0x10;
 	struct isp_main_info* param_ptr=NULL;
+	struct isp_size_info* size_info_ptr=ISP_ParamGetSizeInfo();
 
 	data_len=sizeof(struct isp_main_info);
 	data_addr=ispParserAlloc(data_len);
@@ -249,24 +246,24 @@ static int32_t _ispParserUpMainInfo(void* rtn_param_ptr)
 		strcpy((char*)&param_ptr->sensor_id, sensor_info_ptr->name);
 		param_ptr->version_id=sensor_info_ptr->raw_info_ptr->version_info->version_id;
 
-		for(j=0x00; j<ISP_SIZE_NUM; j++)
+		for(j=0x00; ISP_SIZE_END!=size_info_ptr[j].size_id; j++)
 		{
-			if((s_isp_size_info[j].width==sensor_info_ptr->sensor_mode_info[1].width)
-				&&(s_isp_size_info[j].height==sensor_info_ptr->sensor_mode_info[1].height))
+			if((size_info_ptr[j].width==sensor_info_ptr->sensor_mode_info[1].width)
+				&&(size_info_ptr[j].height==sensor_info_ptr->sensor_mode_info[1].height))
 			{
-				param_ptr->preview_size=s_isp_size_info[j].size_id;
+				param_ptr->preview_size=size_info_ptr[j].size_id;
 				break ;
 			}
 		}
 
 		for(i=0x00; i<SENSOR_MODE_MAX; i++)
 		{
-			for(j=0x00; j<ISP_SIZE_NUM; j++)
+			for(j=0x00; ISP_SIZE_END!=size_info_ptr[j].size_id; j++)
 			{
-				if((s_isp_size_info[j].width==sensor_info_ptr->sensor_mode_info[i].width)
-					&&(s_isp_size_info[j].height==sensor_info_ptr->sensor_mode_info[i].height))
+				if((size_info_ptr[j].width==sensor_info_ptr->sensor_mode_info[i].width)
+					&&(size_info_ptr[j].height==sensor_info_ptr->sensor_mode_info[i].height))
 				{
-					param_ptr->capture_size|=s_isp_size_info[j].size_id;
+					param_ptr->capture_size|=size_info_ptr[j].size_id;
 					break ;
 				}
 			}
@@ -304,6 +301,14 @@ static int32_t _ispParserUpParam(void* rtn_param_ptr)
 			rtn=ispGetUpParamV0000(NULL, rtn_param_ptr);
 			break;
 		}
+
+		case ISP_VERSION_0001_ID:
+		{
+			rtn=ispGetUpParamV0001(NULL, rtn_param_ptr);
+			break;
+		}			
+
+		
 		default :
 		{
 			CMR_LOGE("ISP_TOOL:_ispParserUpParam version_id:0x%08x error \n", version_id);
@@ -435,6 +440,7 @@ static int32_t _ispParserDownCmd(void* in_param_ptr, void* rtn_param_ptr)
 	struct isp_parser_cmd_param* rtn_ptr=(struct isp_parser_cmd_param*)rtn_param_ptr;
 	uint32_t cmd=param_ptr[0];
 	uint32_t i=0x00;
+	struct isp_size_info* size_info_ptr=ISP_ParamGetSizeInfo();
 
 	rtn_ptr->cmd=cmd;
 
@@ -445,12 +451,12 @@ static int32_t _ispParserDownCmd(void* in_param_ptr, void* rtn_param_ptr)
 		case ISP_CAPTURE:
 		{
 			rtn_ptr->param[0]=param_ptr[2];//format
-			for(i=0x00; i<ISP_SIZE_NUM; i++)
+			for(i=0x00; ISP_SIZE_END!=size_info_ptr[i].size_id; i++)
 			{
-				if(s_isp_size_info[i].size_id==param_ptr[3])
+				if(size_info_ptr[i].size_id==param_ptr[3])
 				{
-					rtn_ptr->param[1]=s_isp_size_info[i].width;//width
-					rtn_ptr->param[2]=s_isp_size_info[i].height;//height
+					rtn_ptr->param[1]=size_info_ptr[i].width;//width
+					rtn_ptr->param[2]=size_info_ptr[i].height;//height
 					break ;
 				}
 			}
@@ -636,13 +642,14 @@ uint32_t ispParserGetSizeID(uint32_t width, uint32_t height)
 {
 	uint32_t i=0x00;
 	uint32_t size_id=0x00;
+	struct isp_size_info* size_info_ptr=ISP_ParamGetSizeInfo();
 
-	for(i=0x00; i<ISP_SIZE_NUM; i++)
+	for(i=0x00; ISP_SIZE_END!=size_info_ptr[i].size_id; i++)
 	{
-		if((s_isp_size_info[i].width==width)
-			&&(s_isp_size_info[i].height==height))
+		if((size_info_ptr[i].width==width)
+			&&(size_info_ptr[i].height==height))
 		{
-			size_id=s_isp_size_info[i].size_id;
+			size_id=size_info_ptr[i].size_id;
 			break ;
 		}
 	}

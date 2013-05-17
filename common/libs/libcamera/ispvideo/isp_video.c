@@ -116,6 +116,15 @@ struct camera_func* ispvideo_GetCameraFunc(void)
 	return s_camera_fun_ptr;
 }
 
+int ispvideo_SetreTurnValue(uint8_t* rtn_ptr, uint32_t rtn)
+{
+	uint32_t* rtn_value=(uint32_t*)rtn_ptr;
+
+	*rtn_value=rtn;
+
+	return 0x04;
+}
+
 uint32_t ispvideo_GetIspParamLenFromSt(unsigned char* dig_ptr)
 {
 	uint32_t data_len=0x00;
@@ -335,8 +344,7 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 		case CMD_START_PREVIEW:
 		{// ok
 			DBG("ISP_TOOL:CMD_START_PREVIEW \n");
-			eng_rsp_diag[rsp_len] = ISP_CMD_SUCCESS;
-			rsp_len++;
+			rsp_len+=ispvideo_SetreTurnValue((uint8_t*)&eng_rsp_diag[rsp_len], ISP_CMD_SUCCESS);
 			eng_rsp_diag[rsp_len] = 0x7e;
 			msg_ret->len = rsp_len-1;
 			res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
@@ -347,8 +355,7 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 		{// ok
 			DBG("ISP_TOOL:CMD_STOP_PREVIEW \n");
 			preview_flag = 0;
-			eng_rsp_diag[rsp_len] = ISP_CMD_SUCCESS;
-			rsp_len++;
+			rsp_len+=ispvideo_SetreTurnValue((uint8_t*)&eng_rsp_diag[rsp_len], ISP_CMD_SUCCESS);
 			eng_rsp_diag[rsp_len] = 0x7e;
 			msg_ret->len = rsp_len-1;
 			res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
@@ -356,7 +363,7 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 		}
 		case CMD_GET_PREVIEW_PICTURE:
 		{ // ok
-			//DBG("ISP_TOOL:CMD_GET_PREVIEW_PICTURE \n");
+			//DBG("ISP_TOOL:CMD_GET_PREVIEW_PICTURE, preview_flag = %d\n", preview_flag);
 			if(1==preview_flag)
 			{
 				preview_img_end_flag = 0;
@@ -368,6 +375,7 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 				msg_ret->len = rsp_len-1;
 				res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
 			}
+			//DBG("ISP_TOOL:CMD_GET_PREVIEW_PICTURE, done");
 			break;
 		}
 		case CMD_READ_ISP_PARAM:
@@ -438,8 +446,7 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 				}
 			}
 
-			eng_rsp_diag[rsp_len] = ret;
-			rsp_len++;
+			rsp_len+=ispvideo_SetreTurnValue((uint8_t*)&eng_rsp_diag[rsp_len], ret);
 			eng_rsp_diag[rsp_len] = 0x7e;
 			msg_ret->len = rsp_len-1;
 			res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
@@ -556,11 +563,10 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 			{
 				ret=ispvideo_GetIspParamFromSt(isp_ptr, (struct isp_parser_buf_rtn*)&in_param);
 				ret=ispParser(ISP_PARSER_DOWN, (void*)in_param.buf_addr, (void*)&rtn_cmd);
-				ret=ispParserFree((void*)in_param.buf_addr);
+				ispParserFree((void*)in_param.buf_addr);
 			}
 
-			eng_rsp_diag[rsp_len] = ISP_CMD_SUCCESS;
-			rsp_len++;
+			rsp_len+=ispvideo_SetreTurnValue((uint8_t*)&eng_rsp_diag[rsp_len], ret);
 			eng_rsp_diag[rsp_len] = 0x7e;
 			msg_ret->len = rsp_len-1;
 			res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
@@ -623,8 +629,7 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 				ret=ispParserFree((void*)in_param.buf_addr);
 			}
 
-			eng_rsp_diag[rsp_len] = ISP_CMD_SUCCESS;
-			rsp_len++;
+			rsp_len+=ispvideo_SetreTurnValue((uint8_t*)&eng_rsp_diag[rsp_len], ISP_CMD_SUCCESS);
 			eng_rsp_diag[rsp_len] = 0x7e;
 			msg_ret->len = rsp_len-1;
 			res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
@@ -649,9 +654,11 @@ void send_img_data(uint32_t format, uint32_t width, uint32_t height, char *imgpt
 {
 	int ret;
 
+	//DBG("ISP_TOOL: send_img_data, preview_img_end_flag = %d, %d, %d", preview_img_end_flag, width, height);
+
 	if (0==preview_img_end_flag)
 	{
-	//	DBG("ISP_TOOL:ISP_TOOL:%s: preview_flag: %d, getpic_flag: %d, imagelen: %d.\n", __FUNCTION__, preview_flag, getpic_flag, imagelen);
+		//DBG("ISP_TOOL:ISP_TOOL:%s: preview_flag: %d, getpic_flag: %d, imagelen: %d.\n", __FUNCTION__, preview_flag, getpic_flag, imagelen);
 		ret = handle_img_data(format, width, height, imgptr, imagelen, 0, 0, 0, 0);
 		sem_post(&preview_sem_lock);
 		if (ret != 0) {
@@ -662,16 +669,11 @@ void send_img_data(uint32_t format, uint32_t width, uint32_t height, char *imgpt
 
 void send_capture_data_end(uint32_t format)
 {
-	int ret;
-
 	if ((capture_flag == 1) && (1 == capture_img_end_flag) && (ISP_VIDEO_JPG == format))
 	{
 		DBG("ISP_TOOL:%s:----------end-------- format: %d \n", __FUNCTION__, format);
 		sem_post(&capture_sem_lock);
 		capture_flag = 0;
-		if (ret != 0) {
-			DBG("ISP_TOOL:%s: Fail to handle_img_data(). ret = %d.", __FUNCTION__, ret);
-		}
 	}
 }
 

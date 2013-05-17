@@ -74,8 +74,10 @@ LOCAL_SRC_FILES:= \
 	jpeg_fw_8830/src/exif_writer.c  \
 	jpeg_fw_8830/src/jpeg_stream.c \
 	ispvideo/isp_video.c \
-	sc8830/src/isp_param_tune_com.c \
-	sc8830/src/isp_param_tune_v0000.c \
+	ispvideo/isp_param_tune_com.c \
+	ispvideo/isp_param_tune_v0000.c \
+	ispvideo/isp_param_tune_v0001.c \
+	ispvideo/isp_param_size.c \
 	sc8830/src/utest_camera.cpp
 
 
