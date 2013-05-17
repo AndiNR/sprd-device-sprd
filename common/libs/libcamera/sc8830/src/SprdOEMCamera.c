@@ -1794,6 +1794,13 @@ int camera_take_picture_internal_raw(takepicture_mode cap_mode)
 		return -CAMERA_FAILED;
 	}
 
+	CMR_LOGV("Sensor workmode %d", g_cxt->sn_cxt.capture_mode);
+	ret = Sensor_SetMode(g_cxt->sn_cxt.capture_mode);
+	if (ret) {
+		CMR_LOGE("Sensor can't work at this mode %d", g_cxt->sn_cxt.capture_mode);
+		return -CAMERA_FAILED;
+	}
+
 	ret = camera_capture_init_raw();
 	if (ret) {
 		CMR_LOGE("Failed to init raw capture mode.");
