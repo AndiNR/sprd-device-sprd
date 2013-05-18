@@ -62,6 +62,7 @@ PRODUCT_COPY_FILES := \
 	device/sprd/common/libs/audio/apm/formatvolume.xml:system/etc/formatvolume.xml \
         $(BOARDDIR)/hw_params/tiny_hw.xml:system/etc/tiny_hw.xml \
         $(BOARDDIR)/hw_params/codec_pga.xml:system/etc/codec_pga.xml \
+	$(BOARDDIR)/hw_params/audio_hw.xml:system/etc/audio_hw.xml \
         $(BOARDDIR)/hw_params/audio_para:system/etc/audio_para \
 	device/sprd/common/libs/mali/egl.cfg:system/lib/egl/egl.cfg \
 	device/sprd/common/libs/audio/audio_policy.conf:system/etc/audio_policy.conf \

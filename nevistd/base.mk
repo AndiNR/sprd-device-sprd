@@ -81,6 +81,7 @@ PRODUCT_COPY_FILES := \
         $(BOARDDIR)/hw_params/tiny_hw.xml:system/etc/tiny_hw.xml \
         $(BOARDDIR)/hw_params/codec_pga.xml:system/etc/codec_pga.xml \
         $(BOARDDIR)/hw_params/audio_para:system/etc/audio_para \
+	$(BOARDDIR)/hw_params/audio_hw.xml:system/etc/audio_hw.xml \
 	$(BOARDDIR)/scripts/ext_symlink.sh:system/bin/ext_symlink.sh \
 	$(BOARDDIR)/scripts/ext_data.sh:system/bin/ext_data.sh \
 	$(BOARDDIR)/scripts/ext_kill.sh:system/bin/ext_kill.sh \
