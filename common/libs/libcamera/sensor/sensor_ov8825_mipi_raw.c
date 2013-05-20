@@ -23,6 +23,10 @@
 
 #define OV8825_MIN_FRAME_LEN_PRV  0x5e8
 
+static int s_ov8825_gain = 0;
+static int s_capture_shutter = 0;
+static int s_capture_VTS = 0;
+
 LOCAL uint32_t _ov8825_GetResolutionTrimTab(uint32_t param);
 LOCAL uint32_t _ov8825_PowerOn(uint32_t power_on);
 LOCAL uint32_t _ov8825_Identify(uint32_t param);
@@ -34,6 +38,10 @@ LOCAL uint32_t _ov8825_write_exposure(uint32_t param);
 LOCAL uint32_t _ov8825_write_gain(uint32_t param);
 LOCAL uint32_t _ov8825_write_af(uint32_t param);
 LOCAL uint32_t _ov8825_flash(uint32_t param);
+LOCAL uint32_t _ov8825_ExtFunc(uint32_t ctl_param);
+LOCAL int _ov8825_get_VTS(void);
+LOCAL int _ov8825_set_VTS(int VTS);
+LOCAL uint32_t _ov8825_ReadGain(uint32_t param);
 
 
 static uint32_t g_flash_mode_en = 0;
@@ -541,7 +549,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov8825_ioctl_func_tab = {
 	PNULL,
 	PNULL,
 	PNULL, //_ov8825_GetExifInfo,
-	PNULL,
+	_ov8825_ExtFunc,
 	PNULL, //_ov8825_set_anti_flicker,
 	PNULL, //_ov8825_set_video_mode,
 	PNULL, //pick_jpeg_stream
@@ -1377,10 +1385,30 @@ LOCAL uint32_t _ov8825_BeforeSnapshot(uint32_t param)
 	uint32_t capture_maxline, preview_exposure, preview_gain;
 	uint32_t prv_linetime=s_ov8825_Resolution_Trim_Tab[SENSOR_MODE_PREVIEW_ONE].line_time;
 	uint32_t cap_linetime = s_ov8825_Resolution_Trim_Tab[(param & 0xffff)].line_time;
+	int ae_ag_ctrl;
 	param = param & 0xffff;
 
 	SENSOR_PRINT("SENSOR_ov8825: BeforeSnapshot moe: %d",param);
-
+#if 1/*test*/
+    {
+		int ae_ag_ctrl;
+		//turn off AE/AG
+		ae_ag_ctrl = Sensor_ReadReg(0x3503);
+		SENSOR_PRINT("before, ae_ag_ctrl 0x%x", ae_ag_ctrl);
+		ae_ag_ctrl = ae_ag_ctrl | 0x03;
+		Sensor_WriteReg(0x3503, ae_ag_ctrl);
+		SENSOR_PRINT("after, ae_ag_ctrl 0x%x", ae_ag_ctrl);
+		s_capture_shutter = OV5640_get_shutter();
+		s_capture_VTS = OV5640_get_VTS();
+		_ov8825_ReadGain(param);
+		//turn on AE/AG
+		ae_ag_ctrl = Sensor_ReadReg(0x3503);
+		SENSOR_PRINT("before, ae_ag_ctrl 0x%x", ae_ag_ctrl);
+		ae_ag_ctrl = ae_ag_ctrl && 0xFC;
+		Sensor_WriteReg(0x3503, ae_ag_ctrl);
+		return SENSOR_SUCCESS;
+	}
+#endif
 	if (SENSOR_MODE_PREVIEW_ONE >= param){
 		SENSOR_PRINT("SENSOR_ov8825: prvmode equal to capmode");
 		return SENSOR_SUCCESS;
@@ -1476,5 +1504,168 @@ LOCAL uint32_t _ov8825_StreamOff(uint32_t param)
 	usleep(50*1000);
 
 	return 0;
+}
+
+int _ov8825_get_shutter(void)
+{
+	// read shutter, in number of line period
+	int shutter;
+
+	shutter = (Sensor_ReadReg(0x03500) & 0x0f);
+	shutter = (shutter<<8) + Sensor_ReadReg(0x3501);
+	shutter = (shutter<<4) + (Sensor_ReadReg(0x3502)>>4);
+
+	return shutter;
+}
+
+int _ov8825_set_shutter(int shutter)
+{
+	// write shutter, in number of line period
+	int temp;
+
+	shutter = shutter & 0xffff;
+
+	temp = shutter & 0x0f;
+	temp = temp<<4;
+	Sensor_WriteReg(0x3502, temp);
+
+	temp = shutter & 0xfff;
+	temp = temp>>4;
+	Sensor_WriteReg(0x3501, temp);
+
+	temp = shutter>>12;
+	Sensor_WriteReg(0x3500, temp);
+
+	return 0;
+}
+
+int _ov8825_get_gain16(void)
+{
+	// read gain, 16 = 1x
+	int gain16;
+
+	gain16 = Sensor_ReadReg(0x350a) & 0x03;
+	gain16 = (gain16<<8) + Sensor_ReadReg(0x350b);
+
+	return gain16;
+}
+
+int _ov8825_set_gain16(int gain16)
+{
+	// write gain, 16 = 1x
+	int temp;
+	gain16 = gain16 & 0x3ff;
+
+	temp = gain16 & 0xff;
+	Sensor_WriteReg(0x350b, temp);
+
+	temp = gain16>>8;
+	Sensor_WriteReg(0x350a, temp);
+
+	return 0;
+}
+
+static void _calculate_hdr_exposure(int capture_gain16,int capture_VTS, int capture_shutter)
+{
+	// write capture gain
+	_ov8825_set_gain16(capture_gain16);
+
+	// write capture shutter
+	/*if (capture_shutter > (capture_VTS - 4)) {
+		capture_VTS = capture_shutter + 4;
+		OV5640_set_VTS(capture_VTS);
+	}*/
+	_ov8825_set_shutter(capture_shutter);
+}
+
+static uint32_t _ov8825_SetEV(uint32_t param)
+{
+	uint32_t rtn = SENSOR_SUCCESS;
+	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR) param;
+
+	uint16_t value=0x00;
+	uint32_t gain = s_ov8825_gain;
+	uint32_t ev = ext_ptr->param;
+
+	SENSOR_PRINT("SENSOR: _ov5640_SetEV param: 0x%x", ext_ptr->param);
+
+	switch(ev) {
+	case SENSOR_HDR_EV_LEVE_0:
+		_calculate_hdr_exposure(s_ov8825_gain/4,s_capture_VTS,s_capture_shutter/2);
+		break;
+	case SENSOR_HDR_EV_LEVE_1:
+		_calculate_hdr_exposure(s_ov8825_gain,s_capture_VTS,s_capture_shutter);
+		break;
+	case SENSOR_HDR_EV_LEVE_2:
+		_calculate_hdr_exposure(s_ov8825_gain*3/2,s_capture_VTS,s_capture_shutter);
+		break;
+	default:
+		break;
+	}
+	return rtn;
+}
+LOCAL uint32_t _ov8825_ExtFunc(uint32_t ctl_param)
+{
+	uint32_t rtn = SENSOR_SUCCESS;
+	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr =
+	    (SENSOR_EXT_FUN_PARAM_T_PTR) ctl_param;
+	SENSOR_PRINT_HIGH("0x%x", ext_ptr->cmd);
+
+	switch (ext_ptr->cmd) {
+	case SENSOR_EXT_FUNC_INIT:	
+		break;
+	case SENSOR_EXT_FOCUS_START:		
+		break;
+	case SENSOR_EXT_EXPOSURE_START:	
+		break;
+	case SENSOR_EXT_EV:
+		rtn = _ov8825_SetEV(ctl_param);
+		break;
+	default:
+		break;
+	}
+	return rtn;
+}
+LOCAL int _ov8825_get_VTS(void)
+{
+	// read VTS from register settings
+	int VTS;
+
+	VTS = Sensor_ReadReg(0x380e);//total vertical size[15:8] high byte
+
+	VTS = (VTS<<8) + Sensor_ReadReg(0x380f);
+
+	return VTS;
+}
+
+LOCAL int _ov8825_set_VTS(int VTS)
+{
+	// write VTS to registers
+	int temp;
+
+	temp = VTS & 0xff;
+	Sensor_WriteReg(0x380f, temp);
+
+	temp = VTS>>8;
+	Sensor_WriteReg(0x380e, temp);
+
+	return 0;
+}
+LOCAL uint32_t _ov8825_ReadGain(uint32_t param)
+{
+	uint32_t rtn = SENSOR_SUCCESS;
+	uint16_t value=0x00;
+	uint32_t gain = 0;
+
+	value = Sensor_ReadReg(0x350b);/*0-7*/
+	gain = value&0xff;
+	value = Sensor_ReadReg(0x350a);/*8*/
+	gain |= (value<<0x08)&0x300;
+
+	s_ov8825_gain=(int)gain;
+
+	SENSOR_PRINT("SENSOR: _ov8825_ReadGain gain: 0x%x", s_ov8825_gain);
+
+	return rtn;
 }
 

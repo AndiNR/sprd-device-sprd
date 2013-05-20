@@ -354,6 +354,8 @@ struct camera_context {
 	struct camera_settings   cmr_set;
 	uint32_t                 orientation;
 	uint32_t                 tool_cap_raw_mode;
+
+	uint32_t                 hdr_cnt;
 };
 
 uint32_t camera_get_rot_angle(uint32_t degree);

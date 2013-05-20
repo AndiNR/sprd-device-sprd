@@ -1517,7 +1517,7 @@ takepicture_mode SprdCameraHardware::getCaptureMode()
     if(1 == mParameters.getInt("hdr")) {
         mode = CAMERA_HDR_MODE;
     }	
-
+//	mode = CAMERA_HDR_MODE;
 	LOGI("cap mode %d.\n", mode);
 
 	return mode;
