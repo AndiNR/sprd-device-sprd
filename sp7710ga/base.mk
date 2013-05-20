@@ -53,6 +53,7 @@ PRODUCT_PACKAGES += \
 
 PRODUCT_PACKAGES += \
 	modem_control\
+	mcom_monitor \
 	nvitemd \
 	charge \
 	poweroff_alarm \
