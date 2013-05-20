@@ -373,7 +373,7 @@ int gralloc_perform(struct gralloc_module_t const* module,
 			if(err){
 				break;
 			}
-	 		phys_addr = phys_data.phys;
+	 		phys_addr = phys_data.phys + offset;
 
 			// align offset to page
 			size_t start = phys_addr & ~4095;
