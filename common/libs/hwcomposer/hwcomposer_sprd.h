@@ -61,5 +61,6 @@ struct hwc_context_t {
     volatile void * osd_proc_cmd;
 #endif
     sp<VSyncThread> mVSyncThread;
+    void *fb_virt_addr;
 };
 #endif

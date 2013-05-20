@@ -43,11 +43,15 @@
 #define SPRD_ION_DEV "/dev/ion"
 
 #define OVERLAY_BUF_NUM 2
-extern void dump_layers(hwc_layer_list_t *list , int flag);
-extern int g_rand_set_Num;
-extern bool g_Reset_hwcset_DumpIndexFlag;
-extern int g_rand_prepare_Num;
-extern bool g_Reset_hwcprepare_DumpIndexFlag;
+//extern & define the dump parameters
+extern int dump_layer(const char* path ,const char* pSrc , const char* ptype ,  int width , int height , int format ,int64_t randNum ,  int index , int LayerIndex = 0);
+static int64_t g_GeometoryChanged_Num = 0;
+static bool g_GeometryChanged = false;
+static bool bFirstGeometroyChanged = false;
+static char* currentOsdOverlayAddr = NULL;
+static char* currentVideoOverlayAddr = NULL;
+static int videoOverlayFormat = 0;
+static int osdOverlayFormat = 0;
 inline unsigned int round_up_to_page_size(unsigned int x)
 {
     return (x + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1);
@@ -55,6 +59,11 @@ inline unsigned int round_up_to_page_size(unsigned int x)
 
 using namespace android;
 /*****************************************************************************/
+typedef struct {
+	char *pFrontAddr;
+	char *pBackAddr;
+	int     format;
+} FrameBufferInfo;
 
 
 static int debugenable = 0;
@@ -65,7 +74,76 @@ inline int MIN(int x, int y) {
 inline int MAX(int x, int y) {
     return ((x > y) ? x : y);
 }
-
+//get the back frame buffer addr
+static int getFrameBufferInfo(struct hwc_context_t * context , FrameBufferInfo* fbInfo)
+{
+	struct fb_fix_screeninfo finfo;
+	uint32_t bytespp = 0;
+	if (ioctl(context->fbfd, FBIOGET_FSCREENINFO, &finfo) == -1)
+	{
+		ALOGE_IF(debugenable , "fail to get FBIOGET_FSCREENINFO finfo");
+		return -1;
+	}
+	struct fb_var_screeninfo info;
+	if (ioctl(context->fbfd, FBIOGET_VSCREENINFO, &info) == -1)
+	{
+		ALOGE_IF(debugenable , "fail to get FBIOGET_VSCREENINFO info");
+		return -1;
+	}
+	switch(info.bits_per_pixel)
+	{
+        case 16:
+            bytespp = 2;
+            fbInfo->format = HAL_PIXEL_FORMAT_RGB_565;
+            break;
+        case 24:
+            bytespp = 3;
+            fbInfo->format = HAL_PIXEL_FORMAT_RGB_888;
+            break;
+        case 32:
+            bytespp = 4;
+            fbInfo->format = HAL_PIXEL_FORMAT_RGBA_8888;
+            break;
+        default:
+		ALOGE_IF(debugenable , "fail to getFrameBufferInfo not support bits per pixel:%d" , info.bits_per_pixel);
+		return -1;
+	}
+	if(info.yoffset == info.yres) //flushing the second buffer.
+	{
+		fbInfo->pFrontAddr = (char*)((unsigned int)context->fb_virt_addr + info.xres*info.yres*bytespp);
+		fbInfo->pBackAddr  = (char *)(context->fb_virt_addr);
+		return 0;
+	}
+	else if(info.yoffset == 0) //flushing the first buffer.
+	{
+		fbInfo->pFrontAddr = (char *)(context->fb_virt_addr);
+		fbInfo->pBackAddr = (char*)((unsigned int)context->fb_virt_addr + info.xres*info.yres*bytespp);
+		return 0;
+	}
+	else
+	{
+		ALOGE_IF(debugenable , "fail to getFrameBufferInfo");
+		return -1;
+	}
+}
+static int getDumpPath(char *pPath)
+{
+	char value[PROPERTY_VALUE_MAX];
+	if(0 == property_get("dump.hwcomposer.path" , value , "0"))
+	{
+		ALOGE_IF(debugenable , "fail to getDumpPath not set path");
+		return -1;
+	}
+	if(strchr(value , '/') != NULL)
+	{
+		sprintf(pPath , "%s" , value);
+		return 0;
+	}
+	else
+		pPath[0] = 0;
+	ALOGE_IF(debugenable , "fail to getDumpPath path format error");
+	return -2;
+}
 static int transform_video_layer(struct hwc_context_t *context, hwc_layer_t * l)
 {
 	uint32_t current_overlay_phy_addr;
@@ -76,6 +154,7 @@ static int transform_video_layer(struct hwc_context_t *context, hwc_layer_t * l)
 #else
 	int dstFormat = HAL_PIXEL_FORMAT_YCbCr_420_SP;
 #endif
+	videoOverlayFormat = dstFormat;
 	const native_handle_t *pNativeHandle = l->handle;
 	struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
 
@@ -83,7 +162,6 @@ static int transform_video_layer(struct hwc_context_t *context, hwc_layer_t * l)
 
 
 	current_overlay_phy_addr = context->overlay_phy_addr + context->overlay_buf_size*context->overlay_index;
-	// virtula addr is that right?
 	current_overlay_vir_addr = ((unsigned int)context->overlay_v_addr) + context->overlay_buf_size*context->overlay_index;
 #ifdef SCAL_ROT_TMP_BUF
 	uint32_t tmp_phy_addr = context->overlay_phy_addr_tmp;
@@ -96,6 +174,7 @@ static int transform_video_layer(struct hwc_context_t *context, hwc_layer_t * l)
 					context->src_img.w, context->src_img.h, current_overlay_phy_addr , current_overlay_vir_addr ,
 					dstFormat , context->fb_rect.w , context->fb_rect.h , &context->src_rect , 
 					tmp_phy_addr , tmp_virt_addr);
+	currentVideoOverlayAddr = (char*)current_overlay_vir_addr;
 	return ret;
 }
 
@@ -318,10 +397,18 @@ static int init_fb_parameter(struct hwc_context_t *context)
 		ALOGE("fail to get fb nfo");
 		return -errno;
 	}
+	size_t fbSize = round_up_to_page_size(finfo.line_length * info.yres_virtual);
+	void* vaddr = mmap(0, fbSize, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+	if (vaddr == MAP_FAILED)
+	{
+		AERR( "Error mapping the framebuffer (%s)", strerror(errno) );
+		return -errno;
+	}
 	context->fbfd = fd;
 	context->fb_width = info.xres;
 	context->fb_height = info.yres;
-	ALOGI("fb_width = %d,fb_height = %d",context->fb_width,context->fb_height);
+	context->fb_virt_addr = vaddr;
+	ALOGI("fb_width = %d,fb_height = %d , finfo.line_length:%d ,  info.yres_virtual:%d",context->fb_width,context->fb_height , finfo.line_length,  info.yres_virtual);
 	return 0;
 }
 
@@ -345,10 +432,12 @@ static int set_osd_layer(struct hwc_context_t *context, hwc_layer_t * l)
 			ALOGI_IF(debugenable , "osd display directly");
 			context->osd_sync_display = 1;
 			current_overlay_addr  = private_h->phyaddr;
+			currentOsdOverlayAddr = (char*)private_h->base;
 #else
 			ALOGI_IF(debugenable , "osd display with rot copy");
 			context->osd_sync_display = 0;
 			current_overlay_addr = context->overlay_phy_addr2 + context->overlay_buf_size2*context->overlay_index2;
+			currentOsdOverlayAddr =  (char*)(context->overlay_v_addr2 + context->overlay_buf_size2*context->overlay_index2);
 			int ret = camera_rotation_copy_data(context->fb_width, context->fb_height,  private_h->phyaddr, current_overlay_addr);
 			if(-1 == ret)
 				ALOGE("do osd rotaion copy  fail");
@@ -357,6 +446,7 @@ static int set_osd_layer(struct hwc_context_t *context, hwc_layer_t * l)
 		} else {
 			ALOGI_IF(debugenable , "osd display with rot");
 			current_overlay_addr = context->overlay_phy_addr2 + context->overlay_buf_size2*context->overlay_index2;
+			currentOsdOverlayAddr =  (char*) (context->overlay_v_addr2 + context->overlay_buf_size2*context->overlay_index2);
 			int degree;
 			if (HAL_TRANSFORM_ROT_90 == l->transform)
 				degree = 90;
@@ -372,6 +462,7 @@ static int set_osd_layer(struct hwc_context_t *context, hwc_layer_t * l)
 	} else {
 		ALOGI_IF(debugenable , "osd display with dma copy");
 		current_overlay_addr = context->overlay_phy_addr2 + context->overlay_buf_size2*context->overlay_index2;
+		currentOsdOverlayAddr =  (char*)(context->overlay_v_addr2 + context->overlay_buf_size2*context->overlay_index2);
 		camera_rotation_copy_data_from_virtual(context->fb_width, context->fb_height, private_h->base, current_overlay_addr);
 		context->overlay_index2 = (context->overlay_index2 + 1)%OVERLAY_BUF_NUM;
 	}
@@ -394,6 +485,7 @@ static int set_osd_layer(struct hwc_context_t *context, hwc_layer_t * l)
 	{
 		ALOGE("fail osd SPRD_FB_SET_OVERLAY");
 	}
+	osdOverlayFormat = HAL_PIXEL_FORMAT_RGBA_8888;
 	return 0;	
 }
 
@@ -501,24 +593,54 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 	struct hwc_context_t *ctx = (struct hwc_context_t *)dev;
 	hwc_layer_t * overlay_video = NULL;
 	hwc_layer_t * overlay_osd = NULL;
+	char value[PROPERTY_VALUE_MAX];
 
 	if(!list)
 		return 0;
 	//reset dump index and recalculate random number when geometry changed
 	if(list->flags & HWC_GEOMETRY_CHANGED)
 	{
-		g_Reset_hwcset_DumpIndexFlag = true;
-		srand(g_rand_set_Num);
-		g_rand_set_Num = rand();
-		g_Reset_hwcprepare_DumpIndexFlag = true;
-		srand(g_rand_prepare_Num);
-		g_rand_prepare_Num = rand();
+		if(bFirstGeometroyChanged == false)
+		{
+			bFirstGeometroyChanged =  true;
+			g_GeometoryChanged_Num = 0;
+		}
+		else
+		{
+			g_GeometoryChanged_Num++;
+		}
+		g_GeometryChanged = true;
 	}
-       if(list)
-       {
-            dump_layers(list , DUMP_AT_HWCOMPOSER_HWC_PREPARE);
-            g_Reset_hwcprepare_DumpIndexFlag = false;
-       }
+	else
+	{
+		g_GeometryChanged = false;
+	}
+	/*****************check dump flag and dump layers if true*************************/
+	if(0 != property_get("dump.hwcomposer.flag" , value , "0"))
+	{
+		int flag = atoi(value);
+		static int index = 0;
+		char dumpPath[MAX_DUMP_PATH_LENGTH];
+		if(HWCOMPOSER_DUMP_ORIGINAL_LAYERS & flag)
+		{
+			getDumpPath(dumpPath);
+			if(g_GeometryChanged)
+			{
+				index = 0;
+			}
+			for (size_t i=0 ; i<list->numHwLayers ; i++) {
+				hwc_layer_t * layer_t = &(list->hwLayers[i]);
+				struct private_handle_t *private_h = (struct private_handle_t *)layer_t->handle;
+				if(private_h == NULL)
+				{
+					continue;
+				}
+				dump_layer(dumpPath , (char*)private_h->base , "Layer" , private_h->width , private_h->height , private_h->format , g_GeometoryChanged_Num , index , i);
+			}
+			index++;
+		}
+	}
+	/***************************************dump end****************************/
 	ALOGI_IF(debugenable,"hwc_prepare %d b", list->numHwLayers);
 	ctx->fb_layer_count = 0;
 	ctx->osd_overlay_flag = 0;
@@ -529,18 +651,20 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 		list->hwLayers[i].compositionType = HWC_FRAMEBUFFER;
 		if((list->hwLayers[i].flags & HWC_SKIP_LAYER)|| !list->hwLayers[i].handle) {
 			ctx->fb_layer_count++;
-			ALOGI_IF(debugenable , "skip_layer %p",list->hwLayers[i].handle);
+			ALOGI_IF(debugenable , "skip_layer %p , flags:%d , GeometryNum:%lld",list->hwLayers[i].handle , list->hwLayers[i].flags , g_GeometoryChanged_Num);
 			continue;
 		}
-
 		int  support_overlay = is_overlay_supportted((struct hwc_context_t *)dev, &list->hwLayers[i]);
 		if((support_overlay == SPRD_LAYERS_IMG) && (ctx->video_overlay_flag == 0)) {
 			ctx->video_overlay_flag = 1;
 			list->hwLayers[i].compositionType = HWC_OVERLAY;
-			//list->hwLayers[i].hints = HWC_HINT_CLEAR_FB;//must set it???
+			if(i !=0)
+			    list->hwLayers[i].hints = HWC_HINT_CLEAR_FB;
+			else
+			    list->hwLayers[i].hints &= ~HWC_HINT_CLEAR_FB;
 			overlay_video = &list->hwLayers[i];
 			ALOGI_IF(debugenable , "find video overlay %d",list->hwLayers[i].handle);
-		} else if((support_overlay == SPRD_LAYERS_OSD) && (ctx->osd_overlay_flag == 0)) {
+		} else if((support_overlay == SPRD_LAYERS_OSD) && (ctx->osd_overlay_flag == 0) && (i == 1)) {
 			if ( list->numHwLayers >= 3) {
 				ctx->fb_layer_count++;
 			} else {
@@ -577,8 +701,8 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
        //		ctx->procs->invalidate(ctx->procs);
 	//	}
 	//}
-
 	ctx->pre_fb_layer_count = ctx->fb_layer_count;
+
 	ALOGI_IF(debugenable , "fb_layer_count %d",ctx->fb_layer_count);
 	ALOGI_IF(debugenable , "hwc_prepare %d e", list->numHwLayers);
 
@@ -612,6 +736,7 @@ static int hwc_set(hwc_composer_device_t *dev,
 {
     struct hwc_context_t *ctx = (struct hwc_context_t *)dev;
     char value[PROPERTY_VALUE_MAX];
+    char dumpPath[MAX_DUMP_PATH_LENGTH];
     property_get("debug.hwcomposer.info" , value , "0");
     if(atoi(value) == 1)
         debugenable = 1;
@@ -635,13 +760,6 @@ static int hwc_set(hwc_composer_device_t *dev,
         //dump_layer(&list->hwLayers[i]);
     }
 
-    //add for dump layer to file, need set property dump.hwcomposer.path & dump.hwcomposer.flag
-    if(list)
-    {
-        dump_layers(list , DUMP_AT_HWCOMPOSER_HWC_SET);
-        g_Reset_hwcset_DumpIndexFlag = false;
-    }
-    //add for dump layer end
 
     //ALOGI("hwc_set %d e", list->numHwLayers);
 
@@ -703,14 +821,84 @@ static int hwc_set(hwc_composer_device_t *dev,
 		display_setting.rect.y = 0;
 		display_setting.rect.w = ctx->fb_width;
 		display_setting.rect.h = ctx->fb_height;
+		/*************************dump overlay if need******************************/
+		if(0 != property_get("dump.hwcomposer.flag" , value , "0"))
+		{
+			int flag = atoi(value);
+			if((HWCOMPOSER_DUMP_VIDEO_OVERLAY_FLAG & flag) && (ctx->video_overlay_flag))
+			{
+				static int index = 0;
+				getDumpPath(dumpPath);
+				if(g_GeometryChanged)
+				{
+					index = 0;
+				}
+				dump_layer(dumpPath ,currentVideoOverlayAddr , "OverlayVideo" , ctx->fb_rect.w , ctx->fb_rect.h , videoOverlayFormat , g_GeometoryChanged_Num , index);
+				index++;
+			}
+			if((HWCOMPOSER_DUMP_OSD_OVERLAY_FLAG & flag) && (ctx->osd_overlay_flag))
+			{
+				static int index = 0;
+				getDumpPath(dumpPath);
+				if(g_GeometryChanged)
+				{
+					index = 0;
+				}
+				dump_layer(dumpPath ,currentOsdOverlayAddr , "OverlayOsd" , ctx->fb_width , ctx->fb_height , osdOverlayFormat , g_GeometoryChanged_Num , index);
+				index++;
+			}
+		}
+		/*************************dump end**************************************/
 		ALOGI_IF(debugenable,"SPRD_FB_DISPLAY_OVERLAY %d", layer_indexs);
 		ioctl(ctx->fbfd, SPRD_FB_DISPLAY_OVERLAY, &display_setting);
 	} else {
 		if ((ctx->video_overlay_flag||ctx->osd_overlay_flag)) {
 			ALOGI_IF(debugenable , "eglSwapBuffers video=%d, osd=%d", ctx->video_overlay_flag, ctx->osd_overlay_flag );
+			/*************************dump overlay if need******************************/
+			if(0 != property_get("dump.hwcomposer.flag" , value , "0"))
+			{
+				int flag = atoi(value);
+				if(ctx->video_overlay_flag)
+				{
+					if(HWCOMPOSER_DUMP_VIDEO_OVERLAY_FLAG & flag)
+					{
+						static int index = 0;
+						getDumpPath(dumpPath);
+						if(g_GeometryChanged)
+						{
+							index = 0;
+						}
+						dump_layer(dumpPath ,currentVideoOverlayAddr , "OverlayVideo" , ctx->fb_rect.w , ctx->fb_rect.h , videoOverlayFormat , g_GeometoryChanged_Num , index);
+						index++;
+					}
+				}
+			}
+			/*************************dump end**************************************/
 		}
 		ALOGI_IF(debugenable , "eglSwapBuffers");
 		EGLBoolean sucess = eglSwapBuffers((EGLDisplay)dpy, (EGLSurface)sur);
+		/*************************dump framebuffer if need******************************/
+		if(0 != property_get("dump.hwcomposer.flag" , value , "0"))
+		{
+			int flag = atoi(value);
+			if(HWCOMPOSER_DUMP_FRAMEBUFFER_FLAG & flag)
+			{
+				static int index = 0;
+				FrameBufferInfo fbInfo;
+				int format;
+				getDumpPath(dumpPath);
+				if(g_GeometryChanged)
+				{
+					index = 0;
+				}
+				if(0 == getFrameBufferInfo(ctx , &fbInfo))
+				{
+					dump_layer(dumpPath ,fbInfo.pFrontAddr, "FrameBuffer" , ctx->fb_width , ctx->fb_height , fbInfo.format , g_GeometoryChanged_Num , index);
+				}
+				index++;
+			}
+		}
+		/*************************dump end**************************************/
 		if (!sucess) {
 			return HWC_EGL_ERROR;
 		}
