@@ -28,6 +28,7 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	persist.msms.phone_count=1 \
 	persist.sys.sprd.modemreset=1 \
 	ro.msms.phone_count=1 \
+	ro.digital.fm.support=1 \
 	persist.msms.phone_default=0 \
 	ro.modem.count=1 \
 	ro.modem.t.enable=1 \

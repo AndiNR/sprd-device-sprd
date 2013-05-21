@@ -74,7 +74,7 @@
 #define PRIVATE_VBC_EQ_UPDATE            "eq update"
 #define PRIVATE_VBC_EQ_PROFILE            "eq profile"
 #define PRIVATE_INTERNAL_PA              "internal PA"
-
+#define FM_DIGITAL_SUPPORT_PROPERTY  "ro.digital.fm.support"
 /* ALSA cards for sprd */
 #define CARD_SPRDPHONE "sprdphone"
 #define CARD_VAUDIO    "VIRTUAL AUDIO"
@@ -320,10 +320,12 @@ struct config_parse_state {
     char private_name[PRIVATE_NAME_LEN];
 };
 
-static const struct {
+typedef struct {
     int mask;
     const char *name;
-} dev_names[] = {
+}dev_names_para_t;
+
+static const dev_names_para_t dev_names_linein[] = {
     { AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_FM_SPEAKER, "speaker" },
     { AUDIO_DEVICE_OUT_WIRED_HEADSET | AUDIO_DEVICE_OUT_WIRED_HEADPHONE |AUDIO_DEVICE_OUT_FM_HEADSET,
           "headphone" },
@@ -341,6 +343,28 @@ static const struct {
     { AUDIO_DEVICE_IN_BACK_MIC, "back-mic" },
     //{ "linein-capture"},
 };
+static const dev_names_para_t dev_names_digitalfm[] = {
+    { AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_FM_SPEAKER, "speaker" },
+    { AUDIO_DEVICE_OUT_WIRED_HEADSET | AUDIO_DEVICE_OUT_WIRED_HEADPHONE |AUDIO_DEVICE_OUT_FM_HEADSET,
+          "headphone" },
+    { AUDIO_DEVICE_OUT_EARPIECE, "earpiece" },
+        /* ANLG for voice call via linein*/
+    { AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, "line" },
+    { AUDIO_DEVICE_OUT_ALL_FM, "digital-fm" },
+
+
+    { AUDIO_DEVICE_IN_COMMUNICATION, "comms" },
+    { AUDIO_DEVICE_IN_AMBIENT, "ambient" },
+    { AUDIO_DEVICE_IN_BUILTIN_MIC, "builtin-mic" },
+    { AUDIO_DEVICE_IN_WIRED_HEADSET, "headset-in" },
+    { AUDIO_DEVICE_IN_AUX_DIGITAL, "digital" },
+    { AUDIO_DEVICE_IN_BACK_MIC, "back-mic" },
+    //{ "linein-capture"},
+};
+
+static dev_names_para_t *dev_names = NULL;
+
+
 /*
  * card define
  */
@@ -2767,12 +2791,26 @@ static void adev_config_parse_private(struct config_parse_state *s, const XML_Ch
 static void adev_config_start(void *data, const XML_Char *elem,
 			      const XML_Char **attr)
 {
-    struct config_parse_state *s = data;
-    struct tiny_dev_cfg *dev_cfg;
-    const XML_Char *name = NULL;
-    const XML_Char *val = NULL;
-    unsigned int i, j;
+	struct config_parse_state *s = data;
+	struct tiny_dev_cfg *dev_cfg;
+	const XML_Char *name = NULL;
+	const XML_Char *val = NULL;
+	unsigned int i, j;
+	char value[5];
+	unsigned int dev_num = 0;
 
+	if (property_get(FM_DIGITAL_SUPPORT_PROPERTY, value, "0") && strcmp(value, "1") == 0)
+	{
+		dev_names = dev_names_digitalfm;
+		dev_num = sizeof(dev_names_digitalfm) / sizeof(dev_names_digitalfm[0]);
+	}
+	else
+	{
+		dev_names = dev_names_linein;
+		dev_num = sizeof(dev_names_linein) / sizeof(dev_names_linein[0]);
+	}
+
+    /* default if not set it 0 */	
     for (i = 0; attr[i]; i += 2) {
 	if (strcmp(attr[i], "name") == 0)
 	    name = attr[i + 1];
@@ -2787,8 +2825,8 @@ static void adev_config_start(void *data, const XML_Char *elem,
     }
 
     if (strcmp(elem, "device") == 0) {
-	for (i = 0; i < sizeof(dev_names) / sizeof(dev_names[0]); i++) {
-	    if (strcmp(dev_names[i].name, name) == 0) {
+	for (i = 0; i < dev_num; i++) {
+	    if (strcmp((dev_names+i)->name, name) == 0) {
 		ALOGI("Allocating device %s\n", name);
 		dev_cfg = realloc(s->adev->dev_cfgs,
 				  (s->adev->num_dev_cfgs + 1)
@@ -2800,7 +2838,7 @@ static void adev_config_start(void *data, const XML_Char *elem,
 
 		s->dev = &dev_cfg[s->adev->num_dev_cfgs];
 		memset(s->dev, 0, sizeof(*s->dev));
-		s->dev->mask = dev_names[i].mask;
+		s->dev->mask = (dev_names+i)->mask;
 
 		s->adev->dev_cfgs = dev_cfg;
 		s->adev->num_dev_cfgs++;
@@ -2921,6 +2959,9 @@ static int adev_config_parse(struct tiny_audio_device *adev)
     bool eof = false;
     int len;
 
+
+
+	
     //property_get("ro.product.device", property, "tiny_hw");
     snprintf(file, sizeof(file), "/system/etc/%s", "tiny_hw.xml");
 
