@@ -71,9 +71,9 @@ PRODUCT_PACKAGES := \
 # prebuild files
 PRODUCT_PACKAGES += \
 	moffice_5.3.3_1033_cn00353_multidex_135897.apk \
-	Weibo3.3.0_300_ZhanXun_0308.apk \
-	20130308_iFlyIME_v3.0.1265_Spreadtrum_01430228.apk \
-	SohuNewsClient_v3.3_zhanxun.apk \
+	weibopro_10035_0001_0.9.0noshortcut_Android-0506.apk \
+	SogouInput_31143_android_oem_zhanxun_20130509.apk \
+	SohuNewsClient_v3.3_factory_zhanxun_6230.apk \
 	Wostore.apk \
 	UnicomClient.apk \
 	116114.apk
