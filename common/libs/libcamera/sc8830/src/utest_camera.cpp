@@ -234,7 +234,7 @@ static void utest_dcam_cap_cb(camera_cb_type cb,
 				if(cmr_cxt_ptr->save_directory) {
 					fp = fopen(cmr_cxt_ptr->save_directory, "wb");
 					fwrite(frame->buf_Virt_Addr, 1, frame->captured_dx * 
-						frame->captured_dy * 5/4, fp);
+						frame->captured_dy * 2, fp); // *5/4
 					fclose(fp);
 				}
 				cmr_cxt_ptr->captured_done = 1;

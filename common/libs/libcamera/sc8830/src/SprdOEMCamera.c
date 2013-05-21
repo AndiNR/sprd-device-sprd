@@ -1840,6 +1840,10 @@ int camera_take_picture_internal_raw(takepicture_mode cap_mode)
 	g_cxt->cap_canceled = 0;
 	pthread_mutex_unlock(&g_cxt->cancel_mutex);
 
+	if(0 != g_cxt->sn_cxt.sn_if.if_type) {
+		/* if mipi, set to half word for capture raw */
+		g_cxt->sn_cxt.sn_if.if_spec.mipi.is_loose = 1;
+	}
 	ret = cmr_v4l2_if_cfg(&g_cxt->sn_cxt.sn_if);
 	if (ret) {
 		CMR_LOGE("the sensor interface is unsupported by V4L2");
@@ -3695,7 +3699,7 @@ int camera_capture_ability(SENSOR_MODE_INFO_T *sn_mode,
 			CMR_LOGV("Get RawData From RawRGB senosr");
 			img_cap->need_isp = 0;
 			g_cxt->cap_original_fmt = IMG_DATA_TYPE_RAW;
-			g_cxt->cap_zoom_mode = ZOOM_POST_PROCESS;
+			g_cxt->cap_zoom_mode = ZOOM_BY_CAP;
 		} else {
 			if (cap_size->width <= g_cxt->isp_cxt.width_limit) {
 				CMR_LOGV("Need ISP to work at video mode");
