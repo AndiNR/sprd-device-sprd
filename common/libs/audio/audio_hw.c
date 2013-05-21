@@ -1204,7 +1204,7 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
     return -ENOSYS;
 }
 
-static bool out_bypass_data(struct tiny_audio_device *adev,uint32_t frame_size, uint32_t sample_rate, size_t bytes)
+static bool out_bypass_data(struct tiny_stream_out *out, uint32_t frame_size, uint32_t sample_rate, size_t bytes)
 {
     /*
         1. There is some time between call_start and call_connected, we should throw away some data here.
@@ -1213,12 +1213,16 @@ static bool out_bypass_data(struct tiny_audio_device *adev,uint32_t frame_size, 
         4. After call thread gets stop_call cmd, but hasn't get lock.
     */
     int vbc_2arm =  1;
+    struct tiny_audio_device *adev = out->dev;
+
     if(adev->mode == AUDIO_MODE_IN_CALL){
         vbc_2arm = mixer_ctl_get_value(adev->private_ctl.vbc_switch,0);
     }
     if (( (!adev->call_start) && (adev->mode == AUDIO_MODE_IN_CALL) && (adev->devices & AUDIO_DEVICE_OUT_ALL_SCO) )
         || (adev->call_start && (!adev->call_connected)) || ((!vbc_2arm) && (!adev->call_start)) || adev->call_prestop) {
         MY_TRACE("out_write throw away data call_start(%d) mode(%d) devices(0x%x) call_connected(%d) vbc_2arm(%d) call_prestop(%d)...",adev->call_start,adev->mode,adev->devices,adev->call_connected,vbc_2arm,adev->call_prestop);
+        pthread_mutex_unlock(&adev->lock);
+        pthread_mutex_unlock(&out->lock);
         usleep(bytes * 1000000 / frame_size / sample_rate);
         return true;
     }else{
@@ -1342,9 +1346,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
     pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&out->lock);
 #ifndef _VOICE_CALL_VIA_LINEIN
-    if (out_bypass_data(adev,audio_stream_frame_size(&stream->common),out_get_sample_rate(&stream->common),bytes)) {
-        pthread_mutex_unlock(&adev->lock);
-        pthread_mutex_unlock(&out->lock);
+    if (out_bypass_data(out,audio_stream_frame_size(&stream->common),out_get_sample_rate(&stream->common),bytes)) {
         return bytes;
     }
 #endif
@@ -1450,6 +1452,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
 #endif
     }
 
+   
 exit:
     if (ret != 0) {
         if(out->pcm_sco)
@@ -2164,6 +2167,8 @@ static bool in_bypass_data(struct tiny_stream_in *in,uint32_t frame_size, uint32
    if ((!adev->call_start) && (adev->mode == AUDIO_MODE_IN_CALL) && ((in->device == AUDIO_DEVICE_IN_VOICE_CALL))){
        ALOGW("in_bypass_data write 0 data call_start(%d) mode(%d) devices(0x%x) in_device(0x%x) call_connected(%d) call_prestop(%d) ",adev->call_start,adev->mode,adev->devices,in->device,adev->call_connected,adev->call_prestop);
        memset(buffer,0,bytes);
+        pthread_mutex_unlock(&adev->lock);
+        pthread_mutex_unlock(&in->lock);
        usleep(bytes * 1000000 / frame_size / sample_rate);
        return true;
    }else{
@@ -2187,8 +2192,6 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
     pthread_mutex_lock(&in->lock);
 #ifndef _VOICE_CALL_VIA_LINEIN
     if(in_bypass_data(in,audio_stream_frame_size(&stream->common),in_get_sample_rate(&stream->common),buffer,bytes)){
-        pthread_mutex_unlock(&adev->lock);
-        pthread_mutex_unlock(&in->lock);
         return bytes;
     }
 #endif
@@ -2468,17 +2471,18 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         else
             adev->low_power = true;
     }
-
+    
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));                                                
     if (ret >= 0) {
         val = atoi(value);
         pthread_mutex_lock(&adev->lock);
+	ALOGI("get adev lock adev->devices is %x,%x",adev->devices,adev->devices&AUDIO_DEVICE_OUT_ALL);
         if((adev->mode == AUDIO_MODE_IN_CALL) && (adev->call_connected) && ((adev->devices & AUDIO_DEVICE_OUT_ALL) != val)) {
-            adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
             if(val&AUDIO_DEVICE_OUT_ALL) {
                 ALOGE("adev set device in val is %x",val);
                 adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
                 adev->devices |= val;
+
 		pthread_mutex_unlock(&adev->lock);
                 ret = at_cmd_route(adev);  //send at command to cp
                 if (ret < 0) {
