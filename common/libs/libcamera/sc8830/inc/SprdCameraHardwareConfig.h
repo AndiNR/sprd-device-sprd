@@ -343,7 +343,9 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"max-num-detected-faces-hw", "5"},
 	{"smile-snap-mode","0"},
 	{"hdr-supported","false"},
-	{"hdr","0"}
+	{"hdr","0"},
+	{"zsl-supported","true"},
+	{"zsl","1"}
 };
 struct config_element sprd_back_camera_hardware_config[] = {
 	{"whitebalance-values", "auto,incandescent,fluorescent,daylight,cloudy-daylight"},
@@ -427,7 +429,9 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"iso", "auto"},
 	{"smile-snap-mode","0"},
 	{"hdr-supported","true"},
-	{"hdr","0"}
+	{"hdr","0"},
+	{"zsl-supported","true"},
+	{"zsl","1"}
 };
 
 #endif //_SPRD_CAMERA_HARDWARE_CONFIG_H_

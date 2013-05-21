@@ -393,26 +393,33 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 status_t SprdCameraHardware::takePicture()
 {
     GET_START_TIME;
+	takepicture_mode mode = getCaptureMode();
 	LOGV("takePicture: E");
 	
     print_time();
 
-    Mutex::Autolock l(&mLock);	
+    Mutex::Autolock l(&mLock);
+	//to do it
+/*
+	if (CAMERA_ZSL_MODE != mode) {
+		//stop preview first for debug
+	    if (isPreviewing()) {
+			LOGV("call stopPreviewInternal in takePicture().");
+			stopPreviewInternal();
+	    }
+	    LOGV("ok to stopPreviewInternal in takePicture. preview state = %d", getPreviewState());
 
-#if STOP_PREVIEW_BEFORE_CAPTURE	
-	//stop preview first for debug
-    if (isPreviewing()) {
-		LOGV("call stopPreviewInternal in takePicture().");
-		stopPreviewInternal();
-    }
-    LOGV("ok to stopPreviewInternal in takePicture. preview state = %d", getPreviewState());
-
-	if (isPreviewing()) {
-		LOGE("takePicture: stop preview error!, preview state = %d", getPreviewState());
-		return UNKNOWN_ERROR;
+		if (isPreviewing()) {
+			LOGE("takePicture: stop preview error!, preview state = %d", getPreviewState());
+			return UNKNOWN_ERROR;
+		}
+		if (!initCapture(mData_cb != NULL)) {
+			deinitCapture();
+			LOGE("takePicture initCapture failed. Not taking picture.");
+			return UNKNOWN_ERROR;
+	    }
 	}
-#endif	
-
+*/
 	//wait for last capture being finished
 	if (isCapturing()) {
 		WaitForCaptureDone();
@@ -422,7 +429,7 @@ status_t SprdCameraHardware::takePicture()
 
 	setCameraState(SPRD_INTERNAL_RAW_REQUESTED, STATE_CAPTURE);
     LOGV("INTERPOLATION::takePicture:mRawWidth=%d,mZoomLevel=%d",mRawWidth,mZoomLevel);
-    if(CAMERA_SUCCESS != camera_take_picture(camera_cb, this, getCaptureMode()))
+    if(CAMERA_SUCCESS != camera_take_picture(camera_cb, this, mode))
     {
     	setCameraState(SPRD_ERROR, STATE_CAPTURE);
 		LOGE("takePicture: fail to camera_take_picture.");
@@ -1421,6 +1428,7 @@ void SprdCameraHardware::restoreFreq()
 
 status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 {
+	takepicture_mode mode = getCaptureMode();
 	LOGV("startPreview E");
 
 	if (isPreviewing()) {
@@ -1428,27 +1436,26 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 		LOGV("mLock:startPreview E.\n");
 		setRecordingMode(isRecording);
 		return NO_ERROR;		
-	}			
+	}
+	//to do it
+/*	if (CAMERA_ZSL_MODE != mode) {
+		// We check for these two states explicitly because it is possible
+		// for startPreview() to be called in response to a raw or JPEG
+		// callback, but before we've updated the state from SPRD_WAITING_RAW
+		// or SPRD_WAITING_JPEG to SPRD_IDLE.  This is because in camera_cb(),
+		// we update the state *after* we've made the callback.  See that
+		// function for an explanation.
+		if (isCapturing()) {
+			WaitForCaptureDone();
+		}
 
-#if STOP_PREVIEW_BEFORE_CAPTURE
-	// We check for these two states explicitly because it is possible
-	// for startPreview() to be called in response to a raw or JPEG
-	// callback, but before we've updated the state from SPRD_WAITING_RAW
-	// or SPRD_WAITING_JPEG to SPRD_IDLE.  This is because in camera_cb(),
-	// we update the state *after* we've made the callback.  See that
-	// function for an explanation.
-	if (isCapturing()) {
-		WaitForCaptureDone();
-	}		
-
-    if (isCapturing() || isPreviewing()) {
-		//LOGE("startPreview X Camera state is %s, expecting SPRD_IDLE!",
-		//getCameraStateStr(mCaptureState));
-		LOGV("mLock:startPreview E.\n");
-		return INVALID_OPERATION;
-    }		
-#endif
-
+	    if (isCapturing() || isPreviewing()) {
+			//LOGE("startPreview X Camera state is %s, expecting SPRD_IDLE!",
+			//getCameraStateStr(mCaptureState));
+			LOGV("mLock:startPreview E.\n");
+			return INVALID_OPERATION;
+	    }
+	}*/
 	setRecordingMode(isRecording);
 
 	if (!initPreview()) {
@@ -1457,16 +1464,16 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 		deinitPreview();
 		return UNKNOWN_ERROR;
 	}
-
-    if (!initCapture(mData_cb != NULL)) {
-		deinitCapture();
-		LOGE("initCapture failed. Not taking picture.");
-		return UNKNOWN_ERROR;
-    }
-
+//	if (CAMERA_ZSL_MODE == mode) {
+	    if (!initCapture(mData_cb != NULL)) {
+			deinitCapture();
+			LOGE("initCapture failed. Not taking picture.");
+			return UNKNOWN_ERROR;
+	    }
+//	}
 
 	setCameraState(SPRD_INTERNAL_PREVIEW_REQUESTED, STATE_PREVIEW);
-	camera_ret_code_type qret = camera_start_preview(camera_cb, this);
+	camera_ret_code_type qret = camera_start_preview(camera_cb, this,mode);
 	LOGV("camera_start_preview X");
 	if (qret != CAMERA_SUCCESS) {
 		LOGE("startPreview failed: sensor error.");
@@ -1517,7 +1524,11 @@ takepicture_mode SprdCameraHardware::getCaptureMode()
     if(1 == mParameters.getInt("hdr")) {
         mode = CAMERA_HDR_MODE;
     }	
-//	mode = CAMERA_HDR_MODE;
+
+	if(1 == mParameters.getInt("zsl")) {
+        mode = CAMERA_ZSL_MODE;
+    }
+
 	LOGI("cap mode %d.\n", mode);
 
 	return mode;

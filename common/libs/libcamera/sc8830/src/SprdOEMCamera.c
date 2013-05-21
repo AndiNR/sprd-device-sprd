@@ -1532,17 +1532,15 @@ int camera_start_preview_internal(void)
 		CMR_LOGE("malloc fail for hdr.");
 		return -CAMERA_FAILED;
 	}
-	if (CAMERA_HDR_MODE == g_cxt->cap_mode) {
-		g_cxt->total_cap_num = HDR_CAP_NUM;
-		ret = arithmetic_hdr_init(g_cxt->capture_size.width,g_cxt->capture_size.height);
-		if (ret) {
-			CMR_LOGE("malloc fail for hdr.");
-			return -CAMERA_FAILED;
-		}
-	} else {
+
+	if (CAMERA_ZSL_MODE == g_cxt->cap_mode) {
 		g_cxt->total_cap_num = CAMERA_CAP_FRM_CNT;
+		ret = camera_capture_init();
+	} else if(CAMERA_HDR_MODE == g_cxt->cap_mode) {
+		g_cxt->total_cap_num = HDR_CAP_NUM;
+	} else {
+		g_cxt->total_cap_num = CAMERA_NORMAL_CAP_FRM_CNT;
 	}
-	ret = camera_capture_init();
 
 	if (IMG_SKIP_HW == g_cxt->skip_mode) {
 		skip_number = g_cxt->skip_num;
@@ -1568,7 +1566,7 @@ int camera_start_preview_internal(void)
 }
 
 camera_ret_code_type camera_start_preview(camera_cb_f_type callback,
-					void *client_data)
+					void *client_data,takepicture_mode mode)
 {
 	CMR_MSG_INIT(message);
 	int                      ret = CAMERA_SUCCESS;
@@ -1581,6 +1579,7 @@ camera_ret_code_type camera_start_preview(camera_cb_f_type callback,
 	g_cxt->err_code = 0;
 	g_cxt->recover_status = NO_RECOVERY;
 	g_cxt->cmr_set.bflash = 1;
+	g_cxt->cap_mode = CAMERA_ZSL_MODE;//mode; to do it
 	message.msg_type = CMR_EVT_START;
 	message.sub_msg_type = CMR_PREVIEW;
 	ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
@@ -1932,6 +1931,21 @@ camera_ret_code_type camera_take_picture(camera_cb_f_type    callback,
 	camera_set_hal_cb(callback);
 	camera_set_take_picture_cap_mode(cap_mode);
 	ret = camera_set_take_picture(TAKE_PICTURE_NEEDED);
+	//to do it
+/*	if (CAMERA_ZSL_MODE != cap_mode) {
+		message.msg_type = CMR_EVT_START;
+		message.sub_msg_type = CMR_CAPTURE;
+		message.data = (void*)cap_mode;
+		ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
+		if (ret) {
+			CMR_LOGE("Fail to send message to camera main thread");
+			return ret;
+		}
+		ret = camera_wait_start(g_cxt);
+		if (CAMERA_SUCCESS == ret) {
+			ret = g_cxt->err_code;
+		}
+	}*/
 	return ret;
 }
 

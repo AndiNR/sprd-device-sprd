@@ -413,7 +413,7 @@ camera_ret_code_type camera_start(camera_cb_f_type callback,
 				int  display_width);
 
 camera_ret_code_type camera_start_preview(camera_cb_f_type callback,
-					void *client_data);
+					void *client_data,takepicture_mode mode);
 
 camera_ret_code_type camera_start_focus(void *client_data);
 
