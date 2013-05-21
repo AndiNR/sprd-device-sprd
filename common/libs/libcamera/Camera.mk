@@ -228,6 +228,7 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_ov5648_mipi_raw.c \
 	sensor/sensor_ov8825_mipi_raw.c \
 	sensor/sensor_hi351_mipi.c \
+	sensor/sensor_gc2035.c \
 	vsp/sc8830/src/jpg_drv_sc8830.c \
 	jpeg_fw_8830/src/jpegcodec_bufmgr.c \
 	jpeg_fw_8830/src/jpegcodec_global.c \
