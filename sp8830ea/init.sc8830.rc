@@ -82,6 +82,8 @@ on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
     write /sys/kernel/debug/fatal_dump/enable 1
 
+
+
 #start rawdata daemon.
 service rawdatad /bin/rawdatad
     class core
@@ -544,6 +546,14 @@ on property:ro.modem.w.enable=1
     symlink /dev/stty_w30 /dev/ts0710mux30
     symlink /dev/stty_w31 /dev/ts0710mux31
 
+
+on property:ro.modem.t.count=2
+    write /proc/sim/0 t
+    write /proc/sim/1 t
+
+on property:ro.modem.w.count=2
+    write /proc/sim/0 w
+    write /proc/sim/1 w
 #create symlink
 service smd_symlink /system/bin/ext_symlink.sh -u
     user root
