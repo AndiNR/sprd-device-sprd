@@ -164,11 +164,20 @@ struct sensor_awb_coord{
 	uint16_t yt;
 };
 
+struct sensor_cali_info {
+	uint32_t r_sum;
+	uint32_t gr_sum;
+	uint32_t gb_sum;
+	uint32_t b_sum;
+};
+
 struct sensor_awb_param{
 	struct sensor_pos win_start;
 	struct sensor_size win_size;
 	struct sensor_awb_coord win[SENSOR_AWB_NUM];
 	struct sensor_awb_coord cali[SENSOR_CMC_NUM];
+	struct sensor_cali_info cali_info;
+	struct sensor_cali_info golden_cali_info;
 	uint32_t cali_num;
 	uint32_t cali_index;
 	uint32_t cali_std;

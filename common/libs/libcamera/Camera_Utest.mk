@@ -10,6 +10,7 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/jpeg_fw_8830/src \
 	$(LOCAL_PATH)/sc8830/inc \
 	$(LOCAL_PATH)/sc8830/isp/inc \
+	$(LOCAL_PATH)/sc8830/isp_calibration/inc \
 	external/skia/include/images \
 	external/skia/include/core\
         external/jhead \
@@ -80,9 +81,9 @@ LOCAL_SRC_FILES:= \
 	ispvideo/isp_param_tune_v0000.c \
 	ispvideo/isp_param_tune_v0001.c \
 	ispvideo/isp_param_size.c \
-	sc8830/src/utest_camera.cpp
-
-
+	sc8830/isp_calibration/src/utest_camera.cpp \
+	sc8830/isp_calibration/src/isp_calibration.c \
+	sc8830/isp_calibration/src/isp_cali_interface.c
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_CFLAGS := -fno-strict-aliasing -D_VSP_ -DJPEG_ENC -D_VSP_LINUX_ -DCHIP_ENDIAN_LITTLE -DCONFIG_CAMERA_2M

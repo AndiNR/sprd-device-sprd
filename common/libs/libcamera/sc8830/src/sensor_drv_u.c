@@ -28,6 +28,7 @@
 #include "sensor_cfg.h"
 #include "sensor_drv_u.h"
 #include "cmr_msg.h"
+#include "../isp_calibration/inc/isp_cali_interface.h"
 
 #define SENSOR_ONE_I2C	1
 #define SENSOR_ZERO_I2C	0
@@ -1467,6 +1468,226 @@ void _Sensor_save_sensor_type(void)
 	}
 }
 
+static int _sensor_cali_lnc_param_update(char *cfg_file_dir,SENSOR_INFO_T *sensor_info_ptr,SENSOR_ID_E sensor_id)
+{
+	const char *sensor_name = sensor_info_ptr->name;
+	FILE *fp = PNULL;
+	char file_name[80] = {0};
+	char* file_name_ptr = 0;
+	uint32_t str_len = 0;
+	int file_size = 0;
+	char *data_ptr;
+	int i,j;
+	uint16_t *temp_buf_16 = PNULL;
+	uint32_t width;
+	uint32_t height;
+	SENSOR_TRIM_T *trim_ptr = 0;
+	struct sensor_raw_fix_info *raw_fix_info_ptr = PNULL;
+
+	if(SENSOR_IMAGE_FORMAT_RAW != sensor_info_ptr->image_format){
+		return SENSOR_FAIL;
+	}
+
+	str_len = sprintf(file_name, "%ssensor_%s",cfg_file_dir, sensor_name);
+	file_name_ptr = (char*)&file_name[0] + str_len;
+
+	/*LNC DATA Table*/
+	temp_buf_16 = (uint16_t*)malloc(128*1024*2);
+	if(!temp_buf_16){
+		goto cali_update_error;
+	}
+
+	trim_ptr = s_sensor_info_ptr->ioctl_func_tab_ptr->get_trim(0);
+	raw_fix_info_ptr = sensor_info_ptr->raw_info_ptr->fix_ptr;
+	i = 1;
+	while(1) {
+		height = trim_ptr[i].trim_height;
+		width = trim_ptr[i].trim_width;
+		//SENSOR_PRINT("_sensor_cali_param_update: w:%d, h:%d\n", width, height);
+		if ((0 == height) || (0 == width)) {
+			break;
+		}
+
+		sprintf(file_name_ptr, "_lnc_%d_%d_0.dat", width, height);
+
+		fp = fopen(file_name, "rb");
+		if (0 == fp) {
+
+			SENSOR_PRINT("_sensor_cali_param_update: does not find calibration file\n");
+			i++;
+			continue;
+		}
+
+		fseek(fp, 0L, SEEK_END);
+		file_size = ftell(fp);
+		fseek(fp, 0L, SEEK_SET);
+
+		fread(temp_buf_16,1,file_size,fp);
+		fclose(fp);
+
+		if (file_size != raw_fix_info_ptr->lnc.map[i-1][0].len) {
+			SENSOR_PRINT("_sensor_cali_param_update: file size dis-match, do not replace, w:%d, h:%d, ori: %d, now:%d/n", 
+				width, height, raw_fix_info_ptr->lnc.map[i-1][0].len, file_size);
+		} else {
+			data_ptr = (char*)raw_fix_info_ptr->lnc.map[i-1][0].param_addr;
+			memcpy(data_ptr, temp_buf_16, file_size);
+			SENSOR_PRINT("_sensor_cali_param_update: replace finished/n");
+		}
+
+		i++;
+	}
+
+	if (temp_buf_16) {
+
+		free(temp_buf_16);
+		temp_buf_16 = 0;
+
+	}
+
+	return SENSOR_SUCCESS;
+cali_update_error:
+
+	if (temp_buf_16) {
+
+		free(temp_buf_16);
+		temp_buf_16 = 0;
+
+	}
+	return SENSOR_FAIL;
+}
+
+
+static int _sensor_cali_awb_param_update(char *cfg_file_dir,SENSOR_INFO_T *sensor_info_ptr,SENSOR_ID_E sensor_id)
+{
+	int rtn = 0;
+	const char *sensor_name = sensor_info_ptr->name;
+	FILE *fp = PNULL;
+	char file_name[80] = {0};
+	char buf[256] = {0x00};
+	char* file_name_ptr = 0;
+	uint32_t str_len = 0;
+	int file_size = 0;
+	struct isp_bayer_ptn_stat_t *stat_ptr = PNULL;
+	struct sensor_cali_info *cali_info_ptr = PNULL;
+	struct sensor_raw_tune_info *raw_tune_info_ptr = PNULL;
+
+	if(SENSOR_IMAGE_FORMAT_RAW != sensor_info_ptr->image_format){
+		return SENSOR_FAIL;
+	}
+	raw_tune_info_ptr = (struct sensor_raw_tune_info*)sensor_info_ptr->raw_info_ptr->tune_ptr;
+	cali_info_ptr = (struct sensor_cali_info*)&raw_tune_info_ptr->awb.cali_info;
+
+	str_len = sprintf(file_name, "%ssensor_%s",cfg_file_dir, sensor_name);
+	file_name_ptr = (char*)&file_name[0] + str_len;
+
+	sprintf(file_name_ptr, "_awb.dat");
+
+	SENSOR_PRINT("_sensor_cali_awb_param_update: %s\n", file_name);
+	fp = fopen(file_name, "rb");
+	if (0 == fp) {
+
+		SENSOR_PRINT("_sensor_cali_awb_param_update: does not find calibration file\n");
+
+		cali_info_ptr->r_sum = 1024;
+		cali_info_ptr->b_sum = 1024;
+		cali_info_ptr->gr_sum = 1024;
+		cali_info_ptr->gb_sum = 1024;
+
+		rtn = SENSOR_SUCCESS;
+
+	} else {
+		fseek(fp, 0L, SEEK_END);
+		file_size = ftell(fp);
+		fseek(fp, 0L, SEEK_SET);
+
+		fread(buf,1,file_size,fp);
+		fclose(fp);
+
+		stat_ptr = (struct isp_bayer_ptn_stat_t*)&buf[0];
+		cali_info_ptr->r_sum = stat_ptr->r_stat;
+		cali_info_ptr->b_sum = stat_ptr->b_stat;
+		cali_info_ptr->gr_sum = stat_ptr->gr_stat;
+		cali_info_ptr->gb_sum = stat_ptr->gb_stat;
+
+//		SENSOR_PRINT("_sensor_cali_awb_param_update: %d, %d, %d, %d\n",  stat_ptr->r_stat,  stat_ptr->b_stat, stat_ptr->gr_stat, stat_ptr->gb_stat);
+
+		rtn = SENSOR_SUCCESS;
+	}
+
+
+	return rtn;
+}
+
+static int _sensor_cali_flashlight_param_update(char *cfg_file_dir,SENSOR_INFO_T *sensor_info_ptr,SENSOR_ID_E sensor_id)
+{
+	int rtn = 0;
+	const char *sensor_name = sensor_info_ptr->name;
+	FILE *fp = PNULL;
+	char file_name[80] = {0};
+	char buf[256] = {0x00};
+	char* file_name_ptr = 0;
+	uint32_t str_len = 0;
+	int file_size = 0;
+	struct isp_bayer_ptn_stat_t *stat_ptr = PNULL;
+	struct sensor_raw_tune_info *raw_tune_info_ptr = PNULL;
+
+	if(SENSOR_IMAGE_FORMAT_RAW != sensor_info_ptr->image_format){
+		return SENSOR_FAIL;
+	}
+	raw_tune_info_ptr = (struct sensor_raw_tune_info*)sensor_info_ptr->raw_info_ptr->tune_ptr;
+
+
+	str_len = sprintf(file_name, "%ssensor_%s",cfg_file_dir, sensor_name);
+	file_name_ptr = (char*)&file_name[0] + str_len;
+
+	sprintf(file_name_ptr, "_flashlight.dat");
+
+	SENSOR_PRINT("_sensor_cali_flashlight_param_update: %s\n", file_name);
+	fp = fopen(file_name, "rb");
+	if (0 == fp) {
+
+		SENSOR_PRINT("_sensor_cali_flashlight_param_update: does not find calibration file\n");
+
+		rtn = SENSOR_SUCCESS;
+
+	} else {
+		fseek(fp, 0L, SEEK_END);
+		file_size = ftell(fp);
+		fseek(fp, 0L, SEEK_SET);
+
+		fread(buf,1,file_size,fp);
+		fclose(fp);
+
+		stat_ptr = (struct isp_bayer_ptn_stat_t*)&buf[0];
+
+//		SENSOR_PRINT("_sensor_cali_flashlight_param_update: %d, %d, %d, %d\n",  stat_ptr->r_stat,  stat_ptr->b_stat, stat_ptr->gr_stat, stat_ptr->gb_stat);
+
+		rtn = SENSOR_SUCCESS;
+	}
+
+
+	return rtn;
+}
+
+
+static int  _sensor_cali_load_param(char *cfg_file_dir,SENSOR_INFO_T *sensor_info_ptr,SENSOR_ID_E sensor_id)
+{
+	int rtn = 0;
+
+	rtn = _sensor_cali_lnc_param_update(cfg_file_dir,sensor_info_ptr, sensor_id);
+	if (rtn) {
+		return SENSOR_FAIL;
+	}
+
+	rtn = _sensor_cali_awb_param_update(cfg_file_dir,sensor_info_ptr, sensor_id);
+	if (rtn) {
+		return SENSOR_FAIL;
+	}
+
+	return SENSOR_SUCCESS;
+}
+
+
 int Sensor_Init(uint32_t sensor_id, uint32_t *sensor_num_ptr)
 {
 	int ret_val = SENSOR_FAIL;
@@ -1591,9 +1812,12 @@ int Sensor_Open(uint32_t sensor_id)
 	return ret_val;
 }
 
+static char cali_file_dir[64] = "/data/";
 int _Sensor_SetMode(uint32_t mode)
 {
+	int32_t rtn;
 	uint32_t mclk;
+	uint32_t sensor_id = 0;
 	SENSOR_IOCTL_FUNC_PTR set_reg_tab_func=s_sensor_info_ptr->ioctl_func_tab_ptr->cus_func_1;
 
 	SENSOR_PRINT("SENSOR: Sensor_SetMode -> mode = %d.\n", mode);
@@ -1619,6 +1843,11 @@ int _Sensor_SetMode(uint32_t mode)
 			Sensor_SendRegTabToSensor(&s_sensor_info_ptr->resolution_tab_info_ptr[mode]);
 		}
 		s_sensor_mode[Sensor_GetCurId()] = mode;
+		sensor_id = Sensor_GetCurId();
+		rtn = _sensor_cali_load_param(cali_file_dir, s_sensor_info_ptr, sensor_id);
+		if (rtn) {
+			return rtn;
+		}
 	} else {
 		if(set_reg_tab_func)
 			set_reg_tab_func(0);

@@ -191,6 +191,7 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/jpeg_fw_8830/src \
 	$(LOCAL_PATH)/sc8830/inc \
 	$(LOCAL_PATH)/sc8830/isp/inc \
+	$(LOCAL_PATH)/sc8830/isp_calibration/inc \
 	external/skia/include/images \
 	external/skia/include/core\
         external/jhead \
@@ -260,7 +261,9 @@ LOCAL_SRC_FILES:= \
 	ispvideo/isp_param_tune_com.c \
 	ispvideo/isp_param_tune_v0000.c \
 	ispvideo/isp_param_tune_v0001.c \
-	ispvideo/isp_param_size.c
+	ispvideo/isp_param_size.c\
+	sc8830/isp_calibration/src/isp_calibration.c \
+	sc8830/isp_calibration/src/isp_cali_interface.c
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
