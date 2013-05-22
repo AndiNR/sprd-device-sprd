@@ -843,6 +843,8 @@ void *camera_cap_thread_proc(void *data)
 						camera_capture_hdr_data(data);
 						CMR_LOGE("HDR cnt %d.",g_cxt->hdr_cnt);
 					} 
+				}else {
+					g_cxt->cap_cnt++;
 				}
 				ret = camera_v4l2_capture_handle(data);
 				if (ret) {
@@ -852,7 +854,9 @@ void *camera_cap_thread_proc(void *data)
 							CAMERA_FUNC_TAKE_PICTURE,
 							(uint32_t)NULL);
 				}
-				camera_set_take_picture(TAKE_PICTURE_NO);
+				if ((g_cxt->cap_cnt == g_cxt->total_capture_num)||(CAMERA_HDR_MODE == g_cxt->cap_mode)) {
+					camera_set_take_picture(TAKE_PICTURE_NO);
+				}
 			}
 			CMR_PRINT_TIME;
 			break;
@@ -1533,13 +1537,10 @@ int camera_start_preview_internal(void)
 		return -CAMERA_FAILED;
 	}
 
+	g_cxt->total_cap_num = CAMERA_CAP_FRM_CNT;
+	g_cxt->total_capture_num = CAMERA_NORMAL_CAP_FRM_CNT;
 	if (CAMERA_ZSL_MODE == g_cxt->cap_mode) {
-		g_cxt->total_cap_num = CAMERA_CAP_FRM_CNT;
 		ret = camera_capture_init();
-	} else if(CAMERA_HDR_MODE == g_cxt->cap_mode) {
-		g_cxt->total_cap_num = HDR_CAP_NUM;
-	} else {
-		g_cxt->total_cap_num = CAMERA_NORMAL_CAP_FRM_CNT;
 	}
 
 	if (IMG_SKIP_HW == g_cxt->skip_mode) {
@@ -1932,7 +1933,7 @@ camera_ret_code_type camera_take_picture(camera_cb_f_type    callback,
 	camera_set_take_picture_cap_mode(cap_mode);
 	ret = camera_set_take_picture(TAKE_PICTURE_NEEDED);
 	//to do it
-/*	if (CAMERA_ZSL_MODE != cap_mode) {
+/*	if ((CAMERA_ZSL_MODE != cap_mode) || (CAMERA_ZSL_CONTINUE_SHOT_MODE != mode)) {
 		message.msg_type = CMR_EVT_START;
 		message.sub_msg_type = CMR_CAPTURE;
 		message.data = (void*)cap_mode;
@@ -4561,6 +4562,13 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 	if (0 == ret) {
 		camera_wait_takepicdone(g_cxt);
 		CMR_LOGV("take pic done.");
+
+		encoder_param.need_free = 0;
+		if (((CAMERA_NORMAL_CONTINUE_SHOT_MODE == g_cxt->cap_mode) && (g_cxt->cap_cnt == g_cxt->total_capture_num))
+			|| (CAMERA_NORMAL_MODE == g_cxt->cap_mode)) {
+			encoder_param.need_free = 1;
+		}
+
 		encoder_type.buffer = (uint8_t *)wexif_output.output_buf_virt_addr;
 		encoder_param.size  = wexif_output.output_buf_size;
 		camera_call_cb(CAMERA_EXIT_CB_DONE,

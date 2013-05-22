@@ -327,6 +327,7 @@ struct camera_context {
 	struct img_size          cap_orig_size;
 	struct img_size          max_size;
 	uint32_t                 total_cap_num;
+	uint32_t                 total_capture_num;
 	uint32_t                 cap_cnt;
 	uint32_t                 cap_process_id;
 	uint32_t                 total_cap_ch_num;

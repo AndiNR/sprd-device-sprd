@@ -588,7 +588,7 @@ int camera_snapshot_start_set(void)
 	} else {
 	
 	}
-	if (HDR_CAP_NUM == cxt->total_cap_num) {
+	if (CAMERA_HDR_MODE == cxt->cap_mode) {
 		ret = camera_set_hdr_ev(SENSOR_HDR_EV_LEVE_0);
 	}
 	return ret;
@@ -599,7 +599,7 @@ int camera_snapshot_stop_set(void)
 	int                      ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
 
-	if (HDR_CAP_NUM == cxt->total_cap_num) {
+	if (CAMERA_HDR_MODE == cxt->cap_mode) {
 		camera_set_hdr_ev(SENSOR_HDR_EV_LEVE_1);
 	}
 	if (cxt->cmr_set.flash) {
@@ -723,7 +723,8 @@ int camera_set_ctrl(camera_parm_type id,
 		&& (CAMERA_PARM_PREVIEW_MODE != id)
 		&& (CAMERA_PARM_THUMBCOMP != id)
 		&& (CAMERA_PARM_JPEGCOMP != id)
-		&& (CAMERA_PARM_DCDV_MODE != id)) {
+		&& (CAMERA_PARM_DCDV_MODE != id)
+		&& (CAMERA_PARM_SHOT_NUM != id)) {
 		return ret;
 	}
 
@@ -735,6 +736,10 @@ int camera_set_ctrl(camera_parm_type id,
 	}
 
 	switch (id) {
+	case CAMERA_PARM_SHOT_NUM:
+		cxt->total_capture_num = parm;
+		CMR_LOGI("capture num is %d.",parm);
+		break;
 	case CAMERA_PARM_DCDV_MODE:
 		cxt->is_dv_mode = parm;
 		CMR_LOGI("camera mode %d.",parm);

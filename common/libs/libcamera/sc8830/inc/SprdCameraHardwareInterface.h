@@ -147,7 +147,7 @@ private:
 	void                  receiveJpegPosPicture(void);
 	void                  receivePostLpmRawPicture(camera_frame_type *frame);
 	void                  receiveRawPicture(camera_frame_type *frame);
-	void                  receiveJpegPicture(void);	
+	void                  receiveJpegPicture(JPEGENC_CBrtnType *encInfo);
 	void                  receivePreviewFrame(camera_frame_type *frame);
 	void                  receivePreviewFDFrame(camera_frame_type *frame);	
 	void                  receiveCameraExitError(void);
@@ -290,6 +290,7 @@ private:
 	int32_t                         mCameraId;
 	volatile camera_state           mCameraState;
 	int                             miSPreviewFirstFrame;
+	takepicture_mode                mCaptureMode;
 };
 
 }; // namespace android
