@@ -307,6 +307,8 @@ sprd_camera_memory_t* SprdCameraHardware::GetCachePmem(const char *device_name, 
 		ALOGE("wxz: Fail to GetCachePmem, memory is NULL.");
 		return NULL;
 	}
+	memset(memory, 0, sizeof(*memory));
+
 	camera_memory_t *camera_memory;
 	int paddr, psize;
         int  acc = buf_size *num_bufs ;
@@ -315,6 +317,14 @@ sprd_camera_memory_t* SprdCameraHardware::GetCachePmem(const char *device_name, 
 	//acc = camera_get_size_align_page(acc);
         MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc ,0 , (1<<31) | ION_HEAP_CARVEOUT_MASK);
 //        MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc ,MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+
+	if (NULL == pHeapIon) {
+		goto getpmem_end;
+	}
+	if (NULL == pHeapIon->getBase()
+		|| 0xffffffff == (long)pHeapIon->getBase()) {
+		goto getpmem_end;
+	}
 
 	camera_memory = mGetMemory_cb(pHeapIon->getHeapID(), acc/num_bufs, num_bufs, NULL);
 
@@ -350,6 +360,9 @@ sprd_camera_memory_t* SprdCameraHardware::GetPmem(const char *device_name, int b
 		ALOGE("wxz: Fail to GetPmem, memory is NULL.");
 		return NULL;
 	}
+	memset(memory, 0, sizeof(*memory));
+
+
 	camera_memory_t *camera_memory;
 	int paddr, psize;
         int acc = buf_size *num_bufs ;
@@ -357,6 +370,14 @@ sprd_camera_memory_t* SprdCameraHardware::GetPmem(const char *device_name, int b
 
 	//acc = camera_get_size_align_page(acc);
         MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc , MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+
+	if (NULL == pHeapIon) {
+		goto getpmem_end;
+	}
+	if (NULL == pHeapIon->getBase()
+		|| 0xffffffff == (long)pHeapIon->getBase()) {
+		goto getpmem_end;
+	}
 
 	camera_memory = mGetMemory_cb(pHeapIon->getHeapID(), acc/num_bufs, num_bufs, NULL);
 
