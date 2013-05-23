@@ -18,6 +18,7 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 import android.os.SystemProperties;
+import android.preference.CheckBoxPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceScreen;
@@ -91,6 +92,7 @@ public class DebugParam extends PreferenceActivity {
     private static final String PLMNSELECT = "key_plmnselect";
     private static final String ASSERT_MODE = "key_assertmode";
     private static final String MANUAL_MODE = "key_manualassert";
+    private static final String RILD_SETTING = "key_rildsetting";
 
     private static final int GET_BAND_SELECT = 0;
     private static final int SET_BAND_SELECT = 1;
@@ -99,7 +101,7 @@ public class DebugParam extends PreferenceActivity {
     private static final int SET_MANUAL_ASSERT = 4;
     private static final int INIT_BAND_REFERENCE = 5;
     private static final int INIT_ASSERT_REFERENCE = 6;
-
+    private static final int SETTING_RILD = 7;
 
 
     private static final int ASSERT_DEBUG_MODE = 0;
@@ -123,6 +125,7 @@ public class DebugParam extends PreferenceActivity {
     private int mAssertMdoe;
     //private Preference mAssertModePreference;
     private Preference mBandSelectPreference;
+    private CheckBoxPreference rildSettingPref ;
     private Handler mThread;
     private Handler mUiThread;
     private boolean mHaveFinish = true;
@@ -134,6 +137,16 @@ public class DebugParam extends PreferenceActivity {
         addPreferencesFromResource(R.layout.debugparam);
         //mAssertModePreference = (Preference)findPreference(ASSERT_MODE);
         mBandSelectPreference = (Preference)findPreference(BAND_SELECT);
+        /*Add 20130523 Spreadst of add RILD  control UI start*/
+        rildSettingPref=(CheckBoxPreference)findPreference(RILD_SETTING);
+        boolean rildStatus =SystemProperties.getBoolean("persist.sys.sprd.attest", false);
+        rildSettingPref.setChecked(rildStatus);
+        if(rildStatus){
+            rildSettingPref.setSummary("RILD will be closed after restart");
+        }else{
+            rildSettingPref.setSummary("RILD will work after restart");
+        }
+        /*Add 20130523 Spreadst of add RILD  control UI end*/
         /*Add 20130206 Spreadst of 122017 8810 7710 don't support PLMN start*/
         String mode = SystemProperties.get("ro.product.hardware");
         /*Modify 20130306 Spreadst of 130799 77XX dont support PLMN start */
@@ -327,7 +340,17 @@ public class DebugParam extends PreferenceActivity {
         } else if(PLMNSELECT.equals(key)) {
             Intent intent = new Intent(this, TextInfo.class);
             startActivity(intent.putExtra(TEXT_INFO, 2));
+            /*Add 20130523 Spreadst of add RILD  control UI start*/
+        } else if(RILD_SETTING.equals(key)){
+            if(rildSettingPref.isChecked()){
+                SystemProperties.set("persist.sys.sprd.attest", "true");
+                rildSettingPref.setSummary("RILD will be closed after restart");
+            }else{
+                SystemProperties.set("persist.sys.sprd.attest", "false");
+                rildSettingPref.setSummary("RILD will work after restart");
+            }
         }
+        /*Add 20130523 Spreadst of add RILD  control UI end*/
         return true;
     }
 
