@@ -4124,6 +4124,11 @@ int camera_v4l2_preview_handle(struct frm_info *data)
 		return ret;
 	}
 
+	if (CMR_IDLE == g_cxt->preview_status) {
+		CMR_LOGV("discard.");
+		return ret;
+	}
+
 	g_cxt->pre_frm_cnt++;
 	if (IMG_SKIP_SW == g_cxt->skip_mode) {
 		if (g_cxt->pre_frm_cnt <= g_cxt->skip_num) {
@@ -5341,6 +5346,14 @@ int camera_set_change_size(uint32_t cap_width,uint32_t cap_height,uint32_t previ
 			|| (g_cxt->display_size.height != preview_height)) {
 			CMR_LOGI("need to change size.");
 			ret = 1;
+		}
+		if ((CAMERA_ZSL_MODE == g_cxt->cap_mode)
+		    || (CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode)) {
+			if ((g_cxt->picture_size.width != cap_width)
+			   || (g_cxt->picture_size.height != cap_height)) {
+				CMR_LOGI("need to change size.");
+				ret = 2;
+			}
 		}
 	}
 	CMR_LOGI("done,%d.",ret);

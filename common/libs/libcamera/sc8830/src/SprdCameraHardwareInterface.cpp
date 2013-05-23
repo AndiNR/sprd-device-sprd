@@ -635,6 +635,10 @@ status_t SprdCameraHardware::setParameters(const SprdCameraParameters& params)
 	
 	if (camera_set_change_size(mRawWidth, mRawHeight, mPreviewWidth, mPreviewHeight)) {
 		mPreviewStartFlag = 2;
+		stopPreviewInternal();
+		if (NO_ERROR != startPreviewInternal(isRecordingMode())) {
+			return UNKNOWN_ERROR;
+		}
 	}
 	
 	if(NO_ERROR != setCameraParameters()){
