@@ -1,8 +1,13 @@
 package com.spreadtrum.android.eng;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.SystemProperties;
 import android.preference.CheckBoxPreference;
 import android.preference.ListPreference;
@@ -10,17 +15,12 @@ import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
 import android.preference.PreferenceScreen;
-import android.preference.Preference.OnPreferenceChangeListener;
 import android.util.Log;
 import android.widget.Toast;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-
 
 public class LogSetting extends PreferenceActivity implements OnSharedPreferenceChangeListener {
-
+    private static final boolean DEBUG = Debug.isDebug();
     private static final String LOG_TAG = "LogSetting";
 
     private static final int LOG_APP   = 0;
@@ -53,7 +53,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
         super.onCreate(savedInstanceState);
         addPreferencesFromResource(R.layout.logsetting);
 
-        Log.d(LOG_TAG, "logsetting activity onCreate.");
+        if(DEBUG) Log.d(LOG_TAG, "logsetting activity onCreate.");
         androidLogPrefs = (CheckBoxPreference)findPreference(KEY_ANDROID_LOG);
         DspPrefs = (ListPreference)findPreference(KEY_DSP_LOG);
 	/* initilize modem communication */
@@ -70,14 +70,14 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
         String mode = SystemProperties.get("ro.product.hardware");
         if(mode==null || !mode.contains("77")){
             getPreferenceScreen().removePreference(slogPreference);
-            Log.d(LOG_TAG, "remove the preference");
+            if(DEBUG) Log.d(LOG_TAG, "remove the preference");
         }
         /*Add 20130311 Spreadst of 135491 remove slog item when the phone is not 77xx end*/
     }
 
     @Override
     protected void onStart() {
-    Log.d(LOG_TAG, "logsetting activity onStart.");
+    if(DEBUG) Log.d(LOG_TAG, "logsetting activity onStart.");
         int androidLogState = LogSettingGetLogState(LOG_ANDROID);
         androidLogPrefs.setChecked(androidLogState == 1);
         oldDSPValue = LogSettingGetLogState(LOG_DSP);
@@ -87,7 +87,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
 
     private void updataDSPOption(int selectedId) {
         // TODO Auto-generated method stub
-        Log.d(LOG_TAG, "updataDSPOption selectedId=["+selectedId+"]");
+        if(DEBUG) Log.d(LOG_TAG, "updataDSPOption selectedId=["+selectedId+"]");
         /*Add 20130320 Spreadst of 139908 check the selected ID start */
         if(selectedId == -1){
             return;
@@ -102,12 +102,12 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
 	protected void onDestroy() {
 		mEf.engclose(mSocketID);
 		super.onDestroy();
-		Log.d(LOG_TAG, "logsetting activity onDestroy.");
+		if(DEBUG) Log.d(LOG_TAG, "logsetting activity onDestroy.");
 	}
 
     public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
         String key = preference.getKey();
-	Log.d(LOG_TAG, "[TreeCllik]onPreferenceTreeClick  key="+key);
+	if(DEBUG) Log.d(LOG_TAG, "[TreeCllik]onPreferenceTreeClick  key="+key);
         int logType = 0;
 
         if (key == null) {
@@ -139,7 +139,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
 
         int oldstate = LogSettingGetLogState(logType);
         if (oldstate < 0) {
-            Log.d(LOG_TAG, "Invalid log state.");
+            Log.e(LOG_TAG, "Invalid log state.");
             return false;
         }
 
@@ -150,7 +150,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
 
             String msg ;
             msg = String.format("Log state changed, new state:%d, old state:%d", newstate, oldstate);
-            Log.d(LOG_TAG, msg);
+            if(DEBUG) Log.d(LOG_TAG, msg);
         }
 
         return false;
@@ -169,7 +169,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
                 state = property.compareTo("disable");
                 }
                 else {
-                Log.d(LOG_TAG, "logcat property no exist.");
+                Log.e(LOG_TAG, "logcat property no exist.");
                 }
             break;
 
@@ -299,7 +299,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
             String property = (state == 1 ? "enable":"disable");
 
             SystemProperties.set(PROPERTY_LOGCAT, property);
-            Log.d(LOG_TAG, "Set logcat property:" + property);
+            if(DEBUG) Log.d(LOG_TAG, "Set logcat property:" + property);
             break;
 
             case LOG_MODEM:
@@ -327,7 +327,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
 
                 int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
                 mATResponse =  new String(inputBytes, 0, showlen);
-                Log.d(LOG_TAG, "AT response:" + mATResponse);
+                if(DEBUG) Log.d(LOG_TAG, "AT response:" + mATResponse);
                 if (mATResponse.equals("OK"))
                     Toast.makeText(getApplicationContext(), "Success!",  Toast.LENGTH_SHORT).show();
                 else
@@ -360,7 +360,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
 
                 int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
                 mATResponse =  new String(inputBytes, 0, showlen);
-                Log.d(LOG_TAG, "AT response:" + mATResponse);
+                if(DEBUG) Log.d(LOG_TAG, "AT response:" + mATResponse);
 
                 if (mATResponse.equals("OK")){
                     Toast.makeText(getApplicationContext(), "Success!",  Toast.LENGTH_SHORT).show();
@@ -414,7 +414,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
                 byte[] inputBytes = new byte[dataSize];
                 int showlen = mEf.engread(mSocketID, inputBytes, dataSize);
                 mATResponse = new String(inputBytes, 0, showlen);
-                Log.d(LOG_TAG, "AT response:" + mATResponse);
+                if(DEBUG) Log.d(LOG_TAG, "AT response:" + mATResponse);
                 if (mATResponse.contains("OK")) {
                     Toast.makeText(getApplicationContext(), "Success!",
                             Toast.LENGTH_SHORT).show();
@@ -434,11 +434,11 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         if(key.equals("modem_arm_log")){
             String re = sharedPreferences.getString(key, "");
-            Log.d(LOG_TAG, "onSharedPreferenceChanged key="+key+" value="+re);
+            if(DEBUG) Log.d(LOG_TAG, "onSharedPreferenceChanged key="+key+" value="+re);
             LogSettingSaveLogState(LOG_MODEM_ARM,Integer.parseInt(re));
         }else if(key.equals(KEY_DSP_LOG)){
             String re = sharedPreferences.getString(key, "");
-            Log.d(LOG_TAG, "onSharedPreferenceChanged key="+key+" value="+re);
+            if(DEBUG) Log.d(LOG_TAG, "onSharedPreferenceChanged key="+key+" value="+re);
             if(Integer.parseInt(re) != oldDSPValue)
             LogSettingSaveLogState(LOG_DSP,Integer.parseInt(re));
         }

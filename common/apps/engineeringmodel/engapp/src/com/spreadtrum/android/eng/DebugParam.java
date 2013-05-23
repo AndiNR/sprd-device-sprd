@@ -1,30 +1,28 @@
 package com.spreadtrum.android.eng;
 
-import android.util.Log;
-import android.widget.Toast;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.Looper;
-import android.os.Message;
-import android.os.SystemProperties;
-import android.preference.ListPreference;
-import android.preference.PreferenceScreen;
-import android.preference.Preference;
-import android.preference.PreferenceActivity;
-import android.preference.PreferenceManager;
-import android.app.AlertDialog.Builder;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
-import android.content.Intent;
-
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
+
+import android.app.AlertDialog.Builder;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.os.Bundle;
+import android.os.Debug;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
+import android.os.Message;
+import android.os.SystemProperties;
+import android.preference.Preference;
+import android.preference.PreferenceActivity;
+import android.preference.PreferenceScreen;
+import android.util.Log;
+import android.widget.Toast;
 
 
 class BandSelectDecoder {
@@ -84,6 +82,7 @@ class BandSelectDecoder {
 }
 
 public class DebugParam extends PreferenceActivity {
+    private static final boolean DEBUG = Debug.isDebug();
 	private static final String TAG = "DebugParam";
 	private static final String TEXT_INFO = "text_info";
 
@@ -386,7 +385,7 @@ public class DebugParam extends PreferenceActivity {
 
         int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
         String mATResponse =  new String(inputBytes, 0, showlen);
-        Log.d(TAG, "getSelectedBand result : " + mATResponse);
+        if(DEBUG) Log.d(TAG, "getSelectedBand result : " + mATResponse);
         int value = ERROR;
         try{
         	value = Integer.parseInt(mATResponse);
@@ -417,7 +416,7 @@ public class DebugParam extends PreferenceActivity {
 
         int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
         String mATResponse =  new String(inputBytes, 0, showlen);
-        Log.d(TAG, "getAssertMode result : " + mATResponse);
+        if(DEBUG) Log.d(TAG, "getAssertMode result : " + mATResponse);
         if(mATResponse.indexOf("+SDRMOD: 1") != ERROR) {
             return ASSERT_RELEASE_MODE;
         }else if(mATResponse.indexOf("+SDRMOD: 0") != ERROR) {
@@ -451,7 +450,7 @@ public class DebugParam extends PreferenceActivity {
 
         int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
         String mATResponse =  new String(inputBytes, 0, showlen);
-        Log.d(TAG, "setAssertMode result is " + mATResponse);
+        if(DEBUG) Log.d(TAG, "setAssertMode result is " + mATResponse);
         if(mATResponse.contains("OK")) {
             return true;
         }
@@ -475,7 +474,7 @@ public class DebugParam extends PreferenceActivity {
 
         int datasize = outputBuffer.toByteArray().length;
         int iRet = mEf.engwrite(mSocketID,outputBuffer.toByteArray(), datasize);
-        Log.d(TAG, "setManualAssert engwrite size: " + iRet);
+        if(DEBUG) Log.d(TAG, "setManualAssert engwrite size: " + iRet);
         if(datasize == iRet) {
         	Toast.makeText(DebugParam.this, "Success", Toast.LENGTH_SHORT).show();
         }else{

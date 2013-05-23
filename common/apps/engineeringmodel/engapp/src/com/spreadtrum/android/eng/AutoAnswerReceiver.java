@@ -9,12 +9,14 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Debug;
 import android.os.SystemProperties;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.widget.Toast;
 
 public class AutoAnswerReceiver extends BroadcastReceiver {
+    private static final boolean DEBUG = Debug.isDebug();
     private final String TAG = "AutoAnswerReceiver";
 
     public static final String PREFS_NAME = "ENGINEERINGMODEL";
@@ -30,10 +32,10 @@ public class AutoAnswerReceiver extends BroadcastReceiver {
             SharedPreferences settings = context.getSharedPreferences(PREFS_NAME, 0);
             boolean is_answer = settings.getBoolean("autoanswer_call", false);
 
-            Log.e(TAG, "start AutoAnswerService being" + is_answer);
+            if(DEBUG) Log.d(TAG, "start AutoAnswerService being" + is_answer);
 
             if (is_answer) {
-                Log.e(TAG, "start AutoAnswerService");
+                if(DEBUG) Log.d(TAG, "start AutoAnswerService");
                 context.startService(new Intent(context, AutoAnswerService.class));
             }
             // add by wangxiaobin 11-9 for cmmb set begin
@@ -61,7 +63,7 @@ public class AutoAnswerReceiver extends BroadcastReceiver {
         }
         // 2013/4/23@spreast for bug138559 start
         if (intent.getAction().equals("com.android.modemassert.MODEM_STAT_CHANGE")) {
-            Log.e(TAG, "modem state changed:" + intent.getExtra("modem_stat"));
+            if(DEBUG) Log.d(TAG, "modem state changed:" + intent.getExtra("modem_stat"));
             if (intent.getExtra("modem_stat").equals("modem_alive")) {
                 String mode = SystemProperties.get("ro.product.hardware");
                 if (mode != null && mode.contains("77")) {
@@ -88,7 +90,7 @@ public class AutoAnswerReceiver extends BroadcastReceiver {
         ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
         DataOutputStream outputBufferStream = new DataOutputStream(outputBuffer);
 
-        Log.e(TAG, "Engmode socket open, id:" + mSocketID);
+        if(DEBUG) Log.d(TAG, "Engmode socket open, id:" + mSocketID);
 
         if (state == 1) {
             mATline = String.format("%d,%d,%s", engconstents.ENG_AT_NOHANDLE_CMD, 1, "AT+SLOG=2");
@@ -109,7 +111,7 @@ public class AutoAnswerReceiver extends BroadcastReceiver {
         int showlen = mEf.engread(mSocketID, inputBytes, dataSize);
         mATResponse = new String(inputBytes, 0, showlen);
 
-        Log.d(TAG, "AT response:" + mATResponse);
+        if(DEBUG) Log.d(TAG, "AT response:" + mATResponse);
         if (mATResponse.contains("OK")) {
             return true;
         }

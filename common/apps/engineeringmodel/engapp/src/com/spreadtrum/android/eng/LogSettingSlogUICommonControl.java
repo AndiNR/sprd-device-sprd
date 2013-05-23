@@ -1,7 +1,5 @@
 package com.spreadtrum.android.eng;
 
-import com.spreadtrum.android.eng.R;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -9,11 +7,11 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.res.Configuration;
 import android.content.ServiceConnection;
+import android.content.res.Configuration;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.IBinder;
-import android.os.Message;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -26,6 +24,7 @@ import android.widget.Toast;
 import com.android.internal.app.IMediaContainerService;
 
 public class LogSettingSlogUICommonControl extends Activity {
+    private static final boolean DEBUG = Debug.isDebug();
     private Button btnClear;
     private Button btnDump;
     private RadioButton rdoGeneralOn;
@@ -84,7 +83,7 @@ public class LogSettingSlogUICommonControl extends Activity {
                 SlogUISnapService.class);
         intentMedia = new Intent().setComponent(DEFAULT_CONTAINER_COMPONENT);
         boolean a = getApplicationContext().bindService(intentMedia, mMediaContainerConn, Context.BIND_AUTO_CREATE);
-        Log.e("SlogUI","bindService is " + String.valueOf(a) );
+        if(DEBUG) Log.d("SlogUI","bindService is " + String.valueOf(a) );
         // Sync view's status
         SyncState();
 

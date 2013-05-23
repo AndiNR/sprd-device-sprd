@@ -7,31 +7,31 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import com.android.internal.telephony.PhoneFactory;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.util.Log;
-import android.view.Gravity;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ListView;
-import android.widget.TextView;
-import android.widget.Toast;
-import android.widget.AdapterView.OnItemClickListener;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
+import android.widget.ListView;
+import android.widget.Toast;
+
+import com.android.internal.telephony.PhoneFactory;
 
 
 public class uplmnsettings extends Activity {
-
+    private static final boolean DEBUG = Debug.isDebug();
 	private static final String LOG_TAG = "uplmnsettings";
 	private static final boolean DBUG = false;
 	private ListView listView = null;
@@ -106,7 +106,7 @@ public class uplmnsettings extends Activity {
 				final String editId = mEditText02.getText().toString();
 				final String editTag = mEditText03.getText().toString();
 				if(checkInputParametersIsWrong(editIndex, editId, editTag)){
-					Log.d(LOG_TAG,"bNeedSet is set to false");
+					if(DEBUG) Log.d(LOG_TAG,"bNeedSet is set to false");
 					bNeedSet = false;
 				}else{
 				changeDataFromEdit(       Integer.parseInt(mEditText01.getText().toString()),
@@ -115,7 +115,7 @@ public class uplmnsettings extends Activity {
 								);
 				}
 				if(bNeedSet){
-					Log.d(LOG_TAG,"ENG_AT_SETUPLMN");
+					if(DEBUG) Log.d(LOG_TAG,"ENG_AT_SETUPLMN");
 					Message m = mHandler.obtainMessage(engconstents.ENG_AT_SETUPLMN, 0, 0, 0);
 					mHandler.sendMessage(m);
 				}
@@ -133,7 +133,7 @@ public class uplmnsettings extends Activity {
 			str = str + originalUPLMN[i];
 		}
 		if(DBUG){
-			Log.d(LOG_TAG, "getPacketData---str="+str);
+			if(DEBUG) Log.d(LOG_TAG, "getPacketData---str="+str);
 		}
 		return str;
 	}
@@ -184,7 +184,7 @@ public class uplmnsettings extends Activity {
 				originalUPLMN[index] = compare;
 			}
 			if(DBUG){
-				Log.d(LOG_TAG, "changeDataFromEdit 555originalUPLMN["+index+"]"+originalUPLMN[index]);
+				if(DEBUG) Log.d(LOG_TAG, "changeDataFromEdit 555originalUPLMN["+index+"]"+originalUPLMN[index]);
 			}
 		}
 		else if(strId.length() == 6){
@@ -207,7 +207,7 @@ public class uplmnsettings extends Activity {
 				originalUPLMN[index] = compare01;
 			}
 			if(DBUG){
-				Log.d(LOG_TAG, "changeDataFromEdit 666originalUPLMN["+index+"]"+originalUPLMN[index]);
+				if(DEBUG) Log.d(LOG_TAG, "changeDataFromEdit 666originalUPLMN["+index+"]"+originalUPLMN[index]);
 			}
 		}
 	}
@@ -325,8 +325,7 @@ public class uplmnsettings extends Activity {
 
 				for(int i=0; i<uplmn_list_num; i++){
 					originalUPLMN[i] = new String(inputBytes,i*10,LEN_UNIT);
-					if(DBUG)
-					Log.d(LOG_TAG, "strUPLMN["+i+"] "+originalUPLMN[i] );
+					if(DEBUG) Log.d(LOG_TAG, "strUPLMN["+i+"] "+originalUPLMN[i] );
 				}
 				handleUTRANorGSM(inputBytes);
 				handleShowStrUPLMN(inputBytes);
@@ -373,10 +372,10 @@ public class uplmnsettings extends Activity {
 
 			setAllParameters(uplmn_list_num);
 			if(DBUG){
-			Log.d(LOG_TAG, "showlen== "+showlen );
-			Log.d(LOG_TAG, "setResult== "+setResult );
-			Log.d(LOG_TAG, "lenString== "+lenString );
-			Log.d(LOG_TAG, "at_read_lenth== "+at_read_lenth );
+			if(DEBUG) Log.d(LOG_TAG, "showlen== "+showlen );
+			if(DEBUG) Log.d(LOG_TAG, "setResult== "+setResult );
+			if(DEBUG) Log.d(LOG_TAG, "lenString== "+lenString );
+			if(DEBUG) Log.d(LOG_TAG, "at_read_lenth== "+at_read_lenth );
 			}
 
 			sendMessageToGetUPLMNList(at_read_lenth);
@@ -401,7 +400,6 @@ public class uplmnsettings extends Activity {
                     .append(0).append(",").append(lenth_get< at_read_lenth? lenth_get:at_read_lenth)
                     .append(",").append(getPacketData()).append(",").append("3F007FFF").toString();
     /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
-					Log.e(LOG_TAG, "setuplmn"+str);
 				try {
 					outputBufferStream.writeBytes(str);
 				} catch (IOException e) {

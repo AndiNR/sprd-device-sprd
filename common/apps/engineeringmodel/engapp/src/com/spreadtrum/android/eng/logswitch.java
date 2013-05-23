@@ -1,21 +1,24 @@
 package com.spreadtrum.android.eng;
 
-import android.util.Log;
-import android.widget.Toast;
-import android.os.Bundle;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+
+import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.preference.CheckBoxPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
+import android.util.Log;
 import android.view.Gravity;
+import android.widget.Toast;
 
 public class logswitch extends PreferenceActivity 
 implements Preference.OnPreferenceChangeListener{
+    private static final boolean DEBUG = Debug.isDebug();
 	private static final String LOG_TAG = "logswitch";
 	private static final String KEY_INTEG = "integrity_set";
 	private static final String KEY_FBAND = "fband_set";
@@ -78,7 +81,7 @@ implements Preference.OnPreferenceChangeListener{
 				ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
 				DataOutputStream outputBufferStream = new DataOutputStream(outputBuffer);
 
-				Log.e(LOG_TAG, "engopen sockid=" + sockid);
+				if(DEBUG) Log.d(LOG_TAG, "engopen sockid=" + sockid);
 				try {
     /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
 					if(engconstents.ENG_AT_SETARMLOG == msg.what)
@@ -99,7 +102,7 @@ implements Preference.OnPreferenceChangeListener{
 				return;
 				}
 				mEf.engwrite(sockid,outputBuffer.toByteArray(),outputBuffer.toByteArray().length);
-				Log.d(LOG_TAG, "after engwrite");
+				if(DEBUG) Log.d(LOG_TAG, "after engwrite");
 				int dataSize = 512;
 				byte[] inputBytes = new byte[dataSize];
 				int showlen= mEf.engread(sockid,inputBytes,dataSize);
@@ -128,7 +131,7 @@ implements Preference.OnPreferenceChangeListener{
 	public boolean onPreferenceChange(Preference preference, Object newValue) {
 		// TODO Auto-generated method stub
 		final String key = preference.getKey();
-		Log.d(LOG_TAG, "onPreferenceChange newValue.toString() = "+newValue.toString());
+		if(DEBUG) Log.d(LOG_TAG, "onPreferenceChange newValue.toString() = "+newValue.toString());
 		
 		if(newValue.toString().equals("true"))
 			openlog = 1;

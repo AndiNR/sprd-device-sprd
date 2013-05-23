@@ -3,19 +3,18 @@ package com.spreadtrum.android.eng;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import com.spreadtrum.android.eng.R;
-
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.os.Debug;
 import android.os.IBinder;
 import android.util.Log;
 
 /* SlogUI Added by Yuntao.xiao*/
 
 public class SlogService extends Service {
-
+    private static final boolean DEBUG = Debug.isDebug();
 
 	private static final Class[] mStartForegroundSignature = new Class[] {
 			int.class, Notification.class };
@@ -73,10 +72,10 @@ public class SlogService extends Service {
 								mStartForegroundArgs);
 					} catch (InvocationTargetException e) {
 						// Should not happen.
-						Log.w("Slog", "Unable to invoke startForeground", e);
+						 Log.e("Slog", "Unable to invoke startForeground", e);
 					} catch (IllegalAccessException e) {
 						// Should not happen.
-						Log.w("Slog", "Unable to invoke startForeground", e);
+						 Log.e("Slog", "Unable to invoke startForeground", e);
 					}
 					return;
 				}
@@ -98,10 +97,10 @@ public class SlogService extends Service {
 				mStopForeground.invoke(this, mStopForegroundArgs);
 			} catch (InvocationTargetException e) {
 				// Should not happen.
-				Log.w("Slog", "Unable to invoke stopForeground", e);
+				 Log.e("Slog", "Unable to invoke stopForeground", e);
 			} catch (IllegalAccessException e) {
 				// Should not happen.
-				Log.w("Slog", "Unable to invoke stopForeground", e);
+				 Log.e("Slog", "Unable to invoke stopForeground", e);
 			}
 			return;
 		}

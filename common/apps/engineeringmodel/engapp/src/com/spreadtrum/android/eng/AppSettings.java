@@ -8,6 +8,7 @@ import java.io.IOException;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.SystemProperties;
 import android.preference.CheckBoxPreference;
 import android.preference.Preference;
@@ -17,6 +18,7 @@ import android.provider.Settings;
 import android.util.Log;
 
 public class AppSettings extends PreferenceActivity {
+    private static final boolean DEBUG = Debug.isDebug();
     private static final String LOG_TAG = "engineeringmodel";
 
     private static final String CALL_FORWARD_QUERY = "call_forward_query";
@@ -55,7 +57,7 @@ public class AppSettings extends PreferenceActivity {
         mModemReset = (CheckBoxPreference)findPreference(MODEM_RESET);
 
         String result = SystemProperties.get("persist.sys.sprd.modemreset");
-        Log.e(LOG_TAG, "result: "+ result + ", result.equals(): " + (result.equals("1")));
+        if(DEBUG) Log.d(LOG_TAG, "result: "+ result + ", result.equals(): " + (result.equals("1")));
         mModemReset.setChecked(result.equals("1"));
         mEngSqlite = EngSqlite.getInstance(this);
     }
@@ -68,7 +70,7 @@ public class AppSettings extends PreferenceActivity {
     	}
 		mAcceRotation.setChecked(check);
         String usbMode = SystemProperties.get("sys.usb.config", "");
-        Log.e(LOG_TAG, " usbMode = " + usbMode);
+        if(DEBUG) Log.d(LOG_TAG, " usbMode = " + usbMode);
         mEnableVserGser.setChecked(usbMode.endsWith("vser,gser"));
         boolean test = mEngSqlite.queryData(ENG_TESTMODE);
         if (!test) {
@@ -105,7 +107,7 @@ public class AppSettings extends PreferenceActivity {
 				getApplicationContext().stopService(new Intent(getApplicationContext(), AutoAnswerService.class));
 			}
 
-			Log.e(LOG_TAG, "auto answer state "+newState);
+			if(DEBUG)  Log.d(LOG_TAG, "auto answer state "+newState);
 			return true;
 		//add by liguxiang 07-12-11 for engineeringmoodel usb settings begin
 	}else if(preference == mEnableVserGser){

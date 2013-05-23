@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -17,7 +18,8 @@ import android.util.Log;
 import android.widget.Toast;
 
 public class HsupaSetting extends PreferenceActivity implements Preference.OnPreferenceChangeListener{
-	private static final String TAG = "HsupaSetting";
+    private static final boolean DEBUG = Debug.isDebug();
+    private static final String TAG = "HsupaSetting";
 	private static final String KEY = "hsupa_setting";
 	private int sockid = 0;
 	private engfetch mEf;
@@ -58,7 +60,7 @@ public class HsupaSetting extends PreferenceActivity implements Preference.OnPre
 		public void handleMessage(Message msg) {
 			ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
 			DataOutputStream outputBufferStream = new DataOutputStream(outputBuffer);
-			Log.e(TAG, "engopen sockid=" + sockid);
+			if(DEBUG) Log.d(TAG, "engopen sockid=" + sockid);
 			String str;
 			switch (msg.what) {
 			case QUERY: {
@@ -94,7 +96,7 @@ public class HsupaSetting extends PreferenceActivity implements Preference.OnPre
 			byte[] inputBytes = new byte[dataSize];
 			int showlen = mEf.engread(sockid, inputBytes, dataSize);
 			String str1 = new String(inputBytes, 0, showlen,Charset.defaultCharset());
-			Log.e(TAG, "str1=" + str1);
+			if(DEBUG) Log.d(TAG, "str1=" + str1);
 			if (str1.equals("1")) {
 				setChecked(false);
 			} else if (str1.equals("3")) {

@@ -5,6 +5,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -14,11 +15,11 @@ import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.text.method.NumberKeyListener;
 import android.util.Log;
-import android.view.Gravity;
 import android.widget.Toast;
 
 public class aocsettings extends PreferenceActivity 
 implements Preference.OnPreferenceChangeListener{
+    private static final boolean DEBUG = Debug.isDebug();
 	private static final String LOG_TAG = "aocsettings";
 	private static final String KEY_AOCACT= "aoc_active";
 	private static final String KEY_AOCSET = "aoc_setting";
@@ -78,7 +79,7 @@ implements Preference.OnPreferenceChangeListener{
 		public void handleMessage(Message msg) {
 			ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
 			DataOutputStream outputBufferStream = new DataOutputStream(outputBuffer);
-			Log.d(LOG_TAG, "engopen sockid=" + sockid);
+			if(DEBUG) Log.d(LOG_TAG, "engopen sockid=" + sockid);
 
 			try {
 				switch (msg.what) {
@@ -108,7 +109,7 @@ implements Preference.OnPreferenceChangeListener{
 			byte[] inputBytes = new byte[dataSize];
 			int showlen = mEf.engread(sockid, inputBytes, dataSize);
 			String str1 = new String(inputBytes, 0, showlen);
-			Log.d(LOG_TAG, "AT = " + msg.what + ";return = " + str1);
+			if(DEBUG) Log.d(LOG_TAG, "AT = " + msg.what + ";return = " + str1);
 			if (str1.equals("OK")) {
 				DisplayToast("Set Success.");
 			} else if (str1.equals("ERROR")) {

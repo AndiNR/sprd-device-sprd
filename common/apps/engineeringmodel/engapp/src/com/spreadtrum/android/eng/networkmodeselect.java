@@ -1,28 +1,23 @@
 package com.spreadtrum.android.eng;
 
-import android.telephony.TelephonyManager;
-import android.util.Log;
-import android.widget.Toast;
+import android.os.AsyncResult;
 import android.os.Bundle;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
-import android.preference.PreferenceManager;
-import android.os.AsyncResult;
+import android.telephony.TelephonyManager;
+import android.util.Log;
 
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneFactory;
-import com.android.internal.telephony.TelephonyIntents;
-import com.android.internal.telephony.TelephonyProperties;
 
 public class networkmodeselect extends PreferenceActivity
 implements Preference.OnPreferenceChangeListener{
+    private static final boolean DEBUG = Debug.isDebug();
     private static final String LOG_TAG = "networkmodeselect";
     private static final boolean DBG = true;
     private static final String KEY_NETW = "preferred_network_mode_key";
@@ -92,12 +87,6 @@ implements Preference.OnPreferenceChangeListener{
                      .obtainMessage(MyHandler.MESSAGE_GET_PREFERRED_NETWORK_TYPE));
             }
         }
-
-        if (DBG) { log (" 14 "); }
-       // mButtonPreferredNetworkMode.setValue(Integer.toString(settingsNetworkMode));
-        if (DBG) { log (" 2 "); }
-        //mButtonPreferredNetworkMode.setSummary("Preferred nework mode: "+mButtonPreferredNetworkMode.getEntry());
-
     }
 
     private class MyHandler extends Handler {
@@ -122,7 +111,6 @@ implements Preference.OnPreferenceChangeListener{
 
         private void handleGetPreferredNetworkTypeResponse(Message msg) {
             AsyncResult ar = (AsyncResult) msg.obj;
-            if (DBG) { log (" 3 "); }
             if (ar.exception == null) {
                 int modemNetworkMode = ((int[])ar.result)[0];
 
@@ -193,7 +181,6 @@ implements Preference.OnPreferenceChangeListener{
 
         private void handleSetPreferredNetworkTypeResponse(Message msg) {
             AsyncResult ar = (AsyncResult) msg.obj;
-            if (DBG) { log (" 5 "); }
             if (ar.exception == null) {
                 int networkMode = Integer.valueOf(
                     mButtonPreferredNetworkMode.getValue()).intValue();
@@ -213,7 +200,6 @@ implements Preference.OnPreferenceChangeListener{
             }
         }
         private void resetNetworkModeToDefault() {
-            if (DBG) { log (" 6 "); }
             //set the mButtonPreferredNetworkMode
             mButtonPreferredNetworkMode.setValue(Integer.toString(preferredNetworkMode));
             //set the Settings.System
@@ -256,7 +242,6 @@ implements Preference.OnPreferenceChangeListener{
     public boolean onPreferenceChange(Preference preference, Object objValue){
         // TODO Auto-generated method stub
         if (preference == mButtonPreferredNetworkMode) {
-        if (DBG) { log (" 7 "); }
             //NOTE onPreferenceChange seems to be called even if there is no change
             //Check if the button value is changed from the System.Setting
             mButtonPreferredNetworkMode.setValue((String) objValue);
@@ -311,7 +296,7 @@ implements Preference.OnPreferenceChangeListener{
     }
 
     private static void log(String msg) {
-        Log.d(LOG_TAG, msg);
+        if(DEBUG) Log.d(LOG_TAG, msg);
     }
 
 }

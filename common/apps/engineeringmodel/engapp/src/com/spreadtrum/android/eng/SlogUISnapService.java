@@ -68,10 +68,10 @@ public class SlogUISnapService extends Service {
 								mStartSnapSvcArgs);
 					} catch (InvocationTargetException e) {
 						// Should not happen.
-						Log.w("Slog", "Unable to invoke startForeground", e);
+						 Log.e("Slog", "Unable to invoke startForeground", e);
 					} catch (IllegalAccessException e) {
 						// Should not happen.
-						Log.w("Slog", "Unable to invoke startForeground", e);
+						 Log.e("Slog", "Unable to invoke startForeground", e);
 					}
 
 				}
@@ -95,10 +95,10 @@ public class SlogUISnapService extends Service {
 				mStopSnapSvc.invoke(this, mStopSnapArgs);
 			} catch (InvocationTargetException e) {
 				// Should not happen.
-				Log.w("ApiDemos", "Unable to invoke stopForeground", e);
+				 Log.e("ApiDemos", "Unable to invoke stopForeground", e);
 			} catch (IllegalAccessException e) {
 				// Should not happen.
-				Log.w("ApiDemos", "Unable to invoke stopForeground", e);
+				 Log.e("ApiDemos", "Unable to invoke stopForeground", e);
 			}
 			return;
 		}

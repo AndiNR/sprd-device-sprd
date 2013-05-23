@@ -103,7 +103,7 @@ public class VideoType extends Activity{
 		try{
 			value = Integer.valueOf(v);
 		}catch (Exception e) {
-			Log.d(TAG, "Pase " + v + " to Integer Error !");
+			Log.e(TAG, "Pase " + v + " to Integer Error !");
 		}
 		return value;
 	}

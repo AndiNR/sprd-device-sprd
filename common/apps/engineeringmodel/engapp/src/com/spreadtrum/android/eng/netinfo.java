@@ -9,11 +9,13 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo.State;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.util.Log;
 import android.widget.TextView;
 
 public class netinfo extends Activity {
+    private static final boolean DEBUG = Debug.isDebug();
 	private static final String TAG = "netinfo";
 	private int sockid = 0;
 	private engfetch mEf;
@@ -46,7 +48,7 @@ public class netinfo extends Activity {
 					requestEvent(engconstents.ENG_AT_CCED, 0, NCELL);
 				} else {
 					tv1.setText("network is unavailable");
-					Log.d(TAG, "network is unavailable");
+					if(DEBUG) Log.d(TAG, "network is unavailable");
 				}
 			}
 		}).start();
@@ -57,7 +59,7 @@ public class netinfo extends Activity {
 		case engconstents.ENG_AT_CCED:
 			ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
 			DataOutputStream outputBufferStream = new DataOutputStream(outputBuffer);
-			Log.e(TAG, "engopen sockid=" + sockid);
+			if(DEBUG) Log.d(TAG, "engopen sockid=" + sockid);
 /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
             //str = String.format("%d,%d,%d,%d", code, 2, arg1,arg2);
             str = new StringBuilder().append(code).append(",").append(2)
@@ -75,7 +77,7 @@ public class netinfo extends Activity {
 			byte[] inputBytes = new byte[dataSize];
 			int showlen = mEf.engread(sockid, inputBytes, dataSize);
 			String str = new String(inputBytes, 0, showlen).trim();
-			Log.d(TAG, "get result : " + str);
+			if(DEBUG) Log.d(TAG, "get result : " + str);
 			if (arg2 == SCELL) {
 				String s = "";
 				if (str.indexOf(",") != -1) {

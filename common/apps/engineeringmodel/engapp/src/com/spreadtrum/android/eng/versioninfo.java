@@ -4,13 +4,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
+
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.util.Log;
 import android.widget.TextView;
 
 public class versioninfo extends Activity {
+    private static final boolean DEBUG = Debug.isDebug();
 	private static final String TAG = "versioninfo";
 	private int sockid = 0;
 	private engfetch mEf;

@@ -1,15 +1,18 @@
 package com.spreadtrum.android.eng;
 
-import android.widget.TextView;
-import android.app.Activity;
-import android.os.Bundle;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import android.util.Log;
+
+import android.app.Activity;
 import android.content.Intent;
+import android.os.Bundle;
+import android.os.Debug;
+import android.util.Log;
+import android.widget.TextView;
 
 public class TextInfo extends Activity{
+    private static final boolean DEBUG = Debug.isDebug();
     static final String TAG = "TextInfo";
 
     private TextView mTextView;
@@ -74,7 +77,7 @@ public class TextInfo extends Activity{
                         default:
                             mTextView.setText("ERROR");
                         }
-                        Log.d(TAG, "mATline :" + mATline);
+                        if(DEBUG) Log.d(TAG, "mATline :" + mATline);
                         try {
                             outputBufferStream.writeBytes(mATline);
                         } catch (IOException e) {
@@ -92,7 +95,7 @@ public class TextInfo extends Activity{
                         if(mATResponse.length() >= 10){
                             mATResponse = mATResponse.substring(10);//delete "+SFPL: " line
                         }
-                        Log.e(TAG, "mATResponse:" + mATResponse);
+                        if(DEBUG) Log.d(TAG, "mATResponse:" + mATResponse);
                         if (mATResponse.length() > 0) {
                             mTextView.setText(mATResponse);
                         } else {

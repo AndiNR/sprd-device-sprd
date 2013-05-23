@@ -11,6 +11,7 @@ import android.util.Log;
 import android.widget.TextView;
 
 public class Layer1Monitor extends Activity {
+    
 	static final String LogTag = "Layer1Monitor";
 
 	static final int MSG_REFRESH = 1;

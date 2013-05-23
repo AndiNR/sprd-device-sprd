@@ -1,24 +1,26 @@
 package com.spreadtrum.android.eng;
 
-import android.app.Activity;
-import android.text.method.NumberKeyListener;
-import android.util.Log;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.Toast;
-import android.os.Bundle;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
-import android.view.Gravity;
-import android.view.View;
+import android.app.Activity;
+import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.text.method.NumberKeyListener;
+import android.util.Log;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
 
 public class sendgprsdata extends Activity {
+    private static final boolean DEBUG = Debug.isDebug();
 	private static final String LOG_TAG = "sendgprsdata";
 	private int sockid = 0;
 	private engfetch mEf;
@@ -103,7 +105,7 @@ public class sendgprsdata extends Activity {
 
 				if(!getEditTextValue()) return;
 
-				Log.e(LOG_TAG, "engopen sockid=" + sockid);
+				if(DEBUG) Log.d(LOG_TAG, "engopen sockid=" + sockid);
 				if(bHasContent){
     /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
                 //str=String.format("%d,%d,%d,%d,%s", msg.what,3,100,1,strInput);

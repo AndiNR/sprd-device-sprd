@@ -1,16 +1,17 @@
 package com.spreadtrum.android.eng;
 
-import android.app.Activity;
-import android.util.Log;
-import android.widget.TextView;
-import android.os.Bundle;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.os.Debug;
 import android.util.Log;
-import android.os.Handler;
+import android.widget.TextView;
 
 public class wifitest extends Activity {
+    private static final boolean DEBUG = Debug.isDebug();
 	private static final String LOG_TAG = "engnetinfo";
 	private int sockid = 0;
 	private engfetch mEf;
