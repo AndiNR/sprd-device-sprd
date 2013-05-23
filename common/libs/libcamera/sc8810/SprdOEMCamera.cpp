@@ -193,6 +193,7 @@ DCAM_DIMENSIONS_T g_dcam_dimensions;
 camera_cb_f_type g_callback;
 JPEGENC_CBrtnType g_encoder_param;
 pthread_t g_preview_thr; //the thread pointer for preview processor.
+pthread_t g_facedetect_thr; //the thread pointer for face detect processor.
 pthread_t g_capture_thr; //the thread pointer for capture processor.
 pthread_t g_encoder_thr; //the thread pointer for encoder processor.
 pthread_t g_restart_thr;  //the thread pointer for preview restart processor.
@@ -3500,7 +3501,7 @@ void camera_fd_init(void *client_data)
     //create the thread for FD
     pthread_attr_init (&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    if(0 != (ret = pthread_create(&g_preview_thr, &attr, camera_fd_thread, client_data))) {
+    if(0 != (ret = pthread_create(&g_facedetect_thr, &attr, camera_fd_thread, client_data))) {
         ALOGE("Fail to create FD thread.");
     } else {
         ALOGV("create FD thread done.");
