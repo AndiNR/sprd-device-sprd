@@ -1,25 +1,26 @@
 package com.spreadtrum.android.eng;
 
-import android.app.Activity;
-import android.util.Log;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.TextView;
-import android.os.Bundle;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import android.view.View;
-import android.widget.Toast;
+
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.AlertDialog.Builder;
+import android.content.DialogInterface;
+import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.content.DialogInterface;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
 
 public class unlockfreq extends Activity {
+    private static final boolean DEBUG = Debug.isDebug();
 	private static final String LOG_TAG = "engnetinfo";
 	private int sockid = 0;
 	private engfetch mEf;
@@ -46,7 +47,7 @@ public class unlockfreq extends Activity {
 		mButton.setOnClickListener(new Button.OnClickListener(){
 			public void onClick(View v) {
 			// TODO Auto-generated method stub
-			Log.d(LOG_TAG, "before engwrite");
+			if(DEBUG) Log.d(LOG_TAG, "before engwrite");
            /*Add 20130201 Spreadst of 122488 crash when input a long number to UNLOCK FREQUENCY start */
             int len =mET.getText().toString().length();
             if(len>=10){
@@ -64,7 +65,7 @@ public class unlockfreq extends Activity {
             /*Add 20130201 Spreadst of 122488 crash when input a long number to UNLOCK FREQUENCY end */
 			Message m = mHandler.obtainMessage(engconstents.ENG_AT_SETSPFRQ, 0, 0, 0);
 			mHandler.sendMessage(m);
-			Log.d(LOG_TAG, "after engwrite");
+			if(DEBUG) Log.d(LOG_TAG, "after engwrite");
 			}
 		});
 

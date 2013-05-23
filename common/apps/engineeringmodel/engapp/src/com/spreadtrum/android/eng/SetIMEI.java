@@ -1,23 +1,21 @@
 package com.spreadtrum.android.eng;
 
-import android.app.Activity;
-import android.util.Log;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.Toast;
-import android.view.View.OnClickListener; 
-import android.os.Bundle;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
+import android.app.Activity;
+import android.os.Bundle;
+import android.os.Debug;
+import android.util.Log;
 import android.view.View;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.Message;
+import android.view.View.OnClickListener;
+import android.widget.Button;
+import android.widget.EditText;
 
 public class SetIMEI extends Activity  implements OnClickListener {
+    private static final boolean DEBUG = Debug.isDebug();
     private static final String LOG_TAG = "engineeringmodel";
     private EditText     mIMEIEdit;
     private Button 		 mButtonR;
@@ -68,7 +66,7 @@ public class SetIMEI extends Activity  implements OnClickListener {
         outputBuffer = new ByteArrayOutputStream();
         outputBufferStream = new DataOutputStream(outputBuffer);
 
-        Log.e(LOG_TAG, "Engmode socket open, id:" + mSocketID);
+        if(DEBUG) Log.d(LOG_TAG, "Engmode socket open, id:" + mSocketID);
         /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
         //mATline =String.format("%d,%d", engconstents.ENG_AT_REQUEST_IMEI, 0);
         mATline =new StringBuilder().append(engconstents.ENG_AT_REQUEST_IMEI).append(",")
@@ -88,7 +86,7 @@ public class SetIMEI extends Activity  implements OnClickListener {
 
         int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
         mATResponse =  new String(inputBytes, 0, showlen,Charset.defaultCharset());
-        Log.d(LOG_TAG, "Read IMEI: " + mATResponse);
+        if(DEBUG) Log.d(LOG_TAG, "Read IMEI: " + mATResponse);
         if (mATResponse.equals("Error") == false) {
 			return mATResponse;
         }
@@ -104,7 +102,7 @@ public class SetIMEI extends Activity  implements OnClickListener {
 	protected void onDestroy() {
 		mEf.engclose(mSocketID);
 		super.onDestroy();
-		Log.d(LOG_TAG, "setimei activity onDestroy.");
+		if(DEBUG) Log.d(LOG_TAG, "setimei activity onDestroy.");
 	}
 
 }

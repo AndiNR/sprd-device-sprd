@@ -1,9 +1,8 @@
 package com.spreadtrum.android.eng;
 
-import com.spreadtrum.android.eng.R;
-
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Debug;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -13,6 +12,7 @@ import android.widget.CheckBox;
 
 public class LogSettingSlogUIAndroidPage extends Activity {
 	// Dim views
+    private static final boolean DEBUG = Debug.isDebug();
 	private CheckBox chkGeneral;
 	private CheckBox chkSystem;
 	private CheckBox chkRadio;
@@ -77,7 +77,7 @@ public class LogSettingSlogUIAndroidPage extends Activity {
 				break;
 
 			default:
-				Log.w("Slog->AndroidPage", "Wrong id given.");
+				if(DEBUG) Log.d("Slog->AndroidPage", "Wrong id given.");
 			}
 
 			return;

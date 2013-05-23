@@ -1,19 +1,21 @@
 package com.spreadtrum.android.eng;
 
-import android.app.Activity;
-import android.util.Log;
-import android.widget.TextView;
-import android.os.Bundle;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import android.util.Log;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.util.Log;
+import android.widget.TextView;
 
 public class cellinfo extends Activity {
+    private static final boolean DEBUG = Debug.isDebug();
 	private static final String LOG_TAG = "engnetinfo";
 	private int sockid = 0;
 	private engfetch mEf;
@@ -57,7 +59,7 @@ private class EventHandler extends Handler
 			    ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
 			    DataOutputStream outputBufferStream = new DataOutputStream(outputBuffer);
 
-			    Log.e(LOG_TAG, "engopen sockid=" + sockid);
+			    if(DEBUG) Log.d(LOG_TAG, "engopen sockid=" + sockid);
 			    String strtemp = new String("?");
     /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
                 //str=String.format("%d,%s", msg.what,strtemp);

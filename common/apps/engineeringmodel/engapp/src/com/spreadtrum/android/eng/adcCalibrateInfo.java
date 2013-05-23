@@ -3,8 +3,10 @@ package com.spreadtrum.android.eng;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -12,6 +14,7 @@ import android.util.Log;
 import android.widget.TextView;
 
 public class adcCalibrateInfo extends Activity {
+    private static final boolean DEBUG = Debug.isDebug();
 	private static final String LOG_TAG = "adcCalibrateInfo";
 	private int sockid = 0;
 	private engfetch mEf;
@@ -54,7 +57,7 @@ public class adcCalibrateInfo extends Activity {
 			ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
 			DataOutputStream outputBufferStream = new DataOutputStream(outputBuffer);
 
-			Log.e(LOG_TAG, "engopen sockid=" + sockid);
+			if(DEBUG) Log.d(LOG_TAG, "engopen sockid=" + sockid);
 
             /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
             //str=String.format("%d,%d,%d,%d,%d", msg.what,3,0,0,3);

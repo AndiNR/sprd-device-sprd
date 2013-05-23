@@ -25,7 +25,6 @@ public class RFMaxPower extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.rfmaxpower);
-		Log.e("weicl","70:==================================aaaaaaaaaaaaaaaaaa===============");
 		txtViewlabel01 = (TextView) findViewById(R.id.rfmaxpower_id);
 		txtViewlabel01.setTextSize(20);
 
@@ -71,7 +70,6 @@ public class RFMaxPower extends Activity {
 			mUiThread.post(new Runnable() {
 				public void run() {
 					txtViewlabel01.setText(str);
-					Log.e("weicl","70:=================================================");
 				}
 			});
 			break;

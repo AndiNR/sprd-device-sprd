@@ -1,25 +1,26 @@
 package com.spreadtrum.android.eng;
 
-import java.io.IOException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 
 import org.apache.http.util.EncodingUtils;
 
 import android.content.Context;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Message;
 import android.os.StatFs;
+import android.os.storage.IMountService;
 import android.util.Log;
 import android.widget.CheckBox;
 import android.widget.RadioButton;
 
-import android.os.storage.IMountService;
 import com.android.internal.app.IMediaContainerService;
-//import android.os.storage.StorageVolume;
 
 public class SlogAction {
+    private static final boolean DEBUG = Debug.isDebug();
     // =========================Const=============================================================================
     // slog.conf StorageLocation
     private static final String SLOG_CONF_LOCATION = "/data/local/tmp/slog/slog.conf";
@@ -161,7 +162,7 @@ public class SlogAction {
                     return true;
                 break;
             default:
-                Log.w("GetState(int)", "You have given a invalid case");
+                 Log.e("GetState(int)", "You have given a invalid case");
                 break;
             }
         } catch (NullPointerException nullPointer) {
@@ -299,7 +300,7 @@ public class SlogAction {
             SetState(MAINKEY, status, false);
             break;
         default:
-            Log.w("SetState(int,boolean)", "You have given a invalid case");
+            if(DEBUG) Log.d("SetState(int,boolean)", "You have given a invalid case");
         }
     }
 
@@ -620,7 +621,7 @@ public class SlogAction {
 
             try {
                 if (proc.waitFor() != 0) {
-                    Log.w("ClearLog", "Command" + SLOG_COMMAND_CLEAR
+                    if(DEBUG) Log.d("ClearLog", "Command" + SLOG_COMMAND_CLEAR
                             + " return value = " + proc.exitValue()
                             + ", maybe something wrong.");
                 }
@@ -654,7 +655,7 @@ public class SlogAction {
                     SLOG_COMMAND_DUMP + filename);
             try {
                 if (proc.waitFor() != 0) {
-                    Log.w(NowMethodName, "Command" + SLOG_COMMAND_DUMP
+                    if(DEBUG) Log.d(NowMethodName, "Command" + SLOG_COMMAND_DUMP
                             + " exit value=" + proc.exitValue()
                             + ",maybe it has some problem");
                 }
@@ -757,7 +758,7 @@ public class SlogAction {
                     Process proc = runtime.exec(SLOG_COMMAND_SCREENSHOT);
                     try {
                         if (proc.waitFor() != 0) {
-                        Log.i("Snap", "Exit value=" + proc.exitValue()
+                        if(DEBUG) Log.d("Snap", "Exit value=" + proc.exitValue()
                             + ".Maybe not correct");
                         }
 
