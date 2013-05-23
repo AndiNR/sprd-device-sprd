@@ -138,6 +138,7 @@ private:
 	bool                  allocateCaptureMem(bool initJpegHeap);
 	void                  freeCaptureMem();	
 	uint32_t              getRedisplayMem();
+	void                  FreeReDisplayMem();
 	static void           camera_cb(camera_cb_type cb,
 					const void *client_data,
 					camera_func_type func,
@@ -235,6 +236,8 @@ private:
 	bool                            displayOneFrame(uint32_t width, 
 							uint32_t height,
 							uint32_t phy_addr, char *frame_addr);
+	bool                            iSDisplayCaptureFrame();
+	bool                            iSZslMode();
 	/* These constants reflect the number of buffers that libqcamera requires
 	for preview and raw, and need to be updated when libqcamera
 	changes.
@@ -260,6 +263,7 @@ private:
 	uint32_t                        mJpegHeapSize;
 	uint32_t                        mFDAddr;
 	camera_memory_t                 *mMetadataHeap;
+	sprd_camera_memory_t            *mReDisplayHeap;
 	//TODO: put the picture dimensions in the CameraParameters object;
 	SprdCameraParameters            mParameters;	
 	int                             mPreviewHeight;

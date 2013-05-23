@@ -402,7 +402,7 @@ status_t SprdCameraHardware::takePicture()
     Mutex::Autolock l(&mLock);
 	//to do it
 /*
-	if ((CAMERA_ZSL_MODE != mode) || (CAMERA_ZSL_CONTINUE_SHOT_MODE != mode)) {
+	if (!iSZslMode()) {
 		//stop preview first for debug
 	    if (isPreviewing()) {
 			LOGV("call stopPreviewInternal in takePicture().");
@@ -1203,6 +1203,34 @@ bool SprdCameraHardware::allocatePreviewMem()
 	return true;
 }
 
+uint32_t SprdCameraHardware::getRedisplayMem()
+{
+	uint32_t buffer_size = camera_get_size_align_page(mPreviewWidth*mPreviewHeight*3/2);
+
+	mReDisplayHeap = GetPmem(buffer_size, 1);
+
+	if(NULL == mReDisplayHeap)
+		return 0;
+
+	if(NULL == mReDisplayHeap->handle) {
+		LOGE("Fail to GetPmem mReDisplayHeap. buffer_size: 0x%x.", buffer_size);
+		return 0;
+	}
+
+	if(mReDisplayHeap->phys_addr & 0xFF) {
+		LOGE("error: the mReDisplayHeap is not 256 bytes aligned.");
+		return 0;
+	}
+	return mReDisplayHeap->phys_addr;
+}
+
+void SprdCameraHardware::FreeReDisplayMem()
+{
+	LOGI("free redisplay mem.");
+	FreePmem(mReDisplayHeap);
+	mReDisplayHeap = NULL;
+}
+
 void SprdCameraHardware::freePreviewMem()
 {
 	FreeFdmem();
@@ -1443,7 +1471,7 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 		return NO_ERROR;		
 	}
 	//to do it
-/*	if (CAMERA_ZSL_MODE != mode) {
+/*	if (!iSZslMode()) {
 		// We check for these two states explicitly because it is possible
 		// for startPreview() to be called in response to a raw or JPEG
 		// callback, but before we've updated the state from SPRD_WAITING_RAW
@@ -1469,7 +1497,7 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 		deinitPreview();
 		return UNKNOWN_ERROR;
 	}
-//	if (CAMERA_ZSL_MODE == mode) {
+//	if (iSZslMode()) {
 	    if (!initCapture(mData_cb != NULL)) {
 			deinitCapture();
 			LOGE("initCapture failed. Not taking picture.");
@@ -1540,6 +1568,29 @@ takepicture_mode SprdCameraHardware::getCaptureMode()
 
 	return mCaptureMode;
 }
+
+bool SprdCameraHardware::iSDisplayCaptureFrame()
+{
+	bool ret = true;
+
+	if ((CAMERA_ZSL_MODE == mCaptureMode)
+		|| (CAMERA_ZSL_CONTINUE_SHOT_MODE == mCaptureMode)) {
+		ret = false;
+	}
+	LOGI("dislapy capture flag is %d.",ret);
+	return ret;
+}
+
+bool SprdCameraHardware::iSZslMode()
+{
+	bool ret = true;
+	if ((CAMERA_ZSL_MODE != mCaptureMode)
+		&& (CAMERA_ZSL_CONTINUE_SHOT_MODE != mCaptureMode)) {
+		ret = false;
+	}
+	return ret;
+}
+
 
 status_t SprdCameraHardware::cancelPictureInternal()
 {
@@ -2034,25 +2085,28 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
 	uint32_t phy_addr = 0;
 	uint32_t width = mPreviewWidth;
 	uint32_t height = mPreviewHeight;	
-/*
-	phy_addr = getRedisplayMem();
+/* to do it
+	if (iSDisplayCaptureFrame()) {
+		phy_addr = getRedisplayMem();
 
-	if(0 == phy_addr) {
-		LOGE("%s: get review memory failed", __func__);
-		goto callbackraw;
-	}		
-	
-	if( 0 != camera_get_data_redisplay(phy_addr, width, height, frame->buffer_phy_addr, 
-									frame->buffer_uv_phy_addr, frame->dx, frame->dy)) {
-		LOGE("%s: Fail to camera_get_data_redisplay.", __func__);
-		goto callbackraw;
-	}
-		
-	if (!displayOneFrame(width, height, phy_addr, (char *)frame->buf_Virt_Addr))
-	{
-		LOGE("%s: displayOneFrame failed", __func__);
-	}
-*/
+		if(0 == phy_addr) {
+			LOGE("%s: get review memory failed", __func__);
+			goto callbackraw;
+		}
+
+		if( 0 != camera_get_data_redisplay(phy_addr, width, height, frame->buffer_phy_addr, 
+										frame->buffer_uv_phy_addr, frame->dx, frame->dy)) {
+			LOGE("%s: Fail to camera_get_data_redisplay.", __func__);
+			FreeReDisplayMem();
+			goto callbackraw;
+		}
+
+		if (!displayOneFrame(width, height, phy_addr, (char *)frame->buf_Virt_Addr))
+		{
+			LOGE("%s: displayOneFrame failed", __func__);
+		}
+		FreeReDisplayMem();
+	}*/
 callbackraw:
 	if (mData_cb!= NULL) {
 		// Find the offset within the heap of the current buffer.
@@ -2213,7 +2267,9 @@ void SprdCameraHardware::receiveJpegPosPicture(void)//(camera_frame_type *frame)
 		// We need to keep the raw heap around until the JPEG is fully
 		// encoded, because the JPEG encode uses the raw image contained in
 		// that heap.
-		deinitCapture();
+		if (!iSZslMode()) {
+			deinitCapture();
+		}
 	}
 	
 	print_time();
@@ -2277,14 +2333,12 @@ void SprdCameraHardware::receiveJpegPicture(JPEGENC_CBrtnType *encInfo)
 	// NOTE: the JPEG encoder uses the raw image contained in mRawHeap, so we need
 	// to keep the heap around until the encoding is complete.
 	LOGV("receiveJpegPicture: free the Raw and Jpeg mem. 0x%x, 0x%x", mRawHeap, mMiscHeap);
-	if ((CAMERA_ZSL_MODE != mCaptureMode) && (CAMERA_ZSL_CONTINUE_SHOT_MODE != mCaptureMode)) {
+/*to do it
+	if (!iSZslMode()) {
 		if (encInfo->need_free) {
-	        FreePmem(mRawHeap);
-	        mRawHeap = NULL;
-	        FreePmem(mMiscHeap);
-	        mMiscHeap = NULL;
+			deinitCapture();
 		}
-	}
+	}*/
 	print_time();
 	LOGV("receiveJpegPicture: X callback done.");
 }
