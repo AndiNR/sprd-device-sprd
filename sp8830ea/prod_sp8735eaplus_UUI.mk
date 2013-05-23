@@ -27,6 +27,7 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	universe_ui_support=true\
 	ro.com.android.dataroaming=false \
 	persist.sys.sprd.modemreset=2 \
+	persist.msms.phone_count=2 \
 	ro.msms.phone_count=2 \
  	persist.msms.phone_default=0 \
 	ro.modem.count=2 \

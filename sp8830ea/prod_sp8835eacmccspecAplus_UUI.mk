@@ -27,6 +27,7 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
 	ro.com.android.dataroaming=false \
 	persist.sys.sprd.modemreset=2 \
+	persist.msms.phone_count=2 \
 	universe_ui_support=true \
 	ro.msms.phone_count=2 \
 	persist.msms.phone_default=0 \
