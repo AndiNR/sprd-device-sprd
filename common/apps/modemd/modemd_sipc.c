@@ -174,7 +174,7 @@ void* detect_sipc_modem(void *param)
 	} else
 		MODEMD_LOGE("%s: input wrong modem type!", __func__);
 
-	assert_fd = open(assert_dev, O_WRONLY);
+	assert_fd = open(assert_dev, O_RDWR);
 	MODEMD_LOGD("%s: open assert dev: %s, fd = %d", __func__, assert_dev, assert_fd);
 	if (assert_fd < 0) {
 		MODEMD_LOGE("open %s failed, error: %s", assert_dev, strerror(errno));
@@ -213,7 +213,7 @@ void* detect_sipc_modem(void *param)
 			memset(buf, 0, sizeof(buf));
 			numRead = read(fd, buf, sizeof(buf));
 			if (numRead <= 0) {
-				MODEMD_LOGE("read %d return %d", fd ,numRead);
+				MODEMD_LOGE("read %d return %d, errno = %s", fd ,numRead, strerror(errno));
 				sleep(1);
 				continue;
 			}

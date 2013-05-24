@@ -38,9 +38,25 @@ on boot
     chown system system /sys/class/backlight/sprd_backlight/brightness
 
     chmod 660 /proc/cpt/wdtirq
+    chmod 660 /proc/cpt/stop
+    chmod 660 /proc/cpt/start
+    chmod 660 /proc/cpt/modem
+    chmod 660 /proc/cpt/dsp
     chmod 660 /proc/cpw/wdtirq
+    chmod 660 /proc/cpw/stop
+    chmod 660 /proc/cpwt/start
+    chmod 660 /proc/cpw/modem
+    chmod 660 /proc/cpw/dsp
     chown system root /proc/cpt/wdtirq
+    chown system root /proc/cpt/stop
+    chown system root /proc/cpt/start
+    chown system root /proc/cpt/modem
+    chown system root /proc/cpt/dsp
     chown system root /proc/cpw/wdtirq
+    chown system root /proc/cpw/stop
+    chown system root /proc/cpw/start
+    chown system root /proc/cpw/modem
+    chown system root /proc/cpw/dsp
 
     insmod /system/lib/modules/ft5306_ts.ko
     insmod /system/lib/modules/bcmdhd.ko
