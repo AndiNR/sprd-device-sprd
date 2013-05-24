@@ -313,10 +313,12 @@ static int cp_internal_to_external()
 			}
 			system(buffer);
 			debug_log("%s", buffer);
+			closedir(p_dirent);
 			return 1;
 		}
 	}
 
+	closedir(p_dirent);
 	return 0;
 }
 
@@ -391,6 +393,7 @@ static void use_ori_log_dir()
 	if(log_num == 0)
 		create_log_dir();
 
+	closedir(p_dir);
 	return;
 }
 
