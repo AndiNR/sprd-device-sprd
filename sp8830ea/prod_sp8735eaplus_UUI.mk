@@ -26,7 +26,6 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
 	universe_ui_support=true\
 	ro.com.android.dataroaming=false \
-	persist.sys.sprd.modemreset=2 \
 	persist.msms.phone_count=2 \
 	ro.msms.phone_count=2 \
  	persist.msms.phone_default=0 \
@@ -57,6 +56,11 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.modem.w.id=1 \
 	ro.modem.w.count=1
 
+ifeq ($(TARGET_BUILD_VARIANT),user)
+  PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1
+else
+  PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=0
+endif
 
 # Set default USB interface
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
