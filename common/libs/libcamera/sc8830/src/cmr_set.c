@@ -724,7 +724,8 @@ int camera_set_ctrl(camera_parm_type id,
 		&& (CAMERA_PARM_THUMBCOMP != id)
 		&& (CAMERA_PARM_JPEGCOMP != id)
 		&& (CAMERA_PARM_DCDV_MODE != id)
-		&& (CAMERA_PARM_SHOT_NUM != id)) {
+		&& (CAMERA_PARM_SHOT_NUM != id)
+		&& (CAMERA_PARAM_SLOWMOTION != id)) {
 		return ret;
 	}
 
@@ -736,6 +737,10 @@ int camera_set_ctrl(camera_parm_type id,
 	}
 
 	switch (id) {
+	case CAMERA_PARAM_SLOWMOTION:
+		cxt->cmr_set.slow_motion_mode = parm;
+		CMR_LOGI("slow motion:%d.",parm);
+		break;
 	case CAMERA_PARM_SHOT_NUM:
 		cxt->total_capture_num = parm;
 		CMR_LOGI("capture num is %d.",parm);
@@ -998,10 +1003,15 @@ int camera_set_ctrl(camera_parm_type id,
 
 	case CAMERA_PARM_PREVIEW_MODE:   /* Use camera_preview_mode_type */
 		CMR_LOGV("parm=%d, cxt->cmr_set.video_mode = %d \n", parm, cxt->cmr_set.video_mode);
+
 		if (parm != cxt->cmr_set.video_mode) {
 
 			CMR_LOGV("cxt->preview_status = %d \n", cxt->preview_status);
 
+			if (0 != parm) {
+				parm = (0 == cxt->cmr_set.slow_motion_mode) ? parm : cxt->cmr_set.slow_motion_mode;
+				CMR_LOGI("video mode:%d.",parm);
+			}
 			if (CMR_PREVIEW == cxt->preview_status) {
 
 				if (before_set) {

@@ -42,6 +42,7 @@ LOCAL uint32_t _ov8825_ExtFunc(uint32_t ctl_param);
 LOCAL int _ov8825_get_VTS(void);
 LOCAL int _ov8825_set_VTS(int VTS);
 LOCAL uint32_t _ov8825_ReadGain(uint32_t param);
+LOCAL uint32_t _ov8825_set_video_mode(uint32_t param);
 
 
 static uint32_t g_flash_mode_en = 0;
@@ -551,7 +552,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov8825_ioctl_func_tab = {
 	PNULL, //_ov8825_GetExifInfo,
 	_ov8825_ExtFunc,
 	PNULL, //_ov8825_set_anti_flicker,
-	PNULL, //_ov8825_set_video_mode,
+	_ov8825_set_video_mode,
 	PNULL, //pick_jpeg_stream
 	PNULL,  //meter_mode
 	PNULL, //get_status
@@ -1668,4 +1669,41 @@ LOCAL uint32_t _ov8825_ReadGain(uint32_t param)
 
 	return rtn;
 }
+LOCAL const SENSOR_REG_T ov8825_video_mode_tab[][5]=
+{
+	/* preview mode: ?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* slow motion mode 0:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* slow motion mode 1:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* slow motion mode 2:?fps*/
+	{
+		{0xffff, 0xff}
+	}
+};
+LOCAL uint32_t _ov8825_set_video_mode(uint32_t param)
+{
+	SENSOR_REG_T_PTR sensor_reg_ptr;
+	uint16_t i=0x00;
 
+	if (param>4)
+		return 0;
+
+	sensor_reg_ptr=(SENSOR_REG_T_PTR)ov8825_video_mode_tab[param];
+	for (i=0x00; (0xffff!=sensor_reg_ptr[i].reg_addr)||(0xff!=sensor_reg_ptr[i].reg_value); i++) {
+		Sensor_WriteReg(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
+	}
+	SENSOR_PRINT("0x%02x", param);
+	return 0;
+}

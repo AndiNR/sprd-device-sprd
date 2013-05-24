@@ -2,7 +2,7 @@
 * hardware/sprd/common/libcamera/SprdCameraParameters.h
  * parameters on sc8825
  *
- * Copyright (C) 2013 Spreadtrum 
+ * Copyright (C) 2013 Spreadtrum
  * 
  * Author: Shan He <shan.he@spreadtrum.com>
  *
@@ -28,12 +28,12 @@ public:
 	enum ConfigType {
 		kFrontCameraConfig,
 		kBackCameraConfig
-	};		
+	};
 
 	typedef struct {
 		int width;
 		int height;
-	} Size;	
+	} Size;
 
 	typedef struct {
 		int x;
@@ -42,15 +42,15 @@ public:
 		int height;
 	}Rect;
 
-public:	
+public:
     SprdCameraParameters();
     SprdCameraParameters(const String8 &params);
-    ~SprdCameraParameters();	
+    ~SprdCameraParameters();
 
 	void setDefault(ConfigType config);
-	
+
 	void getFocusAreas(int *area, int *count);
-	void getFocusAreas(int *area, int *count, Size *preview_size, 
+	void getFocusAreas(int *area, int *count, Size *preview_size,
 					 Rect *preview_rect, int orientation, bool mirror);
 	int getFocusMode();
 	int getWhiteBalance();
@@ -67,6 +67,7 @@ public:
 	int getIso();
 	int getRecordingHint();
 	int getFlashMode();
+	int getSlowmotion();
 
 	// These sizes have to be a multiple of 16 in each dimension
 	static const Size kPreviewSizes[];
@@ -77,7 +78,7 @@ public:
 	static const int kInvalidValue = 0xffffffff;
 	static const int kFrontCameraConfigCount;
 	static const int kBackCameraConfigCount;
-	
+
 	static const char KEY_FOCUS_AREAS[];
 	static const char KEY_FOCUS_MODE[];
 	static const char KEY_WHITE_BALANCE[];
@@ -93,7 +94,8 @@ public:
 	static const char KEY_ANTI_BINDING[];
 	static const char KEY_ISO[];
 	static const char KEY_RECORDING_HINT[];
-	static const char KEY_FLASH_MODE[];	
+	static const char KEY_FLASH_MODE[];
+	static const char KEY_SLOWMOTION[];
 
 private:
 

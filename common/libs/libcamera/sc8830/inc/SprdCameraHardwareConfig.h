@@ -136,6 +136,14 @@ enum {
 	CAMERA_RECORDING_MAX
 };
 
+enum {
+	CAMERA_SLOWMOTION_0 = 0,
+	CAMERA_SLOWMOTION_1,
+	CAMERA_SLOWMOTION_2,
+	CAMERA_SLOWMOTION_3,
+	CAMERA_SLOWMOTION_MAX
+};
+
 struct str_map {
 	const char *const desc;
 	int val;
@@ -271,6 +279,14 @@ const struct str_map recording_hint_map[] = {
 	{NULL,              0}
 };
 
+const struct str_map slowmotion_map[] = {
+	{"0",               CAMERA_SLOWMOTION_0},
+	{"1",               CAMERA_SLOWMOTION_1},
+	{"2",               CAMERA_SLOWMOTION_2},
+	{"3",               CAMERA_SLOWMOTION_3},
+	{NULL,              0}
+};
+
 struct config_element{
 	const char *const key;
 	const char *const value;
@@ -346,7 +362,11 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"hdr","0"},
 	{"zsl-supported","true"},
 	{"zsl","1"},
-	{"capture-mode", "1"}
+	{"capture-mode", "1"},
+	{"slow-motion-supported","true"},
+	{"max-slow-motion","3"},
+	{"slow-motion-values", "0,1,2,3"},
+	{"slow-motion", "0"}
 };
 struct config_element sprd_back_camera_hardware_config[] = {
 	{"whitebalance-values", "auto,incandescent,fluorescent,daylight,cloudy-daylight"},
@@ -433,7 +453,11 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"hdr","0"},
 	{"zsl-supported","true"},
 	{"zsl","1"},
-	{"capture-mode", "1"}
+	{"capture-mode", "1"},
+	{"slow-motion-supported","true"},
+	{"max-slow-motion","3"},
+	{"slow-motion-values", "0,1,2,3"},
+	{"slow-motion", "0"}
 };
 
 #endif //_SPRD_CAMERA_HARDWARE_CONFIG_H_
