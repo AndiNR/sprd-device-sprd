@@ -340,7 +340,12 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5640_ioctl_func_tab = {
 	PNULL,  //meter_mode
 	PNULL, //get_status
 	_ov5640_StreamOn,
+#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
+	_ov5640_StreamOff,
+	PNULL
+#else
 	_ov5640_StreamOff
+#endif
 };
 
 

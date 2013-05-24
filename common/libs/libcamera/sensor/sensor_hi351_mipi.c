@@ -4123,6 +4123,7 @@ LOCAL const SENSOR_REG_T HI351_common[]=
 	           
 	{0xb8, 0x29},//LSC GAIN B
 
+
 	{0xb9, 0x80},
 	{0xba, 0x2a},//LSC GAIN R
 	{0xbb, 0x7a},
@@ -7106,7 +7107,12 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_HI351_ioctl_func_tab =
     PNULL, //meter_mode
     PNULL, //get_status
     _hi351_StreamOn,
-    _hi351_StreamOff
+#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
+	_hi351_StreamOff,
+	PNULL
+#else
+	_hi351_StreamOff
+#endif
 };
 
 /**---------------------------------------------------------------------------*

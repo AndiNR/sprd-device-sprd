@@ -473,7 +473,12 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov8830_ioctl_func_tab = {
 	PNULL,  //meter_mode
 	PNULL, //get_status
 	_ov8830_StreamOn,
+#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
+	_ov8830_StreamOff,
+	PNULL
+#else
 	_ov8830_StreamOff
+#endif
 };
 
 

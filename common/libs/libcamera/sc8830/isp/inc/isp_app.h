@@ -200,6 +200,7 @@ enum isp_ctrl_cmd{
 	ISP_CTRL_VIDEO_MODE,
 	ISP_CTRL_AF_STOP,
 	ISP_CTRL_AE_TOUCH,
+	ISP_CTRL_AE_INFO,
 	ISP_CTRL_MAX
 };
 
@@ -208,6 +209,13 @@ enum isp_capbility_cmd{
 	ISP_CAPTURE_SIZE,
 	ISP_FALSH_EB,
 	ISP_CAPBILITY_MAX
+};
+
+struct isp_ae_info {
+	uint32_t min_fps;  //min frame rate
+	uint32_t max_fps;  //max frame rate
+	uint32_t line_time;  //time of line
+	uint32_t gain;
 };
 
 struct isp_addr{

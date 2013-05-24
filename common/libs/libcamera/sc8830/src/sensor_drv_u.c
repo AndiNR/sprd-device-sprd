@@ -1871,6 +1871,16 @@ int Sensor_SetMode(uint32_t mode)
 	return ret;
 }
 
+int Sensor_GetMode(uint32_t *mode)
+{
+	if (SENSOR_FALSE == Sensor_IsInit()) {
+		SENSOR_PRINT("sensor has not init");
+		return SENSOR_OP_STATUS_ERR;
+	}
+	*mode = s_sensor_mode[Sensor_GetCurId()];
+	return SENSOR_SUCCESS;
+}
+
 int _Sensor_StreamOn(void)
 {
 	int                    err = 0xff;
