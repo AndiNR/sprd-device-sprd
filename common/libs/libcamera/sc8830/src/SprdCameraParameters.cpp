@@ -2,7 +2,7 @@
 * hardware/sprd/common/libcamera/SprdCameraParameters.cpp
  * parameters on sc8825
  *
- * Copyright (C) 2013 Spreadtrum 
+ * Copyright (C) 2013 Spreadtrum
  * 
  * Author: Shan He <shan.he@spreadtrum.com>
  *
@@ -38,7 +38,7 @@ namespace android {
 
 ////////////////////////////////////////////////////////////////////////////////////
 static int lookup(const struct str_map *const arr, const char *name, int def);
-// Parse rectangle from string like "(100,100,200,200, weight)" . 
+// Parse rectangle from string like "(100,100,200,200, weight)" .
 // if exclude_weight is true: the weight is not write to rect array
 static int parse_rect(int *rect, int *count, const char *str, bool exclude_weight);
 static void coordinate_struct_convert(int *rect_arr,int arr_size);
@@ -55,7 +55,7 @@ const SprdCameraParameters::Size SprdCameraParameters::kPreviewSizes[] = {
 		{ 320, 240 }, // QVGA
 		{ 240, 160 }, // SQVGA
 		{ 176, 144 }, // QCIF
-	};	
+	};
 
 const int SprdCameraParameters::kPreviewSettingCount = sizeof(kPreviewSizes)/sizeof(Size);
 
@@ -79,6 +79,7 @@ const char SprdCameraParameters::KEY_ANTI_BINDING[] = "antibanding";
 const char SprdCameraParameters::KEY_ISO[] = "iso";
 const char SprdCameraParameters::KEY_RECORDING_HINT[] = "recording-hint";
 const char SprdCameraParameters::KEY_FLASH_MODE[] = "flash-mode";
+const char SprdCameraParameters::KEY_SLOWMOTION[] = "slow-motion";
 
 ////////////////////////////////////////////////////////////////////////////////////
 SprdCameraParameters::SprdCameraParameters():CameraParameters()
@@ -99,21 +100,21 @@ SprdCameraParameters::~SprdCameraParameters()
 void SprdCameraParameters::setDefault(ConfigType config)
 {
 	struct config_element *element = NULL;
-	int count = 0;	
+	int count = 0;
 
-	setPreviewSize(kPreviewSizes[kDefaultPreviewSize].width, 
+	setPreviewSize(kPreviewSizes[kDefaultPreviewSize].width,
 				kPreviewSizes[kDefaultPreviewSize].height);
-	
+
 	setPreviewFrameRate(15);
 	setPreviewFormat("yuv420sp");
 	setPictureFormat("jpeg");
-	
+
 	set("jpeg-quality", "100"); // maximum quality
 	set("jpeg-thumbnail-width", "320");
 	set("jpeg-thumbnail-height", "240");
 	set("jpeg-thumbnail-quality", "80");
-	set("focus-mode", "auto");	
-	
+	set("focus-mode", "auto");
+
 	switch (config) {
 	case kFrontCameraConfig:
 		element = sprd_front_camera_hardware_config;
@@ -152,9 +153,9 @@ void SprdCameraParameters::getFocusAreas(int *area, int *count, Size *preview_si
 	int area_count = 0;
 
 	parse_rect(&focus_area[0], &area_count, p, true);
-	
+
 	if(area_count > 0) {
-		int ret = coordinate_convert(&focus_area[0], area_count, orientation, mirror, 
+		int ret = coordinate_convert(&focus_area[0], area_count, orientation, mirror,
 								preview_size, preview_rect);
 		
 		if(ret) {
@@ -226,7 +227,7 @@ int SprdCameraParameters::getZoom()
 
 	return lookup(zoom_map, p, CAMERA_ZOOM_1X);
 }
-	
+
 int SprdCameraParameters::getBrightness()
 {
 	const char *p = get(KEY_BRIGHTNESS);
@@ -276,10 +277,17 @@ int SprdCameraParameters::getFlashMode()
 	return lookup(flash_mode_map, p, CAMERA_FLASH_MODE_OFF);
 }
 
+int SprdCameraParameters::getSlowmotion()
+{
+	const char *p = get(KEY_SLOWMOTION);
+
+	return lookup(slowmotion_map, p, CAMERA_SLOWMOTION_0);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 ///////////////////////////////////////////////////////////////////////////////
-// Parse rectangle from string like "(100,100,200,200, weight)" . 
+// Parse rectangle from string like "(100,100,200,200, weight)" .
 // if exclude_weight is true: the weight is not write to rect array
 static int parse_rect(int *rect, int *count, const char *str, bool exclude_weight)
 {
@@ -297,9 +305,9 @@ static int parse_rect(int *rect, int *count, const char *str, bool exclude_weigh
 		b = strchr(a,'(');
 		if (b == 0)
 			goto lookuprect_done;
-		
+
 		a = b + 1;
-		b = strchr(a,')');		
+		b = strchr(a,')');
 		if(b == 0)
 			goto lookuprect_done;
 
@@ -331,17 +339,17 @@ static int parse_rect(int *rect, int *count, const char *str, bool exclude_weigh
 
 		b = c + 1;
 		if (!exclude_weight)
-			*rect_arr++ =strtol(b, 0, 0);//weight			
+			*rect_arr++ =strtol(b, 0, 0);//weight
 		memset(m, 0, 20);
 		memset(k, 0, 10);
-		
+
 		cnt++;
-		
+
 		if(cnt == SprdCameraParameters::kFocusZoneMax)
 			break;
-		
+
 	}while(a);
-	
+
 lookuprect_done:
     *count = cnt;
 
@@ -359,7 +367,7 @@ static int lookupvalue(const struct str_map *const arr, const char *name)
             trav++;
         }
     }
-	
+
 	return SprdCameraParameters::kInvalidValue;
 }
 
@@ -425,7 +433,7 @@ static int coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror
 	int width = preview_size->width;
 	int height = preview_size->height;
 
-	LOGV("coordinate_convert: mPreviewWidth=%d, mPreviewHeight=%d, arr_size=%d, angle=%d, is_mirror=%d \n", 
+	LOGV("coordinate_convert: mPreviewWidth=%d, mPreviewHeight=%d, arr_size=%d, angle=%d, is_mirror=%d \n",
 	width, height, arr_size, angle, is_mirror);
 
 	for(i=0;i<arr_size*2;i++) {
@@ -475,7 +483,7 @@ static int coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror
 			rect_arr[i*4+1]       = rect_arr[i*4+3];
 			rect_arr[i*4+3]     = temp;
 		}
-		
+
 		LOGV("coordinate_convert: %d: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
 	}
 
@@ -492,7 +500,7 @@ static int coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror
 		if(rect_arr[i+1] < 0) {
 			rect_arr[i+1]= 0;
 		}
-		
+
 		if(rect_arr[i+1] > width) {
 			rect_arr[i+1] = width;
 		}
@@ -507,11 +515,11 @@ static int coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror
 			i, preview_x, preview_y, preview_w, preview_h);
 
 	for(i=0;i<arr_size;i++)
-	{		
+	{
 		int point_x, point_y;
 
 		LOGV("coordinate_convert %d: org: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);			
-		
+
 		// only for angle 90/270
 		// calculate the centre point
 		recHalfHeight  	= (rect_arr[i*4+2] - rect_arr[i])/2;
@@ -524,7 +532,7 @@ static int coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror
 		centre_y		= height - centre_y;
 		LOGV("coordinate_convert %d: sensor centre pointer: x=%d, y=%d, half_w=%d, half_h=%d.\n",
 				i, centre_x, centre_y, recHalfWidth, recHalfHeight);
-		
+
 		point_x = preview_x + centre_x*preview_w/width;
 		point_y = preview_y + centre_y*preview_h/height;
 		LOGV("coordinate_convert %d: out point: x=%d, y=%d\n", i, point_x, point_y);

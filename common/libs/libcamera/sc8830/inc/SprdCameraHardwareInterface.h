@@ -1,7 +1,7 @@
 /*
  * hardware/sprd/hsdroid/libcamera/sprdcamerahardwareinterface.h
  *
- * Copyright (C) 2013 Spreadtrum 
+ * Copyright (C) 2013 Spreadtrum
  * 
  *
  * This software is licensed under the terms of the GNU General Public

@@ -242,6 +242,7 @@ struct camera_settings {
 	uint32_t                 isp_af_win_val;
 	uint32_t                 auto_flash;
 	uint8_t                  bflash;
+	uint32_t                 slow_motion_mode;
 };
 
 struct camera_context {

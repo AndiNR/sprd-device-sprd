@@ -1462,12 +1462,13 @@ void SprdCameraHardware::restoreFreq()
 status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 {
 	takepicture_mode mode = getCaptureMode();
-	LOGV("startPreview E");
+	LOGV("startPreview E isRecording=%d.",isRecording);
 
 	if (isPreviewing()) {
 		LOGE("startPreview is already in progress, doing nothing.");
 		LOGV("mLock:startPreview E.\n");
 		setRecordingMode(isRecording);
+		setCameraPreviewMode();
 		return NO_ERROR;		
 	}
 	//to do it
@@ -1737,6 +1738,7 @@ status_t SprdCameraHardware::setCameraParameters()
 #endif		
 	}
 
+    SET_PARM(CAMERA_PARAM_SLOWMOTION, mParameters.getSlowmotion());
 	SET_PARM(CAMERA_PARM_WB, mParameters.getWhiteBalance());
 	SET_PARM(CAMERA_PARM_CAMERA_ID, mParameters.getCameraId());
 	SET_PARM(CAMERA_PARM_JPEGCOMP, mParameters.getJpegQuality());
