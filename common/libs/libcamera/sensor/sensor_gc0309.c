@@ -442,7 +442,12 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_GC0309_ioctl_func_tab =
         PNULL,
         PNULL,
         PNULL,
-        PNULL
+#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
+	PNULL,
+	PNULL
+#else
+	PNULL
+#endif
 };
 
 /**---------------------------------------------------------------------------*

@@ -818,7 +818,12 @@ static SENSOR_IOCTL_FUNC_TAB_T s_GC2035_ioctl_func_tab =
 	PNULL,
 	PNULL,
 	PNULL,
+#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
+	PNULL,
 	PNULL
+#else
+	PNULL
+#endif
 };
 
 SENSOR_INFO_T g_GC2035_yuv_info =
