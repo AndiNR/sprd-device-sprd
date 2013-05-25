@@ -291,7 +291,7 @@ static int32_t utest_dcam_awb(void)
 	}
 
 	if (cmr_cxt_ptr->save_directory) {
-		sprintf(file_name, "%s_%dX%d.raw", cmr_cxt_ptr->save_directory, cmr_cxt_ptr->capture_width,
+		sprintf(file_name, "%s_%dX%d.mipi_raw", cmr_cxt_ptr->save_directory, cmr_cxt_ptr->capture_width,
 				cmr_cxt_ptr->capture_height);
 		fp = fopen(file_name, "wb");
 		if (fp >= 0) {
@@ -374,7 +374,7 @@ static int32_t utest_dcam_lsc(void)
 	}
 
 	if (cmr_cxt_ptr->save_directory) {
-		sprintf(file_name, "%s_%dX%d.raw", cmr_cxt_ptr->save_directory, cmr_cxt_ptr->capture_width,
+		sprintf(file_name, "%s_%dX%d.mipi_raw", cmr_cxt_ptr->save_directory, cmr_cxt_ptr->capture_width,
 				cmr_cxt_ptr->capture_height);
 		fp = fopen(file_name, "wb");
 		if (fp >= 0) {

@@ -2196,15 +2196,14 @@ int camera_set_frame_type(camera_frame_type *frame_type, struct frm_info* info)
 				0, 0);
 	}else if (CHN_0 == info->channel_id){
 		frm_id = info->frame_id - CAMERA_CAP0_ID_BASE;
-		//frame_type->buf_Virt_Addr = (uint32_t*)g_cxt->cap_mem[frm_id].target_yuv.addr_vir.addr_y;
 		frame_type->buf_Virt_Addr = (uint32_t*)g_cxt->cap_mem[frm_id].cap_raw.addr_vir.addr_y;
 		frame_type->buffer_phy_addr = g_cxt->cap_mem[frm_id].target_yuv.addr_phy.addr_y;
 		frame_type->Y_Addr = (uint8_t *)g_cxt->cap_mem[frm_id].target_yuv.addr_vir.addr_y;
 		frame_type->CbCr_Addr = (uint8_t *)g_cxt->cap_mem[frm_id].target_yuv.addr_vir.addr_u;
-		frame_type->dx = g_cxt->picture_size.width;
-		frame_type->dy = g_cxt->picture_size.height;
-		frame_type->captured_dx = g_cxt->picture_size.width;
-		frame_type->captured_dy = g_cxt->picture_size.height;
+		frame_type->dx = g_cxt->cap_orig_size.width;
+		frame_type->dy = g_cxt->cap_orig_size.height;
+		frame_type->captured_dx = g_cxt->cap_orig_size.width;
+		frame_type->captured_dy = g_cxt->cap_orig_size.height;
 		frame_type->rotation = 0;
 		frame_type->header_size = 0;
 		frame_type->buffer_uv_phy_addr = g_cxt->cap_mem[frm_id].target_yuv.addr_phy.addr_u;
@@ -3728,7 +3727,7 @@ int camera_capture_ability(SENSOR_MODE_INFO_T *sn_mode,
 			CMR_LOGV("Get RawData From RawRGB senosr");
 			img_cap->need_isp = 0;
 			g_cxt->cap_original_fmt = IMG_DATA_TYPE_RAW;
-			g_cxt->cap_zoom_mode = ZOOM_BY_CAP;
+			g_cxt->cap_zoom_mode = ZOOM_POST_PROCESS;
 		} else {
 			if (cap_size->width <= g_cxt->isp_cxt.width_limit) {
 				CMR_LOGV("Need ISP to work at video mode");
@@ -3769,12 +3768,12 @@ int camera_capture_ability(SENSOR_MODE_INFO_T *sn_mode,
 	sn_trim_rect.width   = img_cap->src_img_rect.width;
 	sn_trim_rect.height  = img_cap->src_img_rect.height;
 	if (ZOOM_POST_PROCESS == g_cxt->cap_zoom_mode) {
-		img_cap->src_img_rect.start_x = 0;
-		img_cap->src_img_rect.start_y = 0;
-		img_cap->src_img_rect.width   = sn_mode->width;
-		img_cap->src_img_rect.height  = sn_mode->height;
-		img_cap->dst_img_size.width   = sn_mode->width;
-		img_cap->dst_img_size.height  = sn_mode->height;
+		img_cap->src_img_rect.start_x = sn_mode->trim_start_x;
+		img_cap->src_img_rect.start_y = sn_mode->trim_start_y;
+		img_cap->src_img_rect.width   = sn_mode->trim_width;
+		img_cap->src_img_rect.height  = sn_mode->trim_height;
+		img_cap->dst_img_size.width   = sn_mode->trim_width;
+		img_cap->dst_img_size.height  = sn_mode->trim_height;
 		g_cxt->isp_cxt.drop_slice_num = sn_trim_rect.start_y / CMR_SLICE_HEIGHT;
 		g_cxt->isp_cxt.drop_slice_cnt = 0;
 		CMR_LOGI("drop cnt %d, drop num %d",
