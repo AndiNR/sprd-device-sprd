@@ -485,7 +485,6 @@ void *camera_get_client_data(void);
 int camera_set_fd_mem(uint32_t phy_addr, uint32_t vir_addr, uint32_t mem_size);
 int camera_set_change_size(uint32_t cap_width,uint32_t cap_height,uint32_t preview_width,uint32_t preview_height);
 int camera_get_preview_rect(int *rect_x, int *rect_y, int *rect_width, int *rect_height);
-camera_ret_code_type camera_set_cap_raw_mode(camera_tool_cap_raw_mode cap_raw_mode);
 camera_ret_code_type camera_take_picture_raw(camera_cb_f_type    callback,
 					void                 *client_data,takepicture_mode cap_mode);
 

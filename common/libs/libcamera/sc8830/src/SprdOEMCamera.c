@@ -315,16 +315,8 @@ int camera_isp_init(void)
 	struct isp_video_limit   isp_limit;
 	SENSOR_EXP_INFO_T		 *sensor_info_ptr;
 
-	CMR_LOGV("inited, %d, tool_cap_raw_mode=%d \n", ctrl->isp_inited, g_cxt->tool_cap_raw_mode);
-
 	CMR_PRINT_TIME;
-#if 0
-	if(CAMERA_TOOL_CAP_RAW_ENABLE == g_cxt->tool_cap_raw_mode){
-		/* tmp solution for isp init fail */
-		CMR_LOGV("Tool Raw Mode, no need ISP ");
-		return ret; // aiden debug
-	}
-#endif
+
 	if (0 == ctrl->sensor_inited || V4L2_SENSOR_FORMAT_RAWRGB != g_cxt->sn_cxt.sn_if.img_fmt) {
 		CMR_LOGI("No need to init ISP %d %d", ctrl->sensor_inited, g_cxt->sn_cxt.sn_if.img_fmt);
 		goto exit;
@@ -855,6 +847,7 @@ void *camera_cap_thread_proc(void *data)
 							(uint32_t)NULL);
 				}
 				if ((g_cxt->cap_cnt == g_cxt->total_capture_num)||(CAMERA_HDR_MODE == g_cxt->cap_mode)) {
+					camera_snapshot_stop_set();
 					camera_set_take_picture(TAKE_PICTURE_NO);
 				}
 			}
@@ -1930,6 +1923,7 @@ camera_ret_code_type camera_take_picture(camera_cb_f_type    callback,
 	CMR_LOGI("start");
 	camera_set_client_data(client_data);
 	camera_set_hal_cb(callback);
+	camera_snapshot_start_set();
 	camera_set_take_picture_cap_mode(cap_mode);
 	ret = camera_set_take_picture(TAKE_PICTURE_NEEDED);
 	//to do it
@@ -3150,7 +3144,7 @@ void *camera_af_thread_proc(void *data)
 			break;
 		case CMR_EVT_AF_START:
 			CMR_PRINT_TIME;
-			//ret = camera_autofocus_start();
+			ret = camera_autofocus_start();
 			if (CAMERA_INVALID_STATE == ret) {
 				camera_call_af_cb(CAMERA_EXIT_CB_ABORT,
 					message.data,
@@ -5427,20 +5421,6 @@ int camera_get_preview_rect(int *rect_x, int *rect_y, int *rect_width, int *rect
 
 	CMR_LOGE("camera_get_preview_rect: x=%d, y=%d, w=%d, h=%d \n",
 		*rect_x, *rect_y, *rect_width, *rect_height);
-
-	return ret;
-}
-
-camera_ret_code_type camera_set_cap_raw_mode(camera_tool_cap_raw_mode cap_raw_mode)
-{
-	int ret = CAMERA_SUCCESS;
-
-	if (CAMERA_TOOL_CAP_RAW_NONE !=cap_raw_mode &&
-		CAMERA_TOOL_CAP_RAW_ENABLE !=cap_raw_mode) {
-		ret = -CAMERA_INVALID_PARM;
-	} else {
-		g_cxt->tool_cap_raw_mode = cap_raw_mode;
-	}
 
 	return ret;
 }
