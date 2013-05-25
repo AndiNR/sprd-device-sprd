@@ -48,7 +48,6 @@ enum utest_sensor_id {
 enum utest_calibration_cmd_id {
 	UTEST_CALIBRATION_AWB= 0,
 	UTEST_CALIBRATION_LSC,
-	UTEST_CALIBRATION_FLASHLIGHT,
 	UTEST_CALIBRATION_MAX
 };
 
@@ -73,7 +72,6 @@ struct utest_cmr_context {
 };
 
 static char calibration_awb_file[] = "/data/sensor_%s_awb.dat";
-static char calibration_flashlight_file[] = "/data/sensor_%s_flashlight.dat";
 static char calibration_lsc_file[] = "/data/sensor_%s_lnc_%d_%d_%d.dat";
 
 static struct utest_cmr_context utest_cmr_cxt;
@@ -258,26 +256,21 @@ static int32_t utest_dcam_awb(void)
 	rect.height = cmr_cxt_ptr->capture_height;
 	img_size.width = cmr_cxt_ptr->capture_width;
 	img_size.height = cmr_cxt_ptr->capture_height;
-#if 0
+
 	dst_temp_addr = (uint32_t *)malloc(cmr_cxt_ptr->capture_width * cmr_cxt_ptr->capture_height * 2);
 
-	if(dst_temp_addr) {
-
+	if(dst_temp_addr) {		
 		dst_addr.y_addr = (uint32_t)dst_temp_addr;
 		if (ISP_Cali_UnCompressedPacket(img_addr, dst_addr,img_size, 1)) {
 			ERR("utest_dcam_awb: failed to unCompresse.\n");
 			rtn = -1;
 			goto awb_exit;
 		}
+
 	} else {
 		ERR("utest_dcam_awb: failed to alloc buffer.\n");
 		return -1;
 	}
-#else
-dst_addr.y_addr = img_addr.y_addr;
-dst_addr.uv_addr = img_addr.uv_addr;
-dst_addr.v_addr = img_addr.v_addr;
-#endif
 
 	if (ISP_Cali_RawRGBStat(&dst_addr, &rect, &img_size, &stat_param)) {
 		ERR("utest_dcam_awb: failed to isp_cali_raw_rgb_status.\n");
@@ -298,7 +291,7 @@ dst_addr.v_addr = img_addr.v_addr;
 	}
 
 	if (cmr_cxt_ptr->save_directory) {
-		sprintf(file_name, "%s_%dX%d.mipi_raw", cmr_cxt_ptr->save_directory, cmr_cxt_ptr->capture_width,
+		sprintf(file_name, "%s_%dX%d.raw", cmr_cxt_ptr->save_directory, cmr_cxt_ptr->capture_width,
 				cmr_cxt_ptr->capture_height);
 		fp = fopen(file_name, "wb");
 		if (fp >= 0) {
@@ -316,92 +309,6 @@ awb_exit:
 	free(dst_temp_addr);
 	return rtn;
 }
-
-
-static int32_t utest_dcam_flashlight(void)
-{
-	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
-	SENSOR_EXP_INFO_T *sensor_ptr = (SENSOR_EXP_INFO_T*)Sensor_GetInfo();
-	struct isp_addr_t img_addr = {0, 0, 0};
-	struct isp_rect_t rect = {0, 0, 0,0};
-	struct isp_size_t img_size = {0, 0};
-	struct isp_bayer_ptn_stat_t stat_param;
-	struct isp_addr_t dst_addr = {0, 0, 0};
-	uint32_t *dst_temp_addr = NULL;
-	char file_name[128] = {0};
-	FILE *fp = NULL;
-	int32_t rtn = 0;
-
-	memset(&stat_param, 0, sizeof(isp_bayer_ptn_stat_t));
-	img_addr.y_addr = cmr_cxt_ptr->capture_raw_vir_addr;
-	rect.x = 0;
-	rect.y = 0;
-	rect.width = cmr_cxt_ptr->capture_width;
-	rect.height = cmr_cxt_ptr->capture_height;
-	img_size.width = cmr_cxt_ptr->capture_width;
-	img_size.height = cmr_cxt_ptr->capture_height;
-
-#if 0
-	dst_temp_addr = (uint32_t *)malloc(cmr_cxt_ptr->capture_width * cmr_cxt_ptr->capture_height * 2);
-
-	if(dst_temp_addr) {
-		dst_addr.y_addr = (uint32_t)dst_temp_addr;
-		if (ISP_Cali_UnCompressedPacket(img_addr, dst_addr,img_size, 1)) {
-			ERR("utest_dcam_flashlight: failed to unCompresse.\n");
-			rtn = -1;
-			goto awb_exit;
-		}
-
-	} else {
-		ERR("utest_dcam_flashlight: failed to alloc buffer.\n");
-		return -1;
-	}
-#else
-dst_addr.y_addr = img_addr.y_addr;
-dst_addr.uv_addr = img_addr.uv_addr;
-dst_addr.v_addr = img_addr.v_addr;
-#endif
-
-	if (ISP_Cali_RawRGBStat(&dst_addr, &rect, &img_size, &stat_param)) {
-		ERR("utest_dcam_flashlight: failed to isp_cali_raw_rgb_status.\n");
-		rtn = -1;
-		goto awb_exit;
-	}
-
-	sprintf(file_name, calibration_flashlight_file, sensor_ptr->name, cmr_cxt_ptr->capture_width,
-			cmr_cxt_ptr->capture_height, 0);
-	fp = fopen(file_name, "wb");
-	if (fp >= 0) {
-		fwrite((void *)(&stat_param), 1, sizeof(stat_param), fp);
-		fclose(fp);
-	} else {
-		ERR("utest_dcam_flashlight: failed to open calibration_awb_file.\n");
-		rtn = -1;
-		goto awb_exit;
-	}
-
-	if (cmr_cxt_ptr->save_directory) {
-		sprintf(file_name, "%s_%dX%d.mipi_raw", cmr_cxt_ptr->save_directory, cmr_cxt_ptr->capture_width,
-				cmr_cxt_ptr->capture_height);
-		fp = fopen(file_name, "wb");
-		if (fp >= 0) {
-			fwrite((void *)cmr_cxt_ptr->capture_raw_vir_addr , 1, cmr_cxt_ptr->capture_width * 
-			cmr_cxt_ptr->capture_height * 2, fp);
-			fclose(fp);
-		} else {
-			ERR("utest_dcam_flashlight: failed to open save_directory.\n");
-			rtn = -1;
-			goto awb_exit;
-		}
-	}
-
-awb_exit:
-	if (dst_temp_addr) {
-		free(dst_temp_addr);
-	}
-	return rtn;
-}
-
 
 
 static int32_t utest_dcam_lsc(void)
@@ -430,12 +337,7 @@ static int32_t utest_dcam_lsc(void)
 	ISP_Cali_GetLensTabSize(img_size, 32, &len_tab_size);
 
 	len_tab_addr = (uint32_t *)malloc(len_tab_size);
-	if (NULL == len_tab_addr) {
-		rtn = -1;
-		ERR("utest_dcam_lsc: failed to alloc buffer.\n");
-		goto lsc_exit;
-	}
-#if 0
+	
 	dst_temp_addr = (uint32_t *)malloc(cmr_cxt_ptr->capture_width * cmr_cxt_ptr->capture_height * 2);
 
 	if (NULL == len_tab_addr || NULL == dst_temp_addr) {
@@ -451,11 +353,6 @@ static int32_t utest_dcam_lsc(void)
 		ERR("utest_dcam_lsc: failed to unCompresse.\n");
 		goto lsc_exit;
 	}
-#else
-	dst_addr.y_addr = img_addr.y_addr;
-	dst_addr.uv_addr = img_addr.uv_addr;
-	dst_addr.v_addr = img_addr.v_addr;
-#endif
 
 	if (ISP_Cali_GetLensTabs(dst_addr, 32, img_size, len_tab_addr, 0, 0)) {
 		rtn = -1;
@@ -477,7 +374,7 @@ static int32_t utest_dcam_lsc(void)
 	}
 
 	if (cmr_cxt_ptr->save_directory) {
-		sprintf(file_name, "%s_%dX%d.mipi_raw", cmr_cxt_ptr->save_directory, cmr_cxt_ptr->capture_width,
+		sprintf(file_name, "%s_%dX%d.raw", cmr_cxt_ptr->save_directory, cmr_cxt_ptr->capture_width,
 				cmr_cxt_ptr->capture_height);
 		fp = fopen(file_name, "wb");
 		if (fp >= 0) {
@@ -580,9 +477,6 @@ int main(int argc, char **argv)
 			break;
 		case UTEST_CALIBRATION_LSC:
 			utest_dcam_lsc();
-			break;
-		case UTEST_CALIBRATION_FLASHLIGHT:
-			utest_dcam_flashlight();
 			break;
 		default:
 			rtn = -1;
