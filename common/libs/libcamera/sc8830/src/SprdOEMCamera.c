@@ -855,6 +855,7 @@ void *camera_cap_thread_proc(void *data)
 							(uint32_t)NULL);
 				}
 				if ((g_cxt->cap_cnt == g_cxt->total_capture_num)||(CAMERA_HDR_MODE == g_cxt->cap_mode)) {
+					camera_snapshot_stop_set();
 					camera_set_take_picture(TAKE_PICTURE_NO);
 				}
 			}
@@ -1930,6 +1931,7 @@ camera_ret_code_type camera_take_picture(camera_cb_f_type    callback,
 	CMR_LOGI("start");
 	camera_set_client_data(client_data);
 	camera_set_hal_cb(callback);
+	camera_snapshot_start_set();
 	camera_set_take_picture_cap_mode(cap_mode);
 	ret = camera_set_take_picture(TAKE_PICTURE_NEEDED);
 	//to do it
@@ -3150,7 +3152,7 @@ void *camera_af_thread_proc(void *data)
 			break;
 		case CMR_EVT_AF_START:
 			CMR_PRINT_TIME;
-			//ret = camera_autofocus_start();
+			ret = camera_autofocus_start();
 			if (CAMERA_INVALID_STATE == ret) {
 				camera_call_af_cb(CAMERA_EXIT_CB_ABORT,
 					message.data,

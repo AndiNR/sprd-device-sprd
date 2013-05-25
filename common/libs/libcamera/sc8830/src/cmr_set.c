@@ -581,7 +581,7 @@ int camera_snapshot_start_set(void)
 		/*open flash*/
 		camera_set_flashdevice((uint32_t)FLASH_OPEN);
 	}
-
+#if 0
 	ret = Sensor_Ioctl(SENSOR_IOCTL_BEFORE_SNAPSHOT, (cxt->sn_cxt.capture_mode | (cxt->cap_mode<<CAP_MODE_BITS)));
 	if (ret) {
 		CMR_LOGE("Sensor can't work at this mode %d", cxt->sn_cxt.capture_mode);
@@ -591,6 +591,7 @@ int camera_snapshot_start_set(void)
 	if (CAMERA_HDR_MODE == cxt->cap_mode) {
 		ret = camera_set_hdr_ev(SENSOR_HDR_EV_LEVE_0);
 	}
+#endif
 	return ret;
 }
 
@@ -598,21 +599,23 @@ int camera_snapshot_stop_set(void)
 {
 	int                      ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
-
+#if 0
 	if (CAMERA_HDR_MODE == cxt->cap_mode) {
 		camera_set_hdr_ev(SENSOR_HDR_EV_LEVE_1);
 	}
+#endif
 	if (cxt->cmr_set.flash) {
 		/*open flash*/
 		camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN);
 	}
+#if 0
 	ret = Sensor_Ioctl(SENSOR_IOCTL_AFTER_SNAPSHOT, cxt->sn_cxt.preview_mode);
 	if (ret) {
 		CMR_LOGE("Sensor can't work at this mode %d", cxt->sn_cxt.preview_mode);
 	} else {
 	
 	}
-
+#endif
 	return ret;
 }
 
@@ -1060,6 +1063,10 @@ int camera_autofocus_start(void)
 	SENSOR_EXT_FUN_PARAM_T   af_param;
 
 	CMR_LOGV("zone_cnt %d, x y w h, %d %d %d %d", zone_cnt, ptr[0], ptr[1], ptr[2], ptr[3]);
+	ptr[0] = 300;
+	ptr[1] = 300;
+	ptr[2] = 300;
+	ptr[3] = 300;
 	CMR_PRINT_TIME;
 	if (camera_autofocus_need_exit()) {
 		ret = CAMERA_INVALID_STATE;

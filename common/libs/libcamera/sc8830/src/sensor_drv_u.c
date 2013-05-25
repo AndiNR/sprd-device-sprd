@@ -1684,6 +1684,11 @@ static int  _sensor_cali_load_param(char *cfg_file_dir,SENSOR_INFO_T *sensor_inf
 		return SENSOR_FAIL;
 	}
 
+	rtn = _sensor_cali_flashlight_param_update(cfg_file_dir,sensor_info_ptr, sensor_id);
+	if (rtn) {
+		return SENSOR_FAIL;
+	}
+
 	return SENSOR_SUCCESS;
 }
 

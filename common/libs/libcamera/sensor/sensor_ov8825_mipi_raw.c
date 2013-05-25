@@ -1717,7 +1717,7 @@ LOCAL uint32_t _ov8825_write_af(uint32_t param)
 	uint16_t reg_val = 0x0;
 
 	SENSOR_PRINT("SENSOR_ov8825: _write_af 0x%x", param);
-#if 0
+#if 1
 	value = (param&0xf)<<0x04;
 	value = value + 8 + (g_af_slewrate&0x7);
 	ret_value = Sensor_WriteReg(0x3618, value);
