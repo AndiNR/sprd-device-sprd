@@ -182,10 +182,12 @@ static int get_modem_assert_information(char *assert_info,int size)
         extern int open_uart_device(int mode);
         char ch, *buffer;
         int     read_len=0,ret=0,timeout;
-        int uart_fd = open_uart_device(1);
 
         if((assert_info == NULL) || (size == 0))
                 return 0;
+
+        int uart_fd = open_uart_device(1);
+
         if(uart_fd < 0){
                printf("open_uart_device failed \n");
                return 0;

@@ -542,6 +542,7 @@ void * load_fdl2memory(int *length)
 	size = info->image_size;
         buffer = malloc(size+4);
         if(buffer == NULL){
+                close(fdl_fd);
                 printf("no memory\n");
                 return NULL;
         }
