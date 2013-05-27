@@ -67,6 +67,11 @@ static void *log_handler(void *args)
 	for (;;) {
 		int cnt, res;
 		cnt = read(log->from, log_data_buf, DATA_BUF_SIZE);
+		if (cnt < 0) {
+			DBG("read from log %d\n", cnt);
+			break;
+		}
+
 		//DBG("read from log %d\n", cnt);
 		res = send(log->to, log_data_buf, cnt, 0);
 		//DBG("write to socket %d\n", res);
