@@ -822,7 +822,7 @@ void eng_check_factorymode_formmc(void)
 	}
 
 	fd=open(ENG_FACOTRYSYNC_FILE, O_RDWR|O_CREAT|O_TRUNC);
-	if(fd > 0)
+	if(fd >= 0)
 		close(fd);
 }
 
