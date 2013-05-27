@@ -36,7 +36,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
 
     private CheckBoxPreference androidLogPrefs;
     private ListPreference DspPrefs;
-    private Preference slogPreference;
+    private CheckBoxPreference slogPreference;
 
     private int mSocketID = 0;
     private engfetch mEf;
@@ -68,13 +68,22 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
         /*Add 20130311 Spreadst of 135491 remove slog item when the phone is not 77xx start*/
         slogPreference = (CheckBoxPreference)findPreference("modem_slog_enable");
         String mode = SystemProperties.get("ro.product.hardware");
+        /*Modify 20130527 spreadst of 166285:close the modem log in user-version start*/
+        String re = SystemProperties.get("persist.sys.modem_slog");
+        if(re.isEmpty()&&SystemProperties.get("ro.build.type").equalsIgnoreCase("user")){
+            re="0";
+        }else if(re.isEmpty()&&SystemProperties.get("ro.build.type").equalsIgnoreCase("userdebug")) {
+            re="1";
+        }
+        slogPreference.setChecked("1".equals(re));
+        /*Modify 20130527 spreadst of 166285:close the modem log in user-version end*/
         if(mode==null || !mode.contains("77")){
             getPreferenceScreen().removePreference(slogPreference);
             if(DEBUG) Log.d(LOG_TAG, "remove the preference");
         }
         /*Add 20130311 Spreadst of 135491 remove slog item when the phone is not 77xx end*/
-    }
 
+    }
     @Override
     protected void onStart() {
     if(DEBUG) Log.d(LOG_TAG, "logsetting activity onStart.");
@@ -276,7 +285,14 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
         }
         break;
         case LOG_MODEM_SLOG: {
-            String re = SystemProperties.get("persist.sys.modem_slog", "0");
+            /*Modify 20130527 spreadst of 166285:close the modem log in user-version start*/
+            String re = SystemProperties.get("persist.sys.modem_slog");
+            if(re.isEmpty()&&SystemProperties.get("ro.build.type").equalsIgnoreCase("user")){
+                re="0";
+            }else if(re.isEmpty()&&SystemProperties.get("ro.build.type").equalsIgnoreCase("userdebug")) {
+                re="1";
+            }
+            /*Modify 20130527 spreadst of 166285:close the modem log in user-version end */
             try {
                 state = Integer.parseInt(re);
             }catch(Exception e){

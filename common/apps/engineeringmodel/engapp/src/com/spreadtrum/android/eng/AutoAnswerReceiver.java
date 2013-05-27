@@ -1,6 +1,8 @@
 
 package com.spreadtrum.android.eng;
 
+import android.os.Debug;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -16,8 +18,8 @@ import android.util.Log;
 import android.widget.Toast;
 
 public class AutoAnswerReceiver extends BroadcastReceiver {
-    private static final boolean DEBUG = Debug.isDebug();
     private final String TAG = "AutoAnswerReceiver";
+    private static final boolean DEBUG=Debug.isDebug();
 
     public static final String PREFS_NAME = "ENGINEERINGMODEL";
 
@@ -84,19 +86,29 @@ public class AutoAnswerReceiver extends BroadcastReceiver {
         mEf = new engfetch();
         mSocketID = mEf.engopen();
         mATline = new String();
-        String re = SystemProperties.get("persist.sys.modem_slog", "1");
+        String re = SystemProperties.get("persist.sys.modem_slog");
+        if(re.isEmpty()&&SystemProperties.get("ro.build.type").equalsIgnoreCase("user")){
+            re="0";
+        }else if(re.isEmpty()&&SystemProperties.get("ro.build.type").equalsIgnoreCase("userdebug")) {
+            re="1";
+        }
         int state = Integer.parseInt(re);
 
         ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
         DataOutputStream outputBufferStream = new DataOutputStream(outputBuffer);
-
+        /*Modify 20130527 spreadst of 166285:close the modem log in user-version start*/
         if(DEBUG) Log.d(TAG, "Engmode socket open, id:" + mSocketID);
 
         if (state == 1) {
+            SystemProperties.set("persist.sys.modem_slog", "1");
             mATline = String.format("%d,%d,%s", engconstents.ENG_AT_NOHANDLE_CMD, 1, "AT+SLOG=2");
+            if(DEBUG) Log.d(TAG, "set persist.sys.modem_slog 1");
         } else {
+            SystemProperties.set("persist.sys.modem_slog", "0");
             mATline = String.format("%d,%d,%s", engconstents.ENG_AT_NOHANDLE_CMD, 1, "AT+SLOG=3");
+            if(DEBUG) Log.d(TAG, "set persist.sys.modem_slog 0");
         }
+        /*Modify 20130527 spreadst of 166285:close the modem log in user-version end*/
         try {
             outputBufferStream.writeBytes(mATline);
         } catch (IOException e) {
