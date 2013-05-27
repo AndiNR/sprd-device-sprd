@@ -1921,9 +1921,9 @@ camera_ret_code_type camera_take_picture(camera_cb_f_type    callback,
 	int                      ret = CAMERA_SUCCESS;
 
 	CMR_LOGI("start");
+	camera_snapshot_start_set();
 	camera_set_client_data(client_data);
 	camera_set_hal_cb(callback);
-	camera_snapshot_start_set();
 	camera_set_take_picture_cap_mode(cap_mode);
 	ret = camera_set_take_picture(TAKE_PICTURE_NEEDED);
 	//to do it
@@ -2750,6 +2750,9 @@ int camera_isp_handle(uint32_t evt_type, uint32_t sub_type, void *data)
 		break;
 	case ISP_AF_NOTICE_CALLBACK:
 		ret = camera_isp_af_done(data);
+		break;
+	case ISP_ALG_CALLBACK:
+		ret = camera_isp_alg_done(data);
 		break;
 	default:
 		break;

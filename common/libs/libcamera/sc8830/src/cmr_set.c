@@ -476,6 +476,7 @@ int camera_setting_init(void)
 
 	pthread_mutex_init (&cxt->cmr_set.set_mutex, NULL);
 	sem_init(&cxt->cmr_set.isp_af_sem, 0, 0);
+	sem_init(&cxt->cmr_set.isp_alg_sem, 0, 0);
 
 	return ret;
 }
@@ -486,6 +487,7 @@ int camera_setting_deinit(void)
 	int                      ret = CAMERA_SUCCESS;
 
 	sem_destroy(&cxt->cmr_set.isp_af_sem);
+	sem_destroy(&cxt->cmr_set.isp_alg_sem);
 	pthread_mutex_destroy(&cxt->cmr_set.set_mutex);
 
 	return ret;
@@ -580,6 +582,15 @@ int camera_snapshot_start_set(void)
 	if (cxt->cmr_set.flash) {
 		/*open flash*/
 		camera_set_flashdevice((uint32_t)FLASH_OPEN);
+	/*	ret = isp_ioctl(ISP_CTRL_ALG,ISP_ALG_FAST);
+		if (CAMERA_SUCCESS != ret) {
+			CMR_LOGE("ISP_CTRL_FLASH_EG error.");
+		}
+		sem_wait(&cxt->cmr_set.isp_alg_sem);
+		ret = isp_ioctl(ISP_CTRL_FLASH_EG,0);
+		if (CAMERA_SUCCESS != ret) {
+			CMR_LOGE("ISP_CTRL_FLASH_EG error.");
+		}*/
 	}
 #if 0
 	ret = Sensor_Ioctl(SENSOR_IOCTL_BEFORE_SNAPSHOT, (cxt->sn_cxt.capture_mode | (cxt->cap_mode<<CAP_MODE_BITS)));
@@ -1229,6 +1240,15 @@ int camera_isp_af_done(void *data)
 
 	cxt->cmr_set.isp_af_win_val = isp_af->valid_win;
 	sem_post(&cxt->cmr_set.isp_af_sem);
+	return 0;
+}
+
+int camera_isp_alg_done(void *data)
+{
+	struct camera_context    *cxt = camera_get_cxt();
+
+	CMR_LOGV("isp ALG done.");
+	sem_post(&cxt->cmr_set.isp_alg_sem);
 	return 0;
 }
 
