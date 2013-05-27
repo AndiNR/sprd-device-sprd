@@ -666,7 +666,7 @@ static void *eng_atauto_thread(void *par)
 #define MODEM_SOCKET_BUFFER_SIZE	128
 static void *eng_modemreset_thread(void *par)
 {
-    int pipe_fd = 0;
+    int pipe_fd = -1;
     int soc_fd, n, ret, status;
     char cmdrst[2]={'z',0x0a};
     char modemrst_property[8];
@@ -700,7 +700,7 @@ static void *eng_modemreset_thread(void *par)
         ALOGD("%s: get %d bytes %s\n", __func__, n, buffer);
         if(n>0) {
             if(strstr(buffer, "Assert") != NULL) {
-                if (pipe_fd <= 0) {
+                if (pipe_fd < 0) {
                     pipe_fd = open("/dev/vbpipe0",O_WRONLY);
                     if(pipe_fd < 0) {
                         ALOGD("%s: cannot open vbpipe0\n",__func__);
