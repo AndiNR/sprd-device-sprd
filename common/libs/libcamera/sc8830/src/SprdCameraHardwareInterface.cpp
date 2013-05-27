@@ -1144,7 +1144,7 @@ void SprdCameraHardware::FreePmem(sprd_camera_memory_t* memory)
 			memory->ion_heap = NULL;
 		}
 
-		memory = NULL;
+		free(memory);
 	} 
 	else {
 		LOGV("FreePmem: NULL");
