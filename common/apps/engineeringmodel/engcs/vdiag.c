@@ -225,7 +225,7 @@ void *eng_vdiag_thread(void *x)
 	int ser_fd;
 	int r_cnt, w_cnt;
 	int res, ret=0;
-    int audio_fd;
+	int audio_fd = -1;
 	int wait_cnt = 0;
 	struct eng_param * param = (struct eng_param *)x;
 
@@ -237,7 +237,7 @@ void *eng_vdiag_thread(void *x)
 		initialize_ctrl_file();
 	/*open usb/usart*/
 	ser_fd = open( s_connect_ser_path[param->connect_type], O_RDONLY);
-	if(ser_fd > 0){
+	if(ser_fd >= 0){
 		if(param->connect_type == CONNECT_UART){
 			set_raw_data_speed(ser_fd, 115200);
 	}
@@ -252,6 +252,7 @@ void *eng_vdiag_thread(void *x)
 		if(pipe_fd < 0) {
 			ENG_LOG("eng_vdiag cannot open %s, times:%d\n", s_cp_pipe[param->cp_type], wait_cnt);
 			if(wait_cnt++ >= MAX_OPEN_TIMES){
+				close(ser_fd);
 				ALOGE("eng_vdiag cannot open vpipe(spipe)\n");
 				return NULL;
 			}
@@ -263,10 +264,10 @@ void *eng_vdiag_thread(void *x)
 	if(0 == ensure_audio_para_file_exists((char *)(ENG_AUDIO_PARA_DEBUG))){
 		audio_fd = open(ENG_AUDIO_PARA_DEBUG,O_RDWR);
 	}
-    if (audio_fd > 0) {
+	if (audio_fd >= 0) {
 		read(audio_fd, &audio_total, sizeof(audio_total));
-    }
-	close(audio_fd);
+		close(audio_fd);
+	}
 	ENG_LOG("put diag data from serial to pipe\n");
 
 	init_user_diag_buf();
@@ -282,11 +283,14 @@ void *eng_vdiag_thread(void *x)
 			ENG_LOG("eng_vdiag reopen serial\n");
 			ser_fd = open(s_connect_ser_path[param->connect_type], O_RDONLY);
 			if(ser_fd < 0) {
+				close(pipe_fd);
 				ALOGE("eng_vdiag cannot open vendor serial\n");
 				return NULL;
 			}
+			continue;
 		}
 		ret=0;
+
 		
 		if (get_user_diag_buf(log_data,r_cnt)){
 			ret = eng_diag(ext_data_buf,ext_buf_len);

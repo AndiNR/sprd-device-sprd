@@ -243,7 +243,7 @@ static int eng_event_reg(int fd)
 	if (monitor_svc_fd < 0
 			&& ( strncmp((const char*)regname,ENG_MONITOR,strlen(ENG_MONITOR)) != 0)){
 		memset(eng_write_buf, 0, ENG_MAX_RW_SIZE);
-		memcpy(eng_write_buf, ENG_DESTERROR, ENG_MAX_RW_SIZE);
+		strcpy(eng_write_buf, ENG_DESTERROR);
 		eng_write(fd, eng_write_buf, strlen(eng_write_buf));
 		close(fd);
 		return -1;
@@ -471,7 +471,7 @@ static void  appclient_event_func(int _fd, unsigned ev, void *_l)
 		} else {
 			//tell sender that the desitnation socket closed
 			memset(eng_write_buf, 0, ENG_MAX_RW_SIZE);
-			memcpy(eng_write_buf, ENG_DESTERROR, ENG_MAX_RW_SIZE);
+			strcpy(eng_write_buf, ENG_DESTERROR);
 			eng_write(_fd, eng_write_buf, strlen(eng_write_buf));
 		}
 	}
@@ -510,7 +510,7 @@ static void modemclient_event_func(int _fd, unsigned ev, void *_l)
  			ALOGD("modemclient_event_func dest socket fd error!\n");
 			//tell sender that the desitnation socket closed
 			memset(eng_write_buf, 0, ENG_MAX_RW_SIZE);
-			memcpy(eng_write_buf, ENG_DESTERROR, ENG_MAX_RW_SIZE);
+			strcpy(eng_write_buf, ENG_DESTERROR);
 			eng_write(_fd, eng_write_buf, strlen(eng_write_buf));
  		}
 	}
