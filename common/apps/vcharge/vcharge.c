@@ -31,7 +31,7 @@ main(int argc, char **argv) {
     int ret = -1;
     int vbpipe_fd = -1;
     int pre_usb_online = -1;
-    int usb_online, ac_online, need_notify, need_start=0;
+    int usb_online, ac_online, need_notify=0, need_start=0;
     int pre_ac_online = -1;
     /* open cmux channel */
     LOGD("start\n");
@@ -176,14 +176,14 @@ int uevent_next_event(char* buffer, int buffer_length)
 int read_usb(void)
 {
     int fd = -1;
-    char buf[2];
+    char buf[3];
     int ret = -1;
     fd = open("/sys/class/power_supply/usb/online", O_RDONLY);
     if(fd < 0){
         LOGE("%s: usb online open error\n", __func__);
         return 0;
     }
-    ret = read(fd, buf, 2);
+    ret = read(fd, buf, 2U);
     if(ret >= 0)
       buf[ret] = '\0';
     close(fd);
@@ -201,14 +201,14 @@ int read_usb(void)
 int read_ac(void)
 {
     int fd = -1;
-    char buf[2];
+    char buf[3];
     int ret = -1;
     fd = open("/sys/class/power_supply/ac/online", O_RDONLY);
     if(fd < 0){
         LOGE("%s: ac online open error\n", __func__);
         return 0;
     }
-    ret = read(fd, buf, 2);
+    ret = read(fd, buf, 2U);
     if(ret >= 0)
       buf[ret] = '\0';
     close(fd);
