@@ -883,8 +883,8 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
 	if(cmdvalue == NULL)
 		return -1;
 
-          fd = open("/proc/cmdline", O_RDONLY);
-	if (fd > 0) {
+	fd = open("/proc/cmdline", O_RDONLY);
+	if (fd >= 0) {
 		if (read(fd, cmdline, sizeof(cmdline)) > 0){
 			ALOGD("eng_pcclient: cmdline %s\n",cmdline);
 			/*calibration*/
@@ -941,8 +941,8 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
 			/*engtest*/
 			if(strstr(cmdline,"engtest") != NULL)
 				cmdvalue->engtest = 1;
-			close(fd);
 		}
+		close(fd);
 	}
 	return 0;
 }
