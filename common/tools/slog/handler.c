@@ -168,6 +168,7 @@ void cp_file(char *path, char *new_path)
 	fp_dest = fopen(new_path, "w");
 	if(fp_dest == NULL) {
 		err_log("open notify dest file failed!");
+		fclose(fp_src);
 		return;
 	}
 
@@ -785,8 +786,6 @@ void *modem_log_handler(void *arg)
 	if(slog_enable == SLOG_DISABLE)
 		return NULL;
 
-	ring_buffer_table = malloc(MODEM_CIRCULAR_SIZE);
-
 	info = stream_log_head;
 	while (info) {
 		if (strncmp(info->name, "modem", 5)) {
@@ -817,6 +816,9 @@ void *modem_log_handler(void *arg)
 		pthread_create(&modem_dump_memory_tid, NULL, modem_dump_memory_handler, NULL);
 		modem_thread_first_start = 0;
 	}
+
+	ring_buffer_table = malloc(MODEM_CIRCULAR_SIZE);
+
 	modem_log_handler_started = 1;
 	while(slog_enable != SLOG_DISABLE) {
 
