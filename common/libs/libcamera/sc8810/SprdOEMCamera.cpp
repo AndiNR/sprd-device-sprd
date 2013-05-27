@@ -5609,13 +5609,13 @@ int camera_capture_init(uint32_t mem_size,int32_t capture_fmat)
 	}
 	else
 	{
-	if((s_camera_info.dcam_out_width !=  g_dcam_dimensions.picture_width)
-		||(s_camera_info.dcam_out_height != g_dcam_dimensions.picture_height))
-	{
-		s_camera_info.is_interpolation = 1;
-		ALOGV("SPRD OEM:camera_capture_init,nedd interpolation,dcam out:%d,%d",
-			    s_camera_info.dcam_out_width,s_camera_info.dcam_out_height);
-	}
+		if((s_camera_info.dcam_out_width !=  g_dcam_dimensions.picture_width)
+			||(s_camera_info.dcam_out_height != g_dcam_dimensions.picture_height))
+		{
+			s_camera_info.is_interpolation = 1;
+			ALOGV("SPRD OEM:camera_capture_init,nedd interpolation,dcam out:%d,%d",
+				    s_camera_info.dcam_out_width,s_camera_info.dcam_out_height);
+		}
 	}
 	ret = camera_capture_mem_alloc(s_camera_info.dcam_out_width,s_camera_info.dcam_out_height);
 
