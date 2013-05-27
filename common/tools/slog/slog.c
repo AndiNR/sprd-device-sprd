@@ -44,7 +44,7 @@ int bt_log_handler_started = 0;
 int tcp_log_handler_started = 0;
 int modem_log_handler_started = 0;
 
-int internal_log_size = 10; /*M*/
+int internal_log_size = 5; /*M*/
 
 int hook_modem_flag = 0;
 
@@ -313,12 +313,12 @@ static int cp_internal_to_external()
 			}
 			system(buffer);
 			debug_log("%s", buffer);
-			closedir(p_dirent);
+			closedir(p_dir);
 			return 1;
 		}
 	}
 
-	closedir(p_dirent);
+	closedir(p_dir);
 	return 0;
 }
 
@@ -588,7 +588,10 @@ static void handler_internal_log_size()
 
 	if(!strncmp(current_log_path, external_storage, strlen(external_storage)))
 		return;
-	statfs(current_log_path, &diskInfo);
+	if( statfs(current_log_path, &diskInfo) < 0) {
+		err_log("statfs return err!");
+		return;
+	}
 	unsigned int blocksize = diskInfo.f_bsize;
 	unsigned int availabledisk = diskInfo.f_bavail * blocksize;
 	debug_log("internal available %dM", availabledisk >> 20);
