@@ -458,7 +458,7 @@ LOCAL void MMIDM_setResUri(char* ResUri_content)
 /*****************************************************************************/
 PUBLIC char* MMIDM_getResUri(void)
 {
-   
+
     if(!strlen(s_g_resUri))
     {
        MMIDM_GetDmParaInfo(DM_SRV_ADDR, s_g_resUri,MAX_RESURI_LEN);
@@ -468,9 +468,9 @@ PUBLIC char* MMIDM_getResUri(void)
     {
         MMIDM_GetDmParaInfo(DM_SRV_ADDR, s_g_tresUri,MAX_RESURI_LEN);
       SCI_TRACE_LOW("MMIDM_getResUri tmp: %s", s_g_tresUri);
-	  return s_g_tresUri;	
+	  return s_g_tresUri;
     }
-*/    
+*/
     SCI_TRACE_LOW("MMIDM_getResUri %s", s_g_resUri);
     return s_g_resUri;
 }
@@ -1939,7 +1939,7 @@ LOCAL BOOLEAN MMIDM_BuildStatus(char* status_buf, uint16 buf_size)
 
 		        SCI_FREE(ptr);
 		        ptr = PNULL;
-		    }		//2013-2-20@hong		
+		    }		//2013-2-20@hong
 		   SCI_TRACE_LOW("MMIDM_BuildStatus status_buf  %s",status_buf);
             }
         }
@@ -3646,7 +3646,7 @@ LOCAL BOOLEAN MMIDM_DealWithGetData(char* getbuf)
 
           SCI_MEMSET(status_tag->data.tagContent, 0, 10); //add 2012-3-15
           SCI_STRCPY(status_tag->data.tagContent, (char*)"200"); // add 2012-3-15
-	  
+
 	  while( (scanner_ptr = MMIDM_getNextXmlTagBuf(scanner_ptr, TAG_ITEMID, item_buff, MAX_TAG_BUF_SIZE)) != PNULL)
         {
 
@@ -3666,8 +3666,8 @@ LOCAL BOOLEAN MMIDM_DealWithGetData(char* getbuf)
 	     spdm_readCb(handletype, content, 0, 500);
           } else
           	{
-                SCI_MEMSET(status_tag->data.tagContent, 0, 10);  
-                SCI_STRCPY(status_tag->data.tagContent, (char*)"204");		  	          	
+                SCI_MEMSET(status_tag->data.tagContent, 0, 10);
+                SCI_STRCPY(status_tag->data.tagContent, (char*)"204");
           	}
 
             item_ptr->source.locuri.hasChildTag = FALSE;
@@ -3854,7 +3854,7 @@ LOCAL BOOLEAN MMIDM_DealWithReplaceData(char* replacebuf)
             ret = FALSE;
             break;
         }
-         SCI_MEMSET(content, 0X0, MAX_TAG_BUF_SIZE);
+        SCI_MEMSET(content, 0X0, MAX_TAG_BUF_SIZE);
 
         data = SCI_ALLOCA(200);
         if(PNULL== data)
@@ -3863,7 +3863,7 @@ LOCAL BOOLEAN MMIDM_DealWithReplaceData(char* replacebuf)
             ret = FALSE;
             break;
         }
-         SCI_MEMSET(data, 0X0, 200);
+        SCI_MEMSET(data, 0X0, 200);
 
         MMIDM_getNextXmlTagBuf(replacebuf, TAG_CMDIDID, cmdid, 20);
         MMIDM_getNextXmlTagBuf(replacebuf, TAG_TARGETID, target, 100);
@@ -3947,90 +3947,88 @@ LOCAL BOOLEAN MMIDM_DealWithReplaceData(char* replacebuf)
             SCI_STRCPY(status_tag->cmd.tagContent, (char*)"Replace");
 
 /***  add by Hong begin                                                         ***/
-		scanner_ptr = replacebuf;  
-	  item_buff = SCI_ALLOCA(MAX_TAG_BUF_SIZE) ;
-	  
-                status_tag->data.tagContent = SCI_ALLOCA(10);
-                if(PNULL==status_tag->data.tagContent)
-                {
-                    SCI_TRACE_LOW("MMIDM_DealWithReplaceData PNULL==status_tag->data.tagContent");
+            scanner_ptr = replacebuf;
+            item_buff = SCI_ALLOCA(MAX_TAG_BUF_SIZE) ;
+
+            status_tag->data.tagContent = SCI_ALLOCA(10);
+            if(PNULL==status_tag->data.tagContent)
+            {
+                SCI_TRACE_LOW("MMIDM_DealWithReplaceData PNULL==status_tag->data.tagContent");
                 ret = FALSE;
                 break;
-                }
-                SCI_MEMSET(status_tag->data.tagContent, 0, 10);
+            }
+            SCI_MEMSET(status_tag->data.tagContent, 0, 10);
 
-                if(1)
+            if(1)
+            {
+                SCI_STRCPY(status_tag->data.tagContent, (char*)"200");
+            }
+            else
+            {
+                SCI_STRCPY(status_tag->data.tagContent, (char*)"204");
+            }
+
+            while( (scanner_ptr = MMIDM_getNextXmlTagBuf(scanner_ptr, TAG_ITEMID, item_buff, MAX_TAG_BUF_SIZE)) != PNULL)
+            {
+                SCI_MEMSET(target_uri, 0, 100);
+                SCI_MEMSET(data, 0, 200);
+                MMIDM_getNextXmlTagBuf(item_buff, TAG_TARGETID, target, 100);
+                MMIDM_getNextXmlTagBuf(target, TAG_LOCURIID, target_uri, 100);
+                MMIDM_getNextXmlTagBuf(item_buff, TAG_DATAID, data, 200);
+
+                SCI_TRACE_LOW("DM Repace target_uri:%s data:%s \n", target_uri, data);
+                handertype = DM_GET_TREE_WRITEFUNC(target_uri);
+/***  add by Hong end                                                         ***/
+
+            //if(PNULL!=write_func)
+                if(-1!=handertype)
                 {
-                    SCI_STRCPY(status_tag->data.tagContent, (char*)"200");
+                    status_tag->data.hasChildTag = FALSE;
+                    status_tag->data.tagId = TAG_DATAID;
+                    spdm_writeCb(handertype, data, 0, strlen(data));
                 }
                 else
                 {
+                    SCI_TRACE_LOW("MMIDM_DealWithGetData, PNULL==read_func");
+                    status_tag->data.hasChildTag = FALSE;
+                    status_tag->data.tagId = TAG_DATAID;
+                    SCI_MEMSET(status_tag->data.tagContent, 0, 10);
                     SCI_STRCPY(status_tag->data.tagContent, (char*)"204");
                 }
-
-	  while( (scanner_ptr = MMIDM_getNextXmlTagBuf(scanner_ptr, TAG_ITEMID, item_buff, MAX_TAG_BUF_SIZE)) != PNULL)
-        {
-        SCI_MEMSET(target_uri, 0, 100);
-	 SCI_MEMSET(data, 0, 200);
-        MMIDM_getNextXmlTagBuf(item_buff, TAG_TARGETID, target, 100);        
-        MMIDM_getNextXmlTagBuf(target, TAG_LOCURIID, target_uri, 100);
-        MMIDM_getNextXmlTagBuf(item_buff, TAG_DATAID, data, 200);
-		
-        SCI_TRACE_LOW("DM Repace target_uri:%s data:%s \n", target_uri, data);
-	  handertype = DM_GET_TREE_WRITEFUNC(target_uri);
-/***  add by Hong end                                                         ***/
-   
-            //if(PNULL!=write_func)
-            if(-1!=handertype)
-            {
-                status_tag->data.hasChildTag = FALSE;
-                status_tag->data.tagId = TAG_DATAID;
-		spdm_writeCb(handertype, data, 0, strlen(data));
-
-
-            }
-            else
-            {
-                SCI_TRACE_LOW("MMIDM_DealWithGetData, PNULL==read_func");
-                status_tag->data.hasChildTag = FALSE;
-                status_tag->data.tagId = TAG_DATAID;
-                SCI_MEMSET(status_tag->data.tagContent, 0, 10);
-                SCI_STRCPY(status_tag->data.tagContent, (char*)"204");
-            }
 	   }
-            if(s_statusTag_head == PNULL)
-            {
-                s_statusTag_head = s_statusTag_tail = status_tag;
-            }
-            else
-            {
-                s_statusTag_tail->next = status_tag;
-                s_statusTag_tail = s_statusTag_tail->next;
+           if(s_statusTag_head == PNULL)
+           {
+               s_statusTag_head = s_statusTag_tail = status_tag;
+           }
+           else
+           {
+               s_statusTag_tail->next = status_tag;
+               s_statusTag_tail = s_statusTag_tail->next;
 
-            }
+           }
           //  MMIDM_BuildStatus(test);
         }
 
     } while(0);
 
      if(PNULL != content)
-    {
-        SCI_FREE(content);
-        content = PNULL;
-    }
+     {
+         SCI_FREE(content);
+         content = PNULL;
+     }
      if(PNULL != data)
-    {
-        SCI_FREE(data);
-        data = PNULL;
-    }
-	 if (item_buff != PNULL)
+     {
+         SCI_FREE(data);
+         data = PNULL;
+     }
+     if (item_buff != PNULL)
 	 SCI_FREE(item_buff);
      if(!ret)
-    {
-       // MMIDM_SendSigToDmTask(DM_TASK_DM_CLOSE,MMIDM_GetDmTaskID(),PNULL);
-       spdm_stopDm(SPRD_DM_PARSE_ERROR);
-    }
-    return ret;
+     {
+        // MMIDM_SendSigToDmTask(DM_TASK_DM_CLOSE,MMIDM_GetDmTaskID(),PNULL);
+        spdm_stopDm(SPRD_DM_PARSE_ERROR);
+     }
+     return ret;
 }
 
 
