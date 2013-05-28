@@ -317,6 +317,7 @@ void SprdCameraHardware::FreePmem(camera_memory_t* camera_memory)
                 } else {
                         LOGE("fail to FreePmem: NULL is camera_memory->release.");
                }
+               free(camera_memory);
         } else{
                 LOGV("FreePmem: NULL");
         }

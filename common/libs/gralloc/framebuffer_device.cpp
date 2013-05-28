@@ -227,12 +227,14 @@ int init_frame_buffer_locked(struct private_module_t* module)
 	struct fb_fix_screeninfo finfo;
 	if (ioctl(fd, FBIOGET_FSCREENINFO, &finfo) == -1)
 	{
+		close(fd);
 		return -errno;
 	}
 
 	struct fb_var_screeninfo info;
 	if (ioctl(fd, FBIOGET_VSCREENINFO, &info) == -1)
 	{
+		close(fd);
 		return -errno;
 	}
 
@@ -249,40 +251,40 @@ int init_frame_buffer_locked(struct private_module_t* module)
 	property_get("ro.sf.lcd_height", value, "1");
 	info.height = atoi(value);
 
-    if(info.bits_per_pixel == 16)
-    {
-        /*
-         * Explicitly request 5/6/5
-         */
-        info.bits_per_pixel = 16;
-        info.red.offset     = 11;
-        info.red.length     = 5;
-        info.green.offset   = 5;
-        info.green.length   = 6;
-        info.blue.offset    = 0;
-        info.blue.length    = 5;
-        info.transp.offset  = 0;
-        info.transp.length  = 0;
+	if(info.bits_per_pixel == 16)
+	{
+	/*
+	 * Explicitly request 5/6/5
+	*/
+		info.bits_per_pixel = 16;
+		info.red.offset     = 11;
+		info.red.length     = 5;
+		info.green.offset   = 5;
+		info.green.length   = 6;
+		info.blue.offset    = 0;
+		info.blue.length    = 5;
+		info.transp.offset  = 0;
+		info.transp.length  = 0;
 
-        module->fbFormat = HAL_PIXEL_FORMAT_RGB_565;
-    }
-    else
-    {
-        /*
-         * Explicitly request 8/8/8
-         */
-        info.bits_per_pixel = 32;
-        info.red.offset     = 0;
-        info.red.length     = 8;
-        info.green.offset   = 8;
-        info.green.length   = 8;
-        info.blue.offset    = 16;
-        info.blue.length    = 8;
-        info.transp.offset  = 24;
-        info.transp.length  = 0;
+		 module->fbFormat = HAL_PIXEL_FORMAT_RGB_565;
+	}
+	else
+	{
+		/*
+		 * Explicitly request 8/8/8
+		*/
+		info.bits_per_pixel = 32;
+		info.red.offset     = 0;
+		info.red.length     = 8;
+		info.green.offset   = 8;
+		info.green.length   = 8;
+		info.blue.offset    = 16;
+		info.blue.length    = 8;
+		info.transp.offset  = 24;
+		info.transp.length  = 0;
 
-        module->fbFormat = HAL_PIXEL_FORMAT_RGBA_8888;
-    }
+		module->fbFormat = HAL_PIXEL_FORMAT_RGBA_8888;
+	}
 
 	/*
 	 * Request NUM_BUFFERS screens (at lest 2 for page flipping)
@@ -307,6 +309,7 @@ int init_frame_buffer_locked(struct private_module_t* module)
 
 	if (ioctl(fd, FBIOGET_VSCREENINFO, &info) == -1)
 	{
+		close(fd);
 		return -errno;
 	}
 
@@ -372,11 +375,13 @@ int init_frame_buffer_locked(struct private_module_t* module)
 
 	if (ioctl(fd, FBIOGET_FSCREENINFO, &finfo) == -1)
 	{
+		close(fd);
 		return -errno;
 	}
 
-    if (finfo.smem_len <= 0)
+	if (finfo.smem_len <= 0)
 	{
+		close(fd);
 		return -errno;
 	}
 
@@ -394,6 +399,7 @@ int init_frame_buffer_locked(struct private_module_t* module)
 	void* vaddr = mmap(0, fbSize, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
 	if (vaddr == MAP_FAILED) 
 	{
+		close(fd);
 		AERR( "Error mapping the framebuffer (%s)", strerror(errno) );
 		return -errno;
 	}
@@ -406,7 +412,6 @@ int init_frame_buffer_locked(struct private_module_t* module)
 
 	module->numBuffers = info.yres_virtual / info.yres;
 	module->bufferMask = 0;
-
 	return 0;
 }
 
