@@ -26,10 +26,14 @@ int load_sipc_image(char *fin, int offsetin, char *fout, int offsetout, int size
 	fdin = open(fin, O_RDONLY, 0);
 	fdout = open(fout, O_RDWR, 0);
 	if (fdin < 0) {
+		if (fdout>=0)
+			close(fdout);
+
 		MODEMD_LOGE("failed to open %s", fin);
 		return -1;
 	}
 	if (fdout < 0) {
+		close(fdin);
 		MODEMD_LOGE("failed to open %s", fout);
 		return -1;
 	}
@@ -73,9 +77,9 @@ int load_sipc_modem_img(int modem)
 	char dsp_partition[128] = {0};
 	char modem_bank[128] = {0};
 	char dsp_bank[128] = {0};
-	int sipc_modem_size;
-	int sipc_dsp_size;
-	char alive_info[20];
+	int sipc_modem_size = 0;
+	int sipc_dsp_size = 0;
+	char alive_info[20]={0};
 	int i, ret;
 
 	if(modem == TD_MODEM) {
@@ -124,6 +128,8 @@ int load_sipc_modem_img(int modem)
 		MODEMD_LOGD("write 1 to %s", W_MODEM_START);
 		write_proc_file(W_MODEM_START, 0, "1");
 		strcpy(alive_info, "W Modem Alive");
+	} else {
+		MODEMD_LOGE("error unkown modem  alive_info");
 	}
 	MODEMD_LOGD("wait for 20s\n");
 
@@ -132,7 +138,7 @@ int load_sipc_modem_img(int modem)
 	/* info socket clients that modem is reset */
 	for(i = 0; i < MAX_CLIENT_NUM; i++) {
 		MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
-		if(client_fd[i] > 0) {
+		if(client_fd[i] >= 0) {
 			ret = write(client_fd[i], alive_info,strlen(alive_info));
 			MODEMD_LOGE("write %d bytes to client_fd[%d]:%d to info modem is alive",
 					ret, i, client_fd[i]);
@@ -227,7 +233,7 @@ void* detect_sipc_modem(void *param)
 			/* info socket clients that modem is assert or hangup */
 			for(i = 0; i < MAX_CLIENT_NUM; i++) {
 				MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
-				if(client_fd[i] > 0) {
+				if(client_fd[i] >= 0) {
 					ret = write(client_fd[i], buf, numRead);
 					MODEMD_LOGE("write %d bytes to client_fd[%d]:%d", ret, i, client_fd[i]);
 					if(ret < 0) {

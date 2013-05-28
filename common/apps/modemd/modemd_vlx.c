@@ -110,6 +110,7 @@ char *loadOpenFile(int fd, int *fileSize)
 	}
 
 	if (lseek(fd, 0, SEEK_SET) < 0) {
+		free(buf);
 		MODEMD_LOGE("lseek error");
 		return 0;
 	}
@@ -156,10 +157,11 @@ int check_proc_file(char *file, char *string)
 
 	MODEMD_LOGD("check proc file buf = %s", buf);
 	if (strstr(buf, string)) {
+		free(buf);
 		MODEMD_LOGD("String found <%s> in <%s>", string, file);
 		return 0;
 	}
-
+	free(buf);
 	MODEMD_LOGD("failed to find %s in %s", string, file);
 	return 1;
 }
@@ -185,10 +187,13 @@ int loadimage(char *fin, int offsetin, char *fout, int offsetout, int size)
 	fdin = open(fin, O_RDONLY, 0);
 	fdout = open(fout, O_RDWR, 0);
 	if (fdin < 0) {
+		if (fdout >= 0)
+			close(fdout);
 		MODEMD_LOGE("failed to open %s", fin);
 		return -1;
 	}
 	if (fdout < 0) {
+		close(fdin);
 		MODEMD_LOGE("failed to open %s", fout);
 		return -1;
 	}
@@ -353,15 +358,19 @@ char *get_proc_mtd(void)
 
 	fileSize = lseek(fd, 0, SEEK_END);
 	if (fileSize < 0) {
+		close(fd);
 		MODEMD_LOGE("fileSize is error\n");
 		return 0;
 	}
 	buf = (char *)malloc((fileSize) + 1);
 	if (buf == 0) {
+		close(fd);
 		MODEMD_LOGE("Malloc buffer failed\n");
 		return 0;
 	}
 	if (lseek(fd, 0, SEEK_SET) < 0) {
+		close(fd);
+		free(buf);
 		MODEMD_LOGE("lseek header error\n");
 		return 0;
 	}
@@ -396,6 +405,10 @@ int get_mcp_size(char *buf)
 	}
 	pos++;
 	pos_len--;
+	if(pos_len>=(int)sizeof(number)) {
+		MODEMD_LOGE("error to find MiB\n");
+		return 0;
+	}
 	memset(number, 0, 8);
 	strncpy(number, pos, pos_len);
 	nandsize = atoi(number);
@@ -524,7 +537,7 @@ int load_vlx_modem_img(int modem, int is_modem_assert)
 			/* info socket clients that modem is reset */
 			for(i = 0; i < MAX_CLIENT_NUM; i++) {
 				MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
-				if(client_fd[i] > 0) {
+				if(client_fd[i] >= 0) {
 					ret = write(client_fd[i], "Modem Alive",strlen("Modem Alive"));
 					MODEMD_LOGE("write %d bytes to client_fd[%d]:%d to info modem is alive",
 							ret, i, client_fd[i]);
@@ -698,7 +711,7 @@ int detect_vlx_modem(int modem)
 				/* include info slog to release vbpipe0 */
 				for(i = 0; i < MAX_CLIENT_NUM; i++) {
 					MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
-					if(client_fd[i] > 0) {
+					if(client_fd[i] >= 0) {
 						ret = write(client_fd[i], buf, numRead);
 						MODEMD_LOGE("write %d bytes to client_fd[%d]:%d to info modem is assert", ret, i, client_fd[i]);
 						if(ret < 0) {
