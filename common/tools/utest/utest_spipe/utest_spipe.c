@@ -126,6 +126,7 @@ static int clean_spipe(char* dev_path)
 
     }while((0 < ret_val) || (ret_val == -1 && errno == EINTR));
     if(-1 == ret_val){
+        close(fd);
         return -EINVAL;
     }
 
