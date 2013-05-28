@@ -43,6 +43,7 @@ struct camera_context        *g_cxt = &cmr_cxt;
 				(g_cxt->cap_orig_size.height == g_cxt->picture_size.height))
 #define TAKE_PIC_CANCEL      do {                                                  \
 									if (camera_capture_need_exit()) {               \
+										camera_takepic_done(g_cxt);                 \
 										CMR_LOGE("exit.");                          \
 										return CAMERA_SUCCESS;                      \
 									}                                               \
@@ -848,6 +849,7 @@ void *camera_cap_thread_proc(void *data)
 				}
 				if ((g_cxt->cap_cnt == g_cxt->total_capture_num)||(CAMERA_HDR_MODE == g_cxt->cap_mode)) {
 					camera_snapshot_stop_set();
+					camera_wait_takepicdone(g_cxt);
 					camera_set_take_picture(TAKE_PICTURE_NO);
 				}
 			}
@@ -1767,7 +1769,7 @@ int camera_take_picture_done(struct frm_info *data)
 			CAMERA_FUNC_TAKE_PICTURE,
 			0);
 	}
-	camera_takepic_done(g_cxt);
+	camera_takepic_callback_done(g_cxt);
 	return ret;
 }
 
@@ -1897,6 +1899,7 @@ int camera_set_take_picture_cap_mode(takepicture_mode cap_mode)
 	pthread_mutex_lock(&g_cxt->take_mutex);	
 	g_cxt->cap_mode = cap_mode;//CAMERA_NORMAL_MODE;
 	g_cxt->hdr_cnt = 0;
+	g_cxt->cap_cnt = 0;
 	pthread_mutex_unlock(&g_cxt->take_mutex);
     CMR_LOGE("cap mode is %d.",cap_mode);
 	return CAMERA_SUCCESS;
@@ -4575,7 +4578,7 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 	ret = jpeg_enc_add_eixf(&wexif_param,&wexif_output);
 	TAKE_PIC_CANCEL;
 	if (0 == ret) {
-		camera_wait_takepicdone(g_cxt);
+		camera_wait_takepic_callback(g_cxt);
 		CMR_LOGV("take pic done.");
 
 		encoder_param.need_free = 0;
@@ -4591,6 +4594,7 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 				CAMERA_FUNC_ENCODE_PICTURE,
 				(uint32_t)&encoder_param);
 	}
+	camera_takepic_done(g_cxt);
 	return ret;
 }
 

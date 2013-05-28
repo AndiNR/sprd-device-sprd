@@ -292,6 +292,7 @@ struct camera_context {
 	sem_t                    start_sem;
 	sem_t                    stop_sem;
 	sem_t                    takepicdone_sem;
+	sem_t                    takepic_callback_sem;
 	uint32_t                 err_code;
 	uint32_t                 camera_id;
 	pthread_t                prev_thread;
