@@ -83,6 +83,7 @@ static int get_cpu_tick(unsigned long *value)
 	}
 	if (fgets(buffer, sizeof(buffer), stat_fp) == NULL) {
 		printf("read from %s failed!\n", PROC_STAT);
+		fclose(stat_fp);
 		return -1;
 	}
 	sscanf(buffer, "%s %lu %lu %lu %lu %lu %lu %lu",
