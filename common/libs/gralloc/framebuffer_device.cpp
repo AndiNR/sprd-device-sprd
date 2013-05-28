@@ -410,6 +410,7 @@ int init_frame_buffer_locked(struct private_module_t* module)
 	module->framebuffer = new private_handle_t(private_handle_t::PRIV_FLAGS_FRAMEBUFFER, fbSize, intptr_t(vaddr),
 	                                           0, dup(fd), 0);
 
+	close(fd);
 	module->numBuffers = info.yres_virtual / info.yres;
 	module->bufferMask = 0;
 	return 0;
