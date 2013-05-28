@@ -743,6 +743,8 @@ void eng_check_factorymode_fornand(void)
 	int status = eng_sql_string2int_get(ENG_TESTMODE);
 	char status_buf[8];
 	char config_property[64];
+	char usb_config_value[PROPERTY_VALUE_MAX];
+	int i;
 
 #ifdef USE_BOOT_AT_DIAG
 	ENG_LOG("%s: status=%x\n",__func__, status);
@@ -760,8 +762,23 @@ void eng_check_factorymode_fornand(void)
 			property_set("persist.sys.usb.config","vser,gser");
 		}
 */
-		property_set("sys.usb.config","mass_storage,adb,vser,gser");
-		property_set("persist.sys.usb.config","mass_storage,adb,vser,gser");
+		for(i = 0;i <5;i++){ //try 5 count
+			property_get("sys.usb.config",usb_config_value,"not_find");
+			if(strcmp(usb_config_value,"not_find") == 0){
+				usleep(200*1000);
+				ALOGD("%s: can not find sys.usb.config\n",__FUNCTION__);
+				continue;
+			}else{
+				property_set("sys.usb.config","mass_storage,adb,vser,gser");
+				ALOGD("%s: set usb property mass_storage,adb,vser,gser\n",__FUNCTION__);
+				break;
+			}
+		}
+		if(i >=5){
+			property_set("sys.usb.config","mass_storage,adb,vser,gser");
+			ALOGD("%s: time out for init.rc set system.usb.config ,we set it as default\n",__FUNCTION__);
+		}
+		ENG_LOG("%s: zds set sys.usb.config!!!\n",__func__);
 	} else if (status == 0) {
 		/*if (strstr(config_property, "vser,gser")) {
 			if (strstr(config_property, "adb")) {
@@ -790,6 +807,8 @@ void eng_check_factorymode_formmc(void)
 	int fd;
 	int status = eng_sql_string2int_get(ENG_TESTMODE);
 	char status_buf[8];
+	char usb_config_value[PROPERTY_VALUE_MAX];
+	int i;
 
 	do {
 		usleep(100*1000);
@@ -806,8 +825,23 @@ void eng_check_factorymode_formmc(void)
 	if(fd >= 0) {
 		if((status==1)||(status == ENG_SQLSTR2INT_ERR)) {
 			sprintf(status_buf, "%s", "1");
-			property_set("sys.usb.config","mass_storage,adb,vser,gser");
-			property_set("persist.sys.usb.config","mass_storage,adb,vser,gser");
+			for(i = 0;i <5;i++){ //try 5 count
+				property_get("sys.usb.config",usb_config_value,"not_find");
+				if(strcmp(usb_config_value,"not_find") == 0){
+					usleep(200*1000);
+					ALOGD("%s: can not find sys.usb.config\n",__FUNCTION__);
+					continue;
+				}else{
+					property_set("sys.usb.config","mass_storage,adb,vser,gser");
+					ALOGD("%s: set usb property mass_storage,adb,vser,gser\n",__FUNCTION__);
+					break;
+				}
+			}
+			if(i >=5){
+				property_set("sys.usb.config","mass_storage,adb,vser,gser");
+				ALOGD("%s: time out for init.rc set system.usb.config ,we set it as default\n",__FUNCTION__);
+			}
+
 		} else if (status == 0) {
 			sprintf(status_buf, "%s", "0");
 		} else {
@@ -883,7 +917,7 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
 	if(cmdvalue == NULL)
 		return -1;
 
-	fd = open("/proc/cmdline", O_RDONLY);
+          fd = open("/proc/cmdline", O_RDONLY);
 	if (fd >= 0) {
 		if (read(fd, cmdline, sizeof(cmdline)) > 0){
 			ALOGD("eng_pcclient: cmdline %s\n",cmdline);
@@ -942,7 +976,7 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
 			if(strstr(cmdline,"engtest") != NULL)
 				cmdvalue->engtest = 1;
 		}
-		close(fd);
+			close(fd);
 	}
 	return 0;
 }
