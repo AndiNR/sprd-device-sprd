@@ -117,6 +117,11 @@ enum VBC_CMD_E
 
     VBC_CMD_MAX
 };
+#ifdef AUDIO_SPIPE_TD
+#define VBC_ARM_CHANNELID 2
+#else
+#define VBC_ARM_CHANNELID 1
+#endif
 
 typedef struct
 {
@@ -125,14 +130,8 @@ typedef struct
     unsigned int    paras_size; /* the size of Parameters Data, unit: bytes*/
 }parameters_head_t;
 
-#define VBC_PIPE_NAME_MAX_LEN 16
-
-#ifdef AUDIO_SPIPE_TD
-#define VBC_PIPE_COUNT 2  
-#else
-#define VBC_PIPE_COUNT 1//one pipe used in one cp
-#endif
-
+static unsigned short s_vbc_pipe_count = 0;
+	
 typedef struct
 {
 	char vbpipe[VBC_PIPE_NAME_MAX_LEN];//vbpipe5/vbpipe6
@@ -144,43 +143,16 @@ typedef struct
 	struct tiny_audio_device *adev;
 }vbc_ctrl_thread_para_t;
 
-/*support multiple call for multiple modem(cp0/cp1/...):
-different modem is corresponding to different pipe and all pipes use the only vbc.
-support multiple pipe:
-1. change VBC_PIPE_COUNT
-2. change the definition of s_vbc_ctrl_pipe_info.
-3. change channel_id for different cp .On sharp, 0 for cp0,  1 for cp1,2 for ap
-*/
-#ifdef AUDIO_SPIPE_TD
-#define VBC_ARM_CHANNELID 2
-#else
-#define VBC_ARM_CHANNELID 1
-#endif
-
-typedef struct
-{
-    char s_vbc_ctrl_pipe_name[VBC_PIPE_NAME_MAX_LEN];
-    int channel_id;
-    cp_type_t cp_type;
-}vbc_ctrl_pipe__para_t;
-
-static vbc_ctrl_pipe__para_t s_vbc_ctrl_pipe_info[VBC_PIPE_COUNT] =
-{
-		//{"/dev/vbpipe5"},
-#ifdef AUDIO_SPIPE_TD
-		{{"/dev/spipe_td6"},1,CP_TG},
-		{{"/dev/spipe_w6"},0,CP_W}
-#else
-		{{"/dev/vbpipe6"},0,CP_TG}  
-#endif
-};
-
-static pthread_t s_vbc_ctrl_thread_id[VBC_PIPE_COUNT] ={0};
-static vbc_ctrl_thread_para_t st_vbc_ctrl_thread_para[VBC_PIPE_COUNT] = {0};
+static pthread_t *s_vbc_ctrl_thread_id =NULL;
+static vbc_ctrl_thread_para_t *st_vbc_ctrl_thread_para = NULL;
 
 static uint32_t android_cur_device = 0x0;   // devices value the same as audiosystem.h
 static int s_is_active = 0;
 static int android_sim_num = 0;
+static vbc_ctrl_pipe_para_t s_default_vbc_ctrl_pipe_info =
+{
+	"/dev/vbpipe6",0,CP_TG 
+};
 
 /* Transfer packet by vbpipe, packet format as follows.*/
 /************************************************
@@ -294,6 +266,10 @@ int Write_Rsp2cp(int fd_pipe, unsigned int cmd)
 unsigned short GetCall_Cur_Device()
 {
     return android_cur_device;
+}
+unsigned short GetAudio_vbcpipe_count(void)
+{
+	return s_vbc_pipe_count;
 }
 
 static int32_t GetAudio_mode_number_from_device(struct tiny_audio_device *adev)
@@ -788,23 +764,112 @@ int SetParas_DeviceCtrl_Incall(int fd_pipe,struct tiny_audio_device *adev)
 	return ret;
 }
 
+
+void vbc_ctrl_init(struct tiny_audio_device *adev)
+{
+    char prop_t[5] = {0};
+    char prop_w[5] = {0};
+    bool t_enable = false;
+    bool w_enalbe = false;
+    int i=0;
+    bool result=false;
+    vbc_ctrl_thread_para_t* vbc_ctrl_index = NULL;
+ 	if(property_get(RO_MODEM_T_ENABLE_PROPERTY, prop_t, "") && 0 == strcmp(prop_t, "1") )
+	{	
+		MY_TRACE("%s:ro.modem.t.enable",__func__);
+		t_enable = true;
+		s_vbc_pipe_count++;
+	}
+	if(property_get(RO_MODEM_W_ENABLE_PROPERTY, prop_w, "") && 0 == strcmp(prop_w, "1"))
+	{
+		MY_TRACE("%s:ro.modem.w.enable",__func__);
+		w_enalbe = true;
+		s_vbc_pipe_count++;
+	}
+
+	if(s_vbc_pipe_count)	
+	{
+		st_vbc_ctrl_thread_para = malloc(s_vbc_pipe_count *
+									sizeof(vbc_ctrl_thread_para_t));
+		if(!st_vbc_ctrl_thread_para)
+		{
+			MY_TRACE("error, vbc_ctrl_init malloc para failed,%d",s_vbc_pipe_count);
+		}
+		s_vbc_ctrl_thread_id = malloc(s_vbc_pipe_count *
+									sizeof(pthread_t));
+		if(!s_vbc_ctrl_thread_id)
+		{
+			MY_TRACE("error, vbc_ctrl_init malloc id failed,%d",s_vbc_pipe_count);
+		}
+			//initialize vbc pipe information
+		vbc_ctrl_index = st_vbc_ctrl_thread_para;
+		for(i=0;i<adev->cp->num;i++)
+		{
+			if((t_enable && (adev->cp->vbc_ctrl_pipe_info+i)->cp_type == CP_TG) ||
+			     (w_enalbe && (adev->cp->vbc_ctrl_pipe_info+i)->cp_type == CP_W))
+			{
+	                memcpy(vbc_ctrl_index->vbpipe, (adev->cp->vbc_ctrl_pipe_info+i)->s_vbc_ctrl_pipe_name, VBC_PIPE_NAME_MAX_LEN);
+					vbc_ctrl_index->vbchannel_id = (adev->cp->vbc_ctrl_pipe_info+i)->channel_id;
+					vbc_ctrl_index->cp_type = (adev->cp->vbc_ctrl_pipe_info+i)->cp_type;
+					vbc_ctrl_index->adev = adev;
+					vbc_ctrl_index->vbpipe_fd = -1;
+					vbc_ctrl_index->vbpipe_pre_fd = -1;
+					vbc_ctrl_index->is_exit = 0;
+					vbc_ctrl_index++;
+					result = true;
+					
+			}
+		}
+	}
+
+	if(!result)	
+	{
+		MY_TRACE("warning: no ro.modem.x.enable,apply default modem profile");
+		if(st_vbc_ctrl_thread_para)
+		{
+			free(st_vbc_ctrl_thread_para);
+		}
+		if(s_vbc_ctrl_thread_id)
+		{
+			free(s_vbc_ctrl_thread_id);
+		}
+		s_vbc_pipe_count = 1;
+		st_vbc_ctrl_thread_para = malloc(sizeof(vbc_ctrl_thread_para_t));
+		if(!st_vbc_ctrl_thread_para)
+		{
+			MY_TRACE("error, vbc_ctrl_init malloc para failed,%d",s_vbc_pipe_count);
+		}
+		s_vbc_ctrl_thread_id = malloc(sizeof(pthread_t));
+		if(!s_vbc_ctrl_thread_id)
+		{
+			MY_TRACE("error, vbc_ctrl_init malloc id failed,%d",s_vbc_pipe_count);
+		}
+		//initialize vbc pipe information
+		memcpy(st_vbc_ctrl_thread_para->vbpipe, s_default_vbc_ctrl_pipe_info.s_vbc_ctrl_pipe_name, VBC_PIPE_NAME_MAX_LEN);
+		st_vbc_ctrl_thread_para->vbchannel_id = s_default_vbc_ctrl_pipe_info.channel_id;
+		st_vbc_ctrl_thread_para->cp_type = s_default_vbc_ctrl_pipe_info.cp_type;
+		st_vbc_ctrl_thread_para->adev = adev;
+		st_vbc_ctrl_thread_para->vbpipe_fd = -1;
+		st_vbc_ctrl_thread_para->vbpipe_pre_fd = -1;
+		st_vbc_ctrl_thread_para->is_exit = 0;			
+	}
+
+	MY_TRACE("%s:enable modem :%d",__func__,s_vbc_pipe_count);
+}
+
+
 int vbc_ctrl_open(struct tiny_audio_device *adev)
 {
     if (s_is_active) return (-1);
     int rc,i=0,j=0;
+
     MY_TRACE("%s IN.",__func__);
     s_is_active = 1;
-    while(i<VBC_PIPE_COUNT)
+	vbc_ctrl_init(adev);
+    while(i<s_vbc_pipe_count)
     {
-        memcpy(st_vbc_ctrl_thread_para[i].vbpipe, s_vbc_ctrl_pipe_info[i].s_vbc_ctrl_pipe_name, VBC_PIPE_NAME_MAX_LEN);
-        st_vbc_ctrl_thread_para[i].vbchannel_id = s_vbc_ctrl_pipe_info[i].channel_id;
-	st_vbc_ctrl_thread_para[i].cp_type = s_vbc_ctrl_pipe_info[i].cp_type;
-        st_vbc_ctrl_thread_para[i].adev = adev;
-        st_vbc_ctrl_thread_para[i].vbpipe_fd = -1;
-        st_vbc_ctrl_thread_para[i].vbpipe_pre_fd = -1;
-        st_vbc_ctrl_thread_para[i].is_exit = 0;
-        rc = pthread_create(&(s_vbc_ctrl_thread_id[i]), NULL,
-                vbc_ctrl_thread_routine, (void *)(&(st_vbc_ctrl_thread_para[i])));
+        rc = pthread_create((pthread_t *)(s_vbc_ctrl_thread_id+i), NULL,
+                vbc_ctrl_thread_routine, (void *)(st_vbc_ctrl_thread_para+i));
         if (rc) {
             ALOGE("error, pthread_create failed, rc=%d, i:%d", rc, i);
             while(j<i)
@@ -831,15 +896,18 @@ int vbc_ctrl_close()
     int i=0;
     s_is_active = 0;
     /* close vbpipe.*/
-	while(i<VBC_PIPE_COUNT)
+	while(i<s_vbc_pipe_count)
 	{
-		close(st_vbc_ctrl_thread_para[i].vbpipe_fd);
-		st_vbc_ctrl_thread_para[i].vbpipe_fd = -1;
-		st_vbc_ctrl_thread_para[i].vbpipe_pre_fd = -1;
-		st_vbc_ctrl_thread_para[i].is_exit = 1;
+		close((st_vbc_ctrl_thread_para+i)->vbpipe_fd);
+		(st_vbc_ctrl_thread_para+i)->vbpipe_fd = -1;
+		(st_vbc_ctrl_thread_para+i)->vbpipe_pre_fd = -1;
+		(st_vbc_ctrl_thread_para+i)->is_exit = 1;
 		i++;
 	}
 
+	free(s_vbc_ctrl_thread_id);
+	free(st_vbc_ctrl_thread_para);
+	
     /* terminate thread.*/
     //pthread_cancel (s_vbc_ctrl_thread);    
     return (0);
@@ -1028,15 +1096,15 @@ RESTART:
             {
                 MY_TRACE("VBC_CMD_SET_MODE IN.");
                 int i=0;
-                while(i<VBC_PIPE_COUNT)
+                while(i<s_vbc_pipe_count)
                 {
-                    if(st_vbc_ctrl_thread_para[i].vbpipe_fd!=-1)
+                    if((st_vbc_ctrl_thread_para+i)->vbpipe_fd!=-1)
                     {
-                        ret = SetParas_Route_Incall(st_vbc_ctrl_thread_para[i].vbpipe_fd,adev);
+                        ret = SetParas_Route_Incall((st_vbc_ctrl_thread_para+i)->vbpipe_fd,adev);
                         if(ret < 0){
                             MY_TRACE("VBC_CMD_SET_MODE SetParas_Route_Incall error. pipe:%s, s_is_exit:%d ",
-                                st_vbc_ctrl_thread_para[i].vbpipe, st_vbc_ctrl_thread_para[i].is_exit);
-                            st_vbc_ctrl_thread_para[i].is_exit = 1;
+                                (st_vbc_ctrl_thread_para+i)->vbpipe, (st_vbc_ctrl_thread_para+i)->is_exit);
+                            (st_vbc_ctrl_thread_para+i)->is_exit = 1;
                         }
                     }
                     i++;
@@ -1048,15 +1116,15 @@ RESTART:
             {
                 MY_TRACE("VBC_CMD_SET_GAIN IN.");
                 int i=0;
-                while(i<VBC_PIPE_COUNT)
+                while(i<s_vbc_pipe_count)
                 {
-                    if(st_vbc_ctrl_thread_para[i].vbpipe_fd!=-1)
+                    if((st_vbc_ctrl_thread_para+i)->vbpipe_fd!=-1)
                     {
-                        ret = SetParas_Volume_Incall(st_vbc_ctrl_thread_para[i].vbpipe_fd,adev);
+                        ret = SetParas_Volume_Incall((st_vbc_ctrl_thread_para+i)->vbpipe_fd,adev);
                         if(ret < 0){
                             MY_TRACE("VBC_CMD_SET_GAIN SetParas_Route_Incall error. pipe:%s, s_is_exit:%d ",
-                                st_vbc_ctrl_thread_para[i].vbpipe, st_vbc_ctrl_thread_para[i].is_exit);
-                            st_vbc_ctrl_thread_para[i].is_exit = 1;
+                                (st_vbc_ctrl_thread_para+i)->vbpipe, (st_vbc_ctrl_thread_para+i)->is_exit);
+                            (st_vbc_ctrl_thread_para+i)->is_exit = 1;
                         }
                     }
                     i++;

@@ -47,6 +47,7 @@
 
 #include "eng_audio.h"
 #include "aud_proc.h"
+#include "vb_control_parameters.h"
 
 #ifdef AUDIO_MUX_PCM
 #include "audio_mux_pcm.h"
@@ -211,11 +212,7 @@ struct stream_routing_manager {
     bool             is_exit;
 };
 
-typedef enum {
-    CP_W,
-    CP_TG,
-    CP_MAX
-}cp_type_t;
+
 
 struct tiny_audio_device {
     struct audio_hw_device hw_device;
@@ -247,6 +244,8 @@ struct tiny_audio_device {
     struct tiny_private_ctl private_ctl;
     struct audio_pga *pga;
     bool eq_available;
+
+    audio_modem_t *cp;
 
     struct stream_routing_manager  routing_mgr;
 };
@@ -2724,6 +2723,9 @@ static int adev_close(hw_device_t *device)
     };
     free(adev->dev_cfgs);
 
+	free(adev->cp->vbc_ctrl_pipe_info);
+	free(adev->cp);
+
     mixer_close(adev->mixer);
     stream_routing_manager_close(adev);
     free(device);
@@ -3166,6 +3168,184 @@ static void stream_routing_manager_close(struct tiny_audio_device *adev)
     pthread_cond_destroy(&adev->routing_mgr.device_switch_cv);
 }
 
+
+static  vbc_ctrl_pipe_para_t *adev_modem_create(audio_modem_t  *modem, const char *num)
+{	
+	vbc_ctrl_pipe_para_t *a;
+	if (!atoi((char *)num)) {
+		ALOGE("Unnormal modem num!");
+		return NULL;
+	}
+
+	  modem->num = atoi((char *)num);
+	/* check if we need to allocate  space for modem profile */
+	 if(!modem->vbc_ctrl_pipe_info)
+	 {
+	 	modem->vbc_ctrl_pipe_info = malloc(modem->num *
+				sizeof(vbc_ctrl_pipe_para_t));
+				
+		if (modem->vbc_ctrl_pipe_info == NULL) {
+			ALOGE("Unable to allocate modem profiles");
+			return NULL;
+		} 
+		else
+		{
+			/* initialise the new profile */
+			memset((void*)modem->vbc_ctrl_pipe_info,0x00,modem->num *
+				sizeof(vbc_ctrl_pipe_para_t));
+		}
+	 }
+	
+
+	/* return the profile just added */
+	return modem->vbc_ctrl_pipe_info;
+}
+
+
+static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
+		const XML_Char **attr)
+{
+	struct modem_config_parse_state *state = data;
+	 audio_modem_t *modem = state->modem_info;
+	unsigned int i;
+	int value;
+	struct mixer_ctl *ctl;
+	vbc_ctrl_pipe_para_t item;
+	vbc_ctrl_pipe_para_t *vbc_ctrl_pipe_info = NULL;
+
+	/* Look at tags */
+	if (strcmp(tag_name, "audio") == 0) {
+		if (strcmp(attr[0], "device") == 0) {
+			ALOGI("The device name is %s", attr[1]);
+		} else {
+			ALOGE("Unnamed audio!");
+		}
+	}
+	else if (strcmp(tag_name, "modem") == 0) {
+		/* Obtain the modem num */
+		if (strcmp(attr[0], "num") == 0) {
+			ALOGD("The modem num is '%s'", attr[1]);
+			state->vbc_ctrl_pipe_info = adev_modem_create(modem, attr[1]);		
+		} else {
+			ALOGE("no modem num!");
+		}
+	}
+	else if (strcmp(tag_name, "cp") == 0) {
+		if (state->vbc_ctrl_pipe_info) {
+			/* Obtain the modem name  \pipe\vbc   filed */
+			if (strcmp(attr[0], "name") != 0) {
+				ALOGE("Unnamed modem!");
+				goto attr_err;
+			}
+			if (strcmp(attr[2], "pipe") != 0) {
+				ALOGE("'%s' No pipe filed!", attr[0]);
+				goto attr_err;
+			}
+			if (strcmp(attr[4], "vbchannel") != 0) {
+			ALOGE("'%s' No vbc filed!", attr[0]);
+			goto attr_err;
+			}
+			ALOGD("cp name is '%s', pipe is '%s',vbc is '%s'", attr[1], attr[3],attr[5]);
+			if(strcmp(attr[1], "w") == 0)
+			{
+				state->vbc_ctrl_pipe_info->cp_type = CP_W;
+			}
+			else if(strcmp(attr[1], "t") == 0)
+			{
+				state->vbc_ctrl_pipe_info->cp_type = CP_TG;
+			}
+			memcpy((void*)state->vbc_ctrl_pipe_info->s_vbc_ctrl_pipe_name,(void*)attr[3],strlen((char *)attr[3]));
+			state->vbc_ctrl_pipe_info->channel_id = atoi((char *)attr[5]);
+			state->vbc_ctrl_pipe_info++;
+			
+		} else {
+			ALOGE("error profile!");
+		}
+	}
+attr_err:
+	return;
+}
+static void adev_modem_end_tag(void *data, const XML_Char *tag_name)
+{
+	struct modem_config_parse_state *state = data;
+}
+
+/* Initialises  the audio params,the modem profile and variables , */
+static int adev_modem_parse(struct tiny_audio_device *adev)
+{
+	struct modem_config_parse_state state;
+	XML_Parser parser;
+	FILE *file;
+	int bytes_read;
+	void *buf;
+	int i;
+	int ret = 0;
+	
+	vbc_ctrl_pipe_para_t *vbc_ctrl_pipe_info = NULL;
+	 audio_modem_t *modem = NULL;
+
+	modem = calloc(1, sizeof(audio_modem_t));
+	if (!modem)
+	{
+		ret = -ENOMEM;
+		goto err_calloc;
+	}
+	modem->num = 0;
+	modem->vbc_ctrl_pipe_info = NULL;
+
+	file = fopen(AUDIO_XML_PATH, "r");
+	if (!file) {
+		ALOGE("Failed to open %s", AUDIO_XML_PATH);
+		ret = -ENODEV;
+		goto err_fopen;
+	}
+
+	parser = XML_ParserCreate(NULL);
+	if (!parser) {
+		ALOGE("Failed to create XML parser");
+		ret = -ENOMEM;
+		goto err_parser_create;
+	}
+
+	memset(&state, 0, sizeof(state));
+	state.modem_info = modem;
+	XML_SetUserData(parser, &state);
+	XML_SetElementHandler(parser, adev_modem_start_tag, adev_modem_end_tag);
+
+	for (;;) {
+		buf = XML_GetBuffer(parser, BUF_SIZE);
+		if (buf == NULL)
+		{
+			ret = -EIO;
+			goto err_parse;
+		}
+		bytes_read = fread(buf, 1, BUF_SIZE, file);
+		if (bytes_read < 0)
+		{
+			ret = -EIO;
+			goto err_parse;
+		}
+		if (XML_ParseBuffer(parser, bytes_read,
+					bytes_read == 0) == XML_STATUS_ERROR) {
+			ALOGE("Error in codec PGA xml (%s)", AUDIO_XML_PATH);
+			ret = -EINVAL;
+			goto err_parse;
+		}
+
+		if (bytes_read == 0)
+			break;
+	}
+
+	adev->cp = modem;
+err_parse:
+	XML_ParserFree(parser);
+err_parser_create:
+	fclose(file);
+err_fopen:
+err_calloc:
+	return ret;
+}
+
 static int adev_open(const hw_module_t* module, const char* name,
                      hw_device_t** device)
 {
@@ -3217,6 +3397,14 @@ static int adev_open(const hw_module_t* module, const char* name,
         ALOGE("Unable to open the mixer, aborting.");
         goto ERROR;
     }
+	 pthread_mutex_lock(&adev->lock);
+	 ret = adev_modem_parse(adev);
+	 pthread_mutex_unlock(&adev->lock);
+	if (ret < 0) {
+		ALOGE("Warning:Unable to locate all audio modem parameters from XML.");
+	}	
+
+    
     /* parse mixer ctl */
     ret = adev_config_parse(adev);
     if (ret < 0) {
