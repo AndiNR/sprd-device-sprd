@@ -90,12 +90,14 @@ static int read_mmc_partition(const char *partname, loff_t offset, unsigned char
 
 	if (lseek(fd, offset, SEEK_SET) != offset) {
 		DBG("failed to lseek %lld in %s\n", offset, partname);
+		close(fd);
 		return -1;
 	}
 
 	rsize = read(fd, buf, size);
 	if (rsize != size) {
 		DBG("read error rsize = %d  size = %d\n", rsize, size);
+		close(fd);
 		return -1;
 	}
 
@@ -121,12 +123,14 @@ static int write_mmc_partition(const char *partname, loff_t offset, unsigned cha
 
 	if (lseek(fd, offset, SEEK_SET) != offset) {
 		DBG("failed to lseek %lld in %s\n", offset, partname);
+		close(fd);
 		return -1;
 	}
 
 	wsize = write(fd, buf, size);
 	if (wsize != size) {
 		DBG("write error rsize = %d  size = %d\n", wsize, size);
+		close(fd);
 		return -1;
 	}
 
