@@ -14,7 +14,8 @@
 using namespace android;
 
 
-#include "mpeg4enc.h"
+//#include "mpeg4enc.h"
+#include "m4v_h263_enc_api.h"
 
 
 #include "util.h"

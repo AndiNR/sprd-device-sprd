@@ -13,7 +13,9 @@
 using namespace android;
 
 
-#include "mpeg4dec.h"
+//#include "vp8dec.h"
+//#include "vsp_vp8_dec.h"
+#include "vpx_dec_api.h"
 
 
 #include "util.h"
@@ -27,7 +29,7 @@ using namespace android;
 
 
 #define ONEFRAME_BITSTREAM_BFR_SIZE	(1500*1024)  //for bitstream size of one encoded frame.
-#define DEC_YUV_BUFFER_NUM   3
+#define DEC_YUV_BUFFER_NUM   17
 
 
 #define	STARTCODE_H263_PSC	0x00008000
@@ -86,14 +88,14 @@ static void usage()
 	INFO("-i       string: input bitstream filename\n");
 	INFO("[OPTIONS]:\n");
         INFO("-o       string: output yuv filename\n");
-	INFO("-format integer: video format(0:H263 / 1:MPEG4 / 2:MJPG / 3:FLVH263 / 4:H264), auto detection if default\n");
+	INFO("-format integer: video format(0:H263 / 1:MPEG4 / 2:MJPG / 3:FLVH263 / 4:H264 /5: VP8), auto detection if default\n");
 	INFO("-frames integer: number of frames to decode, default is 0 means all frames\n");
 	INFO("-help          : show this help message\n");
 	INFO("Built on %s %s, Written by JamesXiong(james.xiong@spreadtrum.com)\n", __DATE__, __TIME__);
 }
 
 
-static int dec_init(int format, unsigned char* pheader_buffer, unsigned int header_size, 
+static int dec_init(VPXHandle *mHandle, int format, unsigned char* pheader_buffer, unsigned int header_size, 
     unsigned char* pbuf_inter, unsigned char* pbuf_inter_phy, unsigned int size_inter, 
     unsigned char* pbuf_extra, unsigned char* pbuf_extra_phy, unsigned int size_extra)
 {
@@ -118,24 +120,22 @@ static int dec_init(int format, unsigned char* pheader_buffer, unsigned int head
 	video_format.frame_width = 0;
     	video_format.frame_height = 0;
 
-	ret = MP4DecInit(&InterMemBfr,&video_format);
-	if (ret == 0)
-	{
-		MP4DecMemInit(&ExtraMemBfr);
-	}
+	ret = VP8DecInit(mHandle, &InterMemBfr/*,&video_format*/);
+
 
         INFO("dec_init OUT\n"); 
 
 	return ret;
 }
 
-static int dec_decode_frame(unsigned char* pframe, unsigned int size, int* frame_effective, unsigned int* width, unsigned int* height, int* type)
+static int dec_decode_frame(VPXHandle *mHandle, unsigned char* pframe,unsigned char* pframe_phy, unsigned int size, int* frame_effective, unsigned int* width, unsigned int* height, int* type)
 {
 	MMDecInput dec_in;
     	MMDecOutput dec_out;
 	int ret;
 
-	dec_in.pStream_phy= pframe;
+	dec_in.pStream= pframe;
+	dec_in.pStream_phy= pframe_phy;
     	dec_in.dataLen = size;
     	dec_in.beLastFrm = 0;
     	dec_in.expected_IVOP = 0;
@@ -145,7 +145,11 @@ static int dec_decode_frame(unsigned char* pframe, unsigned int size, int* frame
 	dec_out.VopPredType = -1;
     	dec_out.frameEffective = 0;
 
-	ret = MP4DecDecode(&dec_in, &dec_out);
+	ret = VP8DecDecode(mHandle, &dec_in, &dec_out);
+	if(ret == MMDEC_MEMORY_ALLOCED)
+		ret = VP8DecDecode(mHandle, &dec_in, &dec_out);
+
+
 	if (ret == 0)
 	{
 		*width = dec_out.frame_width;
@@ -157,12 +161,32 @@ static int dec_decode_frame(unsigned char* pframe, unsigned int size, int* frame
 	return ret;
 }
 
-
-static void dec_release()
+#if 0
+static int dec_header(unsigned char* pframe, unsigned int size,unsigned int* width, unsigned int* height)
 {
-	MP4DecReleaseRefBuffers();
+	MMDecInput dec_in;
+    	MMDecVideoFormat video_format;
+	int ret;
 
-	MP4DecRelease();
+	dec_in.pStream_phy= pframe;
+    	dec_in.dataLen = size;
+
+	
+	VP8DecHeader(&dec_in,&video_format);
+
+	*width = video_format.frame_width;
+	*height = video_format.frame_height;
+
+	return ret;
+}
+#endif
+
+
+static void dec_release(VPXHandle *mHandle)
+{
+//	MP4DecReleaseRefBuffers();
+
+//	MP4DecRelease();
 }
 
 
@@ -287,7 +311,7 @@ int main(int argc, char **argv)
 	unsigned int maskcode = 0;
 	int i;
 
-
+        VPXHandle *mHandle;
 	
 	// bitstream buffer, read from bs file
 	unsigned char buffer_data[ONEFRAME_BITSTREAM_BFR_SIZE];
@@ -394,8 +418,8 @@ int main(int argc, char **argv)
         }
     }
 
-	
-	if ((format < 0) || (format > 4))
+#if 0	
+	if ((format < 0) || (format > 5))
 	{
 		// detect bistream format
 		unsigned char header_data[64];
@@ -408,8 +432,9 @@ int main(int argc, char **argv)
 		rewind(fp_bs);
 		format = detect_format(header_data, header_size);
 	}
-
-
+#endif
+	
+	format = 5;
 
 	
 	/* bs buffer */
@@ -473,11 +498,12 @@ int main(int argc, char **argv)
 	INFO("Try to decode %s to %s, format = %s\n", filename_bs, filename_yuv, format2str(format));
 
 	
-
+        mHandle = (VPXHandle *)malloc(sizeof(VPXHandle));
+        memset(mHandle, 0, sizeof(VPXHandle));
 
 
 	/* step 1 - init vsp */
-	size_inter = MP4DEC_INTERNAL_BUFFER_SIZE;
+	size_inter = VP8_DECODER_INTERNAL_BUFFER_SIZE;
 	pmem_inter = new MemoryHeapIon("/dev/ion", size_inter, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
 	if (pmem_inter->getHeapID() == NULL)
 	{
@@ -510,7 +536,7 @@ int main(int argc, char **argv)
 		goto err;
 	}
 
-	if (dec_init(format, NULL, 0, pbuf_inter, pbuf_inter_phy, size_inter, pbuf_extra, pbuf_extra_phy, size_extra) != 0)
+	if (dec_init(mHandle, format, NULL, 0, pbuf_inter, pbuf_inter_phy, size_inter, pbuf_extra, pbuf_extra_phy, size_extra) != 0)
 	{
 		ERR("Failed to init VSP\n");
 		goto err;
@@ -531,10 +557,24 @@ int main(int argc, char **argv)
 		buffer_size += read_size;
 
 
-		unsigned char* ptmp = buffer_data;
+		unsigned char* ptmp = buffer_data ; 
 		unsigned int frame_size = 0;
+		unsigned int width_header = 0;
+		unsigned int height_header = 0;
+
+		//memcpy(pbuf_stream, ptmp, 32);
+
+		//dec_header(pbuf_stream_phy,32,&width_header,  &height_header);
+
+		//INFO("width_header : %d, height_header %d \n", width_header, height_header); 
+
+		ptmp += 32;
+	
+		
 		while (buffer_size > 0)
 		{
+
+		#if 0
 			// search a frame
 			frame_size = find_frame(ptmp, buffer_size, startcode, maskcode);
 			if (frame_size == 0)
@@ -548,8 +588,15 @@ int main(int argc, char **argv)
 					break;
 				}
 			}
+		#endif
+			frame_size = (ptmp[3] <<24)	|  (ptmp[2] <<16)	|  (ptmp[1] <<8)	|  (ptmp[0] <<0);
 
+			INFO("frame_size : %d\t", frame_size); 
+			ptmp += 12;// Header length.
 
+                        if (frame_size == 0)
+                            break;
+			
 			// read a bitstream frame
 			memcpy(pbuf_stream, ptmp, frame_size);
 
@@ -564,10 +611,10 @@ int main(int argc, char **argv)
 			unsigned int height_new = 0;
 			unsigned char* pyuv420sp = pyuv[framenum_bs % DEC_YUV_BUFFER_NUM];
 			unsigned char* pyuv420sp_phy = pyuv_phy[framenum_bs % DEC_YUV_BUFFER_NUM];
-			MP4DecSetCurRecPic(pyuv420sp, pyuv420sp_phy, NULL);
+			VP8DecSetCurRecPic(mHandle, pyuv420sp, pyuv420sp_phy, NULL);
 			framenum_bs ++;
 			int64_t start = systemTime();
-			int ret = dec_decode_frame(pbuf_stream_phy, frame_size, &frame_effective, &width_new, &height_new, &type);
+			int ret = dec_decode_frame(mHandle, pbuf_stream,pbuf_stream_phy, frame_size, &frame_effective, &width_new, &height_new, &type);
 			int64_t end = systemTime();
 			unsigned int duration = (unsigned int)((end-start) / 1000000L);
 			time_total_ms += duration;
@@ -623,7 +670,7 @@ int main(int argc, char **argv)
 
 
 	/* step 3 - release vsp */
-	dec_release();
+	dec_release(mHandle);
 
 
 	INFO("Finish decoding %s(%s, %d frames) to %s(%d frames)", filename_bs, format2str(format), framenum_bs, filename_yuv, framenum_yuv);
@@ -640,6 +687,11 @@ int main(int argc, char **argv)
 
 
 err:
+        if (mHandle != NULL)
+        {
+            free (mHandle);
+        }
+
         if (pbuf_extra != NULL)
 	{
 		pmem_extra.clear();

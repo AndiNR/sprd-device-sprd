@@ -51,16 +51,19 @@ PRODUCT_PACKAGES += \
     libsprddm \
     libvalidationtoolsjni \
     vtserver \
+    libstagefright_sprd_soft_mpeg4dec	\
+    libstagefright_sprd_soft_h264dec	\
     \
-    libstagefright_mix_mpeg4dec_sprd \
-    libstagefright_m4vh263dec_hw_sprd \
-    libstagefright_m4vh263dec_sprd \
+    libstagefright_sprd_mpeg4dec \
+    libomx_m4vh263dec_hw_sprd \
+    libomx_m4vh263dec_sw_sprd \
     \
-    libstagefright_hw_mpeg4enc_sprd\
+    libstagefright_sprd_mpeg4enc	\
+    libomx_m4vh263enc_hw_sprd \
     \
-    libstagefright_mix_h264dec_sprd	\
-    libstagefright_avcdec_hw_sprd	\
-    libstagefright_avcdec_sprd
+    libstagefright_sprd_h264dec	\
+    libomx_avcdec_hw_sprd	\
+    libomx_avcdec_sw_sprd	\
 
 # prebuild files
 PRODUCT_PACKAGES += \

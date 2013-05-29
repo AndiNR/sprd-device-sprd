@@ -14,7 +14,8 @@
 using namespace android;
 
 
-#include "h264enc.h"
+//#include "h264enc.h"
+#include "avc_enc_api.h"
 
 
 #include "util.h"
@@ -423,8 +424,29 @@ INFO("enc_init end\n");
 //		}
 //		INFO("header: size = %d\n", header_size);
 //	}
+        MMEncOut sps_header, pps_header;
+        int   header_ret;
 
+        memset(&sps_header, 0, sizeof(MMEncOut));
+        memset(&pps_header, 0, sizeof(MMEncOut));
 
+        //sps
+        header_ret = H264EncGenHeader(&sps_header, 1);
+        if (fwrite(sps_header.pOutBuf, sizeof(unsigned char), sps_header.strmSize, fp_bs) != sps_header.strmSize)
+        {
+	    ERR("Failed to encode sps %d\n", header_ret);
+            goto err;
+        }
+        bs_total_len += sps_header.strmSize;
+
+        //pps
+        header_ret = H264EncGenHeader(&pps_header, 0);
+        if (fwrite(pps_header.pOutBuf, sizeof(unsigned char), pps_header.strmSize, fp_bs) != pps_header.strmSize)
+        {
+	    ERR("Failed to encode pps %d\n", header_ret);
+            goto err;
+        }
+        bs_total_len += pps_header.strmSize;
 
 	/* step 3 - encode with vsp */
 	while (!feof(fp_yuv))
@@ -493,6 +515,7 @@ INFO("enc_init end\n");
 #endif
 
 		// write header if key frame for MPEG4
+	#if 0	
 		if (format && (type == 0))
 		{
 			if (fwrite(header_buffer, sizeof(unsigned char), header_size, fp_bs) != header_size)
@@ -501,7 +524,7 @@ INFO("enc_init end\n");
 			}
 			bs_total_len += header_size;
 		}
-
+        #endif
 
 		// write frame
 		if (fwrite(frame_buffer, sizeof(unsigned char), frame_size, fp_bs) != frame_size)

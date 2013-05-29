@@ -44,11 +44,11 @@ PRODUCT_PACKAGES += \
     ValidationTools \
     libvalidationtoolsjni \
     vtserver	\
-    libstagefright_soft_mpeg4dec_sprd \
-    libstagefright_soft_h264dec_sprd \
+    libstagefright_sprd_soft_mpeg4dec \
+    libstagefright_sprd_soft_h264dec \
     \
-    libstagefright_sw_mpeg4dec_sprd.so \
-    libstagefright_m4vh263dec_sprd.so
+    libstagefright_sprd_mpeg4dec.so \
+    libomx_m4vh263dec_sw_sprd.so
 
 # prebuild files
 PRODUCT_PACKAGES += \

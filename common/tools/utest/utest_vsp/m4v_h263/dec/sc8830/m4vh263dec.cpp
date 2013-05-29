@@ -13,8 +13,8 @@
 using namespace android;
 
 
-#include "vp8dec.h"
-#include "vsp_vp8_dec.h"
+//#include "mpeg4dec.h"
+#include "m4v_h263_dec_api.h"
 
 
 #include "util.h"
@@ -28,7 +28,7 @@ using namespace android;
 
 
 #define ONEFRAME_BITSTREAM_BFR_SIZE	(1500*1024)  //for bitstream size of one encoded frame.
-#define DEC_YUV_BUFFER_NUM   17
+#define DEC_YUV_BUFFER_NUM   3
 
 
 #define	STARTCODE_H263_PSC	0x00008000
@@ -76,8 +76,12 @@ static const unsigned int table_maskcode2[] =
 		0x00000074
 };
 
-
-
+typedef enum
+{
+	H263_MODE = 0,MPEG4_MODE,
+	FLV_MODE,
+	UNKNOWN_MODE	
+}MP4DecodingMode;
 
 
 static void usage()
@@ -87,14 +91,72 @@ static void usage()
 	INFO("-i       string: input bitstream filename\n");
 	INFO("[OPTIONS]:\n");
         INFO("-o       string: output yuv filename\n");
-	INFO("-format integer: video format(0:H263 / 1:MPEG4 / 2:MJPG / 3:FLVH263 / 4:H264 /5: VP8), auto detection if default\n");
+	INFO("-format integer: video format(0:H263 / 1:MPEG4 / 2:MJPG / 3:FLVH263 / 4:H264), auto detection if default\n");
 	INFO("-frames integer: number of frames to decode, default is 0 means all frames\n");
 	INFO("-help          : show this help message\n");
 	INFO("Built on %s %s, Written by JamesXiong(james.xiong@spreadtrum.com)\n", __DATE__, __TIME__);
 }
+	unsigned int framenum_bs = 0;
+
+    sp<MemoryHeapIon> iDecExtPmemHeap;
+    void*  iDecExtVAddr =NULL;
+    uint32 iDecExtPhyAddr =NULL;
+
+int extMemoryAlloc(void *  mHandle,unsigned int width,unsigned int height) {
+
+    int32 Frm_width_align = ((width + 15) & (~15));
+    int32 Frm_height_align = ((height + 15) & (~15));
+
+#if 0 //removed it, bug 121132, xiaowei@2013.01.25
+    mWidth = Frm_width_align;
+    mHeight = Frm_height_align;
+#endif
+
+//    ALOGI("%s, %d, Frm_width_align: %d, Frm_height_align: %d", __FUNCTION__, __LINE__, Frm_width_align, Frm_height_align);
+
+    int32 mb_num_x = Frm_width_align/16;
+    int32 mb_num_y = Frm_height_align/16;
+    int32 mb_num_total = mb_num_x * mb_num_y;
+    int32 frm_size = (mb_num_total * 256);
+    int32 i;
+    MMCodecBuffer extra_mem;
+    uint32 extra_mem_size;
 
 
-static int dec_init(int format, unsigned char* pheader_buffer, unsigned int header_size, 
+
+//    if (mDecoderSwFlag)
+//    {
+//        extra_mem_size[HW_NO_CACHABLE] = 0;	
+//        extra_mem_size[HW_CACHABLE] = 0;
+//    }else
+    {
+        extra_mem_size = mb_num_total * (32 + 3 * 80) + 1024;
+        iDecExtPmemHeap = new MemoryHeapIon("/dev/ion", extra_mem_size, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);	
+        int fd = iDecExtPmemHeap->getHeapID();
+        if(fd>=0)
+        {
+            int ret,phy_addr, buffer_size;
+            ret = iDecExtPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
+            if(ret) 
+            {
+                ALOGE ("iDecExtPmemHeap get_phy_addr_from_ion fail %d",ret);
+            }
+    			
+            iDecExtPhyAddr =(uint32)phy_addr;
+//            ALOGD ("%s: ext mem pmempool %x,%x,%x,%x\n", __FUNCTION__, iDecExtPmemHeap->getHeapID(),iDecExtPmemHeap->base(),phy_addr,buffer_size);
+            iDecExtVAddr = (void *)iDecExtPmemHeap->base();
+            extra_mem.common_buffer_ptr =(uint8 *) iDecExtVAddr;
+            extra_mem.common_buffer_ptr_phy = (void *)iDecExtPhyAddr;
+            extra_mem.size = extra_mem_size;
+        }
+    }
+
+     MP4DecMemInit((MP4Handle *)mHandle, &extra_mem);
+
+    return 1;
+}
+
+static int dec_init(MP4Handle *mHandle, int format, unsigned char* pheader_buffer, unsigned int header_size, 
     unsigned char* pbuf_inter, unsigned char* pbuf_inter_phy, unsigned int size_inter, 
     unsigned char* pbuf_extra, unsigned char* pbuf_extra_phy, unsigned int size_extra)
 {
@@ -119,73 +181,55 @@ static int dec_init(int format, unsigned char* pheader_buffer, unsigned int head
 	video_format.frame_width = 0;
     	video_format.frame_height = 0;
 
-	ret = VP8DecInit(&InterMemBfr,&video_format);
-
+	ret = MP4DecInit(mHandle, &InterMemBfr);
+	if (ret == 0)
+	{
+		MP4DecMemInit(mHandle, &ExtraMemBfr);
+	}
 
         INFO("dec_init OUT\n"); 
 
 	return ret;
 }
 
-static int dec_decode_frame(unsigned char* pframe,unsigned char* pframe_phy, unsigned int size, int* frame_effective, unsigned int* width, unsigned int* height, int* type)
+static int dec_decode_frame(MP4Handle *mHandle, unsigned char* pframe, unsigned char* pframe_y,unsigned int size, int* frame_effective, unsigned int* width, unsigned int* height, int* type)
 {
 	MMDecInput dec_in;
     	MMDecOutput dec_out;
 	int ret;
 
-	dec_in.pStream= pframe;
-	dec_in.pStream_phy= pframe_phy;
+	do
+	{
+		dec_in.pStream= pframe;
+		dec_in.pStream_phy= pframe_y;
     	dec_in.dataLen = size;
     	dec_in.beLastFrm = 0;
     	dec_in.expected_IVOP = 0;
     	dec_in.beDisplayed = 1;
     	dec_in.err_pkt_num = 0;
 
-	dec_out.VopPredType = -1;
+		dec_out.VopPredType = -1;
     	dec_out.frameEffective = 0;
 
-	ret = VP8DecDecode(&dec_in, &dec_out);
-	if(ret == MMDEC_MEMORY_ALLOCED)
-		ret = VP8DecDecode(&dec_in, &dec_out);
-
-
-	if (ret == 0)
-	{
-		*width = dec_out.frame_width;
-		*height = dec_out.frame_height;
-		*type = dec_out.VopPredType;
-		*frame_effective = dec_out.frameEffective;
-	}
+		ret = MP4DecDecode(mHandle, &dec_in, &dec_out);
+		if (ret == 0)
+		{
+			*width = dec_out.frame_width;
+			*height = dec_out.frame_height;
+			*type = dec_out.VopPredType;
+			*frame_effective = dec_out.frameEffective;
+		}
+	}while (framenum_bs == 1 && ret == MMDEC_MEMORY_ALLOCED);
 
 	return ret;
 }
 
 
-static int dec_header(unsigned char* pframe, unsigned int size,unsigned int* width, unsigned int* height)
+static void dec_release(MP4Handle *mHandle)
 {
-	MMDecInput dec_in;
-    	MMDecVideoFormat video_format;
-	int ret;
+	MP4DecReleaseRefBuffers(mHandle);
 
-	dec_in.pStream_phy= pframe;
-    	dec_in.dataLen = size;
-
-	
-	VP8DecHeader(&dec_in,&video_format);
-
-	*width = video_format.frame_width;
-	*height = video_format.frame_height;
-
-	return ret;
-}
-
-
-
-static void dec_release()
-{
-//	MP4DecReleaseRefBuffers();
-
-//	MP4DecRelease();
+	MP4DecRelease(mHandle);
 }
 
 
@@ -293,7 +337,6 @@ static const char* type2str(int type)
 
 
 sp<MemoryHeapIon> pmem_extra = NULL;
-sp<MemoryHeapIon> pmem_extra_cachable = NULL;
 
 int main(int argc, char **argv)
 {
@@ -310,6 +353,7 @@ int main(int argc, char **argv)
 	unsigned int maskcode = 0;
 	int i;
 
+        MP4Handle *mHandle;
 
 	
 	// bitstream buffer, read from bs file
@@ -326,7 +370,7 @@ int main(int argc, char **argv)
 	unsigned char* pu = NULL;
 	unsigned char* pv = NULL;
     
-	unsigned int framenum_bs = 0;
+	//unsigned int framenum_bs = 0;
 	unsigned int framenum_err = 0;
 	unsigned int framenum_yuv = 0;
 	unsigned int time_total_ms = 0;
@@ -351,7 +395,7 @@ int main(int argc, char **argv)
         
 	int phy_addr = 0;
 	int size = 0;
-
+	framenum_bs = 0;
 
 	/* parse argument */
 
@@ -417,8 +461,8 @@ int main(int argc, char **argv)
         }
     }
 
-#if 0	
-	if ((format < 0) || (format > 5))
+	
+	if ((format < 0) || (format > 4))
 	{
 		// detect bistream format
 		unsigned char header_data[64];
@@ -431,9 +475,8 @@ int main(int argc, char **argv)
 		rewind(fp_bs);
 		format = detect_format(header_data, header_size);
 	}
-#endif
-	
-	format = 5;
+
+
 
 	
 	/* bs buffer */
@@ -497,11 +540,16 @@ int main(int argc, char **argv)
 	INFO("Try to decode %s to %s, format = %s\n", filename_bs, filename_yuv, format2str(format));
 
 	
+    mHandle = (MP4Handle *)malloc(sizeof(MP4Handle));
+    memset(mHandle, 0, sizeof(tagMP4Handle));
 
-
+    mHandle->userdata = (void *)mHandle;
+    mHandle->VSP_extMemCb = extMemoryAlloc;
+    mHandle->VSP_bindCb = NULL;
+    mHandle->VSP_unbindCb = NULL;
 
 	/* step 1 - init vsp */
-	size_inter = VP8_DECODER_INTERNAL_BUFFER_SIZE;
+	size_inter = MP4DEC_INTERNAL_BUFFER_SIZE;
 	pmem_inter = new MemoryHeapIon("/dev/ion", size_inter, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
 	if (pmem_inter->getHeapID() == NULL)
 	{
@@ -520,11 +568,11 @@ int main(int argc, char **argv)
 
 	size_extra = 5000 * 1024;
 	pmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
-        if (pmem_extra->getHeapID() < 0)
-        {
-                    ERR("Failed to alloc extra memory\n");
+    if (pmem_extra->getHeapID() < 0)
+	{
+		ERR("Failed to alloc extra memory\n");
 		goto err;
-        }
+	}
 	pmem_extra->get_phy_addr_from_ion(&phy_addr, &size);
 	pbuf_extra = (unsigned char*)pmem_extra->base();
 	pbuf_extra_phy = (unsigned char*)phy_addr;
@@ -534,14 +582,57 @@ int main(int argc, char **argv)
 		goto err;
 	}
 
-	if (dec_init(format, NULL, 0, pbuf_inter, pbuf_inter_phy, size_inter, pbuf_extra, pbuf_extra_phy, size_extra) != 0)
+	if (dec_init(mHandle, format, NULL, 0, pbuf_inter, pbuf_inter_phy, size_inter, pbuf_extra, pbuf_extra_phy, size_extra) != 0)
 	{
 		ERR("Failed to init VSP\n");
 		goto err;
 	}
+{
+	MP4DecodingMode mode = (format== MPEG4_MODE) ? MPEG4_MODE : H263_MODE;
+	MMDecVideoFormat video_format;
+	
+	if (mode == MPEG4_MODE)
+	{
+		int read_size = fread(buffer_data, 1, ONEFRAME_BITSTREAM_BFR_SIZE, fp_bs);
+		if (read_size <= 0)
+		{
+			goto err;
+		}
+		
+		// search a frame
+		unsigned char* ptmp = buffer_data;
+		unsigned int frame_size = 0;
+		frame_size = find_frame(ptmp, buffer_size, startcode, maskcode);
+		video_format.i_extra = frame_size;
+		
+		if( video_format.i_extra > 0)
+		{
+			memcpy(pbuf_stream, buffer_data,read_size);
+        	video_format.p_extra = pbuf_stream;
+			video_format.p_extra_phy = pbuf_stream_phy;
+		}else{
+        	video_format.p_extra = NULL;
+			video_format.p_extra_phy = NULL;
+		}
+			
+		video_format.video_std = MPEG4;
+		video_format.frame_width = 0;
+		video_format.frame_height = 0;
+		video_format.uv_interleaved = 1;
 
-
-
+		INFO(" MP4DecVolHeader \n");
+		MMDecRet ret = MP4DecVolHeader(mHandle, &video_format);
+		
+		if (MMDEC_OK != ret)
+		{
+			ERR("Failed to decode Vol Header\n");
+			goto err;
+		}
+		
+		buffer_size = 0;
+		fseek(fp_bs, 0, SEEK_SET);		
+	}			
+}											
 	/* step 2 - decode with vsp */
 	startcode = table_startcode2[format];
 	maskcode = table_maskcode2[format];
@@ -555,24 +646,11 @@ int main(int argc, char **argv)
 		buffer_size += read_size;
 
 
-		unsigned char* ptmp = buffer_data ; 
+
+		unsigned char* ptmp = buffer_data;
 		unsigned int frame_size = 0;
-		unsigned int width_header = 0;
-		unsigned int height_header = 0;
-
-		//memcpy(pbuf_stream, ptmp, 32);
-
-		//dec_header(pbuf_stream_phy,32,&width_header,  &height_header);
-
-		//INFO("width_header : %d, height_header %d \n", width_header, height_header); 
-
-		ptmp += 32;
-	
-		
 		while (buffer_size > 0)
 		{
-
-		#if 0
 			// search a frame
 			frame_size = find_frame(ptmp, buffer_size, startcode, maskcode);
 			if (frame_size == 0)
@@ -586,12 +664,8 @@ int main(int argc, char **argv)
 					break;
 				}
 			}
-		#endif
-			frame_size = (ptmp[3] <<24)	|  (ptmp[2] <<16)	|  (ptmp[1] <<8)	|  (ptmp[0] <<0);
 
-			INFO("frame_size : %d\n", frame_size); 
-			ptmp += 12;// Header length.
-			
+
 			// read a bitstream frame
 			memcpy(pbuf_stream, ptmp, frame_size);
 
@@ -606,10 +680,10 @@ int main(int argc, char **argv)
 			unsigned int height_new = 0;
 			unsigned char* pyuv420sp = pyuv[framenum_bs % DEC_YUV_BUFFER_NUM];
 			unsigned char* pyuv420sp_phy = pyuv_phy[framenum_bs % DEC_YUV_BUFFER_NUM];
-			VP8Dec_SetCurRecPic(pyuv420sp, pyuv420sp_phy, NULL);
+			MP4DecSetCurRecPic(mHandle, pyuv420sp, pyuv420sp_phy, NULL);
 			framenum_bs ++;
 			int64_t start = systemTime();
-			int ret = dec_decode_frame(pbuf_stream,pbuf_stream_phy, frame_size, &frame_effective, &width_new, &height_new, &type);
+			int ret = dec_decode_frame(mHandle, pbuf_stream,pbuf_stream_phy, frame_size, &frame_effective, &width_new, &height_new, &type);
 			int64_t end = systemTime();
 			unsigned int duration = (unsigned int)((end-start) / 1000000L);
 			time_total_ms += duration;
@@ -665,7 +739,7 @@ int main(int argc, char **argv)
 
 
 	/* step 3 - release vsp */
-	dec_release();
+	dec_release(mHandle);
 
 
 	INFO("Finish decoding %s(%s, %d frames) to %s(%d frames)", filename_bs, format2str(format), framenum_bs, filename_yuv, framenum_yuv);
@@ -682,6 +756,16 @@ int main(int argc, char **argv)
 
 
 err:
+        if (mHandle != NULL)
+        {
+            free (mHandle);
+        }
+             
+        if(iDecExtVAddr)
+        {
+            iDecExtPmemHeap.clear();
+            iDecExtVAddr = NULL;
+        }
         if (pbuf_extra != NULL)
 	{
 		pmem_extra.clear();
