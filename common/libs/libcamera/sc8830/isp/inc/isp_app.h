@@ -44,7 +44,8 @@ enum isp_callback_cmd{
 	ISP_PROC_CALLBACK=0x00000100,
 	ISP_AF_NOTICE_CALLBACK=0x00000200,
 	ISP_SKIP_FRAME_CALLBACK=0x00000300,
-	ISP_ALG_CALLBACK=0x00000400,
+	ISP_FLASH_AE_CALLBACK=0x00000400,
+	ISP_AE_BAPASS_CALLBACK=0x00000500,
 	ISP_CALLBACK_CMD_MAX=0xffffffff
 };
 
@@ -261,6 +262,7 @@ struct isp_af_notice{
 
 struct isp_alg{
 	enum isp_alg_mode mode;
+	uint32_t flash_eb;
 	uint32_t flash_ratio;
 };
 

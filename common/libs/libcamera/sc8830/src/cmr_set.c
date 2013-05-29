@@ -581,16 +581,32 @@ int camera_snapshot_start_set(void)
 
 	if (cxt->cmr_set.flash) {
 		/*open flash*/
-		camera_set_flashdevice((uint32_t)FLASH_OPEN);
-	/*	ret = isp_ioctl(ISP_CTRL_ALG,ISP_ALG_FAST);
+
+		struct isp_alg flash_param;
+
+		flash_param.mode=ISP_AE_BYPASS;
+		flash_param.flash_eb=0x01;
+		ret = isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param);
 		if (CAMERA_SUCCESS != ret) {
 			CMR_LOGE("ISP_CTRL_FLASH_EG error.");
 		}
 		sem_wait(&cxt->cmr_set.isp_alg_sem);
+
+		camera_set_flashdevice((uint32_t)FLASH_OPEN);
+
+		flash_param.mode=ISP_ALG_FAST;
+		flash_param.flash_eb=0x01;
+		flash_param.flash_ratio=1;
+		ret = isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param);
+		if (CAMERA_SUCCESS != ret) {
+			CMR_LOGE("ISP_CTRL_FLASH_EG error.");
+		}
+		sem_wait(&cxt->cmr_set.isp_alg_sem);
+
 		ret = isp_ioctl(ISP_CTRL_FLASH_EG,0);
 		if (CAMERA_SUCCESS != ret) {
 			CMR_LOGE("ISP_CTRL_FLASH_EG error.");
-		}*/
+		}
 	}
 #if 0
 	ret = Sensor_Ioctl(SENSOR_IOCTL_BEFORE_SNAPSHOT, (cxt->sn_cxt.capture_mode | (cxt->cap_mode<<CAP_MODE_BITS)));

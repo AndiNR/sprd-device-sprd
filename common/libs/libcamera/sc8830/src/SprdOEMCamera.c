@@ -2754,7 +2754,10 @@ int camera_isp_handle(uint32_t evt_type, uint32_t sub_type, void *data)
 	case ISP_AF_NOTICE_CALLBACK:
 		ret = camera_isp_af_done(data);
 		break;
-	case ISP_ALG_CALLBACK:
+	case ISP_FLASH_AE_CALLBACK:
+		ret = camera_isp_alg_done(data);
+		break;
+	case ISP_AE_BAPASS_CALLBACK:
 		ret = camera_isp_alg_done(data);
 		break;
 	default:
