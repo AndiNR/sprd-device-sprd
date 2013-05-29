@@ -769,21 +769,10 @@ int camera_init_internal(uint32_t camera_id)
 		goto sensor_deinit;
 	}
 
-#ifdef __PREV_THREAD
-	ret = camera_prev_thread_init();
-	if (ret) {
-		CMR_LOGE("Failed to init preview manager %d", ret);
-		goto v4l2_deinit;
-	}
-#endif
 	ret = camera_isp_init();
 	if (ret) {
 		CMR_LOGE("Failed to init ISP driver %d", ret);
-#ifdef __PREV_THREAD
-		goto prev_thread_deinit;
-#else
 		goto v4l2_deinit;
-#endif
 	}
 
 	ret = camera_jpeg_init();
@@ -812,11 +801,6 @@ jpeg_deinit:
 	camera_jpeg_deinit();
 isp_deinit:
 	camera_isp_deinit();
-
-#ifdef __PREV_THREAD
-prev_thread_deinit:
-	camera_prev_thread_deinit();
-#endif
 
 v4l2_deinit:
 	camera_v4l2_deinit();
@@ -871,10 +855,6 @@ int camera_stop_internal(void)
 	camera_jpeg_deinit();
 
 	camera_isp_deinit();
-
-#ifdef __PREV_THREAD
-	camera_prev_thread_deinit();
-#endif
 
 	camera_v4l2_deinit();
 
@@ -1274,6 +1254,14 @@ int camera_start_preview_internal(void)
 
 	CMR_LOGV("preview format is %d", g_cxt->preview_fmt);
 
+#ifdef __PREV_THREAD
+	ret = camera_prev_thread_init();
+	if (ret) {
+		CMR_LOGE("Failed to init preview manager %d", ret);
+		return -CAMERA_FAILED;
+	}
+#endif
+
 	ret = cmr_v4l2_if_cfg(&g_cxt->sn_cxt.sn_if);
 	if (ret) {
 		CMR_LOGE("the sensor interface is unsupported by V4L2");
@@ -1396,6 +1384,10 @@ int camera_stop_preview_internal(void)
 	}
 
 	cmr_rot_wait_done();
+
+#ifdef __PREV_THREAD
+	camera_prev_thread_deinit();
+#endif
 
 	g_cxt->rot_cxt.rot_state = IMG_CVT_ROT_DONE;
 
