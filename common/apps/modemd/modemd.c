@@ -265,7 +265,7 @@ int start_service(int modem, int is_vlx, int restart)
 	char at_str[20];
 	unsigned char buffer[50] = {0};
 	unsigned char *p_buf = buffer;
-	int count =0;
+	int count =0, resend = 0;
 
 	MODEMD_LOGD("enter start_service!");
 
@@ -304,8 +304,9 @@ int start_service(int modem, int is_vlx, int restart)
 			strcpy(at_str, "AT+SMMSWAP=1\r");
 		else
 			strcpy(at_str, "AT\r");
+rewrite:
 		MODEMD_LOGD("write %s to %s", at_str, path);
-		length = sizeof(at_str);
+		length = strlen(at_str);
 		ret = write(stty_fd, at_str, length);
 		if (ret != length) {
 			MODEMD_LOGE("write error length = %d  ret = %d\n", length, ret);
@@ -319,6 +320,7 @@ int start_service(int modem, int is_vlx, int restart)
 				p_buf += ret;
 				if (findInBuf(buffer, sizeof(buffer), "OK")) {
 					MODEMD_LOGD("read OK from %s", path);
+					resend++;
 					break;
 				} else if (findInBuf(buffer, sizeof(buffer), "ERROR")) {
 					MODEMD_LOGD("wrong modem state, exit!");
@@ -339,6 +341,12 @@ int start_service(int modem, int is_vlx, int restart)
 				close(stty_fd);
 				exit(-1);
 			}
+		}
+		if(resend == 1) {
+			memset(buffer, 0, sizeof(buffer));
+			p_buf = buffer;
+			strcpy(at_str, "AT+CMUX=0\r");
+			goto rewrite;
 		}
 		close(stty_fd);
 	}
