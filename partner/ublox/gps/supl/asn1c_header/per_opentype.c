@@ -356,7 +356,7 @@ static int
 per_skip_bits(asn_per_data_t *pd, int skip_nbits) {
 	int hasNonZeroBits = 0;
 	while(skip_nbits > 0) {
-		int skip;
+		int skip = 0;
 		if(skip_nbits < skip)
 			skip = skip_nbits;
 		else
