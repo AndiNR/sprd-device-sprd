@@ -65,12 +65,6 @@ PRODUCT_PACKAGES += \
 	
 # packages files
 PRODUCT_PACKAGES += \
-
-	
-# add  system properties
-PRODUCT_PROPERTY_OVERRIDES += \
-	ro.operator=cmcc \
-	ro.operator.version=specA
 	
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \

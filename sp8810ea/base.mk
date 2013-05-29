@@ -134,7 +134,6 @@ PRODUCT_COPY_FILES := \
 	frameworks/native/data/etc/android.hardware.touchscreen.multitouch.xml:system/etc/permissions/android.hardware.touchscreen.multitouch.xml
 
 BOARD_WLAN_DEVICE_REV       := bcm4330_b2
-WLAN_FEATURE_CUST           := cmcc
 $(call inherit-product, $(BOARDDIR)/../common/apps/engineeringmodel/module.mk)
 $(call inherit-product, $(BOARDDIR)/../common/apps/modemassert/module.mk)
 $(call inherit-product, hardware/broadcom/wlan/bcmdhd/firmware/bcm4330/device-bcm.mk)

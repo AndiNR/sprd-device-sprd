@@ -72,10 +72,6 @@ PRODUCT_PACKAGES += \
 # packages files
 PRODUCT_PACKAGES += \
 	
-# add  system properties
-PRODUCT_PROPERTY_OVERRIDES += \
-	ro.operator.version=specA
-	
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \
 	$(BOARDDIR)/ft5x0x_ts.idc:system/usr/idc/ft5x0x_ts.idc \
