@@ -13,7 +13,8 @@
 using namespace android;
 
 
-#include "h264dec.h"
+//#include "h264dec.h"
+#include "avc_dec_api.h"
 
 
 #include "util.h"
@@ -93,7 +94,7 @@ static void usage()
 }
 
 
-static int dec_init(int format, unsigned char* pheader_buffer, unsigned int header_size, 
+static int dec_init(AVCHandle *mHandle, int format, unsigned char* pheader_buffer, unsigned int header_size, 
     unsigned char* pbuf_inter, unsigned char* pbuf_inter_phy, unsigned int size_inter/*, MMCodecBuffer extra_mem[]*/)
 {
 	MMCodecBuffer InterMemBfr;
@@ -111,7 +112,7 @@ static int dec_init(int format, unsigned char* pheader_buffer, unsigned int head
 	video_format.frame_width = 0;
     	video_format.frame_height = 0;
 
-	ret = H264DecInit(&InterMemBfr,&video_format);
+	ret = H264DecInit(mHandle, &InterMemBfr,&video_format);
 //	if (ret == 0)
 //	{
 //		H264DecMemInit(extra_mem);
@@ -121,13 +122,13 @@ static int dec_init(int format, unsigned char* pheader_buffer, unsigned int head
 	return ret;
 }
 
-static int dec_decode_frame(unsigned char* pframe, unsigned int size, int* frame_effective, unsigned int* width, unsigned int* height, int* type)
+static int dec_decode_frame(AVCHandle *mHandle, unsigned char* pframe, unsigned int size, int* frame_effective, unsigned int* width, unsigned int* height, int* type)
 {
 	MMDecInput dec_in;
     	MMDecOutput dec_out;
 	int ret;
 
-	dec_in.pStream_phy= pframe;
+	dec_in.pStream= pframe;
     	dec_in.dataLen = size;
     	dec_in.beLastFrm = 0;
     	dec_in.expected_IVOP = 0;
@@ -136,7 +137,7 @@ static int dec_decode_frame(unsigned char* pframe, unsigned int size, int* frame
 
     	dec_out.frameEffective = 0;
 
-	ret = H264DecDecode(&dec_in, &dec_out);
+	ret = H264DecDecode(mHandle, &dec_in, &dec_out);
 	if (ret == 0)
 	{
 		*width = dec_out.frame_width;
@@ -148,11 +149,11 @@ static int dec_decode_frame(unsigned char* pframe, unsigned int size, int* frame
 }
 
 
-static void dec_release()
+static void dec_release(AVCHandle *mHandle)
 {
-	H264Dec_ReleaseRefBuffers();
+	H264Dec_ReleaseRefBuffers(mHandle);
 
-	H264DecRelease();
+	H264DecRelease(mHandle);
 }
 
 
@@ -316,6 +317,7 @@ int main(int argc, char **argv)
 	unsigned int maskcode = 0;
 	int i;
 
+        AVCHandle *mHandle;
 
 	
 	// bitstream buffer, read from bs file
@@ -498,7 +500,13 @@ int main(int argc, char **argv)
 	INFO("Try to decode %s to %s, format = %s\n", filename_bs, filename_yuv, format2str(format));
 
 	
+    mHandle = (AVCHandle *)malloc(sizeof(AVCHandle));
+    memset(mHandle, 0, sizeof(AVCHandle));
 
+    mHandle->userdata = (void *)mHandle;
+    mHandle->VSP_extMemCb = VSP_malloc_cb;
+    mHandle->VSP_bindCb = NULL;
+    mHandle->VSP_unbindCb = NULL;
 
 
 	/* step 1 - init vsp */
@@ -520,8 +528,8 @@ int main(int argc, char **argv)
 INFO("h1");
     
 //	H264Dec_RegSPSCB(ActivateSPS);
-        H264Dec_RegMallocCB( VSP_malloc_cb);
-	if (dec_init(format, NULL, 0, pbuf_inter, pbuf_inter_phy, size_inter/*, extra_mem*/) != 0)
+//        H264Dec_RegMallocCB( VSP_malloc_cb);
+	if (dec_init(mHandle, format, NULL, 0, pbuf_inter, pbuf_inter_phy, size_inter/*, extra_mem*/) != 0)
 	{
 		ERR("Failed to init VSP\n");
 		goto err;
@@ -576,10 +584,10 @@ INFO("h2");
 			unsigned int height_new = 0;
 			unsigned char* pyuv420sp = pyuv[framenum_bs % DEC_YUV_BUFFER_NUM];
 			unsigned char* pyuv420sp_phy = pyuv_phy[framenum_bs % DEC_YUV_BUFFER_NUM];
-			H264Dec_SetCurRecPic(pyuv420sp, pyuv420sp_phy, NULL);
+			H264Dec_SetCurRecPic(mHandle, pyuv420sp, pyuv420sp_phy, NULL, framenum_yuv);
 			framenum_bs ++;
 			int64_t start = systemTime();
-			int ret = dec_decode_frame(pbuf_stream_phy, frame_size, &frame_effective, &width_new, &height_new, &type);
+			int ret = dec_decode_frame(mHandle, pbuf_stream_phy, frame_size, &frame_effective, &width_new, &height_new, &type);
 			int64_t end = systemTime();
 			unsigned int duration = (unsigned int)((end-start) / 1000000L);
 			time_total_ms += duration;
@@ -635,7 +643,7 @@ INFO("h2");
 
 
 	/* step 3 - release vsp */
-	dec_release();
+	dec_release(mHandle);
 
 
 	INFO("Finish decoding %s(%s, %d frames) to %s(%d frames)", filename_bs, format2str(format), framenum_bs, filename_yuv, framenum_yuv);
@@ -652,6 +660,11 @@ INFO("h2");
 
 
 err:
+        if (mHandle != NULL)
+        {
+            free (mHandle);
+        }
+
         for (int i = 0; i < 17; i++)
         {
             if (pbuf_extra[i] == NULL)
