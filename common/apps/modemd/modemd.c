@@ -245,7 +245,10 @@ int stop_service(int modem, int is_vlx)
 		snprintf(pid_str, sizeof(pid_str), "%d", pid);
 		property_set(PHONE_APP_PROP, pid_str);
 	}
-	property_set("ctl.start", "kill_phone");
+	if(modem == TD_MODEM)
+		property_set("ctl.start", "kill_td_phone");
+	else if(modem == W_MODEM)
+		property_set("ctl.start", "kill_w_phone");
 
 	return 0;
 }

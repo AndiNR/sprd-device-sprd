@@ -303,8 +303,14 @@ service data_off /system/bin/ext_data.sh  -d
     disabled
     oneshot
 
-#kill app
-service kill_phone /system/bin/ext_kill.sh  -m
+#kill td app
+service kill_td_phone /system/bin/ext_kill.sh  -t
+    user root
+    disabled
+    oneshot
+
+#kill w app
+service kill_w_phone /system/bin/ext_kill.sh  -w
     user root
     disabled
     oneshot
