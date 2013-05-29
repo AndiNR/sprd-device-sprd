@@ -22575,5 +22575,12 @@
         mmsport="8080"
         mmsc="http://mms.ideasclaro.com:8002"
         type="mms"
-    />  
+    />
+    <apn carrier="3gwap"
+        mcc="454"
+        mnc="07"
+        apn="3gwap"
+        mmsproxy="10.0.0.172"
+        mmsport="80"
+    />
 </apns>
