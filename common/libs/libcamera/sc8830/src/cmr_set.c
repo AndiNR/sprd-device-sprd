@@ -581,31 +581,34 @@ int camera_snapshot_start_set(void)
 
 	if (cxt->cmr_set.flash) {
 		/*open flash*/
+		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
+			struct isp_alg flash_param;
 
-		struct isp_alg flash_param;
+			flash_param.mode=ISP_AE_BYPASS;
+			flash_param.flash_eb=0x01;
+			ret = isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param);
+			if (CAMERA_SUCCESS != ret) {
+				CMR_LOGE("ISP_CTRL_FLASH_EG error.");
+			}
+			sem_wait(&cxt->cmr_set.isp_alg_sem);
 
-		flash_param.mode=ISP_AE_BYPASS;
-		flash_param.flash_eb=0x01;
-		ret = isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param);
-		if (CAMERA_SUCCESS != ret) {
-			CMR_LOGE("ISP_CTRL_FLASH_EG error.");
-		}
-		sem_wait(&cxt->cmr_set.isp_alg_sem);
+			camera_set_flashdevice((uint32_t)FLASH_OPEN);
 
-		camera_set_flashdevice((uint32_t)FLASH_OPEN);
+			flash_param.mode=ISP_ALG_FAST;
+			flash_param.flash_eb=0x01;
+			flash_param.flash_ratio=1;
+			ret = isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param);
+			if (CAMERA_SUCCESS != ret) {
+				CMR_LOGE("ISP_CTRL_FLASH_EG error.");
+			}
+			sem_wait(&cxt->cmr_set.isp_alg_sem);
 
-		flash_param.mode=ISP_ALG_FAST;
-		flash_param.flash_eb=0x01;
-		flash_param.flash_ratio=1;
-		ret = isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param);
-		if (CAMERA_SUCCESS != ret) {
-			CMR_LOGE("ISP_CTRL_FLASH_EG error.");
-		}
-		sem_wait(&cxt->cmr_set.isp_alg_sem);
-
-		ret = isp_ioctl(ISP_CTRL_FLASH_EG,0);
-		if (CAMERA_SUCCESS != ret) {
-			CMR_LOGE("ISP_CTRL_FLASH_EG error.");
+			ret = isp_ioctl(ISP_CTRL_FLASH_EG,0);
+			if (CAMERA_SUCCESS != ret) {
+				CMR_LOGE("ISP_CTRL_FLASH_EG error.");
+			}
+		} else {
+			camera_set_flashdevice((uint32_t)FLASH_OPEN);
 		}
 	}
 	if ((CAMERA_NORMAL_MODE == cxt->cap_mode) || (CAMERA_HDR_MODE == cxt->cap_mode)) {
