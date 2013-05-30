@@ -44,12 +44,16 @@ _mali_osk_errcode_t mali_platform_init(void)
 
 	MALI_DEBUG_ASSERT(g_gpu_clock);
 
-	sci_glb_clr(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
-	while(sci_glb_read(REG_GLB_G3D_PWR_CTL, BITS_PD_G3D_STATUS(0x1f))) udelay(100);
+	{
+		sci_glb_clr(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
+		while(sci_glb_read(REG_GLB_G3D_PWR_CTL, BITS_PD_G3D_STATUS(0x1f))) udelay(100);
+		msleep(2);
+	}
 	if(!g_gpu_clock_on)
 	{
 		g_gpu_clock_on = 1;
 		clk_enable(g_gpu_clock);
+		udelay(300);
 	}
 	MALI_SUCCESS;
 }
@@ -74,11 +78,13 @@ _mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
 		{
 			sci_glb_clr(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
 			while(sci_glb_read(REG_GLB_G3D_PWR_CTL, BITS_PD_G3D_STATUS(0x1f))) udelay(100);
+			msleep(2);
 		}
 		if(!g_gpu_clock_on)
 		{
 			g_gpu_clock_on = 1;
 			clk_enable(g_gpu_clock);
+			udelay(300);
 		}
 		break;
 	case MALI_POWER_MODE_LIGHT_SLEEP:

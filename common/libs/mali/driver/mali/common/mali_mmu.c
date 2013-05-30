@@ -18,6 +18,7 @@
 #include "mali_hw_core.h"
 #include "mali_group.h"
 #include "mali_mmu_page_directory.h"
+#include "mali_pm.h"
 
 /**
  * Size of the MMU registers in bytes
@@ -408,12 +409,22 @@ _mali_osk_errcode_t mali_mmu_reset(struct mali_mmu_core *mmu)
 static _mali_osk_errcode_t mali_mmu_upper_half(void * data)
 {
 	struct mali_mmu_core *mmu = (struct mali_mmu_core *)data;
-	u32 int_stat;
+	u32 int_stat = 0;
 
 	MALI_DEBUG_ASSERT_POINTER(mmu);
 
-	/* Check if it was our device which caused the interrupt (we could be sharing the IRQ line) */
-	int_stat = mali_hw_core_register_read(&mmu->hw_core, MALI_MMU_REGISTER_INT_STATUS);
+#if MALI_SHARED_INTERRUPTS
+	mali_pm_lock();
+	if (MALI_TRUE == mali_pm_is_powered_on())
+	{
+#endif
+		/* Check if it was our device which caused the interrupt (we could be sharing the IRQ line) */
+		int_stat = mali_hw_core_register_read(&mmu->hw_core, MALI_MMU_REGISTER_INT_STATUS);
+#if MALI_SHARED_INTERRUPTS
+	}
+	mali_pm_unlock();
+#endif
+
 	if (0 != int_stat)
 	{
 		mali_hw_core_register_write(&mmu->hw_core, MALI_MMU_REGISTER_INT_MASK, 0);

@@ -18,6 +18,7 @@
 #if MALI_TIMELINE_PROFILING_ENABLED
 #include "mali_osk_profiling.h"
 #endif
+#include "mali_pm.h"
 
 /* See mali_gp.c file for description on how to handle the interrupt mask.
  * This is how to do it on PP: mali_hw_core_register_write(&core->hw_core, MALI200_REG_ADDR_MGMT_INT_MASK, MALI200_REG_VAL_IRQ_MASK_USED);
@@ -471,9 +472,19 @@ u32 mali_pp_get_max_num_pp_cores(void)
 static _mali_osk_errcode_t mali_pp_upper_half(void *data)
 {
 	struct mali_pp_core *core = (struct mali_pp_core *)data;
-	u32 irq_readout;
+	u32 irq_readout = 0;
 
-	irq_readout = mali_hw_core_register_read(&core->hw_core, MALI200_REG_ADDR_MGMT_INT_STATUS);
+#if MALI_SHARED_INTERRUPTS
+	mali_pm_lock();
+	if (MALI_TRUE == mali_pm_is_powered_on())
+	{
+#endif
+		irq_readout = mali_hw_core_register_read(&core->hw_core, MALI200_REG_ADDR_MGMT_INT_STATUS);
+#if MALI_SHARED_INTERRUPTS
+	}
+	mali_pm_unlock();
+#endif
+
 	if (MALI200_REG_VAL_IRQ_MASK_NONE != irq_readout)
 	{
 		/* Mask out all IRQs from this core until IRQ is handled */

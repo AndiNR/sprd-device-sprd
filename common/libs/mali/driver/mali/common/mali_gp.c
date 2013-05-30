@@ -18,6 +18,7 @@
 #if MALI_TIMELINE_PROFILING_ENABLED
 #include "mali_osk_profiling.h"
 #endif
+#include "mali_pm.h"
 
 /**
  * Definition of the GP core struct
@@ -453,9 +454,19 @@ struct mali_gp_core *mali_gp_get_global_gp_core(void)
 static _mali_osk_errcode_t mali_gp_upper_half(void *data)
 {
 	struct mali_gp_core *core = (struct mali_gp_core *)data;
-	u32 irq_readout;
+	u32 irq_readout = 0;
 
-	irq_readout = mali_hw_core_register_read(&core->hw_core, MALIGP2_REG_ADDR_MGMT_INT_STAT);
+#if MALI_SHARED_INTERRUPTS
+	mali_pm_lock();
+	if (MALI_TRUE == mali_pm_is_powered_on())
+	{
+#endif
+		irq_readout = mali_hw_core_register_read(&core->hw_core, MALIGP2_REG_ADDR_MGMT_INT_STAT);
+#if MALI_SHARED_INTERRUPTS
+	}
+	mali_pm_unlock();
+#endif
+
 	if (MALIGP2_REG_VAL_IRQ_MASK_NONE != irq_readout)
 	{
 		/* Mask out all IRQs from this core until IRQ is handled */
