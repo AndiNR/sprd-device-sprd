@@ -412,14 +412,65 @@ static void *modemd_listenaccept_thread(void *par)
 	}
 }
 
-int main(int argc, char *argv[])
+static void start_modem(int *para)
 {
-	pthread_t tid, tid1, tid2;
-	int modem;
-	struct sigaction action;
-	int ret;
+	pthread_t tid1, tid2;
+	int modem = -1;
+	char prop[30];
 	char modem_enable[5];
         char modem_dev[20];
+
+	if(para != NULL)
+		modem = *para;
+
+	if(modem == TD_MODEM) {
+		strcpy(prop, TD_MODEM_ENABLE);
+	} else if(modem == W_MODEM) {
+		strcpy(prop, W_MODEM_ENABLE);
+	} else {
+		MODEMD_LOGE("Invalid modem type");
+		return;
+	}
+
+	property_get(prop, modem_enable, "");
+	if(!strcmp(modem_enable, "1")) {
+		MODEMD_LOGD("%s modem is enabled", modem == TD_MODEM?"TD":"W");
+
+		if(modem == TD_MODEM)
+			strcpy(prop, TD_PROC_PRO);
+		else if(modem == W_MODEM)
+			strcpy(prop, W_PROC_PRO);
+
+		property_get(prop, modem_dev, "");
+		if(!strcmp(modem_dev, TD_PROC_DEV)) {
+			/*  sipc td modem */
+			MODEMD_LOGD("It's td native version");
+			start_service(modem, 0, 0);
+			pthread_create(&tid1, NULL, (void*)detect_sipc_modem, (void *)para);
+		} else if(!strcmp(modem_dev, W_PROC_DEV)) {
+			/*  sipc w modem */
+			MODEMD_LOGD("It's w native version");
+			start_service(modem, 0, 0);
+			pthread_create(&tid2, NULL, (void*)detect_sipc_modem, (void *)para);
+		} else {
+			/*  vlx version, only one modem */
+			MODEMD_LOGD("It's vlx version");
+			vlx_reboot_init();
+			start_service(modem, 1, 0);
+			detect_vlx_modem(modem);
+		}
+	} else {
+		MODEMD_LOGD("%s modem is not enabled", modem == TD_MODEM?"TD":"W");
+	}
+}
+
+int main(int argc, char *argv[])
+{
+	pthread_t tid;
+	struct sigaction action;
+	int ret;
+	int modem_td = TD_MODEM;
+	int modem_w = W_MODEM;
 
 	memset(&action, 0x00, sizeof(action));
 	action.sa_handler = SIG_IGN;
@@ -433,47 +484,15 @@ int main(int argc, char *argv[])
 
 	pthread_create(&tid, NULL, (void*)modemd_listenaccept_thread, NULL);
 
-	property_get(TD_MODEM_ENABLE, modem_enable, "");
-	if(!strcmp(modem_enable, "1")) {
-		MODEMD_LOGD("TD modem is enabled");
-		modem = TD_MODEM;
-		property_get(TD_PROC_PRO, modem_dev, "");
-		if(!strcmp(modem_dev, TD_PROC_DEV)) {
-			/*  sipc modem */
-			MODEMD_LOGD("It's native version");
-			start_service(modem, 0, 0);
-			pthread_create(&tid1, NULL, (void*)detect_sipc_modem, &modem);
-		} else {
-			/*  vlx modem */
-			MODEMD_LOGD("It's vlx version");
-			vlx_reboot_init();
-			start_service(modem, 1, 0);
-			detect_vlx_modem(modem);
-		}
-	} else {
-		MODEMD_LOGD("TD modem is not enabled");
-	}
+	/* for vlx version, there is only one modem, once one of the follow two functions
+	*   matched, it will execute forever and never retrun to check the next modem
+	*/
 
-	property_get(W_MODEM_ENABLE, modem_enable, "");
-	if(!strcmp(modem_enable, "1")) {
-		MODEMD_LOGD("WCDMA modem is enabled");
-		modem = W_MODEM;
-		property_get(W_PROC_PRO, modem_dev, "");
-		if(!strcmp(modem_dev, W_PROC_DEV)) {
-			/*  sipc modem */
-			MODEMD_LOGD("It's native version");
-			start_service(modem, 0, 0);
-			pthread_create(&tid2, NULL, (void*)detect_sipc_modem, &modem);
-		} else {
-			/*  vlx modem */
-			MODEMD_LOGD("It's vlx version");
-			vlx_reboot_init();
-			start_service(modem, 1, 0);
-			detect_vlx_modem(modem);
-		}
-	} else {
-		MODEMD_LOGD("WCDMA modem is not enabled");
-	}
+	/* start td modem*/
+	start_modem(&modem_td);
+
+	/* start w modem*/
+	start_modem(&modem_w);
 
 	do {
 		pause();
