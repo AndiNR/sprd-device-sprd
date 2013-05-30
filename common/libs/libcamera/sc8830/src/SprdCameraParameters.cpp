@@ -165,6 +165,7 @@ void SprdCameraParameters::getFocusAreas(int *area, int *count, Size *preview_si
 			coordinate_struct_convert(&focus_area[0], area_count * 4);
 
 			for (int i=0; i<area_count * 4; i++) {
+				area[i] = focus_area[i];
 				if(focus_area[i+1] < 0) {
 					area_count = 0;
 					LOGV("error: focus area %d < 0, ignore focus \n", focus_area[i+1]);
@@ -402,16 +403,20 @@ static void coordinate_struct_convert(int *rect_arr,int arr_size)
 {
     int i =0;
     int left = 0,top=0,right=0,bottom=0;
+	int width = 0, height = 0;
     int *rect_arr_copy = rect_arr;
 
     for(i=0;i<arr_size/4;i++)
     {
-        left = *rect_arr++;
-        top = *rect_arr++;
-        right = *rect_arr;
-        *rect_arr++ = (((right-left+3) >> 2)<<2);
-        bottom = *rect_arr;
-        *rect_arr++=(((bottom-top+3) >> 2)<<2);
+        left   = rect_arr[i*4];
+        top    = rect_arr[i*4+1];
+        right  = rect_arr[i*4+2];
+		bottom = rect_arr[i*4+3];
+        width = (((right-left+3) >> 2)<<2);
+        height =(((bottom-top+3) >> 2)<<2);
+		rect_arr[i*4+2] = width;
+		rect_arr[i*4+3] = height;
+		LOGV("test:zone: left=%d,top=%d,right=%d,bottom=%d, w=%d, h=%d \n", left, top, right, bottom, width, height);
     }
     for(i=0;i<arr_size/4;i++)
     {
@@ -484,7 +489,7 @@ static int coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror
 			rect_arr[i*4+3]     = temp;
 		}
 
-		LOGV("coordinate_convert: %d: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
+		LOGV("coordinate_convert: %d: left=%d, top=%d, right=%d, bottom=%d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
 	}
 
 	// make sure the coordinate within [width, height]
@@ -522,8 +527,8 @@ static int coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror
 
 		// only for angle 90/270
 		// calculate the centre point
-		recHalfHeight  	= (rect_arr[i*4+2] - rect_arr[i])/2;
-		recHalfWidth   	= (rect_arr[i*4+3] - rect_arr[i+1])/2;
+		recHalfHeight  	= (rect_arr[i*4+2] - rect_arr[i*4])/2;
+		recHalfWidth   	= (rect_arr[i*4+3] - rect_arr[i*4+1])/2;
 		centre_y  		= rect_arr[i*4+2] - recHalfHeight;
 		centre_x 		= rect_arr[i*4+3] - recHalfWidth;
 		LOGV("CAMERA HAL:coordinate_convert %d: center point: x=%d, y=%d\n", i, centre_x, centre_y);
@@ -537,10 +542,10 @@ static int coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror
 		point_y = preview_y + centre_y*preview_h/height;
 		LOGV("coordinate_convert %d: out point: x=%d, y=%d\n", i, point_x, point_y);
 
-		rect_arr[i] 	= point_x - recHalfWidth;
-		rect_arr[i+1] 	= point_y - recHalfHeight;
-		rect_arr[i+2] 	= point_x + recHalfWidth;
-		rect_arr[i+3] 	= point_y + recHalfHeight;
+		rect_arr[i*4]       = point_x - recHalfWidth;
+		rect_arr[i*4+1]     = point_y - recHalfHeight;
+		rect_arr[i*4+2]     = point_x + recHalfWidth;
+		rect_arr[i*4+3]     = point_y + recHalfHeight;
 
 		LOGV("coordinate_convert %d: final: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
 	}

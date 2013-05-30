@@ -1088,10 +1088,7 @@ int camera_autofocus_start(void)
 	SENSOR_EXT_FUN_PARAM_T   af_param;
 
 	CMR_LOGV("zone_cnt %d, x y w h, %d %d %d %d", zone_cnt, ptr[0], ptr[1], ptr[2], ptr[3]);
-	ptr[0] = 300;
-	ptr[1] = 300;
-	ptr[2] = 300;
-	ptr[3] = 300;
+
 	CMR_PRINT_TIME;
 	if (camera_autofocus_need_exit()) {
 		ret = CAMERA_INVALID_STATE;
