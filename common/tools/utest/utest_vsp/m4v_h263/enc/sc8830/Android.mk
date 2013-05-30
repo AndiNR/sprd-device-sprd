@@ -13,7 +13,7 @@ LOCAL_SRC_FILES := m4vh263enc.cpp \
 LOCAL_C_INCLUDES := $(LOCAL_PATH) \
 		$(LOCAL_PATH)/../../../util
 
-LOCAL_SHARED_LIBRARIES := libutils libbinder libomx_m4vh263enc_hw_sprd
+LOCAL_SHARED_LIBRARIES := libutils libbinder libdl
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 

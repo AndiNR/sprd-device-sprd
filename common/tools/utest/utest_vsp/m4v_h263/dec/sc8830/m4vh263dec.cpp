@@ -7,6 +7,7 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <dlfcn.h>
 
 #include <linux/ion.h>
 #include <binder/MemoryHeapIon.h>
@@ -96,7 +97,21 @@ static void usage()
 	INFO("-help          : show this help message\n");
 	INFO("Built on %s %s, Written by JamesXiong(james.xiong@spreadtrum.com)\n", __DATE__, __TIME__);
 }
-	unsigned int framenum_bs = 0;
+
+    void* mLibHandle;
+
+    FT_MP4DecSetCurRecPic mMP4DecSetCurRecPic;
+    FT_MP4DecMemCacheInit mMP4DecMemCacheInit;
+    FT_MP4DecInit mMP4DecInit;
+    FT_MP4DecVolHeader mMP4DecVolHeader;
+    FT_MP4DecMemInit mMP4DecMemInit;
+    FT_MP4DecDecode mMP4DecDecode;
+    FT_MP4DecRelease mMP4DecRelease;
+    FT_Mp4GetVideoDimensions mMp4GetVideoDimensions;
+    FT_Mp4GetBufferDimensions mMp4GetBufferDimensions;        
+    FT_MP4DecReleaseRefBuffers mMP4DecReleaseRefBuffers;
+
+    unsigned int framenum_bs = 0;
 
     sp<MemoryHeapIon> iDecExtPmemHeap;
     void*  iDecExtVAddr =NULL;
@@ -139,7 +154,7 @@ int extMemoryAlloc(void *  mHandle,unsigned int width,unsigned int height) {
             ret = iDecExtPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
             if(ret) 
             {
-                ALOGE ("iDecExtPmemHeap get_phy_addr_from_ion fail %d",ret);
+                ERR ("iDecExtPmemHeap get_phy_addr_from_ion fail %d",ret);
             }
     			
             iDecExtPhyAddr =(uint32)phy_addr;
@@ -151,7 +166,7 @@ int extMemoryAlloc(void *  mHandle,unsigned int width,unsigned int height) {
         }
     }
 
-     MP4DecMemInit((MP4Handle *)mHandle, &extra_mem);
+     (*mMP4DecMemInit)((MP4Handle *)mHandle, &extra_mem);
 
     return 1;
 }
@@ -181,10 +196,10 @@ static int dec_init(MP4Handle *mHandle, int format, unsigned char* pheader_buffe
 	video_format.frame_width = 0;
     	video_format.frame_height = 0;
 
-	ret = MP4DecInit(mHandle, &InterMemBfr);
+	ret = (*mMP4DecInit)(mHandle, &InterMemBfr);
 	if (ret == 0)
 	{
-		MP4DecMemInit(mHandle, &ExtraMemBfr);
+		(*mMP4DecMemInit)(mHandle, &ExtraMemBfr);
 	}
 
         INFO("dec_init OUT\n"); 
@@ -211,7 +226,7 @@ static int dec_decode_frame(MP4Handle *mHandle, unsigned char* pframe, unsigned 
 		dec_out.VopPredType = -1;
     	dec_out.frameEffective = 0;
 
-		ret = MP4DecDecode(mHandle, &dec_in, &dec_out);
+		ret = (*mMP4DecDecode)(mHandle, &dec_in, &dec_out);
 		if (ret == 0)
 		{
 			*width = dec_out.frame_width;
@@ -227,9 +242,9 @@ static int dec_decode_frame(MP4Handle *mHandle, unsigned char* pframe, unsigned 
 
 static void dec_release(MP4Handle *mHandle)
 {
-	MP4DecReleaseRefBuffers(mHandle);
+	(*mMP4DecReleaseRefBuffers)(mHandle);
 
-	MP4DecRelease(mHandle);
+	(*mMP4DecRelease)(mHandle);
 }
 
 
@@ -335,6 +350,101 @@ static const char* type2str(int type)
 	}
 }
 
+bool openDecoder(const char* libName)
+{
+    if(mLibHandle){
+        dlclose(mLibHandle);
+    }
+    
+    INFO("openDecoder, lib: %s",libName);
+
+    mLibHandle = dlopen(libName, RTLD_NOW);
+    if(mLibHandle == NULL){
+        ERR("openDecoder, can't open lib: %s",libName);
+        return false;
+    }
+    
+    mMP4DecSetCurRecPic = (FT_MP4DecSetCurRecPic)dlsym(mLibHandle, "MP4DecSetCurRecPic");
+    if(mMP4DecSetCurRecPic == NULL){
+        ERR("Can't find MP4DecSetCurRecPic in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+//    mMP4DecMemCacheInit = (FT_MP4DecMemCacheInit)dlsym(mLibHandle, "MP4DecMemCacheInit");
+//    if(mMP4DecMemCacheInit == NULL){
+//        LOGE("Can't find MP4DecMemCacheInit in %s",libName);
+//        dlclose(mLibHandle);
+//        mLibHandle = NULL;
+//        return false;
+//    }
+
+    mMP4DecInit = (FT_MP4DecInit)dlsym(mLibHandle, "MP4DecInit");
+    if(mMP4DecInit == NULL){
+        ERR("Can't find MP4DecInit in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mMP4DecVolHeader = (FT_MP4DecVolHeader)dlsym(mLibHandle, "MP4DecVolHeader");
+    if(mMP4DecVolHeader == NULL){
+        ERR("Can't find MP4DecVolHeader in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mMP4DecMemInit = (FT_MP4DecMemInit)dlsym(mLibHandle, "MP4DecMemInit");
+    if(mMP4DecMemInit == NULL){
+        ERR("Can't find MP4DecMemInit in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mMP4DecDecode = (FT_MP4DecDecode)dlsym(mLibHandle, "MP4DecDecode");
+    if(mMP4DecDecode == NULL){
+        ERR("Can't find MP4DecDecode in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mMP4DecRelease = (FT_MP4DecRelease)dlsym(mLibHandle, "MP4DecRelease");
+    if(mMP4DecRelease == NULL){
+        ERR("Can't find MP4DecRelease in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+    }
+
+    mMp4GetVideoDimensions = (FT_Mp4GetVideoDimensions)dlsym(mLibHandle, "Mp4GetVideoDimensions");
+    if(mMp4GetVideoDimensions == NULL){
+        ERR("Can't find Mp4GetVideoDimensions in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mMp4GetBufferDimensions = (FT_Mp4GetBufferDimensions)dlsym(mLibHandle, "Mp4GetBufferDimensions");
+    if(mMp4GetBufferDimensions == NULL){
+        ERR("Can't find Mp4GetBufferDimensions in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mMP4DecReleaseRefBuffers = (FT_MP4DecReleaseRefBuffers)dlsym(mLibHandle, "MP4DecReleaseRefBuffers");
+    if(mMP4DecReleaseRefBuffers == NULL){
+        ERR("Can't find MP4DecReleaseRefBuffers in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    return true;
+}
 
 sp<MemoryHeapIon> pmem_extra = NULL;
 
@@ -548,6 +658,8 @@ int main(int argc, char **argv)
     mHandle->VSP_bindCb = NULL;
     mHandle->VSP_unbindCb = NULL;
 
+    openDecoder("libomx_m4vh263dec_hw_sprd.so");
+
 	/* step 1 - init vsp */
 	size_inter = MP4DEC_INTERNAL_BUFFER_SIZE;
 	pmem_inter = new MemoryHeapIon("/dev/ion", size_inter, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
@@ -621,7 +733,7 @@ int main(int argc, char **argv)
 		video_format.uv_interleaved = 1;
 
 		INFO(" MP4DecVolHeader \n");
-		MMDecRet ret = MP4DecVolHeader(mHandle, &video_format);
+		MMDecRet ret = (*mMP4DecVolHeader)(mHandle, &video_format);
 		
 		if (MMDEC_OK != ret)
 		{
@@ -680,7 +792,7 @@ int main(int argc, char **argv)
 			unsigned int height_new = 0;
 			unsigned char* pyuv420sp = pyuv[framenum_bs % DEC_YUV_BUFFER_NUM];
 			unsigned char* pyuv420sp_phy = pyuv_phy[framenum_bs % DEC_YUV_BUFFER_NUM];
-			MP4DecSetCurRecPic(mHandle, pyuv420sp, pyuv420sp_phy, NULL);
+			(*mMP4DecSetCurRecPic)(mHandle, pyuv420sp, pyuv420sp_phy, NULL);
 			framenum_bs ++;
 			int64_t start = systemTime();
 			int ret = dec_decode_frame(mHandle, pbuf_stream,pbuf_stream_phy, frame_size, &frame_effective, &width_new, &height_new, &type);
@@ -727,6 +839,7 @@ int main(int argc, char **argv)
 				if (framenum_yuv >= frames)
 				{
 					break;
+					goto  early_terminate;
 				}
 			}
 		}
@@ -737,7 +850,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-
+early_terminate:
 	/* step 3 - release vsp */
 	dec_release(mHandle);
 
@@ -756,6 +869,12 @@ int main(int argc, char **argv)
 
 
 err:
+        if(mLibHandle)
+        {
+            dlclose(mLibHandle);
+            mLibHandle = NULL;
+        }
+
         if (mHandle != NULL)
         {
             free (mHandle);

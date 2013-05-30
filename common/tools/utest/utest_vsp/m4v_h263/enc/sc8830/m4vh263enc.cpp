@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <math.h>
+#include <dlfcn.h>
 
 #include <linux/ion.h>
 #include <binder/MemoryHeapIon.h>
@@ -54,6 +55,13 @@ static void usage()
 }
 
 
+    void* mLibHandle;
+    FT_MP4EncInit        mMP4EncInit;
+    FT_MP4EncSetConf        mMP4EncSetConf;
+    FT_MP4EncGetConf        mMP4EncGetConf;
+    FT_MP4EncStrmEncode        mMP4EncStrmEncode;
+    FT_MP4EncGenHeader        mMP4EncGenHeader;
+    FT_MP4EncRelease        mMP4EncRelease;
 
 
 static int enc_init(unsigned int width, unsigned int height, int format, 
@@ -86,7 +94,7 @@ static int enc_init(unsigned int width, unsigned int height, int format,
 	encInfo.uv_interleaved = 1;
 	encInfo.time_scale = 1000;
 	
-	return MP4EncInit(&InterMemBfr, &ExtraMemBfr,&StreamMemBfr, &encInfo); 
+	return (*mMP4EncInit)(&InterMemBfr, &ExtraMemBfr,&StreamMemBfr, &encInfo); 
 }
 
 static void enc_set_parameter(int format, int framerate, int cbr, int bitrate, int qp)
@@ -94,7 +102,7 @@ static void enc_set_parameter(int format, int framerate, int cbr, int bitrate, i
 	MMEncConfig encConfig;
 INFO("enc_set_parameter 0\n"); 
     
-	MP4EncGetConf(&encConfig);
+	(*mMP4EncGetConf)(&encConfig);
 
 	encConfig.h263En = (format == 0) ? 1 : 0;
 	encConfig.RateCtrlEnable = cbr;
@@ -105,7 +113,7 @@ INFO("enc_set_parameter 0\n");
 	encConfig.vbv_buf_size = bitrate/2;
 	encConfig.profileAndLevel = 1;
 
-	MP4EncSetConf(&encConfig);
+	(*mMP4EncSetConf)(&encConfig);
 
     INFO("enc_set_parameter 1\n"); 
 
@@ -115,7 +123,7 @@ INFO("enc_set_parameter 0\n");
 static int enc_get_header(unsigned char* pheader, unsigned int* size)
 {
 	MMEncOut encOut;
-	MP4EncGenHeader(&encOut);
+	(*mMP4EncGenHeader)(&encOut);
 
 	if ((encOut.strmSize > (int)(*size)) || (encOut.strmSize <= 0))
 	{
@@ -146,7 +154,7 @@ static int enc_encode_frame(unsigned char* py, unsigned char* py_phy, unsigned c
 	vid_in.p_src_u_phy = puv_phy;
 	vid_in.p_src_v_phy = 0;
 
-	ret = MP4EncStrmEncode(&vid_in, &vid_out);
+	ret = (*mMP4EncStrmEncode)(&vid_in, &vid_out);
 	if ((vid_out.strmSize > ONEFRAME_BITSTREAM_BFR_SIZE) || (vid_out.strmSize <= 0))
 	{
 		return -1;
@@ -165,7 +173,7 @@ static int enc_encode_frame(unsigned char* py, unsigned char* py_phy, unsigned c
 
 static void enc_release()
 {
-	MP4EncRelease();
+	(*mMP4EncRelease)();
 }
 
 
@@ -219,6 +227,69 @@ static float psnr(unsigned char* pframe_org, unsigned char* pframe_rec, unsigned
 }
 #endif
 
+bool openEncoder(const char* libName)
+{
+    if(mLibHandle){
+        dlclose(mLibHandle);
+    }
+    
+    ALOGI("openEncoder, lib: %s",libName);
+
+    mLibHandle = dlopen(libName, RTLD_NOW);
+    if(mLibHandle == NULL){
+        ERR("openEncoder, can't open lib: %s",libName);
+        return false;
+    }
+
+    mMP4EncInit = (FT_MP4EncInit)dlsym(mLibHandle, "MP4EncInit");
+    if(mMP4EncInit == NULL){
+        ERR("Can't find MP4EncInit in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mMP4EncSetConf = (FT_MP4EncSetConf)dlsym(mLibHandle, "MP4EncSetConf");
+    if(mMP4EncSetConf == NULL){
+        ERR("Can't find MP4EncSetConf in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mMP4EncGetConf = (FT_MP4EncGetConf)dlsym(mLibHandle, "MP4EncGetConf");
+    if(mMP4EncGetConf == NULL){
+        ERR("Can't find MP4EncGetConf in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mMP4EncStrmEncode = (FT_MP4EncStrmEncode)dlsym(mLibHandle, "MP4EncStrmEncode");
+    if(mMP4EncStrmEncode == NULL){
+        ERR("Can't find MP4EncStrmEncode in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mMP4EncGenHeader = (FT_MP4EncGenHeader)dlsym(mLibHandle, "MP4EncGenHeader");
+    if(mMP4EncGenHeader == NULL){
+        ERR("Can't find MP4EncGenHeader in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mMP4EncRelease = (FT_MP4EncRelease)dlsym(mLibHandle, "MP4EncRelease");
+    if(mMP4EncRelease == NULL){
+        ERR("Can't find MP4EncRelease in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+    }
+
+    return true;
+}
 
 int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned int height, int format, unsigned int framerate, unsigned int max_key_interval, int cbr, unsigned int bitrate, unsigned int qp, unsigned int frames = 0)
 {
@@ -362,8 +433,7 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
 		INFO(", framerate = %d, QP = %d\n", framerate, qp);
 	}
 	
-
-
+        openEncoder("libomx_m4vh263enc_hw_sprd.so");
 
 
 	/* step 1 - init vsp */
@@ -551,6 +621,12 @@ INFO("enc_init end\n");
 
 
 err:
+        if(mLibHandle)
+        {
+            dlclose(mLibHandle);
+            mLibHandle = NULL;
+        }
+
 	if (pbuf_extra != NULL)
 	{
 		pmem_extra.clear();

@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <math.h>
+#include <dlfcn.h>
 
 #include <linux/ion.h>
 #include <binder/MemoryHeapIon.h>
@@ -53,7 +54,13 @@ static void usage()
 	INFO("Built on %s %s, Written by JamesXiong(james.xiong@spreadtrum.com)\n", __DATE__, __TIME__);
 }
 
-
+    void* mLibHandle;
+    FT_H264EncInit        mH264EncInit;
+    FT_H264EncSetConf        mH264EncSetConf;
+    FT_H264EncGetConf        mH264EncGetConf;
+    FT_H264EncStrmEncode        mH264EncStrmEncode;
+    FT_H264EncGenHeader        mH264EncGenHeader;
+    FT_H264EncRelease        mH264EncRelease;
 
 
 static int enc_init(unsigned int width, unsigned int height, int format, 
@@ -86,7 +93,7 @@ static int enc_init(unsigned int width, unsigned int height, int format,
 	encInfo.uv_interleaved = 1;
 	encInfo.time_scale = 1000;
 	
-	return H264EncInit(&InterMemBfr, &ExtraMemBfr,&StreamMemBfr, &encInfo); 
+	return (*mH264EncInit)(&InterMemBfr, &ExtraMemBfr,&StreamMemBfr, &encInfo); 
 }
 
 static void enc_set_parameter(int format, int framerate, int cbr, int bitrate, int qp)
@@ -94,7 +101,7 @@ static void enc_set_parameter(int format, int framerate, int cbr, int bitrate, i
 	MMEncConfig encConfig;
 INFO("enc_set_parameter 0\n"); 
     
-	H264EncGetConf(&encConfig);
+	(*mH264EncGetConf)(&encConfig);
 
 	encConfig.h263En = (format == 0) ? 1 : 0;
 	encConfig.RateCtrlEnable = cbr;
@@ -105,7 +112,7 @@ INFO("enc_set_parameter 0\n");
 	encConfig.vbv_buf_size = bitrate/2;
 	encConfig.profileAndLevel = 1;
 
-	H264EncSetConf(&encConfig);
+	(*mH264EncSetConf)(&encConfig);
 
     INFO("enc_set_parameter 1\n"); 
 
@@ -146,7 +153,7 @@ static int enc_encode_frame(unsigned char* py, unsigned char* py_phy, unsigned c
 	vid_in.p_src_u_phy = puv_phy;
 	vid_in.p_src_v_phy = 0;
 
-	ret = H264EncStrmEncode(&vid_in, &vid_out);
+	ret = (*mH264EncStrmEncode)(&vid_in, &vid_out);
 	if ((vid_out.strmSize > ONEFRAME_BITSTREAM_BFR_SIZE) || (vid_out.strmSize <= 0))
 	{
 		return -1;
@@ -165,14 +172,8 @@ static int enc_encode_frame(unsigned char* py, unsigned char* py_phy, unsigned c
 
 static void enc_release()
 {
-	H264EncRelease();
+	(*mH264EncRelease)();
 }
-
-
-
-
-
-
 
 static const char* format2str(int format)
 {
@@ -219,6 +220,69 @@ static float psnr(unsigned char* pframe_org, unsigned char* pframe_rec, unsigned
 }
 #endif
 
+bool openEncoder(const char* libName)
+{
+    if(mLibHandle){
+        dlclose(mLibHandle);
+    }
+    
+    ALOGI("openEncoder, lib: %s",libName);
+
+    mLibHandle = dlopen(libName, RTLD_NOW);
+    if(mLibHandle == NULL){
+        ERR("openEncoder, can't open lib: %s",libName);
+        return false;
+    }
+
+    mH264EncInit = (FT_H264EncInit)dlsym(mLibHandle, "H264EncInit");
+    if(mH264EncInit == NULL){
+        ERR("Can't find H264EncInit in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mH264EncSetConf = (FT_H264EncSetConf)dlsym(mLibHandle, "H264EncSetConf");
+    if(mH264EncSetConf == NULL){
+        ERR("Can't find H264EncSetConf in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mH264EncGetConf = (FT_H264EncGetConf)dlsym(mLibHandle, "H264EncGetConf");
+    if(mH264EncGetConf == NULL){
+        ERR("Can't find H264EncGetConf in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mH264EncStrmEncode = (FT_H264EncStrmEncode)dlsym(mLibHandle, "H264EncStrmEncode");
+    if(mH264EncStrmEncode == NULL){
+        ERR("Can't find H264EncStrmEncode in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mH264EncGenHeader = (FT_H264EncGenHeader)dlsym(mLibHandle, "H264EncGenHeader");
+    if(mH264EncGenHeader == NULL){
+        ERR("Can't find H264EncGenHeader in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mH264EncRelease = (FT_H264EncRelease)dlsym(mLibHandle, "H264EncRelease");
+    if(mH264EncRelease == NULL){
+        ERR("Can't find H264EncRelease in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+    }
+
+    return true;
+}
 
 int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned int height, int format, unsigned int framerate, unsigned int max_key_interval, int cbr, unsigned int bitrate, unsigned int qp, unsigned int frames = 0)
 {
@@ -363,7 +427,7 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
 	}
 	
 
-
+        openEncoder("libomx_avcenc_hw_sprd.so");
 
 
 	/* step 1 - init vsp */
@@ -431,7 +495,7 @@ INFO("enc_init end\n");
         memset(&pps_header, 0, sizeof(MMEncOut));
 
         //sps
-        header_ret = H264EncGenHeader(&sps_header, 1);
+        header_ret = (*mH264EncGenHeader)(&sps_header, 1);
         if (fwrite(sps_header.pOutBuf, sizeof(unsigned char), sps_header.strmSize, fp_bs) != sps_header.strmSize)
         {
 	    ERR("Failed to encode sps %d\n", header_ret);
@@ -440,7 +504,7 @@ INFO("enc_init end\n");
         bs_total_len += sps_header.strmSize;
 
         //pps
-        header_ret = H264EncGenHeader(&pps_header, 0);
+        header_ret = (*mH264EncGenHeader)(&pps_header, 0);
         if (fwrite(pps_header.pOutBuf, sizeof(unsigned char), pps_header.strmSize, fp_bs) != pps_header.strmSize)
         {
 	    ERR("Failed to encode pps %d\n", header_ret);
@@ -573,6 +637,12 @@ INFO("enc_init end\n");
 
 
 err:
+        if(mLibHandle)
+        {
+            dlclose(mLibHandle);
+            mLibHandle = NULL;
+        }
+
 	if (pbuf_extra != NULL)
 	{
 		pmem_extra.clear();
@@ -655,9 +725,6 @@ int main(int argc, char **argv)
 	unsigned int qp = 8;
 	unsigned int frames = 0;
 	int i;
-
-
-
 
 	/* parse argument */
 
