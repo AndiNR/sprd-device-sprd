@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.widget.TabHost;
 import android.widget.Toast;
 
@@ -111,7 +112,10 @@ public class LogSettingSlogUITabHostActivity extends TabActivity {
                 mProgressDialog.cancel();
                 break;
             case SlogAction.MESSAGE_SNAP_SUCCESSED:
-                if (mContext == null) {android.util.Log.e("SlogUIDebug","mContext==null");break;}
+                if (mContext == null) {
+                    Log.e("SlogUI","No context here, can't show toast");
+                    break;
+                }
                 Toast.makeText(mContext
                     , mContext.getText(R.string.toast_snap_success)
                     , Toast.LENGTH_SHORT )
@@ -129,4 +133,14 @@ public class LogSettingSlogUITabHostActivity extends TabActivity {
         }
 
     };
+    /*Add 20130320 Spreadst of 136305 engmode crash when close engmode start*/
+    @Override
+    protected void onStop() {
+        // TODO Auto-generated method stub
+        if (mProgressDialog != null && mProgressDialog.isShowing()) {
+            mProgressDialog.dismiss();
+        }
+        super.onStop();
+    }
+    /*Add 20130320 Spreadst of 136305 engmode crash when close engmode end*/
 }

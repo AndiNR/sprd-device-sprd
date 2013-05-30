@@ -1,29 +1,47 @@
 package com.spreadtrum.android.eng;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import com.spreadtrum.android.eng.engconstents;
+import com.spreadtrum.android.eng.engfetch;
 
-import org.apache.http.util.EncodingUtils;
+import com.android.internal.app.IMediaContainerService;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.os.Debug;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager.NameNotFoundException;
+import android.net.ConnectivityManager;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.os.StatFs;
 import android.os.storage.IMountService;
+import android.os.SystemProperties;
 import android.util.Log;
 import android.widget.CheckBox;
 import android.widget.RadioButton;
 
-import com.android.internal.app.IMediaContainerService;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+
+import org.apache.http.util.EncodingUtils;
+//import android.os.storage.StorageVolume;
 
 public class SlogAction {
-    private static final boolean DEBUG = Debug.isDebug();
     // =========================Const=============================================================================
+    // The name of package.
+    private static final String PACKAGE_NAME = "com.spreadtrum.android.eng";
+    // The tag for slog
+    private static final String TAG = "SlogAction";
     // slog.conf StorageLocation
     private static final String SLOG_CONF_LOCATION = "/data/local/tmp/slog/slog.conf";
+    // The common-control of logs and etc.
+    private static final boolean DBG = true;
     // Command to run slog
     private static final String SLOG_COMMAND_START = "slog";
     // A tester to confirm slog is running.
@@ -36,7 +54,13 @@ public class SlogAction {
     private static final String SLOG_COMMAND_DUMP = "slogctl dump ";
 
     private static final String SLOG_COMMAND_SCREENSHOT = "slogctl screen";
-    //
+
+    private static final String SLOG_COMMAND_FETCH = "synchronism download";
+
+    private static final String SLOG_COMMAND_CHECK = "synchronism check";
+
+    private static final String SLOG_COMMAND_UNLINK = "synchronism unlink";
+    // Engconfigs location.
     private static final String APPFILES = "/data/data/com.spreadtrum.android.eng/files/";
     // New Feature
     // public static String Options[] = null;
@@ -52,6 +76,7 @@ public class SlogAction {
     public static final String STORAGESDCARD = "external";
 
     /** keyName->General **/
+    // TODO:Bad reading method, need improve.
     public static final String GENERALKEY = "\n";
     public static final String GENERALON = "enable";
     public static final String GENERALOFF = "disable";
@@ -62,6 +87,8 @@ public class SlogAction {
     public static final String SYSTEMKEY = "stream\tsystem\t";
     public static final String RADIOKEY = "stream\tradio\t";
     public static final String MODEMKEY = "stream\tmodem\t";
+    public static final String MUTI_MODEM_0KEY = "stream\tmodem0\t";
+    public static final String MUTI_MODEM_1KEY = "stream\tmodem1\t";
     public static final String MAINKEY = "stream\tmain\t";
     public static final String TCPKEY = "stream\ttcp\t";
     public static final String BULETOOTHKEY = "stream\tbt\t";
@@ -73,6 +100,8 @@ public class SlogAction {
     public static final String SERVICESLOG = "slogsvc.conf";
     public static final String SERVICESNAP = "snapsvc.conf";
     public static final String ANDROIDSPEC = "android";
+
+    private static final String DECODE_ERROR = "decode error";
     // new feature
     // private static final int LENGTHOPTIONSTREAM = 3;
 
@@ -84,7 +113,10 @@ public class SlogAction {
     // String[]{"0","50","100","150","200"};
 
     // public static int position;
-    private static final String ACTIONFAILED = "Failed";
+    private static final int SLOG_COMMAND_RETURN_CHECK_FAILED = 255;
+    private static final int SLOG_COMMAND_RETURN_FAILED = -1;
+    private static final int SLOG_COMMAND_RETURN_OK = 0;
+    private static final int SLOG_COMMAND_RETURN_EXCEPTION = -126;
     public static Context contextMainActivity;
 
     public static final int MESSAGE_START_READING = 11;
@@ -100,12 +132,14 @@ public class SlogAction {
     public static final int MESSAGE_SNAP_SUCCESSED = 21;
     public static final int MESSAGE_SNAP_FAILED = 22;
 
+    private static Context mContext;
+
     public static String tester;
 
     // Temp Solution.
     private static boolean MMC_SUPPORT = "1".equals(android.os.SystemProperties.get("ro.device.support.mmc"));
 
-    public static Handler handleMan;
+    private static Object mLock = new Object();
 
     // ========================================================================================================
 
@@ -138,7 +172,7 @@ public class SlogAction {
         } catch (NullPointerException nullPointer) {
             Log.e("GetState",
                     "Maybe you change GetState(),but don't return null.Log:\n"
-                            + nullPointer);
+                    + nullPointer);
             return false;
         }
         return false;
@@ -162,7 +196,7 @@ public class SlogAction {
                     return true;
                 break;
             default:
-                 Log.e("GetState(int)", "You have given a invalid case");
+                Log.e("GetState(int)", "You have given a invalid case");
                 break;
             }
         } catch (NullPointerException nullPointer) {
@@ -177,6 +211,8 @@ public class SlogAction {
     /**
      * Finally, we'll run the this GetState. It will return a result(String)
      * which you want to search after "keyName"
+     * FIXME: The getState and setState has many problems, may change the
+     * function of get and set States.
      **/
     public static String GetState(String keyName, boolean isLastOption) {
         // recieve all text from slog.conf
@@ -202,13 +238,13 @@ public class SlogAction {
                 // Although I'm dead, I close it!
                 freader.close();
                 Log.e("GetStates->Readfile", e.toString());
-                return ACTIONFAILED;
+                return DECODE_ERROR;
             }
             freader.close();
 
         } catch (Exception e) {
             Log.e("GetState(String,boolean):String", e.toString());
-            return ACTIONFAILED;
+            return DECODE_ERROR;
         }
 
         conf.getChars(
@@ -300,7 +336,7 @@ public class SlogAction {
             SetState(MAINKEY, status, false);
             break;
         default:
-            if(DEBUG) Log.d("SetState(int,boolean)", "You have given a invalid case");
+            Log.w("SetState(int,boolean)", "You have given a invalid case");
         }
     }
 
@@ -551,7 +587,7 @@ public class SlogAction {
                 }
         }
             System.err.println("Maybe it is first Run,now try to create one.\n"+e);
-	    FileOutputStream fwriter = null;
+        FileOutputStream fwriter = null;
             try {
                 fwriter = contextMainActivity.openFileOutput(
                         keyName, Context.MODE_PRIVATE);
@@ -561,13 +597,13 @@ public class SlogAction {
             } catch (Exception e1) {
                 System.err.println("No!! Create file failed, logs followed\n"
                         + e1);
-		if(fwriter!=null) {
-		    try {
-		        fwriter.close();
-		    } catch (IOException e2) {
-		        return false;
-		   }
-		}
+        if(fwriter!=null) {
+            try {
+                fwriter.close();
+            } catch (IOException e2) {
+                return false;
+           }
+        }
                 return false;
             }
             System.err
@@ -579,7 +615,7 @@ public class SlogAction {
 
     /** Make SlogService run in foreground all the time **/
     public static void setAlwaysRun(String keyService, boolean isChecked) {
-	FileOutputStream fwriter = null;
+    FileOutputStream fwriter = null;
         try {
             fwriter = contextMainActivity.openFileOutput(
                     keyService, Context.MODE_PRIVATE);
@@ -621,7 +657,7 @@ public class SlogAction {
 
             try {
                 if (proc.waitFor() != 0) {
-                    if(DEBUG) Log.d("ClearLog", "Command" + SLOG_COMMAND_CLEAR
+                    Log.w("ClearLog", "Command" + SLOG_COMMAND_CLEAR
                             + " return value = " + proc.exitValue()
                             + ", maybe something wrong.");
                 }
@@ -637,6 +673,129 @@ public class SlogAction {
         LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
     }
 
+    private static int mTryTimes = 0;
+    private static final int MAX_TRY_TIMES = 20;
+
+    private static class FetchRunnable implements Runnable {
+        private BroadcastReceiver mBroadcastReceiver;
+        FetchRunnable (BroadcastReceiver br) {
+            mBroadcastReceiver = br;
+        }
+        @Override
+        public void run() {
+            synchronized(mLock) {
+                /*if (DBG) {
+                    Log.i(TAG, "in FetchThread::run() and mTryTimes = " + mTryTimes);
+                }*/
+                int check = runSlogCommand(SLOG_COMMAND_CHECK);
+                if ( SLOG_COMMAND_RETURN_OK == check ) {Log.d(TAG, "check == OK return");return ;}
+                int fetch = runSlogCommand(SLOG_COMMAND_FETCH);
+                /*if (DBG) {
+                    Log.i(TAG, "fetch return = " + fetch);
+                }*/
+                if (SLOG_COMMAND_RETURN_OK == fetch) {
+                    // Log.i(TAG, "fetch ok, unregisterReceiver netReceiver");
+                    mContext.unregisterReceiver(mBroadcastReceiver);
+                    registBroadcast(mContext, SLOG_COMMAND_FETCH);
+                } else {
+                    Log.e(TAG, "Failed fetch");
+                    mTryTimes++;
+                }
+
+            }
+        }
+    }
+
+    private static BroadcastReceiver mNetReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            //synchronized (mLock) {
+            /*Log.i(TAG, "receive net broadcast and mTryTimes=" + mTryTimes);
+            Log.i(TAG, "Connectivity action=" + ConnectivityManager.CONNECTIVITY_ACTION);
+            Log.i(TAG, "intent.getAction=" + intent.getAction());
+            Log.i(TAG, "case1" + String.valueOf(ConnectivityManager.CONNECTIVITY_ACTION.equals(intent.getAction())));
+            Log.i(TAG, "case2" + String.valueOf(intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false)));*/
+            if (intent != null
+                && ConnectivityManager.CONNECTIVITY_ACTION.equals(intent.getAction())
+                && !intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false)) {
+                Log.d(TAG, "receive net broadcast, start fetch thread");
+                FetchRunnable fr = new FetchRunnable(this);
+                Thread ft = new Thread(null, fr, "FetchThread");
+                ft.start();
+
+            }
+            if (mTryTimes > MAX_TRY_TIMES) {
+                Log.d(TAG, "unregisterRecier netReceiver");
+                mContext.unregisterReceiver(this);
+                //debug
+                registBroadcast(mContext, SLOG_COMMAND_FETCH);
+                //release
+                //mContext = null;
+            }
+        }
+        //}
+    };
+
+    private static BroadcastReceiver mInstallReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            // Log.i(TAG, "receive intent and install package=" + intent.getData().getSchemeSpecificPart());
+            if (intent != null
+                && Intent.ACTION_PACKAGE_ADDED.equals(intent.getAction())
+                && "com.android.synchronism".equals(intent.getData().getSchemeSpecificPart()) ) {
+                //context.startService(); or context.sendBroadcast();
+                if (mContext != null ) {
+                    mContext.unregisterReceiver(this);
+                }
+                mContext = null;
+                Thread t = new Thread() {
+                    @Override
+                    public void run() {
+                        SystemProperties.set("persist.sys.synchronism.exist", "1");
+                        runSlogCommand("am startservice -n com.android.synchronism/com.android.synchronism.service.CoreService");
+                    }
+                };
+                t.start();
+            }
+        }
+    };
+
+    private static void registBroadcast(Context context, String command) {
+        if (command == null) {
+            Log.e(TAG, "Failed registBroadcast, command == null");
+            return;
+        }
+        // Log.i(TAG, "In registBroadcast command = " + command);
+        if (SLOG_COMMAND_CHECK.equals(command)) {
+            try {
+                // Log.i(TAG, "create context and registerReceiver");
+                mContext = context.createPackageContext(PACKAGE_NAME
+                                , Context.CONTEXT_IGNORE_SECURITY);
+                IntentFilter filterConn = new IntentFilter();
+                filterConn.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
+                mContext.registerReceiver(mNetReceiver, filterConn);
+            } catch (NameNotFoundException e) {
+                Log.e(TAG, "NameNotFoundException " + e);
+                return ;
+            }
+
+        } else if (SLOG_COMMAND_FETCH.equals(command)) {
+            try {
+                if (mContext == null) {
+                    mContext = context.createPackageContext(PACKAGE_NAME
+                                    , Context.CONTEXT_IGNORE_SECURITY);
+                }
+                IntentFilter filterInstall = new IntentFilter();
+                filterInstall.addAction(Intent.ACTION_PACKAGE_ADDED);
+                filterInstall.addDataScheme("package");
+                mContext.registerReceiver(mInstallReceiver, filterInstall);
+            } catch (NameNotFoundException e) {
+                Log.e(TAG, "NameNotFoundException " + e);
+                return ;
+            }          
+        } else {
+            Log.e(TAG, "Failed registBroadcast, unknown command " + command);
+        }
+    }
 
     /** Make logs into package. **/
     private static void runDump(String filename) {
@@ -655,7 +814,7 @@ public class SlogAction {
                     SLOG_COMMAND_DUMP + filename);
             try {
                 if (proc.waitFor() != 0) {
-                    if(DEBUG) Log.d(NowMethodName, "Command" + SLOG_COMMAND_DUMP
+                    Log.w(NowMethodName, "Command" + SLOG_COMMAND_DUMP
                             + " exit value=" + proc.exitValue()
                             + ",maybe it has some problem");
                 }
@@ -671,8 +830,8 @@ public class SlogAction {
         LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
     }
 
-    public static void Dump(String filename){
-        if(filename==null){
+    public static void dump(String filename){
+        if(filename == null){
             Log.e("SlogUIDump()", "Do not give nulll");
             return ;
         }
@@ -684,31 +843,186 @@ public class SlogAction {
         runThread.start();
     }
 
-    public static void SlogStart() {
-        /*Modify 20130121 Spreadst 119078 engmode crash when cancell airplane mode start */
-        Thread t =new Thread(){
-            @Override
-            public void run() {
-                // TODO Auto-generated method stub
-                Runtime runtime = Runtime.getRuntime();
-                Process proc;
-                try {
-                    proc = runtime.exec(SLOG_COMMAND_START);
-                    if (proc.waitFor() != 0) {
-                        System.err.println("Exit value=" + proc.exitValue());
-                    }
-                } catch (IOException e1) {
-                    // TODO Auto-generated catch block
-                    e1.printStackTrace();
-                }catch (InterruptedException e) {
-                    System.err.println(e);
+    /**
+      * This function can change InputStream to String, if catching
+      * exception, I'll return DECODE_ERROR.
+      */
+    public static String decodeInputStream(InputStream input) {
+        if (input == null) {
+            Log.e(TAG, DECODE_ERROR + ", InputStream is null.");
+            return DECODE_ERROR;
+        }
+        byte[] buffer = null;
+        try {
+            buffer = new byte[input.available()];
+            input.read(buffer);
+            input.close();
+        } catch (IOException ioe) {
+            try {
+                if (input != null) {
+                    input.close();
                 }
+            } catch(Exception e) {
+                Log.e(TAG, "Close file failed, \n" + e.toString());
             }
-        };
-        t.start();
-        /*Modify 20130121 Spreadst 119078 engmode crash when cancell airplane mode end */
+            Log.e(TAG, DECODE_ERROR + ", see log:" + ioe.toString());
+            return DECODE_ERROR;
+        }
+
+        String result = EncodingUtils.getString(buffer, "UTF-8");
+        if (result != null) {
+            return result;
+        } else {
+            Log.e(TAG, DECODE_ERROR + ", result == null.");
+            return DECODE_ERROR;
+        }
     }
 
+    public static boolean sendATCommand(int atCommandCode, boolean openLog) {
+        /* require set AT Control to modem and this may be FIXME
+        * 1. Why write byte can catch IOException?
+        * 2. Whether Setting AT Command in main thread can cause ANR or not?
+        */
+        
+        // Feature changed, remove close action of openLog now.
+        if (!openLog) {
+            return false;
+        }
+        
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(baos);
+        try {
+            dos.writeBytes(String.format("%d,%d,%d", atCommandCode , 1, openLog ? 1 : 0));
+        } catch (IOException ioException) {
+            Log.e(TAG, "IOException has catched, see logs " + ioException);
+            return false;
+        }
+        /* engfetch em.. is a class! may be a bad coding style */
+        engfetch ef = new engfetch();
+        int sockid = ef.engopen();
+        ef.engwrite(sockid, baos.toByteArray(), baos.toByteArray().length);
+        /* Whether engfetch has free function? */
+
+        // Bring from logswitch ...
+        byte[] inputBytes = new byte[512];
+        int showlen= ef.engread(sockid, inputBytes, 512);
+        String result = new String(inputBytes, 0, showlen);
+
+        if ("OK".equals(result)) {
+            return true;
+        } else if ("Unknown".equals(result)) {
+            Log.w("SlogUI","ATCommand has catch a \"Unknow\" command!");
+            return false;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+      * XXX: Please do NOT give this function null.
+      * See SLOG_COMMAND_ , after executing commands, return
+      * a boolean result , true : success , false : fail.
+      * This function *must NOT* run in main thread or
+      * broadcast receiver.
+      */
+    private static int runSlogCommand(String command) {
+        if (command == null) {
+            Log.e(TAG, "runSlogCommand catch null command.");
+            return SLOG_COMMAND_RETURN_EXCEPTION;
+        }
+
+        // Security confirm
+        /*if (!command.equals(SLOG_COMMAND_RESTART | SLOG_COMMAND_CLEAR
+                            | SLOG_COMMAND_DUMP  | SLOG_COMMAND_SCREENSHOT
+                            | SLOG_COMMAND_FETCH | SLOG_COMMAND_CHECK
+                            | SLOG_COMMAND_UNLINK)) {
+            Log.d("duke","Check result");
+            return -255;
+        }*/
+        Log.i(TAG, "runSlogCommand command=" + command);
+        try {
+            Process proc = Runtime.getRuntime().exec(command);
+            proc.waitFor();
+            Log.d(TAG, decodeInputStream(proc.getInputStream()));
+            // Log.i(TAG, "after proc.waitFor");
+            return proc.exitValue();
+        } catch (IOException ioException) {
+            Log.e(TAG, "Catch IOException.\n" + ioException.toString());
+            return SLOG_COMMAND_RETURN_EXCEPTION;
+        } catch (InterruptedException interruptException) {
+            Log.e(TAG, "Catch InterruptedException.\n" + interruptException.toString());
+            return SLOG_COMMAND_RETURN_EXCEPTION;
+        } catch (Exception other) {
+            Log.e(TAG, "Catch InterruptedException.\n" + other.toString());
+            return SLOG_COMMAND_RETURN_EXCEPTION;
+        }
+    }
+
+    /**
+     * When receive BOOT_COMPLETE , we ensure slog and ota
+     * surviving.
+     */
+    public static void SlogStart(Context context) {
+        int check = runSlogCommand(SLOG_COMMAND_CHECK);
+        int start = runSlogCommand(SLOG_COMMAND_START);
+        boolean isDirty = false;
+        // TODO:Maybe a double check, or other check method.
+        try {
+            context.getPackageManager().getPackageInfo(
+                            "com.android.synchronism", 0);
+        } catch (NameNotFoundException error) {
+            Log.e(TAG, "The package was not installed."
+                        + "Set is dirty");
+            isDirty = true;
+        }
+        //if (check != null) {
+            //Log.i(TAG, "check result is " + check + " (-126:Exception, 0 OK , -1 Failed)");
+            if (!isDirty && SLOG_COMMAND_RETURN_OK == check) {
+                SystemProperties.set("persist.sys.synchronism.exist", "1");
+                if (DBG) {
+                    Log.i(TAG, "Check ok, set persist.sys.synchronism.exist = true");
+                }
+                return;
+            } else if (SLOG_COMMAND_RETURN_CHECK_FAILED == check) {
+                //Log.i(TAG, "start registBroadcast");
+                if (DBG) {
+                    Log.i(TAG, "Check failed, set persist.sys.synchronism.exist = false");
+                }
+                SystemProperties.set("persist.sys.synchronism.exist", "0");
+                registBroadcast(context, SLOG_COMMAND_CHECK);
+            } else {
+                // Command synchronism can't work as expected, disabled com.android.synchronism
+                if (DBG) {
+                    Log.i(TAG, "Check catch exception, set persist.sys.synchronism = false");
+                }
+                SystemProperties.set("persist.sys.synchronism", "0");
+                Log.e(TAG, "Failed checking. Stop");
+                return;
+            }
+        /*} else {
+            Log.e(TAG, "SlogUI check failed.");
+        }*/
+    }
+
+    /**
+     * This function will remove aota.
+     */
+    public static void SlogStart(boolean kill) {
+        if (kill) {
+            runSlogCommand(SLOG_COMMAND_UNLINK);
+            runSlogCommand(SLOG_COMMAND_START);
+        } else {
+            Log.w(TAG, "Run me (kill) but doesn't kill aota?");
+        }
+    }
+
+    public static void SlogStart() {
+        runSlogCommand(SLOG_COMMAND_START);
+    }
+
+    /**
+     * This function may be removed in future versions.
+     */
     private static void runCommand() {
         Message msg = new Message();
         msg.what = MESSAGE_END_RUN;
@@ -747,18 +1061,28 @@ public class SlogAction {
 
     }
 
+    /**
+     * Screenshot
+     */
     public static void snap() {
         Thread snapThread = new Thread() {
             @Override
             public void run() {
                 Message msg = new Message();
+                /*Add 20130527 Spreadst of 169012 No init Looper start*/
+                try {
+                    Looper.prepare();
+                } catch(Exception e) {
+                    Log.e(TAG, "Failed prepare Looper");
+                }
+                /*Add 20130527 Spreadst of 169012 No init Looper end*/
                 try {
                     Thread.sleep(500);
                     Runtime runtime = Runtime.getRuntime();
                     Process proc = runtime.exec(SLOG_COMMAND_SCREENSHOT);
                     try {
                         if (proc.waitFor() != 0) {
-                        if(DEBUG) Log.d("Snap", "Exit value=" + proc.exitValue()
+                        Log.d("Snap", "Exit value=" + proc.exitValue()
                             + ".Maybe not correct");
                         }
 
@@ -766,7 +1090,11 @@ public class SlogAction {
                         LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
                     } catch (InterruptedException e) {
                         msg.what = MESSAGE_SNAP_FAILED;
-                        LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
+                        try {
+                            LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
+                        } catch (ExceptionInInitializerError initError) {
+                            Log.e(TAG, "Can't send message");
+                        }
                         Log.e("Snap", e.toString());
                     }
 
@@ -774,9 +1102,20 @@ public class SlogAction {
                     System.err.println(SLOG_COMMAND_RESTART
                         + " has Exception, log followed");
                     msg.what = MESSAGE_SNAP_FAILED;
-                    LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
+                    try {
+                        LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
+                    } catch (ExceptionInInitializerError initError) {
+                        Log.e(TAG, "Can't send message");
+                    }
                     return ;
                 }
+                /*Add 20130527 Spreadst of 169012 No init Looper start*/
+                try {
+                    Looper.loop();
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed loop the Looper");
+                }
+                /*Add 20130527 Spreadst of 169012 No init Looper end*/
             }
         };
         snapThread.start();
@@ -784,12 +1123,9 @@ public class SlogAction {
     }
 
     private static class RunThread implements Runnable {
-
         public void run() {
             runCommand();
-
         }
-
     }
 
     private static class DumpThread implements Runnable {
@@ -799,16 +1135,16 @@ public class SlogAction {
             filename = fname;
         }
         public void run() {
-            if(filename==null){
+            if(filename == null){
                 Message msg = new Message();
                 msg.what = MESSAGE_DUMP_STOP;
-                Log.e("SlogUIDumpThreadRun()", "filename==null");
+                Log.d("SlogUIDumpThreadRun()", "filename==null");
                 return;
             }
             runDump(filename);
-
         }
     }
+
     private static class ClearThread implements Runnable{
         public void run(){
             runClearLog();

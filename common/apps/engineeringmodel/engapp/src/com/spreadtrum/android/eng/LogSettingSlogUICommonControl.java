@@ -1,5 +1,7 @@
 package com.spreadtrum.android.eng;
 
+import com.spreadtrum.android.eng.R;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -7,11 +9,11 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.res.Configuration;
+import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.os.Debug;
 import android.os.IBinder;
+import android.os.Message;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -23,8 +25,7 @@ import android.widget.Toast;
 
 import com.android.internal.app.IMediaContainerService;
 
-public class LogSettingSlogUICommonControl extends Activity {
-    private static final boolean DEBUG = Debug.isDebug();
+public class LogSettingSlogUICommonControl extends Activity implements SlogUISyncState {
     private Button btnClear;
     private Button btnDump;
     private RadioButton rdoGeneralOn;
@@ -48,7 +49,6 @@ public class LogSettingSlogUICommonControl extends Activity {
         public void onServiceConnected(ComponentName name, IBinder service) {
             final IMediaContainerService imcs = IMediaContainerService.Stub
             .asInterface(service);
-            Log.e("SlogUI","has this connection worked?");
             mMediaContainer = imcs;
         }
 
@@ -82,10 +82,12 @@ public class LogSettingSlogUICommonControl extends Activity {
         intentSnap.setClass(LogSettingSlogUICommonControl.this,
                 SlogUISnapService.class);
         intentMedia = new Intent().setComponent(DEFAULT_CONTAINER_COMPONENT);
-        boolean a = getApplicationContext().bindService(intentMedia, mMediaContainerConn, Context.BIND_AUTO_CREATE);
-        if(DEBUG) Log.d("SlogUI","bindService is " + String.valueOf(a) );
+        boolean success = getApplicationContext().bindService(intentMedia, mMediaContainerConn, Context.BIND_AUTO_CREATE);
+        if (!success) {
+            Log.e("SlogUI", "Unable to bind MediaContainerService!");
+        }
         // Sync view's status
-        SyncState();
+        syncState();
 
         chkAlwaysRun.setChecked (SlogAction.isAlwaysRun (SlogAction.SERVICESLOG));
         chkSnap.setChecked (SlogAction.isAlwaysRun (SlogAction.SERVICESNAP));
@@ -118,14 +120,14 @@ public class LogSettingSlogUICommonControl extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        SyncState();
+        syncState();
     }
 
-    protected void SyncState() {
+    @Override
+    public void syncState() {
         // Set checkbox status
         boolean tempHostOn = SlogAction.GetState(SlogAction.GENERALKEY, true).equals(SlogAction.GENERALON);
         boolean tempHostLowPower = SlogAction.GetState(SlogAction.GENERALKEY, true).equals(SlogAction.GENERALLOWPOWER);
-//        Log.e("test","tempHostOn=" + String.valueOf(tempHostOn) + "  \ttempHostLowPower" + String.valueOf(tempHostLowPower));
         if (tempHostOn) {
             rdoGeneralOn.setChecked(true);
         } else if (tempHostLowPower) {
@@ -147,8 +149,11 @@ public class LogSettingSlogUICommonControl extends Activity {
                 btnDump.setEnabled(true);
             } else {
                 rdoNAND.setChecked(true);
-                SlogAction.SetState(SlogAction.STORAGEKEY,
-                        SlogAction.STORAGENAND, true);
+                
+                // The UI should not control the config automatically
+                // This may effect the logic of the slog design
+                // SlogAction.SetState(SlogAction.STORAGEKEY,
+                //         SlogAction.STORAGENAND, true);
                 btnDump.setEnabled(false);
             }
         } else {
@@ -174,7 +179,7 @@ public class LogSettingSlogUICommonControl extends Activity {
             case R.id.rdo_general_on:
                 SlogAction.SetState(SlogAction.GENERALKEY,
                         SlogAction.GENERALON, true);
-                SyncState();
+                syncState();
                 if (rdoGeneralOff.isChecked()) {
                     requestDumpLog();
                 }
@@ -183,13 +188,13 @@ public class LogSettingSlogUICommonControl extends Activity {
             case R.id.rdo_general_off:
                 SlogAction.SetState(SlogAction.GENERALKEY,
                         SlogAction.GENERALOFF, true);
-                SyncState();
+                syncState();
             break;
             
             case R.id.rdo_general_lowpower:
                 SlogAction.SetState(SlogAction.GENERALKEY,
                         SlogAction.GENERALLOWPOWER, true);
-                SyncState();
+                syncState();
             break;
             
             case R.id.chk_general_android_switch:
@@ -283,14 +288,14 @@ public class LogSettingSlogUICommonControl extends Activity {
                 break;
 
             case R.id.btn_general_dump:
-                dump();
+                dumpLog();
                 break;
             }
 
         }
     }
 
-    void dump() {
+    void dumpLog() {
 
         final EditText edtDump = new EditText(
                 LogSettingSlogUICommonControl.this);
@@ -313,7 +318,7 @@ public class LogSettingSlogUICommonControl extends Activity {
                                 String fileName = edtDump.getText().toString();
                                 java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("[0-9a-zA-Z]*");
                                 if (pattern.matcher(fileName).matches() && !"".equals(fileName)) {
-                                    SlogAction.Dump(edtDump.getText()
+                                    SlogAction.dump(edtDump.getText()
                                         .toString());
                                 } else {
                                     Toast.makeText(LogSettingSlogUICommonControl.this
@@ -368,7 +373,7 @@ public class LogSettingSlogUICommonControl extends Activity {
                             public void onClick(DialogInterface dialog,
                                     int whichButton) {
                                 if (rdoSDCard.isChecked()) {
-                                    dump();
+                                    dumpLog();
                                 }
                             }
                         })
@@ -380,6 +385,11 @@ public class LogSettingSlogUICommonControl extends Activity {
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+    }
+
+    @Override
+    public void onSlogConfigChanged(){
+        syncState();
     }
 
 }
