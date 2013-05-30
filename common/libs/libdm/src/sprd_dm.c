@@ -33,6 +33,7 @@ bool spdm_start(int type, char * data, int datalen)
 	spdm_task_init();
 	while(1)
 	{
+	usleep(50000);
 	if (spdm_task_check_running()) break;
 	}
 
