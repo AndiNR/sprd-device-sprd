@@ -7,6 +7,7 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <dlfcn.h>
 
 #include <linux/ion.h>
 #include <binder/MemoryHeapIon.h>
@@ -94,7 +95,12 @@ static void usage()
 	INFO("Built on %s %s, Written by JamesXiong(james.xiong@spreadtrum.com)\n", __DATE__, __TIME__);
 }
 
-
+    void* mLibHandle;
+    FT_VPXDecSetCurRecPic mVPXDecSetCurRecPic;
+    FT_VPXDecInit mVPXDecInit;
+    FT_VPXDecDecode mVPXDecDecode;
+    FT_VPXDecRelease mVPXDecRelease;
+    
 static int dec_init(VPXHandle *mHandle, int format, unsigned char* pheader_buffer, unsigned int header_size, 
     unsigned char* pbuf_inter, unsigned char* pbuf_inter_phy, unsigned int size_inter, 
     unsigned char* pbuf_extra, unsigned char* pbuf_extra_phy, unsigned int size_extra)
@@ -120,7 +126,7 @@ static int dec_init(VPXHandle *mHandle, int format, unsigned char* pheader_buffe
 	video_format.frame_width = 0;
     	video_format.frame_height = 0;
 
-	ret = VP8DecInit(mHandle, &InterMemBfr/*,&video_format*/);
+	ret = (*mVPXDecInit)(mHandle, &InterMemBfr/*,&video_format*/);
 
 
         INFO("dec_init OUT\n"); 
@@ -145,9 +151,9 @@ static int dec_decode_frame(VPXHandle *mHandle, unsigned char* pframe,unsigned c
 	dec_out.VopPredType = -1;
     	dec_out.frameEffective = 0;
 
-	ret = VP8DecDecode(mHandle, &dec_in, &dec_out);
+	ret = (*mVPXDecDecode)(mHandle, &dec_in, &dec_out);
 	if(ret == MMDEC_MEMORY_ALLOCED)
-		ret = VP8DecDecode(mHandle, &dec_in, &dec_out);
+		ret = (*mVPXDecDecode)(mHandle, &dec_in, &dec_out);
 
 
 	if (ret == 0)
@@ -294,7 +300,54 @@ static const char* type2str(int type)
 
 
 sp<MemoryHeapIon> pmem_extra = NULL;
-sp<MemoryHeapIon> pmem_extra_cachable = NULL;
+
+bool openDecoder(const char* libName)
+{
+    if(mLibHandle){
+        dlclose(mLibHandle);
+    }
+    
+    ALOGI("openDecoder, lib: %s",libName);
+
+    mLibHandle = dlopen(libName, RTLD_NOW);
+    if(mLibHandle == NULL){
+        ERR("openDecoder, can't open lib: %s",libName);
+        return false;
+    }
+    
+    mVPXDecSetCurRecPic = (FT_VPXDecSetCurRecPic)dlsym(mLibHandle, "VP8DecSetCurRecPic");
+    if(mVPXDecSetCurRecPic == NULL){
+        ERR("Can't find VPXDecSetCurRecPic in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mVPXDecInit = (FT_VPXDecInit)dlsym(mLibHandle, "VP8DecInit");
+    if(mVPXDecInit == NULL){
+        ERR("Can't find VP8DecInit in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mVPXDecDecode = (FT_VPXDecDecode)dlsym(mLibHandle, "VP8DecDecode");
+    if(mVPXDecDecode == NULL){
+        ERR("Can't find VP8DecDecode in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mVPXDecRelease = (FT_VPXDecRelease)dlsym(mLibHandle, "VP8DecRelease");
+    if(mVPXDecRelease == NULL){
+        ERR("Can't find VP8DecRelease in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+    }
+    
+    return true;
+}
 
 int main(int argc, char **argv)
 {
@@ -501,6 +554,7 @@ int main(int argc, char **argv)
         mHandle = (VPXHandle *)malloc(sizeof(VPXHandle));
         memset(mHandle, 0, sizeof(VPXHandle));
 
+        openDecoder("libomx_vpxdec_hw_sprd.so");
 
 	/* step 1 - init vsp */
 	size_inter = VP8_DECODER_INTERNAL_BUFFER_SIZE;
@@ -611,7 +665,7 @@ int main(int argc, char **argv)
 			unsigned int height_new = 0;
 			unsigned char* pyuv420sp = pyuv[framenum_bs % DEC_YUV_BUFFER_NUM];
 			unsigned char* pyuv420sp_phy = pyuv_phy[framenum_bs % DEC_YUV_BUFFER_NUM];
-			VP8DecSetCurRecPic(mHandle, pyuv420sp, pyuv420sp_phy, NULL);
+			(*mVPXDecSetCurRecPic)(mHandle, pyuv420sp, pyuv420sp_phy, NULL);
 			framenum_bs ++;
 			int64_t start = systemTime();
 			int ret = dec_decode_frame(mHandle, pbuf_stream,pbuf_stream_phy, frame_size, &frame_effective, &width_new, &height_new, &type);
@@ -687,6 +741,12 @@ int main(int argc, char **argv)
 
 
 err:
+        if(mLibHandle)
+        {
+            dlclose(mLibHandle);
+            mLibHandle = NULL;
+        }
+
         if (mHandle != NULL)
         {
             free (mHandle);

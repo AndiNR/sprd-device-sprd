@@ -7,6 +7,7 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <dlfcn.h>
 
 #include <linux/ion.h>
 #include <binder/MemoryHeapIon.h>
@@ -93,7 +94,18 @@ static void usage()
 	INFO("Built on %s %s, Written by JamesXiong(james.xiong@spreadtrum.com)\n", __DATE__, __TIME__);
 }
 
-
+    void* mLibHandle;
+    FT_H264DecGetNALType mH264DecGetNALType;
+//    FT_H264GetBufferDimensions mH264GetBufferDimensions;
+    FT_H264DecGetInfo mH264DecGetInfo;
+    FT_H264DecInit mH264DecInit;
+    FT_H264DecDecode mH264DecDecode;
+    FT_H264_DecReleaseDispBfr mH264_DecReleaseDispBfr;
+    FT_H264DecRelease mH264DecRelease;
+    FT_H264Dec_SetCurRecPic  mH264Dec_SetCurRecPic;
+    FT_H264Dec_GetLastDspFrm  mH264Dec_GetLastDspFrm;
+    FT_H264Dec_ReleaseRefBuffers  mH264Dec_ReleaseRefBuffers;
+    
 static int dec_init(AVCHandle *mHandle, int format, unsigned char* pheader_buffer, unsigned int header_size, 
     unsigned char* pbuf_inter, unsigned char* pbuf_inter_phy, unsigned int size_inter/*, MMCodecBuffer extra_mem[]*/)
 {
@@ -112,7 +124,7 @@ static int dec_init(AVCHandle *mHandle, int format, unsigned char* pheader_buffe
 	video_format.frame_width = 0;
     	video_format.frame_height = 0;
 
-	ret = H264DecInit(mHandle, &InterMemBfr,&video_format);
+	ret = (*mH264DecInit)(mHandle, &InterMemBfr,&video_format);
 //	if (ret == 0)
 //	{
 //		H264DecMemInit(extra_mem);
@@ -137,7 +149,7 @@ static int dec_decode_frame(AVCHandle *mHandle, unsigned char* pframe, unsigned 
 
     	dec_out.frameEffective = 0;
 
-	ret = H264DecDecode(mHandle, &dec_in, &dec_out);
+	ret = (*mH264DecDecode)(mHandle, &dec_in, &dec_out);
 	if (ret == 0)
 	{
 		*width = dec_out.frame_width;
@@ -151,9 +163,9 @@ static int dec_decode_frame(AVCHandle *mHandle, unsigned char* pframe, unsigned 
 
 static void dec_release(AVCHandle *mHandle)
 {
-	H264Dec_ReleaseRefBuffers(mHandle);
+	(*mH264Dec_ReleaseRefBuffers)(mHandle);
 
-	H264DecRelease(mHandle);
+	(*mH264DecRelease)(mHandle);
 }
 
 
@@ -300,6 +312,102 @@ static int VSP_malloc_cb(void* aUserData, uint32 * buffer_array, uint32 buffer_n
 static int ActivateSPS(void* aUserData, uint width,uint height, uint aNumBuffers)
 {
 	return 1;
+}
+
+bool openDecoder(const char* libName)
+{
+    if(mLibHandle){
+        dlclose(mLibHandle);
+    }
+    
+    ALOGI("openDecoder, lib: %s",libName);
+
+    mLibHandle = dlopen(libName, RTLD_NOW);
+    if(mLibHandle == NULL){
+        ERR("openDecoder, can't open lib: %s",libName);
+        return false;
+    }
+
+    mH264DecGetNALType = (FT_H264DecGetNALType)dlsym(mLibHandle, "H264DecGetNALType");
+    if(mH264DecGetNALType == NULL){
+        ERR("Can't find H264DecGetNALType in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+//    mH264GetBufferDimensions = (FT_H264GetBufferDimensions)dlsym(mLibHandle, "H264GetBufferDimensions");
+//    if(mH264GetBufferDimensions == NULL){
+//        ALOGE("Can't find H264GetBufferDimensions in %s",libName);
+//        dlclose(mLibHandle);
+//        mLibHandle = NULL;
+//        return false;
+//    }
+
+    mH264DecGetInfo = (FT_H264DecGetInfo)dlsym(mLibHandle, "H264DecGetInfo");
+    if(mH264DecGetInfo == NULL){
+        ERR("Can't find H264DecGetInfo in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mH264DecInit = (FT_H264DecInit)dlsym(mLibHandle, "H264DecInit");
+    if(mH264DecInit == NULL){
+        ERR("Can't find H264DecInit in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mH264DecDecode = (FT_H264DecDecode)dlsym(mLibHandle, "H264DecDecode");
+    if(mH264DecDecode == NULL){
+        ERR("Can't find H264DecDecode in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mH264_DecReleaseDispBfr = (FT_H264_DecReleaseDispBfr)dlsym(mLibHandle, "H264_DecReleaseDispBfr");
+    if(mH264_DecReleaseDispBfr == NULL){
+        ERR("Can't find H264_DecReleaseDispBfr in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mH264DecRelease = (FT_H264DecRelease)dlsym(mLibHandle, "H264DecRelease");
+    if(mH264DecRelease == NULL){
+        ERR("Can't find H264DecRelease in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+    }
+
+    mH264Dec_SetCurRecPic = (FT_H264Dec_SetCurRecPic)dlsym(mLibHandle, "H264Dec_SetCurRecPic");
+    if(mH264Dec_SetCurRecPic == NULL){
+        ERR("Can't find H264Dec_SetCurRecPic in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mH264Dec_GetLastDspFrm = (FT_H264Dec_GetLastDspFrm)dlsym(mLibHandle, "H264Dec_GetLastDspFrm");
+    if(mH264Dec_GetLastDspFrm == NULL){
+        ERR("Can't find H264Dec_GetLastDspFrm in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mH264Dec_ReleaseRefBuffers = (FT_H264Dec_ReleaseRefBuffers)dlsym(mLibHandle, "H264Dec_ReleaseRefBuffers");
+    if(mH264Dec_ReleaseRefBuffers == NULL){
+        ERR("Can't find H264Dec_ReleaseRefBuffers in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    return true;
 }
 
 int main(int argc, char **argv)
@@ -508,6 +616,7 @@ int main(int argc, char **argv)
     mHandle->VSP_bindCb = NULL;
     mHandle->VSP_unbindCb = NULL;
 
+    openDecoder("libomx_avcdec_hw_sprd.so");
 
 	/* step 1 - init vsp */
 	size_inter = H264_DECODER_INTERNAL_BUFFER_SIZE;
@@ -584,7 +693,7 @@ INFO("h2");
 			unsigned int height_new = 0;
 			unsigned char* pyuv420sp = pyuv[framenum_bs % DEC_YUV_BUFFER_NUM];
 			unsigned char* pyuv420sp_phy = pyuv_phy[framenum_bs % DEC_YUV_BUFFER_NUM];
-			H264Dec_SetCurRecPic(mHandle, pyuv420sp, pyuv420sp_phy, NULL, framenum_yuv);
+			(*mH264Dec_SetCurRecPic)(mHandle, pyuv420sp, pyuv420sp_phy, NULL, framenum_yuv);
 			framenum_bs ++;
 			int64_t start = systemTime();
 			int ret = dec_decode_frame(mHandle, pbuf_stream_phy, frame_size, &frame_effective, &width_new, &height_new, &type);
@@ -630,7 +739,7 @@ INFO("h2");
 			{
 				if (framenum_yuv >= frames)
 				{
-					break;
+					goto early_terminate;
 				}
 			}
 		}
@@ -641,7 +750,7 @@ INFO("h2");
 		}
 	}
 
-
+early_terminate:
 	/* step 3 - release vsp */
 	dec_release(mHandle);
 
@@ -660,6 +769,12 @@ INFO("h2");
 
 
 err:
+        if(mLibHandle)
+        {
+            dlclose(mLibHandle);
+            mLibHandle = NULL;
+        }
+
         if (mHandle != NULL)
         {
             free (mHandle);
