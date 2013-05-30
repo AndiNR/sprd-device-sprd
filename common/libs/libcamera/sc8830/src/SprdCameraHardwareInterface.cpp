@@ -401,7 +401,7 @@ status_t SprdCameraHardware::takePicture()
 
     Mutex::Autolock l(&mLock);
 	//to do it
-/*
+
 	if (!iSZslMode()) {
 		//stop preview first for debug
 	    if (isPreviewing()) {
@@ -420,7 +420,7 @@ status_t SprdCameraHardware::takePicture()
 			return UNKNOWN_ERROR;
 	    }
 	}
-*/
+
 	//wait for last capture being finished
 	if (isCapturing()) {
 		WaitForCaptureDone();
@@ -1498,13 +1498,13 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 		deinitPreview();
 		return UNKNOWN_ERROR;
 	}
-//	if (iSZslMode()) {
+	if (iSZslMode()) {
 	    if (!initCapture(mData_cb != NULL)) {
 			deinitCapture();
 			LOGE("initCapture failed. Not taking picture.");
 			return UNKNOWN_ERROR;
 	    }
-//	}
+	}
 
 	setCameraState(SPRD_INTERNAL_PREVIEW_REQUESTED, STATE_PREVIEW);
 	camera_ret_code_type qret = camera_start_preview(camera_cb, this,mode);
@@ -1561,6 +1561,8 @@ takepicture_mode SprdCameraHardware::getCaptureMode()
 		mCaptureMode = CAMERA_NORMAL_CONTINUE_SHOT_MODE;
     } else if (1 == mParameters.getInt("zsl")) {
 		mCaptureMode = CAMERA_ZSL_MODE;
+    } else if (1 != mParameters.getInt("zsl")) {
+		mCaptureMode = CAMERA_NORMAL_MODE;
     } else {
 		mCaptureMode = mCaptureMode;
     }
@@ -2508,6 +2510,7 @@ void SprdCameraHardware::HandleStopPreview(camera_cb_type cb,
 	transitionState(SPRD_INTERNAL_PREVIEW_STOPPING, 
 				SPRD_IDLE, 
 				STATE_PREVIEW);
+	freePreviewMem();
 
 	LOGV("HandleStopPreview out, state = %s", getCameraStateStr(getPreviewState()));		
 }

@@ -608,17 +608,15 @@ int camera_snapshot_start_set(void)
 			CMR_LOGE("ISP_CTRL_FLASH_EG error.");
 		}
 	}
-#if 0
-	ret = Sensor_Ioctl(SENSOR_IOCTL_BEFORE_SNAPSHOT, (cxt->sn_cxt.capture_mode | (cxt->cap_mode<<CAP_MODE_BITS)));
-	if (ret) {
-		CMR_LOGE("Sensor can't work at this mode %d", cxt->sn_cxt.capture_mode);
-	} else {
-	
+	if ((CAMERA_NORMAL_MODE == cxt->cap_mode) || (CAMERA_HDR_MODE == cxt->cap_mode)) {
+		ret = Sensor_Ioctl(SENSOR_IOCTL_BEFORE_SNAPSHOT, (cxt->sn_cxt.capture_mode | (cxt->cap_mode<<CAP_MODE_BITS)));
+		if (ret) {
+			CMR_LOGE("Sensor can't work at this mode %d", cxt->sn_cxt.capture_mode);
+		}
+		if (CAMERA_HDR_MODE == cxt->cap_mode) {
+			ret = camera_set_hdr_ev(SENSOR_HDR_EV_LEVE_0);
+		}
 	}
-	if (CAMERA_HDR_MODE == cxt->cap_mode) {
-		ret = camera_set_hdr_ev(SENSOR_HDR_EV_LEVE_0);
-	}
-#endif
 	return ret;
 }
 
@@ -626,23 +624,20 @@ int camera_snapshot_stop_set(void)
 {
 	int                      ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
-#if 0
-	if (CAMERA_HDR_MODE == cxt->cap_mode) {
-		camera_set_hdr_ev(SENSOR_HDR_EV_LEVE_1);
-	}
-#endif
+
 	if (cxt->cmr_set.flash) {
 		/*open flash*/
 		camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN);
 	}
-#if 0
-	ret = Sensor_Ioctl(SENSOR_IOCTL_AFTER_SNAPSHOT, cxt->sn_cxt.preview_mode);
-	if (ret) {
-		CMR_LOGE("Sensor can't work at this mode %d", cxt->sn_cxt.preview_mode);
-	} else {
-	
+	if ((CAMERA_NORMAL_MODE == cxt->cap_mode) || (CAMERA_HDR_MODE == cxt->cap_mode)) {
+		ret = Sensor_Ioctl(SENSOR_IOCTL_AFTER_SNAPSHOT, cxt->sn_cxt.preview_mode);
+		if (ret) {
+			CMR_LOGE("Sensor can't work at this mode %d", cxt->sn_cxt.preview_mode);
+		}
+		if (CAMERA_HDR_MODE == cxt->cap_mode) {
+			camera_set_hdr_ev(SENSOR_HDR_EV_LEVE_1);
+		}
 	}
-#endif
 	return ret;
 }
 
