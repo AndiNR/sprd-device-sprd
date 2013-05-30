@@ -121,7 +121,6 @@ public class DMTransaction implements Runnable {
             if (DEBUG) {
                 Log.v(TAG, "Unexpected IOException", e);
             }
-        DmNetwork.getInstance().beginConnectivity(null);
 
         //TODO: to be confirm
 //            if (DmService.getInstance().getDmInterface().getPppConnectStatus() != Phone.APN_ALREADY_ACTIVE) {
@@ -132,6 +131,8 @@ public class DMTransaction implements Runnable {
 //                }
 //            }
             try {
+		DmNetwork.getInstance().endConnectivity();
+        	DmNetwork.getInstance().beginConnectivity(null);
                 response = null;
                 // Log.d(TAG, "sendData: " +new String(data));
                 Log.d(TAG, "sendData: ");
