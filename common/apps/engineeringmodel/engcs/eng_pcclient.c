@@ -976,7 +976,7 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
 			if(strstr(cmdline,"engtest") != NULL)
 				cmdvalue->engtest = 1;
 		}
-			close(fd);
+		close(fd);
 	}
 	return 0;
 }
