@@ -111,19 +111,6 @@ on property:ro.modem.w.count=2
     write /proc/sim/0 w
     write /proc/sim/1 w
 
-#start rawdata daemon.
-service rawdatad /bin/rawdatad
-    class core
-    user system
-    oneshot
-
-#start nvitem daemon.
-#service nvm_daemon /system/bin/nvm_daemon
-#    class core
-#    user system
-#    group system radio shell
-#    oneshot
-
 service modemd /system/bin/modemd
     class core
     user system
