@@ -48,7 +48,10 @@ PRODUCT_PACKAGES += \
     libstagefright_sprd_soft_h264dec \
 	\
     libstagefright_sprd_mpeg4dec \
-    libomx_m4vh263dec_sw_sprd
+    libomx_m4vh263dec_sw_sprd	\
+	\
+    libstagefright_sprd_mpeg4enc	\
+    libomx_m4vh263enc_hw_sprd
 
 # prebuild files
 PRODUCT_PACKAGES += \
