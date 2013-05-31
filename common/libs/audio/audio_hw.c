@@ -3448,6 +3448,7 @@ static int adev_open(const hw_module_t* module, const char* name,
     adev->voice_volume = 1.0f;
     adev->bluetooth_nrec = false;
 
+    mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch to arm
     pthread_mutex_unlock(&adev->lock);
 
     *device = &adev->hw_device.common;
