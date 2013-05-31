@@ -29,14 +29,17 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
     private static final int LOG_MODEM_ARM = 3;
     private static final int LOG_ANDROID = 4;
     private static final int LOG_MODEM_SLOG = 5;
+    private static final int LOG_IQ_LOG = 6;
 
     private static final String PROPERTY_LOGCAT = "persist.sys.logstate";
     private static final String KEY_ANDROID_LOG = "android_log_enable";
     private static final String KEY_DSP_LOG = "dsplog_enable";
+    private static final String KEY_IQ_LOG= "iq_log_enable";
 
     private CheckBoxPreference androidLogPrefs;
     private ListPreference DspPrefs;
     private CheckBoxPreference slogPreference;
+    private CheckBoxPreference iqLogPrefs;
 
     private int mSocketID = 0;
     private engfetch mEf;
@@ -55,6 +58,9 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
 
         if(DEBUG) Log.d(LOG_TAG, "logsetting activity onCreate.");
         androidLogPrefs = (CheckBoxPreference)findPreference(KEY_ANDROID_LOG);
+        /*Add 20130530 spreadst of 171854 add dump iq checkbox start*/
+        iqLogPrefs = (CheckBoxPreference)findPreference(KEY_IQ_LOG);
+        /*Add 20130530 spreadst of 171854 add dump iq checkbox end*/
         DspPrefs = (ListPreference)findPreference(KEY_DSP_LOG);
 	/* initilize modem communication */
     	mEf = new engfetch();
@@ -82,6 +88,9 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
             if(DEBUG) Log.d(LOG_TAG, "remove the preference");
         }
         /*Add 20130311 Spreadst of 135491 remove slog item when the phone is not 77xx end*/
+        /*Add 20130530 spreadst of 171854 add dump iq checkbox start*/
+        iqLogPrefs.setChecked(LogSettingGetLogState(LOG_IQ_LOG)==1);
+        /*Add 20130530 spreadst of 171854 add dump iq checkbox end*/
 
     }
     @Override
@@ -141,7 +150,11 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
             logType = LOG_ANDROID;
         } else if("modem_slog_enable".equals(key)){
             logType = LOG_MODEM_SLOG;
-        } else {
+        /*Add 20130530 spreadst of 171854 add dump iq checkbox start*/
+        } else if ("iq_log_enable".equals(key)) {
+            logType = LOG_IQ_LOG;
+        /*Add 20130530 spreadst of 171854 add dump iq checkbox end*/
+        }else {
             Log.e(LOG_TAG, "Unknown type!");
             return false;
         }
@@ -300,7 +313,17 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
             }
             break ;
         }
-
+        /*Add 20130530 spreadst of 171854 add dump iq checkbox start*/
+        case LOG_IQ_LOG :{
+            String re=SystemProperties.get("sys.iq_slog", "0");
+            try{
+                state= Integer.parseInt(re);
+            }catch(Exception e){
+                state=0;
+            }
+            break;
+        }
+        /*Add 20130530 spreadst of 171854 add dump iq checkbox end*/
         default:
             break;
         }
@@ -440,7 +463,48 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
                 }
                 break;
             }
+            /*Add 20130530 spreadst of 171854 add dump iq checkbox start*/
+            case LOG_IQ_LOG :{
+                outputBuffer = new ByteArrayOutputStream();
+                outputBufferStream = new DataOutputStream(outputBuffer);
+                if(DEBUG) Log.d(LOG_TAG, "Engmode socket open, id:" + mSocketID);
+                /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
+                if (state == 1) {
+                  // mATline = String.format("%d,%d,%s",engconstents.ENG_AT_NOHANDLE_CMD, 1, "AT+SLOG=2");
+                    mATline = new StringBuilder().append(engconstents.ENG_AT_NOHANDLE_CMD).append(",")
+                             .append(1).append(",").append("AT+SPDSP = 1,1,0,0").toString();
+                }else {
+                  //  mATline = String.format("%d,%d,%s",engconstents.ENG_AT_NOHANDLE_CMD, 1, "AT+SLOG=3");
+                    mATline = new StringBuilder().append(engconstents.ENG_AT_NOHANDLE_CMD).append(",")
+                             .append(1).append(",").append("AT+SPDSP = 1,0,0,0").toString();
+                 /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
+                }
+                if(DEBUG) Log.d(LOG_TAG, "cmd" + mATline);
+                try{
+                    outputBufferStream.writeBytes(mATline);
+                }catch (IOException e) {
+                    Log.e(LOG_TAG, "writeBytes() error!");
+                    return ;
+                }
+                mEf.engwrite(mSocketID, outputBuffer.toByteArray(),
+                        outputBuffer.toByteArray().length);
 
+                int dataSize = 128;
+                byte[] inputBytes = new byte[dataSize];
+                int showlen = mEf.engread(mSocketID, inputBytes, dataSize);
+                mATResponse = new String(inputBytes, 0, showlen);
+                if(DEBUG) Log.d(LOG_TAG, "AT response:" + mATResponse);
+                if (mATResponse.contains("OK")) {
+                    Toast.makeText(getApplicationContext(), "Success!",
+                            Toast.LENGTH_SHORT).show();
+                    SystemProperties.set("sys.iq_slog",String.valueOf(state));
+                }else {
+                    Toast.makeText(getApplicationContext(), "Fail!",
+                            Toast.LENGTH_SHORT).show();
+                }
+                break;
+            }
+            /*Add 20130530 spreadst of 171854 add dump iq checkbox end*/
             default:
             break;
         }

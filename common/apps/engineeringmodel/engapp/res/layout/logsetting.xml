@@ -29,6 +29,14 @@
         android:summaryOff="Modem slog disable"
         android:defaultValue="true">
     </CheckBoxPreference>
+    <!--  Add 20130530 spreadst of 171854 add dump iq checkbox start-->
+    <CheckBoxPreference android:key="iq_log_enable"
+        android:title="IQ Log"
+        android:summaryOn="IQ Log enable"
+        android:summaryOff="IQ Log disable"
+        android:defaultValue="false">
+    </CheckBoxPreference>
+    <!--  Add 20130530 spreadst of 171854 add dump iq checkbox end-->
         <!--Modify 20130201 Spreadst of 122525 set the armlog unavailable start-->
         <ListPreference
            android:key="modem_arm_log"
