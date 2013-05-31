@@ -64,6 +64,7 @@ on property:sys.usb.config=rndis,gser
     write /sys/class/android_usb/android0/enable 0
     write /sys/class/android_usb/android0/idVendor 1782
     write /sys/class/android_usb/android0/idProduct 5d22
+    write /sys/class/android_usb/android0/f_gser/port_count 1
     write /sys/class/android_usb/android0/functions $sys.usb.config
     write /sys/class/android_usb/android0/bDeviceClass 0
     write /sys/class/android_usb/android0/enable 1
@@ -74,6 +75,7 @@ on property:sys.usb.config=rndis,gser,adb
     write /sys/class/android_usb/android0/enable 0
     write /sys/class/android_usb/android0/idVendor 1782
     write /sys/class/android_usb/android0/idProduct 5d22
+    write /sys/class/android_usb/android0/f_gser/port_count 1
     write /sys/class/android_usb/android0/functions $sys.usb.config
     write /sys/class/android_usb/android0/bDeviceClass 0
     write /sys/class/android_usb/android0/enable 1
@@ -84,6 +86,7 @@ on property:sys.usb.config=rndis,gser,adb,vser
     write /sys/class/android_usb/android0/enable 0
     write /sys/class/android_usb/android0/idVendor 1782
     write /sys/class/android_usb/android0/idProduct 5d22
+    write /sys/class/android_usb/android0/f_gser/port_count 1
     write /sys/class/android_usb/android0/functions $sys.usb.config
     write /sys/class/android_usb/android0/bDeviceClass 0
     write /sys/class/android_usb/android0/enable 1
@@ -144,6 +147,7 @@ on property:sys.usb.config=mass_storage,vser,gser
     write /sys/class/android_usb/android0/f_mass_storage/lun/file '\0'
     write /sys/class/android_usb/android0/f_mass_storage/lun/cdrom 0
     write /sys/class/android_usb/android0/f_mass_storage/lun/ro 0
+    write /sys/class/android_usb/android0/f_gser/port_count 1
     write /sys/class/android_usb/android0/functions $sys.usb.config
     write /sys/class/android_usb/android0/enable 1
     setprop sys.usb.state $sys.usb.config
@@ -155,6 +159,7 @@ on property:sys.usb.config=mass_storage,adb,vser,gser
     write /sys/class/android_usb/android0/f_mass_storage/lun/file '\0'
     write /sys/class/android_usb/android0/f_mass_storage/lun/cdrom 0
     write /sys/class/android_usb/android0/f_mass_storage/lun/ro 0
+    write /sys/class/android_usb/android0/f_gser/port_count 1
     write /sys/class/android_usb/android0/functions $sys.usb.config
     write /sys/class/android_usb/android0/enable 1
     start adbd
@@ -163,7 +168,8 @@ on property:sys.usb.config=mass_storage,adb,vser,gser
 on property:sys.usb.config=adb,vser,gser
     write /sys/class/android_usb/android0/enable 0
     write /sys/class/android_usb/android0/idVendor 1782
-    write /sys/class/android_usb/android0/idProduct 5d06
+    write /sys/class/android_usb/android0/f_gser/port_count 2
+    write /sys/class/android_usb/android0/idProduct 5d22
     write /sys/class/android_usb/android0/functions $sys.usb.config
     write /sys/class/android_usb/android0/enable 1
     start adbd

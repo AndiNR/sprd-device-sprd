@@ -165,6 +165,7 @@ LOCAL_SRC_FILES     := eng_pcclient.c  \
 			wifi_eut.c \
 			gps_eut.c \
 			adc_calibration.c\
+			eng_at_trans.c \
 
 LOCAL_MODULE := engpcclient
 LOCAL_MODULE_TAGS := optional
