@@ -76,7 +76,8 @@ PRODUCT_PACKAGES += \
 	SohuNewsClient_v3.3_factory_zhanxun_6230.apk \
 	Wostore.apk \
 	UnicomClient.apk \
-	116114.apk
+	wo116114.apk \
+	AIMail_Android_V375a_orange.apk
 
 # packages files
 PRODUCT_PACKAGES += \
