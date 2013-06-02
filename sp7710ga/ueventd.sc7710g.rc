@@ -21,6 +21,7 @@
 /dev/gpsctl             0660     system      system
 /dev/ts0710mux23        0660     media   audio
 /dev/ttyGS0             0660     system  system
+/dev/ttyGS1             0660     system  system
 /dev/vser               0660     system  system
 /dev/ttyS1              0660     system  system
 
