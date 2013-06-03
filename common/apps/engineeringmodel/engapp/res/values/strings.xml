@@ -160,6 +160,8 @@
     <string name="chk_android_radio">Record radio log</string>
 
     <string name="chk_modem_switch">Record modem log</string>
+    <string name="chk_muti_modem_switch0">Record modem0 log</string>
+    <string name="chk_muti_modem_switch1">Record modem1 log</string>
     <string name="txv_modem_other">Misc options</string>
     <string name="chk_modem_bluetooth">Record bluetooth log</string>
     <string name="chk_modem_tcp">Record tcp log</string>
@@ -205,6 +207,10 @@
 
     <string name="toast_freespace_nand">Free space in Data directory:</string>
     <string name="toast_freespace_sdcard">Free space in SDCard:</string>
+    
+    <string name="low_free_space_title">Request clean or dump logs</string>
+    <string name="low_free_space_message">The free space of current logpath is low, this may effect saved logs or dumping log, please dump them or clean them in time</string>
+
 	<!-- SlogUI Added Done -->
 
 </resources>

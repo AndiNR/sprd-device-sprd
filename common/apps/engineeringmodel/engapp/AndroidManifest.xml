@@ -308,9 +308,8 @@
        <activity android:name="TextInfo" android:label="Text Info" android:screenOrientation="portrait"/>
        <activity android:name="HsupaSetting" android:label="HSUPA Setting" android:screenOrientation="portrait"/>
 
-
-	<!--  SlogUI Added by Yuntao.xiao  -->
-	<activity
+    <!--  SlogUI Added by Yuntao.xiao  -->
+    <activity
             android:name=".LogSettingSlogUITabHostActivity"
             android:label="@string/label_slogui"
             android:configChanges="orientation|screenSize|locale"
@@ -323,6 +322,9 @@
         <receiver android:name=".SlogUIServerReceiver" >
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.SIM_STATE_CHANGED" />
+                <action android:name="android.intent.action.SIM_STATE_CHANGED0" />
+                <action android:name="android.intent.action.SIM_STATE_CHANGED1" />
             </intent-filter>
         </receiver>
 
@@ -332,11 +334,16 @@
             android:noHistory="true"
             android:taskAffinity="" >
         </activity>
+        
+        <activity
+            android:name=".SlogUILowStorage"
+            android:excludeFromRecents="true"
+            android:noHistory="true" />
 
         <activity android:name=".LogSettingSlogUICommonControl"
             android:configChanges="orientation|screenSize|locale">
         </activity>
-        <activity android:name=".LogSettingSlogUIAndroidPage" 
+        <activity android:name=".LogSettingSlogUIAndroidPage"
             android:configChanges="orientation|screenSize|locale"/>
         <activity android:name=".LogSettingSlogUIModemPage"
             android:configChanges="orientation|screenSize|locale" >
@@ -346,23 +353,34 @@
         </service>
         <service android:name=".SlogUISnapService" >
         </service>
-	<!-- SlogUI Added Done  -->
+        <service android:name=".EngInstallHelperService" />
+  <!-- SlogUI Added Done  -->
+      <activity
+          android:name=".EngInstallActivity" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+    <!-- aota test -->
+        <activity
+            android:name=".AOTASetting" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
 
-
-	</application>
+    </application>
     <uses-sdk android:minSdkVersion="8" />
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.CHANGE_CONFIGURATION"/>
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.MODIFY_PHONE_STATE" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
-    <!--Add 20130109 Spreadst of 112929,dialog disappear when change the direction of phone start -->
-    <uses-permission android:name="android.permission.CHANGE_CONFIGURATION" />
-    <!--Add 20130109 Spreadst of 112929,dialog disappear when change the direction of phone end   -->
-	<!-- add by wangxiabin 09-15-11 for Wifi test begin -->
-	<uses-permission android:name="android.permission.ACCESS_WIFI_STATE"></uses-permission>
-	<uses-permission android:name="android.permission.CHANGE_WIFI_STATE"></uses-permission>
-	<!-- add by wangxiabin 09-15-11 for Wifi test end -->
+    <!-- add by wangxiabin 09-15-11 for Wifi test begin -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"></uses-permission>
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"></uses-permission>
+    <!-- add by wangxiabin 09-15-11 for Wifi test end -->
 </manifest>
