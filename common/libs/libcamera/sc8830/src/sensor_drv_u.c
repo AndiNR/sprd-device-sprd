@@ -1575,7 +1575,7 @@ static int _sensor_cali_awb_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 		return SENSOR_FAIL;
 	}
 	raw_tune_info_ptr = (struct sensor_raw_tune_info*)sensor_info_ptr->raw_info_ptr->tune_ptr;
-	cali_info_ptr = (struct sensor_cali_info*)&raw_tune_info_ptr->awb.cali_info;
+	cali_info_ptr = (struct sensor_cali_info*)&sensor_info_ptr->raw_info_ptr->cali_ptr->awb.cali_info;
 
 	str_len = sprintf(file_name, "%ssensor_%s",cfg_file_dir, sensor_name);
 	file_name_ptr = (char*)&file_name[0] + str_len;

@@ -40,9 +40,11 @@
 #define SENSOR_ISO_NUM 0x05
 #define SENSOR_AE_NUM 0x500
 #define SENSOR_AE_TAB_NUM 0x04
-#define SENSOR_CMC_NUM 0x09
+#define SENSOR_AWB_CALI_NUM 0x09
 #define SENSOR_AWB_NUM 0x14
 #define SENSOR_MAP_NUM 0x08
+
+#define RAW_INFO_END_ID 0x71717567
 
 #define SENSOR_RAW_VERSION_ID 0x00000000 /* tiger-0000xxxx, soft-xxxx0000*/
 
@@ -70,11 +72,17 @@ struct sensor_pos_rect{
 	uint16_t end_y;
 };
 
-
 struct sensor_rgb_gain{
 	uint16_t r_gain;
 	uint16_t g_gain;
 	uint16_t b_gain;
+};
+
+struct sensor_blc_offset{
+	uint16_t r;
+	uint16_t gr;
+	uint16_t gb;
+	uint16_t b;
 };
 
 struct sensor_blc_param{
@@ -82,10 +90,7 @@ struct sensor_blc_param{
 	uint8_t reserved2;
 	uint8_t reserved1;
 	uint8_t reserved0;
-	uint16_t r;
-	uint16_t gr;
-	uint16_t gb;
-	uint16_t b;
+	struct sensor_blc_offset offset[8];
 };
 
 struct sensor_nlc_param{
@@ -102,7 +107,7 @@ struct sensor_lnc_map_addr{
 };
 
 struct sensor_lnc_map{
-	struct sensor_lnc_map_addr map[SENSOR_MAP_NUM][9];
+	struct sensor_lnc_map_addr map[SENSOR_MAP_NUM][SENSOR_AWB_CALI_NUM];
 };
 
 struct sensor_ae_index{
@@ -139,12 +144,7 @@ struct sensor_ae_param{
 	uint8_t quick_mode;
 	uint8_t reserved0;
 	int8_t ev[16];
-	struct sensor_ae_change_speed *speed_dark_to_bright;
-	uint32_t			step_dark_to_bright;
-	struct sensor_ae_change_speed *speed_bright_to_dark;
-	uint32_t			step_bright_to_dark;
-	struct sensor_ae_histogram_segment *histogram_segment;
-	uint32_t			histogram_segment_num;
+	uint32_t reserved[40];
 };
 
 struct sensor_ae_tab{
@@ -174,10 +174,9 @@ struct sensor_cali_info {
 struct sensor_awb_param{
 	struct sensor_pos win_start;
 	struct sensor_size win_size;
+	struct sensor_rgb gain_convert[8];
 	struct sensor_awb_coord win[SENSOR_AWB_NUM];
-	struct sensor_awb_coord cali[SENSOR_CMC_NUM];
-	struct sensor_cali_info cali_info;
-	struct sensor_cali_info golden_cali_info;
+	struct sensor_awb_coord cali[SENSOR_AWB_CALI_NUM];
 	uint32_t cali_num;
 	uint32_t cali_index;
 	uint32_t cali_std;
@@ -189,8 +188,8 @@ struct sensor_awb_param{
 	uint32_t target_zone;
 	uint32_t smart;
 	uint32_t quick_mode;
+	uint32_t reserved[40];
 };
-
 
 struct sensor_bpc_param{
 	uint16_t flat_thr;
@@ -212,6 +211,7 @@ struct sensor_denoise_param{
 	uint8_t ranwei[31];
 	uint8_t reserved1;
 	uint8_t reserved0;
+	uint32_t reserved7[70];
 };
 
 struct sensor_grgb_param{
@@ -225,7 +225,7 @@ struct sensor_cfa_param{
 };
 
 struct sensor_cmc_param{
-	uint16_t matrix[SENSOR_CMC_NUM][9];
+	uint16_t matrix[SENSOR_AWB_CALI_NUM][9];
 	uint16_t reserved;
 };
 
@@ -238,11 +238,13 @@ struct sensor_cce_parm{
 
 struct sensor_gamma_param{
 	uint16_t axis[2][26];
+	uint32_t reserved[130];
 };
 
 struct sensor_cce_uvdiv{
 	uint8_t thrd[7];
 	uint8_t reserved;
+	uint32_t reserved1[20];
 };
 
 struct sensor_pref_param{
@@ -250,6 +252,7 @@ struct sensor_pref_param{
 	uint8_t y_thr;
 	uint8_t u_thr;
 	uint8_t v_thr;
+	uint32_t reserved[20];
 };
 
 struct sensor_bright_param{
@@ -285,10 +288,14 @@ struct sensor_af_param{
 	uint32_t total_step;
 	uint32_t max_step;
 	uint32_t stab_period;
+	uint32_t reserved[40];
 };
 
 struct sensor_emboss_param{
 	uint8_t step;
+	uint8_t reserved2;
+	uint8_t reserved1;
+	uint8_t reserved0;
 };
 
 struct sensor_edge_param{
@@ -299,11 +306,12 @@ struct sensor_edge_param{
 };
 
 struct sensor_edge_info{
-	struct sensor_edge_param info[6];
+	struct sensor_edge_param info[16];
 };
 
 struct sensor_global_gain_param{
 	uint32_t gain;
+	uint32_t reserved[20];
 };
 
 
@@ -316,6 +324,7 @@ struct sensor_chn_gain_param{
 	uint16_t g_offset;
 	uint16_t b_offset;
 	uint16_t reserved1;
+	uint32_t reserved2[50];
 };
 
 struct sensor_css_param{
@@ -323,6 +332,7 @@ struct sensor_css_param{
 	uint8_t lum_thr;
 	uint8_t low_sum_thr[7];
 	uint8_t chr_thr;
+	uint32_t reserved[70];
 };
 
 struct sensor_version_info{
@@ -357,6 +367,16 @@ struct sensor_raw_tune_info{
 	uint32_t hdr_bypass;
 	uint32_t glb_gain_bypass;
 	uint32_t chn_gain_bypass;
+	uint32_t reserve9;
+	uint32_t reserve8;
+	uint32_t reserve7;
+	uint32_t reserve6;
+	uint32_t reserve5;
+	uint32_t reserve4;
+	uint32_t reserve3;
+	uint32_t reserve2;
+	uint32_t reserve1;
+	uint32_t reserve0;
 
 	struct sensor_blc_param blc;
 	struct sensor_nlc_param nlc;
@@ -389,13 +409,36 @@ struct sensor_raw_fix_info{
 	struct sensor_lnc_map lnc;
 };
 
+struct sensor_raw_awb_cali{
+	struct sensor_cali_info cali_info;
+	struct sensor_cali_info golden_cali_info;
+};
+
+struct sensor_raw_ae_cali{
+	struct sensor_ae_change_speed *speed_dark_to_bright;
+	uint32_t			step_dark_to_bright;
+	struct sensor_ae_change_speed *speed_bright_to_dark;
+	uint32_t			step_bright_to_dark;
+	struct sensor_ae_histogram_segment *histogram_segment;
+	uint32_t			histogram_segment_num;
+};
+
+struct sensor_raw_cali_info{
+	struct sensor_raw_ae_cali ae;
+	struct sensor_raw_awb_cali awb;
+};
+
 struct sensor_raw_info{
 	struct sensor_version_info* version_info;
 	struct sensor_raw_tune_info* tune_ptr;
 	struct sensor_raw_fix_info* fix_ptr;
+	struct sensor_raw_cali_info* cali_ptr;
 };
 
 
-
+struct raw_param_info_tab{
+	uint32_t param_id;
+	struct sensor_raw_info* info_ptr;
+};
 
 #endif

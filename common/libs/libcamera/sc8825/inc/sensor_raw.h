@@ -77,15 +77,19 @@ struct sensor_rgb_gain{
 	uint16_t b_gain;
 };
 
+struct sensor_blc_offset{
+	uint16_t r;
+	uint16_t gr;
+	uint16_t gb;
+	uint16_t b;
+};
+
 struct sensor_blc_param{
 	uint8_t mode;
 	uint8_t reserved2;
 	uint8_t reserved1;
 	uint8_t reserved0;
-	uint16_t r;
-	uint16_t gr;
-	uint16_t gb;
-	uint16_t b;
+	struct sensor_blc_offset offset[8];
 };
 
 struct sensor_nlc_param{
