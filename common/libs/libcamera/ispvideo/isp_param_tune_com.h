@@ -88,6 +88,7 @@ typedef int32_t (*isp_fun)(void* param_ptr);
 #define ISP_VIDEO_MIPI_RAW10 (1<<3)
 #define ISP_VIDEO_JPG (1<<4)
 
+#if 0
 #define ISP_SIZE_640x480   (1<<0)
 #define ISP_SIZE_800x600   (1<<1)
 #define ISP_SIZE_1280x960  (1<<2)
@@ -96,7 +97,7 @@ typedef int32_t (*isp_fun)(void* param_ptr);
 #define ISP_SIZE_2048x1536 (1<<5)
 #define ISP_SIZE_2592x1944 (1<<6)
 #define ISP_SIZE_3264x2448 (1<<7)
-
+#endif
 
 #define ISP_UINT8 0x01
 #define ISP_UINT16 0x02

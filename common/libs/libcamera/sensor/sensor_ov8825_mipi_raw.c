@@ -843,6 +843,7 @@ static struct sensor_raw_info s_ov8825_mipi_raw_info={
 	&s_ov8825_version_info,
 	&s_ov8825_tune_info,
 	&s_ov8825_fix_info,
+	&s_ov8825_cali_info,
 };
 
 struct sensor_raw_info* s_ov8825_mipi_raw_info_ptr=&s_ov8825_mipi_raw_info;
@@ -989,6 +990,7 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	uint32_t rtn=0x00;
 	struct sensor_raw_info* raw_sensor_ptr=Sensor_GetContext();
 	struct sensor_raw_tune_info* sensor_ptr=raw_sensor_ptr->tune_ptr;
+	struct sensor_raw_cali_info* cali_ptr=raw_sensor_ptr->cali_ptr;
 
 	raw_sensor_ptr->version_info->version_id=0x00000000;
 	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);
@@ -1022,10 +1024,10 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 
 	//blc
 	sensor_ptr->blc.mode=0x00;
-	sensor_ptr->blc.r=0x0f;
-	sensor_ptr->blc.gr=0x0f;
-	sensor_ptr->blc.gb=0x0f;
-	sensor_ptr->blc.b=0x0f;
+	sensor_ptr->blc.offset[0].r=0x0f;
+	sensor_ptr->blc.offset[0].gr=0x0f;
+	sensor_ptr->blc.offset[0].gb=0x0f;
+	sensor_ptr->blc.offset[0].b=0x0f;
 	//nlc
 	sensor_ptr->nlc.r_node[0]=0;
 	sensor_ptr->nlc.r_node[1]=16;

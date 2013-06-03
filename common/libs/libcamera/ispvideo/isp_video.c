@@ -79,6 +79,9 @@ struct camera_func{
 	int32_t(*set_capture_size) (uint32_t width, uint32_t height);
 };
 
+#define PREVIEW_MAX_WIDTH 640
+#define PREVIEW_MAX_HEIGHT 480
+
 #define CMD_BUF_SIZE  4096 // 1k
 #define SEND_IMAGE_SIZE 64512 // 63k
 #define DATA_BUF_SIZE 65536 //64k
@@ -93,7 +96,7 @@ struct camera_func{
 #ifdef CLIENT_DEBUG
 #define DBG ALOGD
 #endif
-
+static uint8_t* preview_buf_ptr = 0;
 static unsigned char diag_cmd_buf[CMD_BUF_SIZE];
 static unsigned char eng_rsp_diag[DATA_BUF_SIZE];
 static int preview_flag = 0; // 1: start preview
@@ -650,6 +653,81 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 #define ISP_DATA_JPG (1<<4)
 
 */
+
+void ispvideo_Scale(uint32_t format, uint32_t in_w, uint32_t in_h, char *in_imgptr, int in_imglen, uint32_t* out_w, uint32_t* out_h, char **out_imgptr, int* out_imglen)
+{
+	int ret;
+	uint32_t x=0x00;
+	uint32_t y=0x00;
+	uint32_t src_img_w=in_w;
+	uint32_t src_img_h=in_h;
+	uint32_t img_w=in_w;
+	uint32_t img_h=in_h;
+	uint8_t* src_buf_ptr=(uint8_t*)in_imgptr;
+	uint8_t* dst_buf_ptr=(uint8_t*)*out_imgptr;
+	uint32_t shift_num=0x01;
+
+	if((PREVIEW_MAX_WIDTH>=img_w)
+		&&(PREVIEW_MAX_HEIGHT>=img_h))	{
+		*out_w=img_w;
+		*out_h=img_h;
+		*out_imgptr=in_imgptr;
+		*out_imglen=in_imglen;
+		return ;
+	}
+
+	for(x=0x00; ; x++){
+		if((PREVIEW_MAX_WIDTH>=img_w)
+			&&(PREVIEW_MAX_HEIGHT>=img_h))	{
+			break ;
+		}
+		img_w>>=0x01;
+		img_h>>=0x01;
+		shift_num<<=0x01;
+	}
+
+	*out_w=img_w;
+	*out_h=img_h;
+
+	if (2 ==format){
+		*out_imglen=img_w*img_h+(img_w*img_h)/2;
+		shift_num-=0x01;
+		shift_num<<=0x01;
+
+		for(y=0x00; y<img_h; y+=0x02){/*y*/
+			for(x=0x00; x<img_w; x+=0x02){
+				*dst_buf_ptr++=*src_buf_ptr++;
+				*dst_buf_ptr++=*src_buf_ptr++;
+				src_buf_ptr+=shift_num;
+			}
+			for(x=0x00; x<img_w; x+=0x02){
+				*dst_buf_ptr++=*src_buf_ptr++;
+				*dst_buf_ptr++=*src_buf_ptr++;
+				src_buf_ptr+=shift_num;
+			}
+			src_buf_ptr+=(src_img_w*shift_num);
+		}
+
+		src_buf_ptr=(uint8_t*)in_imgptr;
+		dst_buf_ptr=(uint8_t*)*out_imgptr;
+		src_buf_ptr=src_buf_ptr+src_img_w*src_img_h;
+		dst_buf_ptr=dst_buf_ptr+img_w*img_h;
+
+
+		img_h>>=0x01;
+		for(y=0x00; y<img_h; y++){/*uv*/
+			for(x=0x00; x<img_w; x+=0x02){
+				*dst_buf_ptr++=*src_buf_ptr++;
+				*dst_buf_ptr++=*src_buf_ptr++;
+				src_buf_ptr+=shift_num;
+			}
+			src_buf_ptr+=(src_img_w*(shift_num/2));
+		}
+
+	}
+
+}
+
 void send_img_data(uint32_t format, uint32_t width, uint32_t height, char *imgptr, int imagelen)
 {
 	int ret;
@@ -658,8 +736,15 @@ void send_img_data(uint32_t format, uint32_t width, uint32_t height, char *imgpt
 
 	if (0==preview_img_end_flag)
 	{
-		//DBG("ISP_TOOL:ISP_TOOL:%s: preview_flag: %d, getpic_flag: %d, imagelen: %d.\n", __FUNCTION__, preview_flag, getpic_flag, imagelen);
-		ret = handle_img_data(format, width, height, imgptr, imagelen, 0, 0, 0, 0);
+		char *img_ptr=preview_buf_ptr;
+		int img_len;
+		uint32_t img_w;
+		uint32_t img_h;
+
+		ispvideo_Scale(format, width, height, imgptr, imagelen, &img_w, &img_h, &img_ptr, &img_len);
+
+		ret = handle_img_data(format, img_w, img_h, img_ptr, img_len, 0, 0, 0, 0);
+		//ret = handle_img_data(format, width, height, imgptr, imagelen, 0, 0, 0, 0);
 		sem_post(&preview_sem_lock);
 		if (ret != 0) {
 			DBG("ISP_TOOL:%s: Fail to handle_img_data(). ret = %d.", __FUNCTION__, ret);
@@ -883,10 +968,14 @@ void stopispserver()
 		shutdown(sock_fd, 1);
 	}
 
+	ispParserFree((void*)preview_buf_ptr);
+
 	preview_flag = 0;
 	capture_flag = 0;
 	preview_img_end_flag=1;
 	capture_img_end_flag=1;
+	preview_buf_ptr=0;
+	
 }
 
 void startispserver()
@@ -901,6 +990,8 @@ void startispserver()
 	capture_flag = 0;
 	preview_img_end_flag=1;
 	capture_img_end_flag=1;
+	preview_buf_ptr=0;
+	preview_buf_ptr=(uint8_t*)ispParserAlloc(PREVIEW_MAX_WIDTH*PREVIEW_MAX_HEIGHT*2);
 
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
