@@ -579,7 +579,7 @@ int camera_snapshot_start_set(void)
 	int                      ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
 
-	if (cxt->cmr_set.flash) {
+	if (cxt->cmr_set.flash && (CAMERA_HDR_MODE != cxt->cap_mode)) {
 		/*open flash*/
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 			struct isp_alg flash_param;
@@ -628,7 +628,7 @@ int camera_snapshot_stop_set(void)
 	int                      ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
 
-	if (cxt->cmr_set.flash) {
+	if (cxt->cmr_set.flash && (CAMERA_HDR_MODE != cxt->cap_mode)) {
 		/*open flash*/
 		camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN);
 	}
