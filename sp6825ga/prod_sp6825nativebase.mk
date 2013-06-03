@@ -39,7 +39,8 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.modem.t.assert=/dev/vbpipe2 \
 	ro.modem.t.vbc=/dev/vbpipe6 \
 	ro.modem.t.id=0 \
-	ro.modem.t.count=1
+	ro.modem.t.count=1 \
+	persist.sys.lowcost=true
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1

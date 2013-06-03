@@ -39,8 +39,9 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.modem.w.enable=1 \
 	ro.modem.w.tty=/dev/ts0710mux \
 	ro.modem.w.eth=veth \
-	ro.modem.w.id=0
-	ro.modem.w.count=2
+	ro.modem.w.id=0 \
+	ro.modem.w.count=2 \
+	persist.sys.lowcost=true
 
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
