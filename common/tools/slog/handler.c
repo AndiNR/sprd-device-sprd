@@ -608,6 +608,40 @@ static int write_from_buffer(int fd, char *buf, int len)
 	return result;
 }
 
+#define MODEM_TD_DEVICE_PROPERTY "ro.modem.t.enable"
+#define MODEM_W_DEVICE_PROPERTY "ro.modem.w.enable"
+
+static void handle_dump_shark_modem_memory()
+{
+	char buffer[MAX_NAME_LEN];
+	time_t t;
+	struct tm tm;
+	char modem_property[8];
+	int ret_t, ret_w;
+
+	err_log("Start to dump CP memory");
+
+	property_get(MODEM_TD_DEVICE_PROPERTY, modem_property, "");
+	ret_t = atoi(modem_property);
+	property_get(MODEM_W_DEVICE_PROPERTY, modem_property, "");
+	ret_w = atoi(modem_property);
+
+	/* add timestamp */
+	t = time(NULL);
+	localtime_r(&t, &tm);
+	if(ret_t == 1) {
+		sprintf(buffer, "cat /proc/cpt/mem > %s/%s/modem/modem_memory_%d%02d%02d%02d%02d%02d.log", current_log_path, top_logdir,
+				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+	} else if(ret_w == 1) {
+		sprintf(buffer, "cat /proc/cpw/mem > %s/%s/modem/modem_memory_%d%02d%02d%02d%02d%02d.log", current_log_path, top_logdir,
+				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+	} else {
+		err_log("Modem device is not TD and W!");
+	}
+	system(buffer);
+	err_log("Dump CP memory completed");
+}
+
 #define MODEMRESET_PROPERTY "persist.sys.sprd.modemreset"
 #define MODEM_SOCKET_NAME       "modemd"
 #define MODEM_SOCKET_BUFFER_SIZE 128
@@ -643,9 +677,12 @@ connect_socket:
                 if( n > 0 ) {
 			err_log("get %d bytes %s", n, buffer);
 			if(strstr(buffer, "Modem Assert") != NULL) {
-				if(ret == 0)
-					dump_modem_memory_flag = 1;
-				else {
+				if(ret == 0) {
+					if(dev_shark_flag == 1)
+						handle_dump_shark_modem_memory();
+					else
+						dump_modem_memory_flag = 1;
+				} else {
 					modem_reset_flag =1;
 					err = pthread_kill(modem_tid, SIGUSR1);
 					if(err != 0)
@@ -900,6 +937,9 @@ void *modem_log_handler(void *arg)
 		close(data_fd);
 		hook_modem_flag = 0;
 	}
+
+	free(ring_buffer_table);
+	ring_buffer_table == NULL;
 
 	/* close all open fds */
 	if(info->fd_device)
@@ -1168,7 +1208,7 @@ void *tcp_log_handler(void *arg)
 			err_log("mkdir %s failed.", buffer);
 			exit(0);
 		}
-		sprintf(buffer, "%s/%s/%s/%s.log",
+		sprintf(buffer, "%s/%s/%s/%s.pcap",
 			current_log_path, top_logdir, tcp->log_path, tcp->log_basename);
 		file_name_rotate(buffer);
 

@@ -156,6 +156,7 @@ extern int internal_log_size;
 extern int screenshot_enable;
 extern int slog_save_all;
 extern int hook_modem_flag;
+extern int dev_shark_flag;
 
 /* function */
 extern int parse_config();

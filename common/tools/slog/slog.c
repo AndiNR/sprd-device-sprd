@@ -47,6 +47,7 @@ int modem_log_handler_started = 0;
 int internal_log_size = 5; /*M*/
 
 int hook_modem_flag = 0;
+int dev_shark_flag = 0;
 
 char *config_log_path = INTERNAL_LOG_PATH;
 char *current_log_path;
@@ -728,11 +729,13 @@ void *command_handler(void *arg)
 
 	if (bind(server_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
 		err_log("bind socket failed!");
+		close(server_sock);
 		return NULL;
 	}
 
 	if (listen(server_sock, 5) < 0) {
 		err_log("listen socket failed!");
+		close(server_sock);
 		return NULL;
 	}
 
@@ -933,6 +936,8 @@ static void setup_signals()
  */
 int main(int argc, char *argv[])
 {
+	int opt;
+
 /*
 	if(daemon(0, 0)){
 		err_log("Can't start Slog daemon.");
@@ -940,6 +945,16 @@ int main(int argc, char *argv[])
 	}
 */
 	err_log("Slog begin to work.");
+
+	while ( -1 != (opt = getopt(argc, argv, "t"))) {
+		switch (opt) {
+			case 't':
+				dev_shark_flag = 1;
+				break;
+			default:
+				break;
+		}
+	}
 
 	/* sets slog process's file mode creation mask */
 	umask(0);

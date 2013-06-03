@@ -359,7 +359,7 @@ service iprenew_bnep0 /system/bin/dhcpcd -n
     disabled
     oneshot
 
-service slog /system/bin/slog
+service slog /system/bin/slog -t
     class main
     user root
 
