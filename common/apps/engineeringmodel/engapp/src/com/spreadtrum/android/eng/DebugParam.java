@@ -3,6 +3,7 @@ package com.spreadtrum.android.eng;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -377,7 +378,7 @@ public class DebugParam extends PreferenceActivity {
         byte[] inputBytes = new byte[dataSize];
 
         int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
-        String mATResponse =  new String(inputBytes, 0, showlen);
+        String mATResponse =  new String(inputBytes, 0, showlen,Charset.defaultCharset());
         if(mATResponse.indexOf("ERROR") != -1) {
             Toast.makeText(this,R.string.set_bands_error,Toast.LENGTH_LONG).show();
             return false;
