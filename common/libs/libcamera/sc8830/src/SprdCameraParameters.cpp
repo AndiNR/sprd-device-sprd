@@ -80,6 +80,7 @@ const char SprdCameraParameters::KEY_ISO[] = "iso";
 const char SprdCameraParameters::KEY_RECORDING_HINT[] = "recording-hint";
 const char SprdCameraParameters::KEY_FLASH_MODE[] = "flash-mode";
 const char SprdCameraParameters::KEY_SLOWMOTION[] = "slow-motion";
+const char SprdCameraParameters::KEY_SATURATION[] = "saturation";
 
 ////////////////////////////////////////////////////////////////////////////////////
 SprdCameraParameters::SprdCameraParameters():CameraParameters()
@@ -241,6 +242,13 @@ int SprdCameraParameters::getContrast()
 	const char *p = get(KEY_CONTRAST);
 
 	return lookup(contrast_map, p, CAMERA_CONTRAST_DEFAULT);
+}
+
+int SprdCameraParameters::getSaturation()
+{
+	const char *p = get(KEY_SATURATION);
+
+	return lookup(saturation_map, p, CAMERA_SATURATION_DEFAULT);
 }
 
 int SprdCameraParameters::getExposureCompensation()

@@ -62,6 +62,7 @@ public:
 	int getZoom();
 	int getBrightness();
 	int getContrast();
+	int getSaturation();
 	int getExposureCompensation();
 	int getAntiBanding();
 	int getIso();
@@ -96,6 +97,7 @@ public:
 	static const char KEY_RECORDING_HINT[];
 	static const char KEY_FLASH_MODE[];
 	static const char KEY_SLOWMOTION[];
+	static const char KEY_SATURATION[];
 
 private:
 

@@ -223,6 +223,7 @@ struct camera_settings {
 	uint32_t                 effect;
 	uint32_t                 expo_compen;
 	uint32_t                 wb_mode;
+	uint32_t                 saturation;
 	uint32_t                 scene_mode;
 	uint32_t                 flash;
 	uint32_t                 night_mode;

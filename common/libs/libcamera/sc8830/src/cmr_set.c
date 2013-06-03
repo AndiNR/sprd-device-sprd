@@ -48,6 +48,7 @@ static int camera_autofocus_need_exit(void);
 static uint32_t camera_flash_mode_to_status(enum cmr_flash_mode f_mode);
 static int camera_set_brightness(uint32_t brightness, uint32_t *skip_mode, uint32_t *skip_num);
 static int camera_set_contrast(uint32_t contrast, uint32_t *skip_mode, uint32_t *skip_num);
+static int camera_set_saturation(uint32_t saturation, uint32_t *skip_mode, uint32_t *skip_num);
 static int camera_set_effect(uint32_t effect, uint32_t *skip_mode, uint32_t *skip_num);
 static int camera_set_ev(uint32_t expo_compen, uint32_t *skip_mode, uint32_t *skip_num);
 static int camera_set_wb(uint32_t wb_mode, uint32_t *skip_mode, uint32_t *skip_num);
@@ -273,6 +274,27 @@ int camera_set_contrast(uint32_t contrast, uint32_t *skip_mode, uint32_t *skip_n
 		*skip_mode = IMG_SKIP_HW;
 		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_CONTRAST, contrast);
+	}
+
+	return ret;
+}
+
+int camera_set_saturation(uint32_t saturation, uint32_t *skip_mode, uint32_t *skip_num)
+{
+	struct camera_context    *cxt = camera_get_cxt();
+	int                      ret = CAMERA_SUCCESS;
+	uint32_t isp_param = 0;
+
+	CMR_LOGI ("saturation %d", saturation);
+	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
+		*skip_mode = IMG_SKIP_SW;
+		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		camera_param_to_isp(ISP_CTRL_SATURATION, saturation, &isp_param);
+		ret = isp_ioctl(ISP_CTRL_SATURATION, (void *)&isp_param);
+	} else {
+		*skip_mode = IMG_SKIP_HW;
+		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		ret = Sensor_Ioctl(SENSOR_IOCTL_SATURATION, saturation);
 	}
 
 	return ret;
@@ -753,7 +775,8 @@ int camera_set_ctrl(camera_parm_type id,
 		&& (CAMERA_PARM_JPEGCOMP != id)
 		&& (CAMERA_PARM_DCDV_MODE != id)
 		&& (CAMERA_PARM_SHOT_NUM != id)
-		&& (CAMERA_PARAM_SLOWMOTION != id)) {
+		&& (CAMERA_PARAM_SLOWMOTION != id)
+		&& (CAMERA_PARM_SATURATION != id)) {
 		return ret;
 	}
 
@@ -765,6 +788,24 @@ int camera_set_ctrl(camera_parm_type id,
 	}
 
 	switch (id) {
+	case CAMERA_PARM_SATURATION:
+		if (parm != cxt->cmr_set.saturation) {
+			if (CMR_PREVIEW == cxt->preview_status) {
+				if (before_set) {
+					ret = (*before_set)(RESTART_LIGHTLY);
+					CMR_RTN_IF_ERR(ret);
+				}
+				ret = camera_set_saturation(parm, &skip_mode, &skip_number);
+				CMR_RTN_IF_ERR(ret);
+				if (after_set) {
+					ret = (*after_set)(RESTART_LIGHTLY, skip_mode, skip_number);
+					CMR_RTN_IF_ERR(ret);
+				}
+			}
+			cxt->cmr_set.saturation = parm;
+		}
+		break;
+
 	case CAMERA_PARAM_SLOWMOTION:
 		cxt->cmr_set.slow_motion_mode = parm;
 		CMR_LOGI("slow motion:%d.",parm);

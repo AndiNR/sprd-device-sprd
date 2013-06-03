@@ -91,6 +91,18 @@ enum {
 	CAMERA_CONTRAST_MAX
 };
 
+enum {
+	CAMERA_SATURATION_0 = 0,
+	CAMERA_SATURATION_1 = 1,
+	CAMERA_SATURATION_2 = 2,
+	CAMERA_SATURATION_DEFAULT = 3,
+	CAMERA_SATURATION_3 = 3,
+	CAMERA_SATURATION_4 = 4,
+	CAMERA_SATURATION_5 = 5,
+	CAMERA_SATURATION_6 = 6,
+	CAMERA_SATURATION_MAX
+};
+
 /* Enum Type for different ISO Mode supported */
 enum {
 	CAMERA_ISO_AUTO = 0,
@@ -238,6 +250,17 @@ const struct str_map contrast_map[] = {
 	{NULL,              0}
 };
 
+const struct str_map saturation_map[] = {
+	{"0",               CAMERA_SATURATION_0},
+	{"1",               CAMERA_SATURATION_1},
+	{"2",               CAMERA_SATURATION_2},
+	{"3",               CAMERA_SATURATION_3},
+	{"4",               CAMERA_SATURATION_4},
+	{"5",               CAMERA_SATURATION_5},
+	{"6",               CAMERA_SATURATION_6},
+	{NULL,              0}
+};
+
 const struct str_map exposure_compensation_map[] = {
 	{"-3",              CAMERA_EXPOSURW_COMPENSATION_0},
 	{"-2",              CAMERA_EXPOSURW_COMPENSATION_1},
@@ -341,6 +364,9 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"max-contrast", "6"},
 	{"contrast-values", "0,1,2,3,4,5,6"},
 	{"contrast", "3"},
+	{"saturation-supported", "true"},
+	{"saturation-values", "0,1,2,3,4,5,6"},
+	{"saturation", "3"},
 	{"min-exposure-compensation", "0"},
 	{"max-exposure-compensation", "0"},
 	{"exposure-compensation","0"},
@@ -426,6 +452,9 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"max-contrast", "6"},
 	{"contrast-values", "0,1,2,3,4,5,6"},
 	{"contrast", "3"}  ,
+	{"saturation-supported", "true"},
+	{"saturation-values", "0,1,2,3,4,5,6"},
+	{"saturation", "3"},
 	{"focus-mode-values", "auto,auto-multi,macro"},
 	{"focus-mode", "auto"},
 	{"min-exposure-compensation", "-3"},
