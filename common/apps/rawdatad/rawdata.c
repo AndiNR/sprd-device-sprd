@@ -292,13 +292,17 @@ static void read_productinfo(unsigned int block, unsigned char *pdata)
 		return;
 	}
 
-	fseek(fp,0,SEEK_END);
-	int size=ftell(fp);
-	fseek(fp,0,SEEK_SET);
+	fseek(fp,0L,SEEK_END);
+	long size=ftell(fp);
+	fseek(fp,0L,SEEK_SET);
 	DBG("%s: size = %d\n", __FUNCTION__,size);
 
 	memset(pdata, 0xff, RAWDATA_BUFFER_SIZE);
-	fread(pdata,size,1,fp);
+	if(fread(pdata,size,1,fp)!=1){
+		DBG("%s: error reading file\n", __FUNCTION__);
+		fclose(fp);
+		return;
+	}
 	DBG("%s: data: %s",__FUNCTION__, pdata);
 
 	fclose(fp);
