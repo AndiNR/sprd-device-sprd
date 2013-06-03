@@ -53,6 +53,7 @@ public class EngSqlite {
                 if(DEBUG) Log.d("Vtools","os= "+br.readLine());
                 Runtime.getRuntime().exec("chmod 777 "+file.getAbsolutePath());
                 int status = p.waitFor();
+		Log.d(TAG, "process :"+status+"has finished");
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
