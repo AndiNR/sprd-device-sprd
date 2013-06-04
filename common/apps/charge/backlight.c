@@ -27,7 +27,7 @@ static int eng_lcdbacklight_test(int brightness)
 
 	fd = open(LCD_BACKLIGHT_DEV, O_RDWR);
 
-	if(fd < -1) {
+	if(fd < 0) {
 		SPRD_DBG("%s: open %s fail",__func__, LCD_BACKLIGHT_DEV);
 		return -1;
 	}
@@ -48,7 +48,7 @@ static int eng_lcdbacklight_get(void)
 
 	fd = open(LCD_BACKLIGHT_DEV, O_RDWR);
 
-	if(fd < -1) {
+	if(fd < 0) {
 		SPRD_DBG("%s: open %s fail",__func__, LCD_BACKLIGHT_DEV);
 		return -1;
 	}
@@ -74,7 +74,7 @@ static int eng_keybacklight_test(int brightness)
 
 	fd = open(KEY_BACKLIGHT_DEV, O_RDWR);
 
-	if(fd < -1) {
+	if(fd < 0) {
 		SPRD_DBG("%s: open %s fail",__func__, KEY_BACKLIGHT_DEV);
 		return -1;
 	}
@@ -95,7 +95,7 @@ static int eng_keybacklight_get(void)
 
 	fd = open(KEY_BACKLIGHT_DEV, O_RDWR);
 
-	if(fd < -1) {
+	if(fd < 0) {
 		SPRD_DBG("%s: open %s fail",__func__, LCD_BACKLIGHT_DEV);
 		return -1;
 	}
