@@ -26,9 +26,9 @@ static void hardware_broadcom_wifi_test(char* buf)
 		ALOGE("hardware_broadcom_wifi_test START");
 		wifieut(OPEN_WIFI,req);
 		if (!strcmp(req,EUT_WIFI_OK)) {
-			memcpy(socket_write_buf,TEST_OK,SOCKET_BUF_LEN);
+			memcpy(socket_write_buf,TEST_OK,strlen(TEST_OK)+1);
 		} else {
-			memcpy(socket_write_buf,TEST_ERROR,SOCKET_BUF_LEN);
+			memcpy(socket_write_buf,TEST_ERROR,strlen(TEST_ERROR)+1);
 		}
 	} else if (0 == strncmp(buf+TYPE_OFFSET,"STOP",strlen("STOP"))) {
 		ALOGE("hardware_broadcom_wifi_test STOP");

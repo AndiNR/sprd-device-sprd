@@ -457,7 +457,7 @@ int get_cmd_index(char *buf)
 {
 	int index = -1;
 	int i;
-	for(i=0;i<=(int)NUM_ELEMS(eut_cmds);i++){
+	for(i=0;i<(int)NUM_ELEMS(eut_cmds);i++){
 		if(strstr(buf,eut_cmds[i].name) != NULL)
 			{
 		index = eut_cmds[i].index;
@@ -958,7 +958,7 @@ int is_audio_at_cmd_need_to_handle(char *buf,int len){
 		at_tok_nextint(&ptr,&eq_or_tun_type);
 		at_tok_nextint(&ptr,&cmd_type);
 		ENG_LOG("%s,SPENHA :value = 0x%02x",__FUNCTION__,cmd_type);
-		for ( i = 0; i < sizeof(at_spenha_cmd_to_handle); i += 1 ) {
+		for ( i = 0; i < sizeof(at_spenha_cmd_to_handle)/sizeof(at_spenha_cmd_to_handle[0]); i += 1 ) {
 			if(-1==at_spenha_cmd_to_handle[i]){
 				ENG_LOG("end of at_spenha_cmd_to_handle");
 				return 0;

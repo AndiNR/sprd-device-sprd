@@ -118,7 +118,7 @@ int eng_at2linux(char *buf)
 
 eng_cmd_type eng_cmd_get_type(int cmd)
 {
-	if (cmd <= NUM_ELEMS(eng_linuxcmd))
+	if (cmd < NUM_ELEMS(eng_linuxcmd))
 		return eng_linuxcmd[cmd].type;
 	else
 		return CMD_INVALID_TYPE;
@@ -220,16 +220,20 @@ int eng_linuxcmd_factoryreset(char *req, char *rsp)
 	ret = write(fd, cmd, strlen(cmd));
 	if(ret < 0) {
 		ret = 0;
+                close(fd);
 		ENG_LOG("%s: write %s fail [%s]\n",__FUNCTION__, ENG_RECOVERYCMD, strerror(errno));
+
 		goto out;
 	}
 	if (eng_sql_string2string_set("factoryrst", "DONE")==-1) {
 		ret = 0;
+                close(fd);
 		ENG_LOG("%s: set factoryrst fail\n",__FUNCTION__);
 		goto out;
 	}
 
 	sync();
+        close(fd);
 	__reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2,
                  LINUX_REBOOT_CMD_RESTART2, "recovery");
 out:
@@ -306,7 +310,7 @@ int eng_linuxcmd_vbat(char *req, char *rsp)
 		sprintf(rsp, "%s%s", SPRDENG_ERROR, ENG_STREND);
 	}
 
-	if(fd > 0)
+	if(fd >= 0)
 		close(fd);
 
 	ENG_LOG("%s: rsp=%s\n",__FUNCTION__,rsp);
@@ -335,7 +339,7 @@ int eng_linuxcmd_stopchg(char *req, char *rsp)
 		sprintf(rsp, "%s%s", SPRDENG_ERROR, ENG_STREND);
 	}
 
-	if(fd > 0)
+	if(fd >= 0)
 		close(fd);
 	ENG_LOG("%s: rsp=%s\n",__FUNCTION__,rsp);
 	return 0;
@@ -528,7 +532,7 @@ int eng_linuxcmd_getich(char *req, char *rsp)
 		sprintf(rsp, "%s%s", SPRDENG_ERROR, ENG_STREND);
 	}
 
-	if(fd > 0)
+	if(fd >= 0)
 		close(fd);
 
 	ENG_LOG("%s: rsp=%s\n",__FUNCTION__,rsp);
@@ -742,7 +746,7 @@ int eng_linuxcmd_chargertest(char *req, char *rsp)
 			if(status==1) {
 				ENG_LOG("%s: Create %s",__FUNCTION__,ENG_CHARGERTEST_FILE); 
 				fd=open(ENG_CHARGERTEST_FILE, O_RDWR|O_CREAT|O_TRUNC);
-				if(fd > 0)
+				if(fd >= 0)
 					close(fd);
 				sprintf(rsp, "%s\r\n", SPRDENG_OK);
 

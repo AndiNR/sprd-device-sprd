@@ -19,7 +19,7 @@ void	disconnect_vbus_charger(void)
 	if(vbus_charger_disconnect == 0){
 		vbus_charger_disconnect = 1;
 		fd = open(CHARGER_STOP_PATH,O_RDWR);
-		if(fd > 0){
+		if(fd >= 0){
 			write(fd,"1",2);
 			close(fd);
 		}	
@@ -62,10 +62,10 @@ void	disable_calibration(void)
 
         if(fd < 0)
                 return;
-        if(cali_info.magic!=CALI_MAGIC)
-		cali_info.magic = CALI_MAGIC;
-	if(cali_info.cali_flag != CALI_COMP)
-		cali_info.cali_flag = CALI_COMP;
+
+	cali_info.magic = CALI_MAGIC;
+	cali_info.cali_flag = CALI_COMP;
+
 	lseek(fd,SEEK_SET,0);
 	write(fd,&cali_info,8);
 	close(fd);
@@ -115,7 +115,7 @@ static int get_battery_voltage(void)
 
         fd = open(BATTERY_VOL_PATH,O_RDONLY);
 
-        if(fd > 0){
+        if(fd >= 0){
                 read_len = read(fd,buffer,sizeof(buffer));
                 if(read_len > 0)
 			value = strtol(buffer,&endptr,0);
@@ -133,7 +133,7 @@ static int get_battery_adc_value(void)
 
         fd = open(BATTERY_ADC_PATH,O_RDONLY);
 
-        if(fd > 0){
+        if(fd >= 0){
                 read_len = read(fd,buffer,sizeof(buffer));
                 if(read_len > 0)
                         value = strtol(buffer,&endptr,0);

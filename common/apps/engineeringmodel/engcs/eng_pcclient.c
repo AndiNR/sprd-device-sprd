@@ -797,7 +797,7 @@ void eng_check_factorymode_fornand(void)
 #endif
 
     fd=open(ENG_FACOTRYSYNC_FILE, O_RDWR|O_CREAT|O_TRUNC);
-    if(fd > 0)
+    if(fd >= 0)
         close(fd);
 }
 
@@ -878,8 +878,8 @@ void eng_ctpcali(void)
             ALOGD("%s: Success!",__FUNCTION__);
         else
             ALOGD("%s: Fail!",__FUNCTION__);
+    close(fd);
     }
-
 }
 
 /* Parse one parameter which is before a special char for string.
