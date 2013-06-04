@@ -57,13 +57,24 @@
 	</CheckBoxPreference>
 
 	<!-- add by liguxiang 07-12-11 for engineeringmodel usb settings begin -->
+	<!--
 	<CheckBoxPreference android:key="enable_vser_gser"
 			android:title="Enable Vser Gser"
 			android:summaryOn="Open"
 			android:summaryOff="Close"
 			android:defaultValue="true">
 	</CheckBoxPreference>
+	-->
 	<!-- add by liguxiang 07-12-11 for engineeringmodel usb settings end -->
+
+    <!-- add by jiaxt 04-12-13 for engineeringmodel adb settings begin -->
+    <CheckBoxPreference android:key="enable_adb_vser_gser"
+            android:title="Enable Adb Vser Gser"
+            android:summaryOn="Open"
+            android:summaryOff="Close"
+            android:defaultValue="true">
+    </CheckBoxPreference>
+    <!-- add by jiaxt 04-12-13 for engineeringmodel adb settings end -->
 
   <!-- add for Enable Usb Factory Mode -->
 	<CheckBoxPreference android:key="enable_usb_factory_mode"
