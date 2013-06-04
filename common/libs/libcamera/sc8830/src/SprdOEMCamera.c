@@ -888,7 +888,12 @@ void *camera_cap_thread_proc(void *data)
 				CMR_LOGE("capture: wrong frame id %d, drop this frame", data->frame_id);
 				break;
 			} else {
-				CMR_LOGV("cap: frame id=%x \n", data->frame_id);
+				CMR_LOGV("cap raw: frame id=%x \n", data->frame_id);
+			}
+			ret = camera_cap_post(data);
+			if (CAMERA_EXIT == ret) {
+				CMR_LOGI("normal exit.");
+				break;
 			}
 
 			ret = camera_v4l2_capture_handle(data);
