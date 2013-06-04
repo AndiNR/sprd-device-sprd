@@ -354,10 +354,10 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 
 	//blc
 	sensor_ptr->blc.mode=0x00;
-	sensor_ptr->blc.r=0x0f;
-	sensor_ptr->blc.gr=0x0f;
-	sensor_ptr->blc.gb=0x0f;
-	sensor_ptr->blc.b=0x0f;
+	sensor_ptr->blc.offset[0].r=0x0f;
+	sensor_ptr->blc.offset[0].gr=0x0f;
+	sensor_ptr->blc.offset[0].gb=0x0f;
+	sensor_ptr->blc.offset[0].b=0x0f;
 	//nlc
 	sensor_ptr->nlc.r_node[0]=0;
 	sensor_ptr->nlc.r_node[1]=16;
