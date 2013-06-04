@@ -23,6 +23,12 @@ static int start_gser(char* name)
         close(pc_fd);
     }
 
+    if(0 != access(s_at_ser_path, F_OK))
+    {
+        ENG_LOG("%s : %s is not exist", __FUNCTION__, s_at_ser_path);
+        return -2;
+    }
+
     ENG_LOG("open serial\n");
     pc_fd = open(s_at_ser_path,O_RDWR);
     if(pc_fd < 0) {
@@ -33,8 +39,8 @@ static int start_gser(char* name)
     tcgetattr(pc_fd, &ser_settings);
     cfmakeraw(&ser_settings);
 
-    ser_settings.c_lflag |= (ECHO | ECHONL);
-    ser_settings.c_lflag &= ~ECHOCTL;
+    //ser_settings.c_lflag |= (ECHO | ECHONL);
+    //ser_settings.c_lflag &= ~ECHOCTL;
     tcsetattr(pc_fd, TCSANOW, &ser_settings);
 
     return 0;
@@ -128,8 +134,9 @@ int eng_at_pcmodem(void)
 
     ENG_LOG("%s",__func__);
 
-    if(-1 == start_gser(s_at_ser_path)){
-        ENG_LOG("%s: open %s fail [%s]\n",__FUNCTION__, s_at_ser_path,strerror(errno));
+    if(-2 == start_gser(s_at_ser_path)){
+        ENG_LOG("%s: device not exist, so don't run the dialling thread \n",__FUNCTION__);
+        return -1;
     }
 
     do {
