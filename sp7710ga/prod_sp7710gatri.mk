@@ -86,6 +86,9 @@ $(call inherit-product, $(BOARDDIR)/proprietories.mk)
 $(call inherit-product, vendor/sprd/operator/cucc/specA/res/boot/boot_res.mk)
 $(call inherit-product, vendor/sprd/UniverseUI/universeui.mk)
 
+# Switch for Low Cost case
+TARGET_LOWCOST_SUPPORT := true
+
 # include standard configs
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/telephony.mk)
