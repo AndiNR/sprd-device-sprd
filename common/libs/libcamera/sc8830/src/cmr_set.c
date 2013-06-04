@@ -1145,6 +1145,7 @@ int camera_autofocus_start(void)
 	if (CAMERA_FOCUS_MODE_MACRO == cxt->cmr_set.af_mode) {
 		af_param.cmd = SENSOR_EXT_FOCUS_START;
 		af_param.param = SENSOR_EXT_FOCUS_MACRO;
+		af_param.zone_cnt = zone_cnt;
 		CMR_LOGV("SPRD OEM: camera_start_focus macro");
 	} else {
 		if (0 == zone_cnt) {
