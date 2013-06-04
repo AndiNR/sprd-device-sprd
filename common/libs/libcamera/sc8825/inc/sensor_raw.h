@@ -120,6 +120,17 @@ struct sensor_ae_tab_info{
 	struct sensor_ae_index index[SENSOR_ISO_NUM];
 };
 
+struct sensor_ae_histogram_segment {
+	uint8_t		min;
+	uint8_t		max;
+	uint16_t	weight;
+};
+
+struct sensor_ae_change_speed {
+	uint16_t	delta_lum;
+	uint16_t	delta_ev;
+};
+
 struct sensor_ae_param{
 	uint8_t skip_frame;
 	uint8_t normal_fix_fps;
@@ -149,6 +160,13 @@ struct sensor_awb_coord{
 	uint16_t x;
 	uint16_t yb;
 	uint16_t yt;
+};
+
+struct sensor_cali_info {
+	uint32_t r_sum;
+	uint32_t gr_sum;
+	uint32_t gb_sum;
+	uint32_t b_sum;
 };
 
 struct sensor_awb_param{
@@ -364,10 +382,30 @@ struct sensor_raw_fix_info{
 	struct sensor_lnc_map lnc;
 };
 
+struct sensor_raw_awb_cali{
+	struct sensor_cali_info cali_info;
+	struct sensor_cali_info golden_cali_info;
+};
+
+struct sensor_raw_ae_cali{
+	struct sensor_ae_change_speed *speed_dark_to_bright;
+	uint32_t			step_dark_to_bright;
+	struct sensor_ae_change_speed *speed_bright_to_dark;
+	uint32_t			step_bright_to_dark;
+	struct sensor_ae_histogram_segment *histogram_segment;
+	uint32_t			histogram_segment_num;
+};
+
+struct sensor_raw_cali_info{
+	struct sensor_raw_ae_cali ae;
+	struct sensor_raw_awb_cali awb;
+};
+
 struct sensor_raw_info{
 	struct sensor_version_info* version_info;
 	struct sensor_raw_tune_info* tune_ptr;
 	struct sensor_raw_fix_info* fix_ptr;
+	struct sensor_raw_cali_info* cali_ptr;
 };
 
 
