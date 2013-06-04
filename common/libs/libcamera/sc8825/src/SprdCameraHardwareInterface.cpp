@@ -1,4 +1,4 @@
-/*
+et*
 * hardware/sprd/hsdroid/libcamera/sprdcamerahardwareinterface.cpp
  * Dcam HAL based on sc8800g2
  *
@@ -864,7 +864,6 @@ bool SprdCameraHardware::recordingEnabled()
 void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
 {
         //LOGV("releaseRecordingFrame E. ");
-        Mutex::Autolock l(&mLock);
         uint8_t *addr = (uint8_t *)opaque;
         uint32_t index;
 
