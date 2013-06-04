@@ -1751,6 +1751,7 @@ status_t SprdCameraHardware::setCameraParameters()
 	mZoomLevel = mParameters.getZoom();
 	SET_PARM(CAMERA_PARM_ZOOM, mZoomLevel);
 	SET_PARM(CAMERA_PARM_BRIGHTNESS, mParameters.getBrightness());
+	SET_PARM(CAMERA_PARM_SHARPNESS, mParameters.getSharpness());
 	SET_PARM(CAMERA_PARM_CONTRAST, mParameters.getContrast());
 	SET_PARM(CAMERA_PARM_SATURATION, mParameters.getSaturation());
 	SET_PARM(CAMERA_PARM_EXPOSURE_COMPENSATION, mParameters.getExposureCompensation());

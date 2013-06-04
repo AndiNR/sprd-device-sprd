@@ -61,6 +61,7 @@ public:
 	int getSceneMode();
 	int getZoom();
 	int getBrightness();
+	int getSharpness();
 	int getContrast();
 	int getSaturation();
 	int getExposureCompensation();
@@ -98,6 +99,7 @@ public:
 	static const char KEY_FLASH_MODE[];
 	static const char KEY_SLOWMOTION[];
 	static const char KEY_SATURATION[];
+	static const char KEY_SHARPNESS[];
 
 private:
 

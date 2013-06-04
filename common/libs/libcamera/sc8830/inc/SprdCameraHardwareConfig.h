@@ -80,6 +80,18 @@ enum {
 };
 
 enum {
+	CAMERA_SHARPNESS_0 = 0,
+	CAMERA_SHARPNESS_1 = 1,
+	CAMERA_SHARPNESS_2 = 2,
+	CAMERA_SHARPNESS_DEFAULT = 3,
+	CAMERA_SHARPNESS_3 = 3,
+	CAMERA_SHARPNESS_4 = 4,
+	CAMERA_SHARPNESS_5 = 5,
+	CAMERA_SHARPNESS_6 = 6,
+	CAMERA_SHARPNESS_MAX
+};
+
+enum {
 	CAMERA_CONTRAST_0 = 0,
 	CAMERA_CONTRAST_1 = 1,
 	CAMERA_CONTRAST_2 = 2,
@@ -229,6 +241,17 @@ const struct str_map brightness_map[] = {
 	{NULL,              0}
 };
 
+const struct str_map sharpness_map[] = {
+	{"0",               CAMERA_SHARPNESS_0},
+	{"1",               CAMERA_SHARPNESS_1},
+	{"2",               CAMERA_SHARPNESS_2},
+	{"3",               CAMERA_SHARPNESS_3},
+	{"4",               CAMERA_SHARPNESS_4},
+	{"5",               CAMERA_SHARPNESS_5},
+	{"6",               CAMERA_SHARPNESS_6},
+	{NULL,              0}
+};
+
 const struct str_map iso_map[] = {
 	{"auto",            CAMERA_ISO_AUTO},
 	{"100",             CAMERA_ISO_100},
@@ -367,6 +390,10 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"saturation-supported", "true"},
 	{"saturation-values", "0,1,2,3,4,5,6"},
 	{"saturation", "3"},
+	{"sharpness-supported", "true"},
+	{"max-sharpness", "5"},
+	{"sharpness-values", "0,1,2,3,4,5"},
+	{"sharpness", "3"},
 	{"min-exposure-compensation", "0"},
 	{"max-exposure-compensation", "0"},
 	{"exposure-compensation","0"},
@@ -455,6 +482,10 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"saturation-supported", "true"},
 	{"saturation-values", "0,1,2,3,4,5,6"},
 	{"saturation", "3"},
+	{"sharpness-supported", "true"},
+	{"max-sharpness", "5"},
+	{"sharpness-values", "0,1,2,3,4,5"},
+	{"sharpness", "3"},
 	{"focus-mode-values", "auto,auto-multi,macro"},
 	{"focus-mode", "auto"},
 	{"min-exposure-compensation", "-3"},
