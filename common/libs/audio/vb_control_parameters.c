@@ -787,7 +787,7 @@ void vbc_ctrl_init(struct tiny_audio_device *adev)
 		s_vbc_pipe_count++;
 	}
 
-	if(s_vbc_pipe_count)	
+	if(adev->cp && s_vbc_pipe_count)	
 	{
 		st_vbc_ctrl_thread_para = malloc(s_vbc_pipe_count *
 									sizeof(vbc_ctrl_thread_para_t));
@@ -821,7 +821,7 @@ void vbc_ctrl_init(struct tiny_audio_device *adev)
 			}
 		}
 	}
-
+	
 	if(!result)	
 	{
 		MY_TRACE("warning: no ro.modem.x.enable,apply default modem profile");
