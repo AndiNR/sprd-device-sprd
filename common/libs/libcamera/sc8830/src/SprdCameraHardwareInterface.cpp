@@ -163,7 +163,6 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mPreviewWidth(-1),
 	mRawHeight(-1),
 	mRawWidth(-1),
-	mPreviewHeap(NULL),
 	mRawHeap(NULL),
 	mMiscHeap(NULL),
 	mFDAddr(0),    
@@ -171,6 +170,8 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mMiscHeapSize(0),
 	mJpegHeapSize(0),
 	mPreviewHeapSize(0),    
+	mPreviewHeapNum(0),
+	mPreviewHeapArray(NULL),
 	mPreviewFormat(1),
 	mPictureFormat(1),
 	mPreviewStartFlag(0),
@@ -192,6 +193,9 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
     mCaptureMode(CAMERA_ZSL_MODE)
 {
 	LOGV("openCameraHardware: E cameraId: %d.", cameraId);
+
+    memset(mPreviewHeapArray_phy, 0, sizeof(mPreviewHeapArray_phy));
+    memset(mPreviewHeapArray_vir, 0, sizeof(mPreviewHeapArray_vir));
 
 	setCameraState(SPRD_INIT, STATE_CAMERA);
 
@@ -471,9 +475,7 @@ status_t SprdCameraHardware::startRecording()
 		
 		if(CAMERA_SUCCESS != camera_stop_preview()){
 			setCameraState(SPRD_ERROR, STATE_PREVIEW);
-			FreeFdmem();
-			FreePmem(mPreviewHeap);
-			mPreviewHeap = NULL;
+			freePreviewMem();
 			LOGE("startRecording: fail to camera_stop_preview().");
 			return INVALID_OPERATION;
 		}
@@ -481,9 +483,7 @@ status_t SprdCameraHardware::startRecording()
 		WaitForPreviewStop();
 
 		LOGV("startRecording: Freeing preview heap.");
-		FreeFdmem();
-		FreePmem(mPreviewHeap);
-		mPreviewHeap = NULL;
+		freePreviewMem();
 	}
 #endif
 
@@ -514,12 +514,15 @@ void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
 		index = (addr - (uint8_t *)mMetadataHeap->data) / (METADATA_SIZE);
 	}
 	else {
-		index = (addr - (uint8_t *)mPreviewHeap->data) / (mPreviewWidth * mPreviewHeight * 3 / 2);
+		for (index=0; index<kPreviewBufferCount; index++)
+		{
+			if (addr == mPreviewHeapArray_vir[index])	break;
+		}
 	}
 
 	if(index > kPreviewBufferCount){
-		LOGV("releaseRecordingFrame error: index: %d, addr: %x, data: %x, w=%d, h=%d \n",
-		index, (uint32_t)addr, (uint32_t)mPreviewHeap->data, mPreviewWidth, mPreviewHeight);
+		LOGV("releaseRecordingFrame error: index: %d, data: %x, w=%d, h=%d \n",
+		index, (uint32_t)addr, mPreviewWidth, mPreviewHeight);
 	}
 	//LOGV("releaseRecordingFrame: index: %d, offset: %x, size: %x.", index,offset,size);
 	camera_release_frame(index);
@@ -1174,29 +1177,41 @@ void SprdCameraHardware::FreeFdmem(void)
 //mPreviewHeapSize must be set before this function be called
 bool SprdCameraHardware::allocatePreviewMem()
 {
+	int i;
 	uint32_t buffer_size = camera_get_size_align_page(mPreviewHeapSize);
-	uint32_t preview_buff_cnt = kPreviewBufferCount;
+	mPreviewHeapNum = kPreviewBufferCount;
 	
 	if(camera_get_rot_set())
 	{
-		/* allocate 1 more buffer for rotation */
-		preview_buff_cnt += kPreviewRotBufferCount;
-		LOGV("initPreview: rotation, increase buffer: %d \n", preview_buff_cnt);
+		/* allocate more buffer for rotation */
+		mPreviewHeapNum += kPreviewRotBufferCount;
+		LOGV("initPreview: rotation, increase buffer: %d \n", mPreviewHeapNum);
 	}
-	
-	mPreviewHeap = GetPmem(buffer_size, preview_buff_cnt);
-	
-	if(NULL == mPreviewHeap)
-		return false;
-	
-	if(NULL == mPreviewHeap->handle) {
-		LOGE("Fail to GetPmem mPreviewHeap. buffer_size: 0x%x.", buffer_size);		
-		return false;
+
+	mPreviewHeapArray = (sprd_camera_memory_t**)malloc(mPreviewHeapNum * sizeof(sprd_camera_memory_t*));
+	if (mPreviewHeapArray == NULL)
+	{
+	        return false;
 	}
-	
-	if(mPreviewHeap->phys_addr & 0xFF) {
-		LOGE("error: the mPreviewHeap is not 256 bytes aligned.");
-		return false;
+	for (i=0; i<mPreviewHeapNum; i++)
+	{
+		sprd_camera_memory_t* mPreviewHeap = GetPmem(buffer_size, 1);
+		if(NULL == mPreviewHeap)
+			return false;
+
+		if(NULL == mPreviewHeap->handle) {
+			LOGE("Fail to GetPmem mPreviewHeap. buffer_size: 0x%x.", buffer_size);
+			return false;
+		}
+
+		if(mPreviewHeap->phys_addr & 0xFF) {
+			LOGE("error: the mPreviewHeap is not 256 bytes aligned.");
+			return false;
+		}
+
+                mPreviewHeapArray[i] = mPreviewHeap;
+                mPreviewHeapArray_phy[i] = mPreviewHeap->phys_addr;
+                mPreviewHeapArray_vir[i] = mPreviewHeap->data;
 	}
 
 	return true;
@@ -1232,10 +1247,22 @@ void SprdCameraHardware::FreeReDisplayMem()
 
 void SprdCameraHardware::freePreviewMem()
 {
+	int i;
 	FreeFdmem();
-	FreePmem(mPreviewHeap);
-	mPreviewHeap = NULL;
+
+	for (i=0; i<mPreviewHeapNum; i++)
+	{
+		FreePmem(mPreviewHeapArray[i]);
+		mPreviewHeapArray[i] = NULL;
+	}
+	if (mPreviewHeapArray != NULL)
+	{
+		free(mPreviewHeapArray);
+		mPreviewHeapArray = NULL;
+	}
+
 	mPreviewHeapSize = 0;
+	mPreviewHeapNum = 0;
 }
 
 bool SprdCameraHardware::initPreview()
@@ -1273,12 +1300,14 @@ bool SprdCameraHardware::initPreview()
 	}
 	
 	if (!allocatePreviewMem()) {
+		freePreviewMem();
 		return false;
 	}
 
-	if (camera_set_preview_mem((uint32_t)mPreviewHeap->phys_addr,
-								(uint32_t)mPreviewHeap->data,
-								(uint32_t)mPreviewHeap->phys_size))
+	if (camera_set_preview_mem((uint32_t)mPreviewHeapArray_phy,
+								(uint32_t)mPreviewHeapArray_vir,
+								camera_get_size_align_page(mPreviewHeapSize),
+								(uint32_t)mPreviewHeapNum))
 		return false;
 	
 	setPreviewFreq();
@@ -1289,7 +1318,7 @@ bool SprdCameraHardware::initPreview()
 void SprdCameraHardware::deinitPreview()
 {
 	freePreviewMem();
-	camera_set_preview_mem(0, 0, 0);
+	camera_set_preview_mem(0, 0, 0, 0);
 	restoreFreq();
 }
 
@@ -1942,9 +1971,9 @@ void SprdCameraHardware::receivePreviewFDFrame(camera_frame_type *frame)
     if(mMsgEnabled&CAMERA_MSG_PREVIEW_METADATA) {
         LOGV("smile capture msg is enabled.");
         if(camera_get_rot_set()) {
-            mData_cb(CAMERA_MSG_PREVIEW_METADATA,mPreviewHeap->camera_memory,(kPreviewBufferCount+offset),&metadata,mUser);
+            mData_cb(CAMERA_MSG_PREVIEW_METADATA,mPreviewHeapArray[kPreviewBufferCount+offset]->camera_memory,0,&metadata,mUser);
         } else {
-            mData_cb(CAMERA_MSG_PREVIEW_METADATA,mPreviewHeap->camera_memory,offset,&metadata,mUser);
+            mData_cb(CAMERA_MSG_PREVIEW_METADATA,mPreviewHeapArray[offset]->camera_memory,0,&metadata,mUser);
         }
     } else {
         LOGV("smile capture msg is disabled.");
@@ -1991,9 +2020,9 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 		LOGV("receivePreviewFrame mMsgEnabled: 0x%x",mMsgEnabled);
 		if (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME) {
 			if(camera_get_rot_set()) {
-				mData_cb(CAMERA_MSG_PREVIEW_FRAME,mPreviewHeap->camera_memory,(kPreviewBufferCount+offset),NULL,mUser);
+				mData_cb(CAMERA_MSG_PREVIEW_FRAME,mPreviewHeapArray[kPreviewBufferCount+offset]->camera_memory,0,NULL,mUser);
 			} else {
-				mData_cb(CAMERA_MSG_PREVIEW_FRAME,mPreviewHeap->camera_memory,offset,NULL,mUser);
+				mData_cb(CAMERA_MSG_PREVIEW_FRAME,mPreviewHeapArray[offset]->camera_memory,0,NULL,mUser);
 			}
 		}
 
@@ -2010,9 +2039,9 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 			else {
 				//mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap->mBuffers[offset], mUser);
 				if(camera_get_rot_set()) {
-					mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap->camera_memory, (kPreviewBufferCount+offset), mUser);
+					mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeapArray[kPreviewBufferCount+offset]->camera_memory, 0, mUser);
 				} else {
-					mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap->camera_memory, offset, mUser);
+					mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeapArray[offset]->camera_memory, 0, mUser);
 				}
 			}
 		//LOGV("receivePreviewFrame: record index: %d, offset: %x, size: %x, frame->buf_Virt_Addr: 0x%x.", offset, off, size, (uint32_t)frame->buf_Virt_Addr);

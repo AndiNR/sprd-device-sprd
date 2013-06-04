@@ -253,8 +253,13 @@ private:
 	Mutex                           mCaptureCbLock;
 	Mutex                           mStateLock;
 	Condition                       mStateWait;	
-	sprd_camera_memory_t            *mPreviewHeap;
+
 	uint32_t                        mPreviewHeapSize;
+	uint32_t                        mPreviewHeapNum;
+	sprd_camera_memory_t*           *mPreviewHeapArray;
+	uint32_t                        mPreviewHeapArray_phy[kPreviewBufferCount+kPreviewRotBufferCount];
+	void*                           mPreviewHeapArray_vir[kPreviewBufferCount+kPreviewRotBufferCount];
+
 	sprd_camera_memory_t            *mRawHeap;
 	uint32_t                        mRawHeapSize;
 	sprd_camera_memory_t            *mMiscHeap;

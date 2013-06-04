@@ -447,7 +447,7 @@ int camera_capture_max_img_size(uint32_t *max_width, uint32_t *max_height);
 
 int camerea_set_preview_format(uint32_t pre_format);
 
-int camera_set_preview_mem(uint32_t phy_addr, uint32_t vir_addr, uint32_t mem_size);
+int camera_set_preview_mem(uint32_t phy_addr, uint32_t vir_addr, uint32_t mem_size, uint32_t mem_num);
 
 int camera_capture_get_buffer_size(uint32_t camera_id,
 						uint32_t width,

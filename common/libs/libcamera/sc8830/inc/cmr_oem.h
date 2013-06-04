@@ -319,9 +319,12 @@ struct camera_context {
 	uint32_t                 prev_rot_index;
 	struct img_frm           prev_frm[CAMERA_PREV_FRM_CNT];
 	struct img_frm           prev_rot_frm[CAMERA_PREV_ROT_FRM_CNT];
-	uint32_t                 prev_phys_addr;
-	uint32_t                 *prev_virt_addr;
-	uint32_t                 prev_mem_szie;
+
+	uint32_t*                 prev_phys_addr_array;
+	uint32_t*                 *prev_virt_addr_array;
+	uint32_t                 prev_mem_size;
+	uint32_t                 prev_mem_num;
+
 	uint32_t                 wait_for_start;
 	uint32_t                 wait_for_stop;
 	uint32_t                 is_dv_mode;
