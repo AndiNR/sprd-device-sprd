@@ -36,7 +36,6 @@ PRODUCT_PACKAGES := \
 	hostapd \
 	wpa_supplicant.conf \
 	calibration_init \
-	rawdatad \
 	nvm_daemon \
 	modemd\
 	audio.a2dp.default
@@ -51,17 +50,25 @@ PRODUCT_PACKAGES += \
     libsprddm \
     libvalidationtoolsjni \
     vtserver	\
-    libstagefright_mix_mpeg4dec_sprd \
-    libstagefright_m4vh263dec_hw_sprd \
-    libstagefright_m4vh263dec_sprd \
+    libstagefright_sprd_soft_mpeg4dec	\
+    libstagefright_sprd_soft_h264dec	\
     \
-    libstagefright_hw_mpeg4enc_sprd	\
+    libstagefright_sprd_mpeg4dec \
+    libomx_m4vh263dec_hw_sprd \
+    libomx_m4vh263dec_sw_sprd \
     \
-    libstagefright_mix_h264dec_sprd	\
-    libstagefright_avcdec_hw_sprd	\
-    libstagefright_avcdec_sprd	\
+    libstagefright_sprd_mpeg4enc	\
+    libomx_m4vh263enc_hw_sprd \
     \
-    libstagefright_hw_h264enc_sprd
+    libstagefright_sprd_h264dec	\
+    libomx_avcdec_hw_sprd	\
+    libomx_avcdec_sw_sprd	\
+    \
+    libstagefright_sprd_h264enc	\
+    libomx_avcenc_hw_sprd	\
+    \
+    libstagefright_sprd_vpxdec \
+    libomx_vpxdec_hw_sprd 	
 
 # prebuild files
 PRODUCT_PACKAGES += \
@@ -108,6 +115,7 @@ PRODUCT_COPY_FILES := \
 	device/sprd/common/libs/audio/apm/formatvolume.xml:system/etc/formatvolume.xml \
         $(BOARDDIR)/hw_params/tiny_hw.xml:system/etc/tiny_hw.xml \
         $(BOARDDIR)/hw_params/codec_pga.xml:system/etc/codec_pga.xml \
+	$(BOARDDIR)/hw_params/audio_hw.xml:system/etc/audio_hw.xml \
         $(BOARDDIR)/hw_params/audio_para:system/etc/audio_para \
 	$(BOARDDIR)/scripts/ext_symlink.sh:system/bin/ext_symlink.sh \
 	$(BOARDDIR)/scripts/ext_data.sh:system/bin/ext_data.sh \

@@ -97,6 +97,11 @@ service glgps /system/bin/glgps -c /system/etc/gpsconfig.xml
 on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
     write /sys/kernel/debug/fatal_dump/enable 1
+    setrlimit 4 -1 -1
+    mkdir /data/corefile
+    chmod 777 /data/corefile
+    write /proc/sys/kernel/core_pattern /data/corefile/core-%e-%p
+    write /proc/sys/fs/suid_dumpable 1
 
 on property:ro.modem.t.count=2
     write /proc/sim/0 t
@@ -105,19 +110,6 @@ on property:ro.modem.t.count=2
 on property:ro.modem.w.count=2
     write /proc/sim/0 w
     write /proc/sim/1 w
-
-#start rawdata daemon.
-service rawdatad /bin/rawdatad
-    class core
-    user system
-    oneshot
-
-#start nvitem daemon.
-#service nvm_daemon /system/bin/nvm_daemon
-#    class core
-#    user system
-#    group system radio shell
-#    oneshot
 
 service modemd /system/bin/modemd
     class core
@@ -367,7 +359,7 @@ service iprenew_bnep0 /system/bin/dhcpcd -n
     disabled
     oneshot
 
-service slog /system/bin/slog
+service slog /system/bin/slog -t
     class main
     user root
 
@@ -588,8 +580,14 @@ service data_off /system/bin/ext_data.sh  -d
     disabled
     oneshot
 
-#kill app
-service kill_phone /system/bin/ext_kill.sh  -m
+#kill td app
+service kill_td_phone /system/bin/ext_kill.sh  -t
+    user root
+    disabled
+    oneshot
+
+#kill w app
+service kill_w_phone /system/bin/ext_kill.sh  -w
     user root
     disabled
     oneshot
