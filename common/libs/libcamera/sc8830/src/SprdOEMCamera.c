@@ -870,9 +870,9 @@ void *camera_cap_thread_proc(void *data)
 							CAMERA_FUNC_TAKE_PICTURE,
 							(uint32_t)NULL);
 				}
+				camera_wait_takepicdone(g_cxt);
 				if ((g_cxt->cap_cnt == g_cxt->total_capture_num)||(CAMERA_HDR_MODE == g_cxt->cap_mode)) {
 					camera_snapshot_stop_set();
-					camera_wait_takepicdone(g_cxt);
 					camera_set_take_picture(TAKE_PICTURE_NO);
 				}
 			}
@@ -1549,15 +1549,11 @@ int camera_start_preview_internal(void)
 		CMR_LOGE("Failed to init preview mode");
 		return -CAMERA_FAILED;
 	}
-/*	ret = arithmetic_hdr_init(g_cxt->capture_size.width,g_cxt->capture_size.height);
-	if (ret) {
-		CMR_LOGE("malloc fail for hdr.");
-		return -CAMERA_FAILED;
-	}
-*/
+
 	g_cxt->total_cap_num = CAMERA_CAP_FRM_CNT;
-	g_cxt->total_capture_num = CAMERA_NORMAL_CAP_FRM_CNT;
-	if (CAMERA_ZSL_MODE == g_cxt->cap_mode) {
+/*	g_cxt->total_capture_num = CAMERA_NORMAL_CAP_FRM_CNT;*/
+	if ((CAMERA_ZSL_MODE == g_cxt->cap_mode)
+		|| (CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode)) {
 		ret = camera_capture_init();
 	}
 
@@ -4752,8 +4748,7 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 		CMR_LOGV("take pic done.");
 
 		encoder_param.need_free = 0;
-		if (((CAMERA_NORMAL_CONTINUE_SHOT_MODE == g_cxt->cap_mode) && (g_cxt->cap_cnt == g_cxt->total_capture_num))
-			|| (CAMERA_NORMAL_MODE == g_cxt->cap_mode)) {
+		if ((g_cxt->cap_cnt == g_cxt->total_capture_num) || (CAMERA_NORMAL_MODE == g_cxt->cap_mode)) {
 			encoder_param.need_free = 1;
 		}
 

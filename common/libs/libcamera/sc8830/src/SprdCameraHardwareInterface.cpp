@@ -400,7 +400,6 @@ status_t SprdCameraHardware::takePicture()
     print_time();
 
     Mutex::Autolock l(&mLock);
-	//to do it
 
 	if (!iSZslMode()) {
 		//stop preview first for debug
@@ -1708,9 +1707,9 @@ status_t SprdCameraHardware::setCameraParameters()
 	
     SET_PARM(CAMERA_PARM_SENSOR_ROTATION, rotation);
     SET_PARM(CAMERA_PARM_SHOT_NUM, mParameters.getInt("capture-mode"));
-	if (1 == mParameters.getInt("hdr")) {
+/*	if (1 == mParameters.getInt("hdr")) {
 		SET_PARM(CAMERA_PARM_SHOT_NUM, HDR_CAP_NUM);
-	}
+	}*/
 	
 	int is_mirror = (mCameraId == 1) ? 1 : 0;
 	int ret = 0;
@@ -2048,19 +2047,15 @@ void SprdCameraHardware::notifyShutter()
 	print_time();
 
 	LOGV("notifyShutter mMsgEnabled: 0x%x.", mMsgEnabled);
-#if 0 //to do it
+
 	if ((CAMERA_ZSL_CONTINUE_SHOT_MODE != mCaptureMode)
-		&& (CAMERA_NORMAL_CONTINUE_SHOT_MODE != mode)) {
-	{
+		&& (CAMERA_NORMAL_CONTINUE_SHOT_MODE != mCaptureMode)) {
 		if (mMsgEnabled & CAMERA_MSG_SHUTTER)
 			mNotify_cb(CAMERA_MSG_SHUTTER, 0, 0, mUser);
 	} else {
 			mNotify_cb(CAMERA_MSG_SHUTTER, 0, 0, mUser);
 	}
-#else
-	if (mMsgEnabled & CAMERA_MSG_SHUTTER)		
-		mNotify_cb(CAMERA_MSG_SHUTTER, 0, 0, mUser);
-#endif
+
 	print_time();
 	LOGV("notifyShutter: X");
 }
@@ -2306,9 +2301,8 @@ void SprdCameraHardware::receiveJpegPicture(JPEGENC_CBrtnType *encInfo)
 		LOGV("receiveJpegPicture: mMsgEnabled: 0x%x.", mMsgEnabled);
 		
 		// mJpegPictureCallback(buffer, mPictureCallbackCookie);
-#if 0 //to do it
 		if ((CAMERA_ZSL_CONTINUE_SHOT_MODE != mCaptureMode)
-			&& (CAMERA_ZSL_CONTINUE_SHOT_MODE != mCaptureMode)) {
+			&& (CAMERA_NORMAL_CONTINUE_SHOT_MODE != mCaptureMode)) {
 			if (mMsgEnabled & CAMERA_MSG_COMPRESSED_IMAGE){
 				camera_memory_t *mem = mGetMemory_cb(-1, mJpegSize, 1, 0);
 				memcpy(mem->data, mJpegHeap->mHeap->base(), mJpegSize);
@@ -2319,19 +2313,9 @@ void SprdCameraHardware::receiveJpegPicture(JPEGENC_CBrtnType *encInfo)
 		} else {
 			camera_memory_t *mem = mGetMemory_cb(-1, mJpegSize, 1, 0);
 			memcpy(mem->data, mJpegHeap->mHeap->base(), mJpegSize);
-			//mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,buffer, mUser );
 			mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,mem, 0, NULL, mUser );
 			mem->release(mem);
 		}
-#else
-		if (mMsgEnabled & CAMERA_MSG_COMPRESSED_IMAGE){
-			camera_memory_t *mem = mGetMemory_cb(-1, mJpegSize, 1, 0);
-			memcpy(mem->data, mJpegHeap->mHeap->base(), mJpegSize);
-			//mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,buffer, mUser );
-			mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,mem, 0, NULL, mUser );
-			mem->release(mem);
-		}
-#endif
 	}
 	else 
 		LOGV("JPEG callback was cancelled--not delivering image.");
@@ -2339,12 +2323,12 @@ void SprdCameraHardware::receiveJpegPicture(JPEGENC_CBrtnType *encInfo)
 	// NOTE: the JPEG encoder uses the raw image contained in mRawHeap, so we need
 	// to keep the heap around until the encoding is complete.
 	LOGV("receiveJpegPicture: free the Raw and Jpeg mem. 0x%x, 0x%x", mRawHeap, mMiscHeap);
-/*to do it
+
 	if (!iSZslMode()) {
 		if (encInfo->need_free) {
 			deinitCapture();
 		}
-	}*/
+	}
 	print_time();
 	LOGV("receiveJpegPicture: X callback done.");
 }
@@ -2609,14 +2593,14 @@ void SprdCameraHardware::HandleEncode(camera_cb_type cb,
 	        receiveJpegPictureFragment((JPEGENC_CBrtnType *)parm4);
 			LOGV("CAMERA_EXIT_CB_DONE MID.");
 	        receiveJpegPicture((JPEGENC_CBrtnType *)parm4);
-#if 0//to do it
+#if 1//to do it
 			if( ((JPEGENC_CBrtnType *)parm4)->need_free ) {
 				transitionState(SPRD_WAITING_JPEG,
 						SPRD_IDLE,
 						STATE_CAPTURE);
 			} else {
 				transitionState(SPRD_WAITING_JPEG,
-						QCS_INTERNAL_RAW_REQUESTED,
+						SPRD_INTERNAL_RAW_REQUESTED,
 						STATE_CAPTURE);
 			}
 #else
