@@ -79,14 +79,14 @@ on boot
     write /sys/class/gpio/export 167
     write /sys/class/gpio/gpio167/direction out
     write /sys/class/gpio/gpio167/value 1
-    write /sys/class/gpio/export 174
-    write /sys/class/gpio/gpio174/direction out
+    write /sys/class/gpio/export 168
+    write /sys/class/gpio/gpio168/direction out
     chmod 777 /system/bin/glgps
     chown root system /sys/class/gpio/gpio167/value
     chmod 0664 /sys/class/gpio/gpio167/value
 
-    chown root system /sys/class/gpio/gpio174/value
-    chmod 0664 /sys/class/gpio/gpio174/value
+    chown root system /sys/class/gpio/gpio168/value
+    chmod 0664 /sys/class/gpio/gpio168/value
 
 service glgps /system/bin/glgps -c /system/etc/gpsconfig.xml
     class main
