@@ -30,6 +30,7 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	persist.msms.phone_default=0 \
         lmk.autocalc=false \
         zram.support=true \
+        zram_for_android.enable=true  \
         ro.build.product.lowmem=1 \
 	universe_ui_support=true \
         ro.callfirewall.disabled=true \

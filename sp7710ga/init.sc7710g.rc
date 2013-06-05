@@ -99,7 +99,7 @@ on property:lmk.autocalc=false
 
 on property:zram_for_android.enable=true
     write /sys/module/lowmemorykiller/parameters/adj 1,3,5,7,9,15
-    write /sys/module/lowmemorykiller/parameters/minfree 3072,4096,5120,8192,10240,12288
+    write /sys/module/lowmemorykiller/parameters/minfree 4096,5120,8192,10240,15360,23040
 
 
 on property:ksm.support=true

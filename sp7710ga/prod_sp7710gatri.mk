@@ -31,6 +31,7 @@ PRODUCT_PROPERTY_OVERRIDES := \
         lmk.autocalc=false \
         ksm.support=false    \
         zram.support=true \
+        zram_for_android.enable=true  \
         ro.build.product.lowmem=1 \
         universe_ui_support=true \
         ro.callfirewall.disabled=true \
