@@ -1878,15 +1878,15 @@ int camera_take_picture_internal(takepicture_mode cap_mode)
 		return -CAMERA_FAILED;
 	}
 
-    ret = camera_snapshot_start_set();
-	if (ret) {
-		CMR_LOGE("Failed to snapshot");
-		return -CAMERA_FAILED;
-	}
-
 	ret = camera_capture_init();
 	if (ret) {
 		CMR_LOGE("Failed to init raw capture mode.");
+		return -CAMERA_FAILED;
+	}
+
+    ret = camera_snapshot_start_set();
+	if (ret) {
+		CMR_LOGE("Failed to snapshot");
 		return -CAMERA_FAILED;
 	}
 
