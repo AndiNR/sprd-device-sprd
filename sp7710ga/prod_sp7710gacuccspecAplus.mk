@@ -76,7 +76,7 @@ PRODUCT_PACKAGES += \
 	weibopro_10035_0001_0.9.0noshortcut_Android-0506.apk \
 	SogouInput_31143_android_oem_zhanxun_20130509.apk \
 	SohuNewsClient_v3.3_factory_zhanxun_6230.apk \
-	Wostore.apk \
+	wostore.apk \
 	Unicomclient_SP7710-4.1.apk \
 	wo116114.apk \
 	AIMail_Android_V375a_orange.apk \
