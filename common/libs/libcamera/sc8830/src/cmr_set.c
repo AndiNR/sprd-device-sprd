@@ -630,9 +630,9 @@ int camera_snapshot_start_set(void)
 			if (CAMERA_SUCCESS != ret) {
 				CMR_LOGE("ISP_CTRL_FLASH_EG error.");
 			}
-			camera_set_flashdevice((uint32_t)FLASH_OPEN);
+			camera_set_flashdevice((uint32_t)FLASH_HIGH_LIGHT);
 		} else {
-			camera_set_flashdevice((uint32_t)FLASH_OPEN);
+			camera_set_flashdevice((uint32_t)FLASH_HIGH_LIGHT);
 		}
 	}
 	if ((CAMERA_NORMAL_MODE == cxt->cap_mode) || (CAMERA_HDR_MODE == cxt->cap_mode)) {
@@ -1160,6 +1160,10 @@ int camera_autofocus_start(void)
 	if ((cxt->cmr_set.flash) &&((CAMERA_ZSL_MODE == cxt->cap_mode)||(CAMERA_NORMAL_MODE == cxt->cap_mode))) {
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 			struct isp_alg flash_param;
+			SENSOR_FLASH_LEVEL_T flash_level;
+			if (Sensor_GetFlashLevel(&flash_level)) {
+				CMR_LOGE("get flash level error.");
+			}
 			flash_param.mode=ISP_AE_BYPASS;
 			flash_param.flash_eb=0x01;
 			ret = isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param);
@@ -1170,7 +1174,7 @@ int camera_autofocus_start(void)
 			camera_set_flashdevice((uint32_t)FLASH_OPEN);
 			flash_param.mode=ISP_ALG_FAST;
 			flash_param.flash_eb=0x01;
-			flash_param.flash_ratio=1;
+			flash_param.flash_ratio=flash_level.high_light*256/flash_level.low_light;
 			ret = isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param);
 			if (CAMERA_SUCCESS != ret) {
 				CMR_LOGE("ISP_CTRL_FLASH_EG error.");
@@ -1346,6 +1350,8 @@ int camera_set_flashdevice(uint32_t param)
 {
 	int                      ret = 0;
 	struct camera_context    *cxt = camera_get_cxt();
+
+	CMR_LOGI("test flash:0x%x.",param);
 
 	if (0 != cxt->camera_id) {
 		CMR_LOGE("don't support flash.");
