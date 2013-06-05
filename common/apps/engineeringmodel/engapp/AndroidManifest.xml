@@ -313,7 +313,7 @@
             android:name=".LogSettingSlogUITabHostActivity"
             android:label="@string/label_slogui"
             android:configChanges="orientation|screenSize|locale"
-            android:launchMode="singleTask" >
+            android:launchMode="singleInstance" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
