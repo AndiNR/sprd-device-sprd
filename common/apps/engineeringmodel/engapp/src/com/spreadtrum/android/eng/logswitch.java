@@ -124,7 +124,15 @@ implements Preference.OnPreferenceChangeListener{
 
 	private void DisplayToast(String str) {
 		Toast mToast = Toast.makeText(this, str, Toast.LENGTH_SHORT);
-		mToast.setGravity(Gravity.TOP, 0, 100);
+        /*
+         * Delete 20130605 Spreadst of 108373 the toast's location is too high
+         * start
+         */
+        //mToast.setGravity(Gravity.TOP, 0, 100);
+        /*
+         * Delete 20130225 Spreadst of 108373 the toast's location is too high
+         * end
+         */
 		mToast.show();
 	}
 
