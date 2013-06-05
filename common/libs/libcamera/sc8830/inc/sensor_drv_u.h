@@ -542,6 +542,11 @@ typedef struct sensor_reg_tab_tag {
 	uint32_t burst_mode;
 } SENSOR_REG_TAB_T, *SENSOR_REG_TAB_PTR;
 
+typedef struct sensor_flash_level	 {
+	uint32_t low_light;
+	uint32_t high_light;
+} SENSOR_FLASH_LEVEL_T;
+
 typedef struct sensor_reg_bits_tag {
 	uint16_t reg_addr;
 	uint16_t reg_value;
@@ -782,6 +787,7 @@ int _Sensor_Device_WriteRegTab(SENSOR_REG_TAB_PTR reg_tab);
 int Sensor_AutoFocusInit(void);
 int Sensor_WriteI2C(uint16_t slave_addr, uint8_t *cmd, uint16_t cmd_length);
 int Sensor_GetMode(uint32_t *mode);
+int Sensor_GetFlashLevel(SENSOR_FLASH_LEVEL_T *level);
 
 #ifdef	 __cplusplus
 }
