@@ -129,6 +129,7 @@ int main(int argc, char* argv[])
 		if(pipefd < 0)
 		{
 			perror("open pipe error!");
+			return 1;
 		}
 
    		enum { MAX_RETRY_INITIAL = 6 };
