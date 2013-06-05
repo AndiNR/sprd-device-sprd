@@ -108,24 +108,25 @@ LOCAL volatile uint32_t           s_exit_monitor_flag = 0;
 /* Sensor Device IO Control  */
 #define SENSOR_IOC_MAGIC		'R'
 
-#define SENSOR_IO_PD				_IOW(SENSOR_IOC_MAGIC, 0,  BOOLEAN)
-#define SENSOR_IO_SET_AVDD			_IOW(SENSOR_IOC_MAGIC, 1,  uint32_t)
-#define SENSOR_IO_SET_DVDD			_IOW(SENSOR_IOC_MAGIC, 2,  uint32_t)
-#define SENSOR_IO_SET_IOVDD			_IOW(SENSOR_IOC_MAGIC, 3,  uint32_t)
-#define SENSOR_IO_SET_MCLK			_IOW(SENSOR_IOC_MAGIC, 4,  uint32_t)
-#define SENSOR_IO_RST				_IOW(SENSOR_IOC_MAGIC, 5,  uint32_t)
-#define SENSOR_IO_I2C_INIT			_IOW(SENSOR_IOC_MAGIC, 6,  uint32_t)
-#define SENSOR_IO_I2C_DEINIT		_IOW(SENSOR_IOC_MAGIC, 7,  uint32_t)
-#define SENSOR_IO_SET_ID			_IOW(SENSOR_IOC_MAGIC, 8,  uint32_t)
-#define SENSOR_IO_RST_LEVEL			_IOW(SENSOR_IOC_MAGIC, 9,  uint32_t)
-#define SENSOR_IO_I2C_ADDR			_IOW(SENSOR_IOC_MAGIC, 10, uint16_t)
-#define SENSOR_IO_I2C_READ			_IOWR(SENSOR_IOC_MAGIC, 11, SENSOR_REG_BITS_T)
-#define SENSOR_IO_I2C_WRITE			_IOW(SENSOR_IOC_MAGIC, 12, SENSOR_REG_BITS_T)
-#define SENSOR_IO_SET_FLASH			_IOW(SENSOR_IOC_MAGIC, 13, uint32_t)
-#define SENSOR_IO_I2C_WRITE_REGS	_IOW(SENSOR_IOC_MAGIC, 14, SENSOR_REG_TAB_T)
-#define SENSOR_IO_SET_CAMMOT		_IOW(SENSOR_IOC_MAGIC, 15,  uint32_t)
-#define SENSOR_IO_SET_I2CCLOCK		_IOW(SENSOR_IOC_MAGIC, 16,  uint32_t)
-#define SENSOR_IO_I2C_WRITE_EXT		_IOW(SENSOR_IOC_MAGIC, 17,  SENSOR_I2C_T)
+#define SENSOR_IO_PD                _IOW(SENSOR_IOC_MAGIC, 0,  BOOLEAN)
+#define SENSOR_IO_SET_AVDD          _IOW(SENSOR_IOC_MAGIC, 1,  uint32_t)
+#define SENSOR_IO_SET_DVDD          _IOW(SENSOR_IOC_MAGIC, 2,  uint32_t)
+#define SENSOR_IO_SET_IOVDD         _IOW(SENSOR_IOC_MAGIC, 3,  uint32_t)
+#define SENSOR_IO_SET_MCLK          _IOW(SENSOR_IOC_MAGIC, 4,  uint32_t)
+#define SENSOR_IO_RST               _IOW(SENSOR_IOC_MAGIC, 5,  uint32_t)
+#define SENSOR_IO_I2C_INIT          _IOW(SENSOR_IOC_MAGIC, 6,  uint32_t)
+#define SENSOR_IO_I2C_DEINIT        _IOW(SENSOR_IOC_MAGIC, 7,  uint32_t)
+#define SENSOR_IO_SET_ID            _IOW(SENSOR_IOC_MAGIC, 8,  uint32_t)
+#define SENSOR_IO_RST_LEVEL         _IOW(SENSOR_IOC_MAGIC, 9,  uint32_t)
+#define SENSOR_IO_I2C_ADDR          _IOW(SENSOR_IOC_MAGIC, 10, uint16_t)
+#define SENSOR_IO_I2C_READ          _IOWR(SENSOR_IOC_MAGIC, 11, SENSOR_REG_BITS_T)
+#define SENSOR_IO_I2C_WRITE         _IOW(SENSOR_IOC_MAGIC, 12, SENSOR_REG_BITS_T)
+#define SENSOR_IO_SET_FLASH         _IOW(SENSOR_IOC_MAGIC, 13, uint32_t)
+#define SENSOR_IO_I2C_WRITE_REGS    _IOW(SENSOR_IOC_MAGIC, 14, SENSOR_REG_TAB_T)
+#define SENSOR_IO_SET_CAMMOT        _IOW(SENSOR_IOC_MAGIC, 15,  uint32_t)
+#define SENSOR_IO_SET_I2CCLOCK      _IOW(SENSOR_IOC_MAGIC, 16,  uint32_t)
+#define SENSOR_IO_I2C_WRITE_EXT     _IOW(SENSOR_IOC_MAGIC, 17,  SENSOR_I2C_T)
+#define SENSOR_IO_GET_FLASH_LEVEL   _IOWR(SENSOR_IOC_MAGIC, 18,  SENSOR_FLASH_LEVEL_T)
 
 #define SENSOR_MSG_QUEUE_SIZE           10
 
@@ -478,6 +479,29 @@ LOCAL int _Sensor_Device_I2CWrite(SENSOR_I2C_T_PTR i2c_tab)
 			i2c_tab->slave_addr, (uint32_t)i2c_tab->i2c_data, i2c_tab->i2c_count);
 		ret = -1;
 	}
+
+	return ret;
+}
+
+LOCAL int _Sensor_Device_GetFlashLevel(SENSOR_FLASH_LEVEL_T *level)
+{
+	int ret = SENSOR_SUCCESS;
+
+	ret = xioctl(g_fd_sensor, SENSOR_IO_GET_FLASH_LEVEL, level);
+	if (0 != ret)
+	{
+		SENSOR_PRINT_ERR("_Sensor_Device_GetFlashLevel failed, ret=%d \n",  ret);
+		ret = -1;
+	}
+
+	return ret;
+}
+
+int Sensor_GetFlashLevel(SENSOR_FLASH_LEVEL_T *level)
+{
+	int ret = SENSOR_SUCCESS;
+
+	ret = _Sensor_Device_GetFlashLevel(level);
 
 	return ret;
 }
