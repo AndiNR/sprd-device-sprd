@@ -813,6 +813,25 @@ int camera_cap_post(void *data)
 				return CAMERA_EXIT;
 			}
 		}
+	}else if (CAMERA_NORMAL_CONTINUE_SHOT_MODE == g_cxt->cap_mode) {
+		if (g_cxt->cap_cnt == g_cxt->total_capture_num) {
+			ret = cmr_v4l2_cap_stop();
+			if (ret) {
+				CMR_LOGE("Failed to stop v4l2 capture, %d", ret);
+				return -CAMERA_FAILED;
+			}
+			CMR_PRINT_TIME;
+			ret = Sensor_StreamOff();
+			if (ret) {
+				CMR_LOGE("Failed to switch off the sensor stream, %d", ret);
+			}
+			CMR_PRINT_TIME;
+			ret = camera_snapshot_stop_set();
+			if (ret) {
+				CMR_LOGE("Failed to exit snapshot %d", ret);
+				return -CAMERA_FAILED;
+			}
+		}
 	}
 	return ret;
 }
@@ -1662,7 +1681,7 @@ int camera_stop_capture_raw_internal(void)
 int camera_stop_preview_internal(void)
 {
 	int                      ret = CAMERA_SUCCESS;
-	uint32_t		  autoflash = 0; 
+	uint32_t		  autoflash = 0;
 
 	if (!IS_PREVIEW) {
 		CMR_LOGE("Not in preview, %d", g_cxt->preview_status);
@@ -3035,11 +3054,10 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 			thumb_size = 0;
 		}
 		ret = camera_jpeg_encode_done(thumb_size);
-		g_cxt->jpeg_cxt.jpeg_state = JPEG_IDLE;
-
 	} else {
 		CMR_LOGV("Do nothing");
 	}
+	CMR_LOGI("test time:%d.",g_cxt->jpeg_cxt.jpeg_state);
 	return ret;
 
 }
@@ -4787,6 +4805,7 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 	}
 
 	ret = jpeg_enc_add_eixf(&wexif_param,&wexif_output);
+	g_cxt->jpeg_cxt.jpeg_state = JPEG_IDLE;
 	TAKE_PIC_CANCEL;
 	if (0 == ret) {
 		camera_wait_takepic_callback(g_cxt);
