@@ -36,7 +36,6 @@ PRODUCT_PACKAGES := \
 	hostapd \
 	wpa_supplicant.conf \
 	calibration_init \
-	rawdatad \
 	nvm_daemon \
 	modemd\
 	audio.a2dp.default
