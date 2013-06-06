@@ -82,7 +82,7 @@ int vlx_reboot_init(void);
 int load_vlx_modem_img(int modem, int is_modem_assert);
 int detect_vlx_modem(int modem);
 
-int load_sipc_modem_img(int modem);
+int load_sipc_modem_img(int modem, int is_modem_assert);
 void* detect_sipc_modem(void *param);
 
 #endif

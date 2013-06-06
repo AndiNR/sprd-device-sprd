@@ -71,7 +71,7 @@ leave:
 	return res;
 }
 
-int load_sipc_modem_img(int modem)
+int load_sipc_modem_img(int modem, int is_modem_assert)
 {
 	char modem_partition[128] = {0};
 	char dsp_partition[128] = {0};
@@ -135,17 +135,19 @@ int load_sipc_modem_img(int modem)
 
 	sleep(20);
 
-	/* info socket clients that modem is reset */
-	for(i = 0; i < MAX_CLIENT_NUM; i++) {
-		MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
-		if(client_fd[i] >= 0) {
-			ret = write(client_fd[i], alive_info,strlen(alive_info));
-			MODEMD_LOGE("write %d bytes to client_fd[%d]:%d to info modem is alive",
-					ret, i, client_fd[i]);
-			if(ret < 0) {
-				MODEMD_LOGE("reset client_fd[%d]=-1",i);
-				close(client_fd[i]);
-				client_fd[i] = -1;
+	if(is_modem_assert) {
+		/* info socket clients that modem is reset */
+		for(i = 0; i < MAX_CLIENT_NUM; i++) {
+			MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
+			if(client_fd[i] >= 0) {
+				ret = write(client_fd[i], alive_info,strlen(alive_info));
+				MODEMD_LOGE("write %d bytes to client_fd[%d]:%d to info modem is alive",
+						ret, i, client_fd[i]);
+				if(ret < 0) {
+					MODEMD_LOGE("reset client_fd[%d]=-1",i);
+					close(client_fd[i]);
+					client_fd[i] = -1;
+				}
 			}
 		}
 	}
@@ -162,11 +164,10 @@ void* detect_sipc_modem(void *param)
 	char watchdog_dev[30] = {0};
 	int i, ret, assert_fd, watchdog_fd, max_fd, fd = -1;
 	fd_set rfds;
-	int numRead, numWrite;
-	char buf[128];
-	char prop[5];
-	int is_reset = 0;
-	int modem = -1;
+	int is_reset, modem = -1;
+	char buf[128], prop[5];
+	int numRead;
+	int is_assert = 0;
 
 	if(param != NULL)
 		modem = *((int *)param);
@@ -219,38 +220,58 @@ void* detect_sipc_modem(void *param)
 			memset(buf, 0, sizeof(buf));
 			numRead = read(fd, buf, sizeof(buf));
 			if (numRead <= 0) {
-				MODEMD_LOGE("read %d return %d, errno = %s", fd ,numRead, strerror(errno));
+				MODEMD_LOGE("read %d return %d, errno = %s", fd , numRead, strerror(errno));
 				sleep(1);
 				continue;
 			}
 
 			MODEMD_LOGD("buf=%s", buf);
-			if(strstr(buf, "Modem Assert")) {
-				MODEMD_LOGE("modem assert happen");
-			} else if(strstr(buf, "Modem Hang")) {
-				MODEMD_LOGE("modem hang up");
-			}
-			/* info socket clients that modem is assert or hangup */
-			for(i = 0; i < MAX_CLIENT_NUM; i++) {
-				MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
-				if(client_fd[i] >= 0) {
-					ret = write(client_fd[i], buf, numRead);
-					MODEMD_LOGE("write %d bytes to client_fd[%d]:%d", ret, i, client_fd[i]);
-					if(ret < 0) {
-						MODEMD_LOGE("reset client_fd[%d]=-1",i);
-						close(client_fd[i]);
-						client_fd[i] = -1;
+			if(strstr(buf, "Modem Reset")) {
+				MODEMD_LOGD("modem reset happen, reload modem...");
+				load_sipc_modem_img(modem, is_assert);
+				is_assert = 0;
+			} else if(strstr(buf, "Modem Assert") || strstr(buf, "wdtirq")) {
+				if(strstr(buf, "wdtirq")) {
+					if(modem == TD_MODEM) {
+						MODEMD_LOGD("td modem hangup");
+						strcpy(buf, "TD Modem Hang");
+						numRead = sizeof("TD Modem Hang");
+					} else if(modem == W_MODEM) {
+						MODEMD_LOGD("w modem hangup");
+						strcpy(buf, "W Modem Hang");
+						numRead = sizeof("W Modem Hang");
+					}
+				} else {
+					MODEMD_LOGD("modem assert happen");
+				}
+				is_assert = 1;
+
+				/* info socket clients that modem is assert or hangup */
+				for(i = 0; i < MAX_CLIENT_NUM; i++) {
+					MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
+					if(client_fd[i] >= 0) {
+						ret = write(client_fd[i], buf, numRead);
+						MODEMD_LOGE("write %d bytes to client_fd[%d]:%d to info modem is assert",
+							numRead, i, client_fd[i]);
+						if(ret < 0) {
+							MODEMD_LOGE("reset client_fd[%d]=-1",i);
+							close(client_fd[i]);
+							client_fd[i] = -1;
+						}
 					}
 				}
-			}
 
-			memset(prop, 0, sizeof(prop));
-			property_get(MODEMRESET_PROPERTY, prop, "0");
-			is_reset = atoi(prop);
-			if(is_reset) {
-				load_sipc_modem_img(modem);
-			} else {
-				MODEMD_LOGE("td modem assert but wont reset");
+				/* reset or not according to property */
+				memset(prop, 0, sizeof(prop));
+				property_get(MODEMRESET_PROPERTY, prop, "0");
+				is_reset = atoi(prop);
+				if(is_reset) {
+					MODEMD_LOGD("modem reset is enabled, reload modem...");
+					load_sipc_modem_img(modem, is_assert);
+					is_assert = 0;
+				} else {
+					MODEMD_LOGD("modem reset is not enabled , will not reset");
+				}
 			}
 		}
 	}
