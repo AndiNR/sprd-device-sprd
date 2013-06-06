@@ -79,8 +79,7 @@ PRODUCT_PACKAGES += \
 	wostore.apk \
 	Unicomclient_SP7710-4.1.apk \
 	wo116114.apk \
-	AIMail_Android_V375a_orange.apk \
-	baidumap_v5_0_0.apk
+	AIMail_Android_V375a_orange.apk
 
 # packages files
 PRODUCT_PACKAGES += \
