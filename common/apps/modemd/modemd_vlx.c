@@ -324,8 +324,12 @@ int copyfile(const char *src, const char *dst)
 		return -1;
 	}
 
-	if (access(dst, 0) == 0)
-		remove(dst);
+	if (access(dst, 0) == 0) {
+		ret = remove(dst);
+		if (ret < 0) {
+			MODEMD_LOGE("remove %s failed\n", dst);
+		}
+	}
 
 	dstfd = open(dst, O_RDWR | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO);
 	if (dstfd < 0) {
@@ -421,9 +425,16 @@ void get_mtd_partition(char *buf, char *name, char *mtdpath)
 	char *pos;
 	int pos_len;
 
+	if(buf == NULL) {
+		return;
+	}
+
 	pos = strstr(buf, name);
-	if (pos == 0)
+	if (pos == 0) {
 		MODEMD_LOGE("failed to find %s\n", name);
+		return;
+	}
+
 	while (*pos != ':') {
 		pos--;
 	}

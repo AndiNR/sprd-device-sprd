@@ -296,8 +296,10 @@ int start_service(int modem, int is_vlx, int restart)
 		sprintf(path, "%s0", modem_dev);
 		MODEMD_LOGD("open stty dev: %s", path);
 		stty_fd = open(path, O_RDWR);
-		if (stty_fd < 0)
+		if (stty_fd < 0) {
 			MODEMD_LOGE("Failed to open %s!\n", path);
+			return -1;
+		}
 		if(!strcmp(phoneCount, "2"))
 			strcpy(at_str, "AT+SMMSWAP=0\r");
 		else if(!strcmp(phoneCount, "3"))
