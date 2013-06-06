@@ -312,6 +312,9 @@ public class DmServiceCU extends Service {
         // Stop listening for service state
         stopListeningServiceState();
         unregisterReceiver(mReceiver);
+	if(sendMessageReceiver != null){
+        	unregisterReceiver(sendMessageReceiver);
+	}
         Log.d(TAG, "onDestroy: DmServiceCU is killed!");
         mInstance = null;
         mContext = null;
@@ -1168,14 +1171,15 @@ public class DmServiceCU extends Service {
                             || actionName.equals(DELIVERED_SMS_ACTION) ){
                                 switch (resultCode) {
                                 case Activity.RESULT_OK:
-                                        TelephonyManager mTelephonyManager = (TelephonyManager) mContext.getSystemService(
-                                                PhoneFactory.getServiceName(mContext.TELEPHONY_SERVICE, curPhoneId));                                        
-                                        String imsi = mTelephonyManager.getSubscriberId();
-                                        Log.d(TAG, "The saved imsi is " + imsi);
-                                        saveImsi(mContext,imsi);
 					if(mContext != null){
-                                        	setRegState(mContext, true);
-                                        }
+						TelephonyManager mTelephonyManager = (TelephonyManager) mContext.getSystemService(
+							PhoneFactory.getServiceName(mContext.TELEPHONY_SERVICE, curPhoneId));                                        
+						String imsi = mTelephonyManager.getSubscriberId();
+						Log.d(TAG, "The saved imsi is " + imsi);
+						saveImsi(mContext,imsi);
+						setRegState(mContext, true);
+					
+					}
     					stopListeningServiceState();
                                         break;
                                 default:
