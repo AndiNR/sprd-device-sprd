@@ -287,7 +287,7 @@ int update_ring_file(void)
 		LOGE("Unable to set alarm to %lld: %s\n", abstime, strerror(errno));
 		return 0;
 	}
-
+        close(fd);
 	return 1;
 
 }
