@@ -29,8 +29,7 @@ public class AppSettings extends PreferenceActivity {
     public static final String PREFS_NAME = "ENGINEERINGMODEL";
 
     private static final String AUTO_ANSWER = "autoanswer_call";
-    //private static final String ENABLE_VSER_GSER = "enable_vser_gser";  //add by liguxiang 07-12-11 for engineeringmoodel usb settings
-    private static final String ENABLE_ADB_VSER_GSER = "enable_adb_vser_gser";
+    private static final String ENABLE_VSER_GSER = "enable_vser_gser";  //add by liguxiang 07-12-11 for engineeringmoodel usb settings
 
     private static final String ENABLE_USB_FACTORY_MODE = "enable_usb_factory_mode";
     private static final String ACCELEROMETER = "accelerometer_rotation";
@@ -40,8 +39,7 @@ public class AppSettings extends PreferenceActivity {
     private static final String ENG_TESTMODE = "engtestmode";
 
     private CheckBoxPreference mAutoAnswer;
-    //private CheckBoxPreference mEnableVserGser;  //add by liguxiang 07-12-11 for engineeringmoodel usb settings
-    private CheckBoxPreference mEnableAdbVserGser;  //2013-4-12@spreadst add adb settings
+    private CheckBoxPreference mEnableVserGser;  //add by liguxiang 07-12-11 for engineeringmoodel usb settings
     private CheckBoxPreference mAcceRotation;
     private CheckBoxPreference mEnableUsbFactoryMode;
     private CheckBoxPreference mModemReset;
@@ -53,8 +51,7 @@ public class AppSettings extends PreferenceActivity {
         addPreferencesFromResource(R.layout.appset);
 
         mAutoAnswer = (CheckBoxPreference) findPreference(AUTO_ANSWER);
-        //mEnableVserGser = (CheckBoxPreference) findPreference(ENABLE_VSER_GSER);  //add by liguxiang 07-12-11 for engineeringmoodel usb settings
-        mEnableAdbVserGser = (CheckBoxPreference) findPreference(ENABLE_ADB_VSER_GSER);  //2013-4-12@spreadst add adb settings
+        mEnableVserGser = (CheckBoxPreference) findPreference(ENABLE_VSER_GSER);  //add by liguxiang 07-12-11 for engineeringmoodel usb settings
         mAcceRotation = (CheckBoxPreference)findPreference(ACCELEROMETER);
         mEnableUsbFactoryMode = (CheckBoxPreference)findPreference(ENABLE_USB_FACTORY_MODE);
         mModemReset = (CheckBoxPreference)findPreference(MODEM_RESET);
@@ -74,8 +71,7 @@ public class AppSettings extends PreferenceActivity {
 		mAcceRotation.setChecked(check);
         String usbMode = SystemProperties.get("sys.usb.config", "");
         if(DEBUG) Log.d(LOG_TAG, " usbMode = " + usbMode);
-        //mEnableVserGser.setChecked(usbMode.endsWith("vser,gser"));
-        mEnableAdbVserGser.setChecked(usbMode.equals("adb,vser,gser"));
+        mEnableVserGser.setChecked(usbMode.endsWith("vser,gser"));
         boolean test = mEngSqlite.queryData(ENG_TESTMODE);
         if (!test) {
             mEnableUsbFactoryMode.setChecked(true);
@@ -113,19 +109,11 @@ public class AppSettings extends PreferenceActivity {
 
 			if(DEBUG)  Log.d(LOG_TAG, "auto answer state "+newState);
 			return true;
-	//add by liguxiang 07-12-11 for engineeringmoodel usb settings begin
-	//} else if(preference == mEnableVserGser){
-	//		boolean newState = mEnableVserGser.isChecked();
-	//		Settings.Secure.putInt(getContentResolver(),
-	//						Settings.Secure.VSER_GSER_ENABLED, newState ? 1 : 0);
-	//		return true;
-	//2013-4-12@spreadst for engineeringmoodel adb settings begin
-	} else if (preference == mEnableAdbVserGser) {
-			boolean newState = mEnableAdbVserGser.isChecked();
+		//add by liguxiang 07-12-11 for engineeringmoodel usb settings begin
+	}else if(preference == mEnableVserGser){
+			boolean newState = mEnableVserGser.isChecked();
 			Settings.Secure.putInt(getContentResolver(),
-					Settings.Secure.ADB_ENABLED, newState ? 1 : 0);
-			Settings.Secure.putInt(getContentResolver(),
-					Settings.Secure.ADB_VSER_GSER_ENABLED, newState ? 1 : 0);
+							Settings.Secure.VSER_GSER_ENABLED, newState ? 1 : 0);
 			return true;
 	}else if(preference == mAcceRotation){
 			boolean checked = mAcceRotation.isChecked();
