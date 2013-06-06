@@ -3,6 +3,7 @@ package com.spreadtrum.android.eng;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 import android.os.Bundle;
 import android.os.Debug;
@@ -106,7 +107,7 @@ implements Preference.OnPreferenceChangeListener{
 				int dataSize = 512;
 				byte[] inputBytes = new byte[dataSize];
 				int showlen= mEf.engread(sockid,inputBytes,dataSize);
-				String str1 =new String(inputBytes,0,showlen); 
+				String str1 =new String(inputBytes,0,showlen,Charset.defaultCharset());
 
 				if(str1.equals("OK")){
 				DisplayToast("Set Success.");
