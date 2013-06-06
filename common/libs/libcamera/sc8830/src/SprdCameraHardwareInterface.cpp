@@ -642,6 +642,29 @@ status_t SprdCameraHardware::setParameters(const SprdCameraParameters& params)
 			return UNKNOWN_ERROR;
 		}
 	}
+
+	if ((1 == params.getInt("zsl")) &&
+		((mCaptureMode != CAMERA_ZSL_CONTINUE_SHOT_MODE) || (mCaptureMode != CAMERA_ZSL_MODE))) {
+		LOGI("mode change:stop preview.");
+		if (isPreviewing()) {
+			mPreviewStartFlag = 2;
+			stopPreviewInternal();
+			if (NO_ERROR != startPreviewInternal(isRecordingMode())) {
+				return UNKNOWN_ERROR;
+			}
+		}
+	}
+	if ((0 == params.getInt("zsl")) &&
+		((mCaptureMode == CAMERA_ZSL_CONTINUE_SHOT_MODE) || (mCaptureMode == CAMERA_ZSL_MODE))) {
+		LOGI("mode change:stop preview.");
+		if (isPreviewing()) {
+			mPreviewStartFlag = 2;
+			stopPreviewInternal();
+			if (NO_ERROR != startPreviewInternal(isRecordingMode())) {
+				return UNKNOWN_ERROR;
+			}
+		}
+	}
 	
 	if(NO_ERROR != setCameraParameters()){
 		return UNKNOWN_ERROR;
