@@ -140,6 +140,7 @@ gralloc_module_t const* SprdCameraHardware::mGrallocHal;
         mJpegencSwapHeap(NULL),
        mFDHeap(NULL),
         mIsStoreMetaData(false),
+        mPreviewWindow(NULL),
         mSettingPreviewWindowState(PREVIEW_WINDOW_SET_IDLE)
     {
         ALOGV("openCameraHardware: call createInstance. cameraId: %d.", cameraId);

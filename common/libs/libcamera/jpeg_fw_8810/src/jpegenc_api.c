@@ -703,7 +703,7 @@ uint32_t JPEGENC_Poll_VLC_BSM(uint32_t time, uint32_t buf_len,  jpegenc_callback
 
 uint32_t JPEGENC_encode_one_pic(JPEGENC_PARAMS_T *jpegenc_params,  jpegenc_callback callback)
 {
-	uint32_t vsp_fd = -1;
+	int32_t vsp_fd = -1;
 	void *vsp_addr = NULL;
 	uint32_t ret = 0;
 	uint32 value = 0, int_val = 0, temp = 0;
@@ -711,7 +711,6 @@ uint32_t JPEGENC_encode_one_pic(JPEGENC_PARAMS_T *jpegenc_params,  jpegenc_callb
 	uint32_t slice_height=SLICE_HEIGHT;
 	uint32_t slice_num=0;
 	JPEG_ENC_TEMP_BUF_PARA_T temp_buffer;
-
 	g_stream_buf_id = 1;
 
 	slice_height = jpegenc_params->set_slice_height ? jpegenc_params->set_slice_height : SLICE_HEIGHT;
