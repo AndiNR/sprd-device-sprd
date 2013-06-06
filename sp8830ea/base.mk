@@ -144,7 +144,7 @@ PRODUCT_COPY_FILES := \
 	frameworks/native/data/etc/android.software.live_wallpaper.xml:system/etc/permissions/android.software.live_wallpaper.xml \
 	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml \
 	device/sprd/partner/brcm/gps/glgps:/system/bin/glgps \
-	device/sprd/partner/brcm/gps/gpsconfig_uart.xml:/system/etc/gpsconfig.xml \
+	device/sprd/partner/brcm/gps/gpsconfig_shark.xml:/system/etc/gpsconfig.xml \
 	device/sprd/partner/brcm/gps/gps.default.so:/system/lib/hw/gps.default.so
 
 BOARD_WLAN_DEVICE_REV       := bcm4330_b2
