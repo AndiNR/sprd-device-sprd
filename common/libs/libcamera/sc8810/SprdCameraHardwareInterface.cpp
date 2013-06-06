@@ -2464,14 +2464,23 @@ status_t strToFPS(const char *str, int &min, int &max) {
 	  ALOGV("preview-fps-range: %s", str);
 
 	  pDest = strrchr(str,(int)',');
-	   memcpy(strTmp, str, strlen(str) - strlen(pDest));
-	    min = atoi(strTmp);
-	    pDest = strrchr((const char *)str, (int)',');
-	    pDest++;
-	    strcpy(strTmp, pDest);
-	    max = atoi(strTmp);
-
-	   ALOGV("preview-fps-range: min: %d, max: %d.", min, max);
+          if(pDest == NULL)
+          {
+              ALOGE("pDest is NULL!");
+              return UNKNOWN_ERROR;
+          }
+	  memcpy(strTmp, str, strlen(str) - strlen(pDest));
+	  min = atoi(strTmp);
+	  pDest = strrchr((const char *)str, (int)',');
+          if(pDest == NULL)
+          {
+              ALOGE("pDest is NULL!");
+              return UNKNOWN_ERROR;
+          }
+          pDest++;
+	  strcpy(strTmp, pDest);
+	  max = atoi(strTmp);
+          ALOGV("preview-fps-range: min: %d, max: %d.", min, max);
 
 	    return NO_ERROR;
   }
