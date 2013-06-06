@@ -80,7 +80,7 @@ public class AppSettings extends PreferenceActivity {
             mEnableUsbFactoryMode.setChecked(mode == 1);
         }
         
-    	super.onStart();
+	super.onResume();
     }
 
     @Override
