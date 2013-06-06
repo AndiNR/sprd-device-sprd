@@ -169,6 +169,7 @@ static void lower_emc_freq(char flag)
         mPreviewStartFlag(0),
         mMetadataHeap(NULL),
         mIsStoreMetaData(false),
+        mPreviewWindow(NULL),
         mSettingPreviewWindowState(PREVIEW_WINDOW_SET_IDLE)
     {
         LOGV("openCameraHardware: call createInstance. cameraId: %d.", cameraId);
