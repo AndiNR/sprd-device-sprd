@@ -42,7 +42,7 @@ public class ApnActivepdpFilter extends PreferenceActivity{
 
     static final String ALL_TYPE_APN = "*";
 
-    private TelephonyManager mTelephonyManager;
+    //private TelephonyManager mTelephonyManager;
     private ITelephony  mTelephony;
     boolean mFilterAllStatus ;
     boolean mFilterDefaultStatus;
@@ -58,7 +58,7 @@ public class ApnActivepdpFilter extends PreferenceActivity{
 
 
 		// ITelephony mTelephony =(ITelephony)ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
-        mTelephonyManager = (TelephonyManager)getSystemService(TELEPHONY_SERVICE);
+        //mTelephonyManager = (TelephonyManager)getSystemService(TELEPHONY_SERVICE);
         mTelephony = getITelephony(this);
 
         addPreferencesFromResource(R.layout.apn_activepdp_filter);
