@@ -194,9 +194,9 @@ public class ApnActivepdpFilter extends PreferenceActivity{
 	        startActivity(startIntent);
 			return super.onPreferenceTreeClick(preferenceScreen, preference);
 		}
-
-		mChecked = ((CheckBoxPreference)preference).isChecked();
-
+		if(preference instanceof CheckBoxPreference){
+			mChecked = ((CheckBoxPreference)preference).isChecked();
+		}
 		if(APN_TYPE_ALL.equals(key))
 		{
 			key = ALL_TYPE_APN;

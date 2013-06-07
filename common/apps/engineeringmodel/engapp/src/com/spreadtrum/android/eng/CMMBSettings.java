@@ -22,11 +22,15 @@ public class CMMBSettings extends PreferenceActivity {
 		final String key = preference.getKey();
 
 		if (TEST_MODE.equals(key)) {
-			SystemProperties.set("ro.hisense.cmcc.test",
+			if(preference instanceof CheckBoxPreference){
+				SystemProperties.set("ro.hisense.cmcc.test",
 					((CheckBoxPreference) preference).isChecked() ? "1" : "0");
+			}
 		} else if (WIRE_TEST_MODE.equals(key)) {
-			SystemProperties.set("ro.hisense.cmcc.test.cmmb.wire",
+			if(preference instanceof CheckBoxPreference){
+				SystemProperties.set("ro.hisense.cmcc.test.cmmb.wire",
 					((CheckBoxPreference) preference).isChecked() ? "1" : "0");
+			}
 		} else {
 			return false;
 		}
