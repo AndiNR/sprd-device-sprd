@@ -70,6 +70,7 @@ public:
 	int getRecordingHint();
 	int getFlashMode();
 	int getSlowmotion();
+	int getPreviewFameRate();
 
 	// These sizes have to be a multiple of 16 in each dimension
 	static const Size kPreviewSizes[];
@@ -100,6 +101,7 @@ public:
 	static const char KEY_SLOWMOTION[];
 	static const char KEY_SATURATION[];
 	static const char KEY_SHARPNESS[];
+	static const char KEY_PREVIEWFRAMERATE[];
 
 private:
 

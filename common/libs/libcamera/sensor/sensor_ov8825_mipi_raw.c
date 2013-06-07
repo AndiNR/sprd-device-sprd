@@ -28,7 +28,6 @@ static int s_capture_shutter = 0;
 static int s_capture_VTS = 0;
 static int s_video_min_framerate = 0;
 static int s_video_max_framerate = 0;
-static int s_video_mode = 0;
 
 LOCAL uint32_t _ov8825_GetResolutionTrimTab(uint32_t param);
 LOCAL uint32_t _ov8825_PowerOn(uint32_t power_on);
@@ -761,78 +760,80 @@ LOCAL SENSOR_TRIM_T s_ov8825_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0}
 };
 #ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
-LOCAL SENSOR_AE_INFO_T s_ov8825_AE_info_Tab[] = {
-	{0, 0, 0, 0},
-	{30, 30, 264, 64},
-	{15, 15, 249, 64},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0}
+
+LOCAL const SENSOR_REG_T s_ov8825_1632x1224_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
+	/*video mode 0: ?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 1:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 2:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 3:?fps*/
+	{
+		{0xffff, 0xff}
+	}
 };
 
-LOCAL uint32_t _ov8825_get_ae_info(uint32_t param)
-{
-	SENSOR_AE_INFO_T *ae_info_ptr = (SENSOR_AE_INFO_T*)param;
-	uint32_t mode;
-
-	if (PNULL == ae_info_ptr) {
-		SENSOR_PRINT("fail.");
-		return SENSOR_FAIL;
+LOCAL const SENSOR_REG_T  s_ov8825_3264x2448_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
+	/*video mode 0: ?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 1:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 2:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 3:?fps*/
+	{
+		{0xffff, 0xff}
 	}
+};
+
+LOCAL SENSOR_VIDEO_INFO_T s_ov8825_video_info[] = {
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{30, 30, 264, 64}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},(SENSOR_REG_T**)&s_ov8825_1632x1224_video_tab},
+	{{{15, 15, 249, 64}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},(SENSOR_REG_T**)&s_ov8825_3264x2448_video_tab},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL}
+};
+
+LOCAL uint32_t _ov8825_set_video_mode(uint32_t param)
+{
+	SENSOR_REG_T_PTR sensor_reg_ptr;
+	uint16_t         i = 0x00;
+	uint32_t         mode;
+
+	if (param > SENSOR_VIDEO_MODE_MAX)
+		return 0;
+
 	if (SENSOR_SUCCESS != Sensor_GetMode(&mode)) {
 		SENSOR_PRINT("fail.");
 		return SENSOR_FAIL;
 	}
-	memcpy((void*)ae_info_ptr,(void*)&s_ov8825_AE_info_Tab[mode],sizeof(SENSOR_AE_INFO_T));
 
-/*	if (0 != s_video_mode) {
-		ae_info_ptr->min_frate = s_video_min_framerate;
-		ae_info_ptr->max_frate = s_video_max_framerate;
-	}*/
-
-	return SENSOR_SUCCESS;
-}
-
-LOCAL const SENSOR_REG_T ov8825_video_mode_tab[][5]=
-{
-	/* preview mode: ?fps*/
-	{
-		{0xffff, 0xff}
-	},
-	/* video mode:?fps*/
-	{
-		{0xffff, 0xff}
-	},
-	/* slow motion mode 0:?fps*/
-	{
-		{0xffff, 0xff}
-	},
-	/* slow motion mode 1:?fps*/
-	{
-		{0xffff, 0xff}
-	},
-	/* slow motion mode 2:?fps*/
-	{
-		{0xffff, 0xff}
+	sensor_reg_ptr = (SENSOR_REG_T_PTR)s_ov8825_video_info[mode].setting_ptr[param];
+	if (PNULL == sensor_reg_ptr) {
+		SENSOR_PRINT("fail.");
+		return SENSOR_FAIL;
 	}
-};
-LOCAL uint32_t _ov8825_set_video_mode(uint32_t param)
-{
-	SENSOR_REG_T_PTR sensor_reg_ptr;
-	uint16_t i=0x00;
-
-	if (param>4)
-		return 0;
-
-	sensor_reg_ptr=(SENSOR_REG_T_PTR)ov8825_video_mode_tab[param];
 	for (i=0x00; (0xffff!=sensor_reg_ptr[i].reg_addr)||(0xff!=sensor_reg_ptr[i].reg_value); i++) {
 		Sensor_WriteReg(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
 	}
-	s_video_mode = param;
-	/* set framerate according video mode
-	 s_video_min_framerate =
-	 s_video_max_framerate = */
+
 	SENSOR_PRINT("0x%02x", param);
 	return 0;
 }
@@ -904,7 +905,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov8825_ioctl_func_tab = {
 	_ov8825_StreamOn,
 #ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	_ov8825_StreamOff,
-	_ov8825_get_ae_info
+	PNULL,
 #else
 	_ov8825_StreamOff
 #endif
@@ -977,7 +978,12 @@ SENSOR_INFO_T g_ov8825_mipi_raw_info = {
 	0,
 	0,
 	0,
+#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
+	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0},
+	s_ov8825_video_info
+#else
 	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0}
+#endif
 };
 
 LOCAL struct sensor_raw_info* Sensor_GetContext(void)

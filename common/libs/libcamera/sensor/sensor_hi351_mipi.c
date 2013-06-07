@@ -4124,6 +4124,7 @@ LOCAL const SENSOR_REG_T HI351_common[]=
 	{0xb8, 0x29},//LSC GAIN B
 
 
+
 	{0xb9, 0x80},
 	{0xba, 0x2a},//LSC GAIN R
 	{0xbb, 0x7a},
@@ -7195,7 +7196,12 @@ SENSOR_INFO_T g_hi351_mipi_yuv_info =
     0,
     0,
     0,
+#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
+    {SENSOR_INTERFACE_TYPE_CSI2, 1, 8, 1},
+    PNULL
+#else
     {SENSOR_INTERFACE_TYPE_CSI2, 1, 8, 1}
+#endif
 };
 /******************************************************************************/
 // Description:

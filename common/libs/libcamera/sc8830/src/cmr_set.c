@@ -60,6 +60,7 @@ static int camera_set_iso(uint32_t iso, uint32_t *skip_mode, uint32_t *skip_num)
 static int camera_set_flash(uint32_t flash_mode, uint32_t *skip_mode, uint32_t *skip_num);
 static int camera_set_video_mode(uint32_t mode, uint32_t *skip_mode, uint32_t *skip_num);
 static int camera_set_flashdevice(uint32_t param);
+static int camera_get_video_mode(uint32_t frame_rate, uint32_t *video_mode);
 
 
 static int camera_param_to_isp(uint32_t cmd, uint32_t in_param, uint32_t *ptr_out_param)
@@ -1093,30 +1094,29 @@ int camera_set_ctrl(camera_parm_type id,
 
 	case CAMERA_PARM_PREVIEW_MODE:   /* Use camera_preview_mode_type */
 		CMR_LOGV("parm=%d, cxt->cmr_set.video_mode = %d \n", parm, cxt->cmr_set.video_mode);
+		{
+			uint32_t video_mode = 0;
 
-		if (parm != cxt->cmr_set.video_mode) {
+			ret = camera_get_video_mode(parm,&video_mode);
+			CMR_RTN_IF_ERR(ret);
 
-			CMR_LOGV("cxt->preview_status = %d \n", cxt->preview_status);
+			if (video_mode != cxt->cmr_set.video_mode) {
+				CMR_LOGV("cxt->preview_status = %d \n", cxt->preview_status);
+				if (CMR_PREVIEW == cxt->preview_status) {
 
-			if (0 != parm) {
-				parm = (0 == cxt->cmr_set.slow_motion_mode) ? parm : cxt->cmr_set.slow_motion_mode;
-				CMR_LOGI("video mode:%d.",parm);
-			}
-			if (CMR_PREVIEW == cxt->preview_status) {
-
-				if (before_set) {
-					ret = (*before_set)(RESTART_LIGHTLY);
+					if (before_set) {
+						ret = (*before_set)(RESTART_LIGHTLY);
+						CMR_RTN_IF_ERR(ret);
+					}
+					ret = camera_set_video_mode(video_mode, &skip_mode, &skip_number);
 					CMR_RTN_IF_ERR(ret);
+					if (after_set) {
+						ret = (*after_set)(RESTART_LIGHTLY, skip_mode, skip_number);
+						CMR_RTN_IF_ERR(ret);
+					}
 				}
-				ret = camera_set_video_mode(parm, &skip_mode, &skip_number);
-				CMR_RTN_IF_ERR(ret);
-				if (after_set) {
-					ret = (*after_set)(RESTART_LIGHTLY, skip_mode, skip_number);
-					CMR_RTN_IF_ERR(ret);
-				}
-				
+				cxt->cmr_set.video_mode = video_mode;
 			}
-			cxt->cmr_set.video_mode = parm;
 		}
 		break;
 
@@ -1363,5 +1363,37 @@ int camera_set_flashdevice(uint32_t param)
 	if (0 != ret) {
 		CMR_LOGE("error:%d.",ret);
 	}
+	return ret;
+}
+int camera_get_video_mode(uint32_t frame_rate, uint32_t *video_mode)
+{
+	int                      ret = 0;
+	int						 sensor_mode = 0;
+	uint32_t                 i = 0;
+	struct camera_context    *cxt = camera_get_cxt();
+	SENSOR_AE_INFO_T         *sensor_ae_info;
+
+	if (PNULL == video_mode) {
+		CMR_LOGI("null pointer.");
+		return CAMERA_FAILED;
+	}
+	*video_mode = 0;
+	ret = Sensor_GetMode(&sensor_mode);
+	if (ret) {
+		CMR_LOGE("get sensor mode fail.");
+		return CAMERA_FAILED;
+	}
+
+	sensor_ae_info = (SENSOR_AE_INFO_T*)&cxt->sn_cxt.sensor_info->sensor_video_info[sensor_mode];
+	for (i=0 ; i<SENSOR_VIDEO_MODE_MAX ; i++) {
+		if (frame_rate <= sensor_ae_info[i].max_frate) {
+			*video_mode = i;
+			break;
+		}
+	}
+	if (SENSOR_VIDEO_MODE_MAX == i) {
+		CMR_LOGI("use default video mode");
+	}
+	CMR_LOGI("video mode:%d.",*video_mode);
 	return ret;
 }

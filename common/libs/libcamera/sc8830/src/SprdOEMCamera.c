@@ -3453,7 +3453,7 @@ int camera_preview_init(int format_mode)
 	SENSOR_MODE_INFO_T       *sensor_mode;
 	struct buffer_cfg        buffer_info;
 	struct isp_video_start   isp_param;
-	SENSOR_AE_INFO_T         sensor_aec_info;
+	SENSOR_AE_INFO_T         *sensor_aec_info;
 
 	sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode];
 
@@ -3526,6 +3526,7 @@ int camera_preview_init(int format_mode)
 	g_cxt->chn_1_status = CHN_BUSY;
 
 	if (v4l2_cfg.cfg.need_isp) {
+		uint32_t video_mode = g_cxt->cmr_set.video_mode;
 		isp_param.size.w = sensor_mode->width;
 		if (v4l2_cfg.cfg.need_binning) {
 			isp_param.size.w = (isp_param.size.w >> 1);
@@ -3533,9 +3534,10 @@ int camera_preview_init(int format_mode)
 		isp_param.size.h = sensor_mode->height;
 		isp_param.format = ISP_DATA_NORMAL_RAW10;
 		CMR_LOGV("isp w h, %d %d", isp_param.size.w, isp_param.size.h);
-		Sensor_Ioctl(SENSOR_IOCTL_GET_AE_INFO,(uint32_t)&sensor_aec_info);
-		CMR_LOGE("%d,%d,%d,%d.",sensor_aec_info.min_frate,sensor_aec_info.max_frate,
-			     sensor_aec_info.line_time,sensor_aec_info.gain);
+	/*	Sensor_Ioctl(SENSOR_IOCTL_GET_AE_INFO,(uint32_t)&sensor_aec_info);*/
+		sensor_aec_info = &g_cxt->sn_cxt.sensor_info->sensor_video_info[g_cxt->sn_cxt.capture_mode].ae_info[video_mode];
+		CMR_LOGE("%d,%d,%d,%d.",sensor_aec_info->min_frate,sensor_aec_info->max_frate,
+			     sensor_aec_info->line_time,sensor_aec_info->gain);
 		ret = isp_ioctl(ISP_CTRL_AE_INFO,(void*)&sensor_aec_info);
 		if (CAMERA_SUCCESS != ret) {
 			CMR_LOGE("set ae information error.");
@@ -3614,7 +3616,7 @@ int camera_capture_init(void)
 	SENSOR_MODE_INFO_T       *sensor_mode;
 	struct buffer_cfg        buffer_info;
 	struct isp_video_start   isp_video_param;
-	SENSOR_AE_INFO_T         sensor_aec_info;
+	SENSOR_AE_INFO_T         *sensor_aec_info;
 	struct sn_cfg            sensor_cfg;
 	CMR_LOGV("capture size, %d %d, cap_rot %d",
 		g_cxt->capture_size.width,
@@ -3665,11 +3667,13 @@ int camera_capture_init(void)
 	SET_CHN_BUSY(CHN_2);
 
 	if (v4l2_cfg.cfg.need_isp && ISP_IDLE == g_cxt->isp_cxt.isp_state) {
+		uint32_t video_mode = g_cxt->cmr_set.video_mode;
 		CMR_LOGI("start ISP.");
 		isp_video_param.size.w = sensor_mode->width;
 		isp_video_param.size.h = sensor_mode->height;
-		Sensor_Ioctl(SENSOR_IOCTL_GET_AE_INFO,(uint32_t)&sensor_aec_info); 
-		ret = isp_ioctl(ISP_CTRL_AE_INFO,(void*)&sensor_aec_info);
+		sensor_aec_info = &g_cxt->sn_cxt.sensor_info->sensor_video_info[g_cxt->sn_cxt.capture_mode].ae_info[video_mode];
+/*		Sensor_Ioctl(SENSOR_IOCTL_GET_AE_INFO,(uint32_t)&sensor_aec_info);*/
+		ret = isp_ioctl(ISP_CTRL_AE_INFO,(void*)sensor_aec_info);
 		if (CAMERA_SUCCESS != ret) {
 			CMR_LOGE("set ae information error.");
 		}

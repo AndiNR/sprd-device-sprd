@@ -621,8 +621,12 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
         0,                    // atv output start postion	
         0,                     // atv output end postion
         0,
+#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
+	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
+	PNULL
+#else
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1}
-
+#endif
 };
 /**---------------------------------------------------------------------------*
  ** 							Function  Definitions

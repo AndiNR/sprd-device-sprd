@@ -92,6 +92,21 @@ enum {
 };
 
 enum {
+	CAMERA_PREVIEWFRAMERATE_0 = 10,
+	CAMERA_PREVIEWFRAMERATE_1 = 15,
+	CAMERA_PREVIEWFRAMERATE_2 = 20,
+	CAMERA_PREVIEWFRAMERATE_3 = 25,
+	CAMERA_PREVIEWFRAMERATE_DEFAULT = 30,
+	CAMERA_PREVIEWFRAMERATE_4 = 30,
+	CAMERA_PREVIEWFRAMERATE_5 = 31,
+	CAMERA_PREVIEWFRAMERATE_6 = 60,
+	CAMERA_PREVIEWFRAMERATE_7 = 70,
+	CAMERA_PREVIEWFRAMERATE_8 = 80,
+	CAMERA_PREVIEWFRAMERATE_9 = 90,
+	CAMERA_PREVIEWFRAMERATE_MAX
+};
+
+enum {
 	CAMERA_CONTRAST_0 = 0,
 	CAMERA_CONTRAST_1 = 1,
 	CAMERA_CONTRAST_2 = 2,
@@ -249,6 +264,20 @@ const struct str_map sharpness_map[] = {
 	{"4",               CAMERA_SHARPNESS_4},
 	{"5",               CAMERA_SHARPNESS_5},
 	{"6",               CAMERA_SHARPNESS_6},
+	{NULL,              0}
+};
+
+const struct str_map previewframerate_map[] = {
+	{"10",              CAMERA_PREVIEWFRAMERATE_0},
+	{"15",              CAMERA_PREVIEWFRAMERATE_1},
+	{"20",              CAMERA_PREVIEWFRAMERATE_2},
+	{"25",              CAMERA_PREVIEWFRAMERATE_3},
+	{"30",              CAMERA_PREVIEWFRAMERATE_4},
+	{"31",              CAMERA_PREVIEWFRAMERATE_5},
+	{"60",              CAMERA_PREVIEWFRAMERATE_6},
+	{"70",              CAMERA_PREVIEWFRAMERATE_7},
+	{"80",              CAMERA_PREVIEWFRAMERATE_8},
+	{"90",              CAMERA_PREVIEWFRAMERATE_9},
 	{NULL,              0}
 };
 
@@ -416,10 +445,10 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"zsl-supported","true"},
 	{"zsl","1"},
 	{"capture-mode", "1"},
-	{"slow-motion-supported","true"},
+	{"slow-motion-supported","false"},
 	{"max-slow-motion","3"},
-	{"slow-motion-values", "0,1,2,3"},
-	{"slow-motion", "0"}
+	{"slow-motion-values", "1"},
+	{"slow-motion", "1"}
 };
 struct config_element sprd_back_camera_hardware_config[] = {
 	{"whitebalance-values", "auto,incandescent,fluorescent,daylight,cloudy-daylight"},
@@ -516,8 +545,8 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"capture-mode", "1"},
 	{"slow-motion-supported","true"},
 	{"max-slow-motion","3"},
-	{"slow-motion-values", "0,1,2,3"},
-	{"slow-motion", "0"}
+	{"slow-motion-values", "1,2,3"},
+	{"slow-motion", "1"}
 };
 
 #endif //_SPRD_CAMERA_HARDWARE_CONFIG_H_
