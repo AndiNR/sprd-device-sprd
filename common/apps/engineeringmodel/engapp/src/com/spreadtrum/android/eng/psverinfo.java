@@ -20,7 +20,6 @@ public class psverinfo extends Activity {
 	private int sockid = 0;
 	private engfetch mEf;
 	private String str;
-	private String str01;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
