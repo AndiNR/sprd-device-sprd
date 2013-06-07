@@ -275,7 +275,7 @@ void mux_reader_thread(const char*caller, int fd, void *pa)
 		while(cnt--){
 			memset(databuf, 0, ENG_BUFFER_SIZE);
 
-			len = read(fd, databuf, ENG_BUFFER_SIZE);
+			len = read(fd, databuf, ENG_BUFFER_SIZE-1);
 			ENG_LOG("%s: got %d chars from modem: %s\n", caller, len, databuf);
 			if (len < 0)
 				ENG_LOG("%s: waiting for modem...[%d]\n", caller, cnt);
@@ -423,7 +423,7 @@ int main(int argc, char **argv)
 		memset(databuf, 0, ENG_BUFFER_SIZE);
 
 		pthread_mutex_lock(&uart_mutex);
-		len = read(uart_fd, databuf, ENG_BUFFER_SIZE);
+		len = read(uart_fd, databuf, ENG_BUFFER_SIZE-1);
 		pthread_mutex_unlock(&uart_mutex);
 
 		ENG_LOG(" -> got %d chars: %s\n", len, databuf);

@@ -145,11 +145,13 @@ static int vhub_init_unix(char *path, int queue)
 
     if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
         printf("bind: %s\n", strerror(errno));
+        close(fd);
         return -1;
     }
 
     if (listen(fd, queue) < 0) {
         printf("listen: %s\n", strerror(errno));
+        close(fd);
         return -1;
     }
 

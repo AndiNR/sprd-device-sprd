@@ -298,8 +298,11 @@ static int snap2png(const char * filename, int quality, FBInfo* fb)
 	png_destroy_write_struct(&png_ptr, &info_ptr);
 
 	fclose(outfile);
-
-	return 0;
+	if(image_buffer){
+		free(image_buffer);
+		image_buffer = NULL;
+	}
+        return 0;
 
 }
 
