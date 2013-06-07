@@ -73,9 +73,7 @@ PRODUCT_PACKAGES += \
     CMCCREAD.apk \
     CMCCTelenav_Nav.apk \
     CMCCWIFI.apk \
-    PimClient.apk \
-    SecondClock.apk \
-    WorldClock.apk
+    PimClient.apk
 	
 # packages files
 PRODUCT_PACKAGES += \

@@ -62,7 +62,6 @@ PRODUCT_PACKAGES := \
 	MsmsStk \
 	Stk1 \
         ES_File_Explorer.apk \
-        SecondClock.apk \
         CallFireWall   \
         AudioProfile \
         LiveWallpapers  \
