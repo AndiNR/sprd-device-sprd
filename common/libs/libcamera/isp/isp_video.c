@@ -533,7 +533,7 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 					fun_ptr->take_picture(0, 0);
 					sem_wait(&capture_sem_lock);
 
-					usleep(1000*10);
+					usleep(1000*1000);
 
 					if(NULL!=fun_ptr->stop_preview){
 						fun_ptr->stop_preview(0, 0);

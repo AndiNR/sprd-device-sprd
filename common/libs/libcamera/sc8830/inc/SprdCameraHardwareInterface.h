@@ -84,6 +84,7 @@ public:
 	virtual status_t             sendCommand(int32_t cmd, int32_t arg1, int32_t arg2);
 	virtual status_t             storeMetaDataInBuffers(bool enable);
 	virtual status_t             dump(int fd) const;
+	void                            setCaptureRawMode(bool mode);
 
 public:
 	static int                   getPropertyAtv();
@@ -300,6 +301,7 @@ private:
 	volatile camera_state           mCameraState;
 	int                             miSPreviewFirstFrame;
 	takepicture_mode                mCaptureMode;
+	bool                             mCaptureRawMode;
 };
 
 }; // namespace android

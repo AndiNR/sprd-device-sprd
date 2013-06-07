@@ -105,13 +105,12 @@ endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
 LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/ispvideo	\
 	$(LOCAL_PATH)/vsp/sc8825/inc	\
 	$(LOCAL_PATH)/vsp/sc8825/src \
 	$(LOCAL_PATH)/jpeg_fw_8825/inc \
 	$(LOCAL_PATH)/jpeg_fw_8825/src \
 	$(LOCAL_PATH)/sc8825/inc \
-	$(LOCAL_PATH)/sc8825/isp/inc \
+	$(LOCAL_PATH)/isp/inc \
 	external/skia/include/images \
 	external/skia/include/core\
         external/jhead \
@@ -175,23 +174,22 @@ LOCAL_SRC_FILES:= \
 	jpeg_fw_8825/src/jpegdec_api.c  \
 	jpeg_fw_8825/src/exif_writer.c  \
 	jpeg_fw_8825/src/jpeg_stream.c \
-	ispvideo/isp_video.c \
-        ispvideo/isp_param_tune_com.c \
-        ispvideo/isp_param_tune_v0000.c \
-        ispvideo/isp_param_tune_v0001.c \
-        ispvideo/isp_param_size.c
+	isp/isp_video.c \
+	isp/isp_param_tune_com.c \
+	isp/isp_param_tune_v0000.c \
+	isp/isp_param_tune_v0001.c \
+	isp/isp_param_size.c
 endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/ispvideo	\
 	$(LOCAL_PATH)/vsp/sc8830/inc	\
 	$(LOCAL_PATH)/vsp/sc8830/src \
 	$(LOCAL_PATH)/jpeg_fw_8830/inc \
 	$(LOCAL_PATH)/jpeg_fw_8830/src \
 	$(LOCAL_PATH)/sc8830/inc \
-	$(LOCAL_PATH)/sc8830/isp/inc \
 	$(LOCAL_PATH)/sc8830/isp_calibration/inc \
+	$(LOCAL_PATH)/isp/inc \
 	external/skia/include/images \
 	external/skia/include/core\
         external/jhead \
@@ -257,11 +255,11 @@ LOCAL_SRC_FILES:= \
 	jpeg_fw_8830/src/jpegdec_api.c  \
 	jpeg_fw_8830/src/exif_writer.c  \
 	jpeg_fw_8830/src/jpeg_stream.c \
-	ispvideo/isp_video.c \
-	ispvideo/isp_param_tune_com.c \
-	ispvideo/isp_param_tune_v0000.c \
-	ispvideo/isp_param_tune_v0001.c \
-	ispvideo/isp_param_size.c\
+	isp/isp_video.c \
+	isp/isp_param_tune_com.c \
+	isp/isp_param_tune_v0000.c \
+	isp/isp_param_tune_v0001.c \
+	isp/isp_param_size.c\
 	sc8830/isp_calibration/src/isp_calibration.c \
 	sc8830/isp_calibration/src/isp_cali_interface.c
 endif

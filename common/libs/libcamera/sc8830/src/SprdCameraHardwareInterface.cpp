@@ -40,7 +40,7 @@
 
 #ifdef CONFIG_CAMERA_ISP
 extern "C" {
-#include "../ispvideo/isp_video.h"
+#include "isp_video.h"
 }
 #endif
 
@@ -277,6 +277,8 @@ status_t SprdCameraHardware::startPreview()
 	LOGV("startPreview: E");
 	Mutex::Autolock l(&mLock);
 
+	setCaptureRawMode(0);
+
 	if(mPreviewStartFlag == 0) {
 	    LOGV("don't need to start preview.");
 	    return NO_ERROR;
@@ -400,6 +402,8 @@ status_t SprdCameraHardware::takePicture()
     GET_START_TIME;
 	takepicture_mode mode = getCaptureMode();
 	LOGV("takePicture: E");
+
+	LOGV("ISP_TOOL:takePicture: %d E", mode);
 	
     print_time();
 
@@ -562,6 +566,12 @@ status_t SprdCameraHardware::autoFocus()
 status_t SprdCameraHardware::cancelAutoFocus()
 {
 	return camera_cancel_autofocus();
+}
+
+void SprdCameraHardware::setCaptureRawMode(bool mode)
+{
+	mCaptureRawMode = mode;
+	LOGV("ISP_TOOL: setCaptureRawMode: %d, %d", mode, mCaptureRawMode);
 }
 
 status_t SprdCameraHardware::setParameters(const SprdCameraParameters& params)
@@ -1617,6 +1627,9 @@ takepicture_mode SprdCameraHardware::getCaptureMode()
     } else {
 		mCaptureMode = mCaptureMode;
     }
+	if (1 == mCaptureRawMode) {
+		mCaptureMode = CAMERA_RAW_MODE;
+	}
 /*	mCaptureMode = CAMERA_HDR_MODE;*/
 	LOGI("cap mode %d.\n", mCaptureMode);
 
@@ -3261,8 +3274,11 @@ static int HAL_IspVideoSetParam(uint32_t width, uint32_t height)
 {
 	int rtn=0x00;
 	SprdCameraHardware * fun_ptr = dynamic_cast<SprdCameraHardware *>((SprdCameraHardware *)g_cam_device->priv);
+
 	if (NULL != fun_ptr)
 	{
+		LOGE("ISP_TOOL: HAL_IspVideoSetParam width:%d, height:%d", width, height);
+		fun_ptr->setCaptureRawMode(1);
 		rtn=fun_ptr->setTakePictureSize(width,height);
 	}
 	return rtn;
