@@ -22,7 +22,7 @@ implements Preference.OnPreferenceChangeListener{
     private static final boolean DBG = true;
     private static final String KEY_NETW = "preferred_network_mode_key";
     static final int preferredNetworkMode = Phone.PREFERRED_NT_MODE;
-    private int valueofsms = 0;
+    //private int valueofsms = 0;
     private int mModemType = 0;
 //    private Phone mPhone;
     private Phone mPhone[];
