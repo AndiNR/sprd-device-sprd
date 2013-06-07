@@ -43,7 +43,7 @@
 
 #ifdef CONFIG_CAMERA_ISP
 extern "C" {
-#include "../ispvideo/isp_video.h"
+#include "isp_video.h"
 }
 #endif
 

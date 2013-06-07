@@ -2358,16 +2358,6 @@ int camera_set_frame_type(camera_frame_type *frame_type, struct frm_info* info)
 		frame_type->buffer_uv_phy_addr = g_cxt->cap_mem[frm_id].target_yuv.addr_phy.addr_u;
 		CMR_LOGI("cap yuv addr 0x%x.",(uint32_t)frame_type->buf_Virt_Addr);
 
-		send_capture_data(0x02,/* yuv420 */
-				g_cxt->picture_size.width,
-				g_cxt->picture_size.height,
-				//(char *)g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg.addr_vir.addr_y,
-				//data->stream_size,
-				(char *)g_cxt->cap_mem[frm_id].target_yuv.addr_vir.addr_y,
-				g_cxt->picture_size.width*g_cxt->picture_size.height,
-				(char *)g_cxt->cap_mem[frm_id].target_yuv.addr_vir.addr_u,
-				g_cxt->picture_size.width*g_cxt->picture_size.height/2,
-				0, 0);
 	}else if (CHN_0 == info->channel_id){
 		frm_id = info->frame_id - CAMERA_CAP0_ID_BASE;
 		if (CAMERA_TOOL_RAW_MODE == g_cxt->cap_mode) {
@@ -2395,6 +2385,16 @@ int camera_set_frame_type(camera_frame_type *frame_type, struct frm_info* info)
 			frame_type->rotation = 0;
 			frame_type->header_size = 0;
 			frame_type->buffer_uv_phy_addr = g_cxt->cap_mem[frm_id].target_yuv.addr_phy.addr_u;
+
+			send_capture_data(0x02,/* yuv420 */
+					g_cxt->picture_size.width,
+					g_cxt->picture_size.height,
+					(char *)g_cxt->cap_mem[frm_id].target_yuv.addr_vir.addr_y,
+					g_cxt->picture_size.width*g_cxt->picture_size.height,
+					(char *)g_cxt->cap_mem[frm_id].target_yuv.addr_vir.addr_u,
+					g_cxt->picture_size.width*g_cxt->picture_size.height/2,
+					0, 0);
+
 			CMR_LOGI("cap yuv addr 0x%x.",(uint32_t)frame_type->buf_Virt_Addr);
 		}
 	}
