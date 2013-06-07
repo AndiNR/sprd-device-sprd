@@ -435,6 +435,7 @@ public class DebugParam extends PreferenceActivity {
             return ERROR;
         }
         int size = mEf.engwrite(mSocketID,outputBuffer.toByteArray(),outputBuffer.toByteArray().length);
+	if(DEBUG) Log.d(TAG, "engwrite size: " + size);
         int dataSize = 128;
         byte[] inputBytes = new byte[dataSize];
 

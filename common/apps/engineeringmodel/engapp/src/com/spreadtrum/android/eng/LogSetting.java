@@ -184,7 +184,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
         switch (logType) {
 
             case LOG_APP:
-                String property = new String();
+                String property;
                 //property = System.getProperty(PROPERTY_LOGCAT);
                 property = SystemProperties.get(PROPERTY_LOGCAT, "CCC");
                 if (property != "CCC") {
