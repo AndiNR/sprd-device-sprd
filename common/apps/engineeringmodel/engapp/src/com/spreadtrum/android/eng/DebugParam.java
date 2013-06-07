@@ -408,7 +408,7 @@ public class DebugParam extends PreferenceActivity {
         byte[] inputBytes = new byte[dataSize];
 
         int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
-        String mATResponse =  new String(inputBytes, 0, showlen);
+        String mATResponse =  new String(inputBytes, 0, showlen,Charset.defaultCharset());
         if(DEBUG) Log.d(TAG, "getSelectedBand result : " + mATResponse);
         int value = ERROR;
         try{
@@ -440,7 +440,7 @@ public class DebugParam extends PreferenceActivity {
         byte[] inputBytes = new byte[dataSize];
 
         int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
-        String mATResponse =  new String(inputBytes, 0, showlen);
+        String mATResponse =  new String(inputBytes, 0, showlen,Charset.defaultCharset());
         if(DEBUG) Log.d(TAG, "getAssertMode result : " + mATResponse);
         if(mATResponse.indexOf("+SDRMOD: 1") != ERROR) {
             return ASSERT_RELEASE_MODE;
@@ -474,7 +474,7 @@ public class DebugParam extends PreferenceActivity {
         byte[] inputBytes = new byte[dataSize];
 
         int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
-        String mATResponse =  new String(inputBytes, 0, showlen);
+        String mATResponse =  new String(inputBytes, 0, showlen,Charset.defaultCharset());
         if(DEBUG) Log.d(TAG, "setAssertMode result is " + mATResponse);
         if(mATResponse.contains("OK")) {
             return true;

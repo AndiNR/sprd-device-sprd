@@ -3,6 +3,7 @@ package com.spreadtrum.android.eng;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -69,7 +70,7 @@ public class Layer1Monitor extends Activity {
 		int dataSize = 2048;
 		byte[] inputBytes = new byte[dataSize];
 		int showlen = mEf.engread(mSocketID, inputBytes, dataSize);
-		final String mATResponse = new String(inputBytes, 0, showlen);
+		final String mATResponse = new String(inputBytes, 0, showlen,Charset.defaultCharset());
 		return mATResponse;
 	}
 	

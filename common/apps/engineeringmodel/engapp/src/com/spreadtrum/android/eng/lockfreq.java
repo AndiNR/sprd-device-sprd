@@ -3,6 +3,7 @@ package com.spreadtrum.android.eng;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -118,7 +119,7 @@ public class lockfreq extends Activity {
 				    int dataSize = 128;
 				    byte[] inputBytes = new byte[dataSize];
 				    int showlen= mEf.engread(sockid,inputBytes,dataSize);
-				    String str =new String(inputBytes,0,showlen); 
+				    String str =new String(inputBytes,0,showlen,Charset.defaultCharset());
 					if(str.equals("OK")){
 						Toast.makeText(getApplicationContext(), "Lock Success.",Toast.LENGTH_SHORT).show(); 
 

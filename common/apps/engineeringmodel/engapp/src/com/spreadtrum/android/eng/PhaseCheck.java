@@ -9,6 +9,7 @@ import android.os.Message;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import android.util.Log;
 
 
@@ -35,7 +36,7 @@ public class PhaseCheck extends Activity
         byte[] inputBytes = new byte[dataSize];
 
         int showlen= mEf.enggetphasecheck(inputBytes, dataSize);
-        mText =  new String(inputBytes, 0, showlen);
+        mText =  new String(inputBytes, 0, showlen,Charset.defaultCharset());
         String str = getIntent().getStringExtra("textFilter");
         if(str != null && str.equals("filter"))
         {//filter sn1/sn2

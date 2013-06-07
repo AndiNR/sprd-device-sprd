@@ -3,6 +3,7 @@ package com.spreadtrum.android.eng;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
@@ -222,7 +223,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
                     byte[] inputBytes = new byte[dataSize];
 
                     int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
-                    mATResponse =  new String(inputBytes, 0, showlen);
+                    mATResponse =  new String(inputBytes, 0, showlen,Charset.defaultCharset());
 					try {
 						state = Integer.parseInt(mATResponse);
 					} catch (Exception e) {
@@ -266,7 +267,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
                 byte[] inputBytes = new byte[dataSize];
 
                 int showlen = mEf.engread(mSocketID, inputBytes, dataSize);
-                mATResponse = new String(inputBytes, 0, showlen);
+                mATResponse = new String(inputBytes, 0, showlen,Charset.defaultCharset());
                 /*Add 20130307 Spreadst of 134187 number format error start */
                 try {
                     state = Integer.parseInt(mATResponse);
@@ -365,7 +366,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
                 byte[] inputBytes = new byte[dataSize];
 
                 int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
-                mATResponse =  new String(inputBytes, 0, showlen);
+                mATResponse =  new String(inputBytes, 0, showlen,Charset.defaultCharset());
                 if(DEBUG) Log.d(LOG_TAG, "AT response:" + mATResponse);
                 if (mATResponse.equals("OK"))
                     Toast.makeText(getApplicationContext(), "Success!",  Toast.LENGTH_SHORT).show();
@@ -398,7 +399,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
                 byte[] inputBytes = new byte[dataSize];
 
                 int showlen= mEf.engread(mSocketID, inputBytes, dataSize);
-                mATResponse =  new String(inputBytes, 0, showlen);
+                mATResponse =  new String(inputBytes, 0, showlen,Charset.defaultCharset());
                 if(DEBUG) Log.d(LOG_TAG, "AT response:" + mATResponse);
 
                 if (mATResponse.equals("OK")){
@@ -452,7 +453,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
                 int dataSize = 128;
                 byte[] inputBytes = new byte[dataSize];
                 int showlen = mEf.engread(mSocketID, inputBytes, dataSize);
-                mATResponse = new String(inputBytes, 0, showlen);
+                mATResponse = new String(inputBytes, 0, showlen,Charset.defaultCharset());
                 if(DEBUG) Log.d(LOG_TAG, "AT response:" + mATResponse);
                 if (mATResponse.contains("OK")) {
                     Toast.makeText(getApplicationContext(), "Success!",
@@ -492,7 +493,7 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
                 int dataSize = 128;
                 byte[] inputBytes = new byte[dataSize];
                 int showlen = mEf.engread(mSocketID, inputBytes, dataSize);
-                mATResponse = new String(inputBytes, 0, showlen);
+                mATResponse = new String(inputBytes, 0, showlen,Charset.defaultCharset());
                 if(DEBUG) Log.d(LOG_TAG, "AT response:" + mATResponse);
                 if (mATResponse.contains("OK")) {
                     Toast.makeText(getApplicationContext(), "Success!",

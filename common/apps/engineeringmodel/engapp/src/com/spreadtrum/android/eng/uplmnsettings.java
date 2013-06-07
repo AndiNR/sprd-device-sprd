@@ -5,6 +5,7 @@ package com.spreadtrum.android.eng;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -353,7 +354,7 @@ public class uplmnsettings extends Activity {
 			int dataSize = 512;//for length
 			byte[] inputBytes = new byte[dataSize];
 			int showlen= mEf.engread(sockid,inputBytes,dataSize);
-			String setResult =new String(inputBytes,0,showlen);
+			String setResult =new String(inputBytes,0,showlen,Charset.defaultCharset());
 			if(showlen <= 3)
 			{
 				DisplayToast(getString(R.string.no_sim_card_prompt));
@@ -411,7 +412,7 @@ public class uplmnsettings extends Activity {
 				byte[] inputBytes01 = new byte[dataSize01];
 				int showlen01= mEf.engread(sockid,inputBytes01,dataSize01);
 
-				String setResult =new String(inputBytes01,0,showlen01);
+				String setResult =new String(inputBytes01,0,showlen01,Charset.defaultCharset());
 				if(setResult.equals("144")){
 					finish();
 				}else{
