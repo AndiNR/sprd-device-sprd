@@ -1309,7 +1309,12 @@ SENSOR_INFO_T g_ov5640_yuv_info = {
 	0,
 	0,
 	0,
+#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
+	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
+	PNULL
+#else
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1}
+#endif
 };
 
 LOCAL uint32_t _ov5640_GetExifInfo(uint32_t param)

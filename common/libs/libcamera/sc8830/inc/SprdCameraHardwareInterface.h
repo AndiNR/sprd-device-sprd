@@ -301,7 +301,8 @@ private:
 	volatile camera_state           mCameraState;
 	int                             miSPreviewFirstFrame;
 	takepicture_mode                mCaptureMode;
-	bool                             mCaptureRawMode;
+	bool                            mCaptureRawMode;
+	uint32_t                        mTimeCoeff;
 };
 
 }; // namespace android

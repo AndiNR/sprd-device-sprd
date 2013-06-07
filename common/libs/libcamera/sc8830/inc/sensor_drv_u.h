@@ -174,6 +174,8 @@ extern	 "C"
 
 #define FOCUS_ZONE_CNT_MAX   6
 
+#define SENSOR_VIDEO_MODE_MAX   4
+
 /*  isp param for raw */
 
 /*  isp param for raw  end */
@@ -621,6 +623,11 @@ typedef struct sensor_register_tag {
 	uint8_t is_register[SENSOR_ID_MAX];
 } SENSOR_REGISTER_INFO_T, *SENSOR_REGISTER_INFO_T_PTR;
 
+typedef struct sensor_video_info_tag {
+	SENSOR_AE_INFO_T ae_info[SENSOR_VIDEO_MODE_MAX];
+	SENSOR_REG_T     **setting_ptr;
+}SENSOR_VIDEO_INFO_T, *SENSOR_VIDEO_INFO_T_PTR;
+
 typedef struct sensor_exp_info_tag {
 	SENSOR_IMAGE_FORMAT image_format;
 	uint32_t image_pattern;
@@ -651,6 +658,7 @@ typedef struct sensor_exp_info_tag {
 	uint16_t threshold_end;
 	SENSOR_INF_T sensor_interface;
 	const char *name;
+	SENSOR_VIDEO_INFO_T sensor_video_info[SENSOR_MODE_MAX];
 } SENSOR_EXP_INFO_T, *SENSOR_EXP_INFO_T_PTR;
 
 typedef struct sensor_info_tag {
@@ -689,6 +697,7 @@ typedef struct sensor_info_tag {
 	uint16_t threshold_end;
 	int32_t i2c_dev_handler;
 	SENSOR_INF_T sensor_interface;
+	SENSOR_VIDEO_INFO_T_PTR video_tab_info_ptr;
 } SENSOR_INFO_T;
 
 typedef enum {

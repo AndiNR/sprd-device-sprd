@@ -727,6 +727,7 @@ LOCAL void Sensor_SetExportInfo(SENSOR_EXP_INFO_T * exp_info_ptr)
 	SENSOR_REG_TAB_INFO_T *resolution_info_ptr = PNULL;
 	SENSOR_TRIM_T_PTR resolution_trim_ptr = PNULL;
 	SENSOR_INFO_T *sensor_info_ptr = s_sensor_info_ptr;
+	SENSOR_VIDEO_INFO_T   *video_info_ptr = PNULL;
 	uint32_t i = 0;
 
 	SENSOR_PRINT("SENSOR: Sensor_SetExportInfo.\n");
@@ -815,16 +816,21 @@ LOCAL void Sensor_SetExportInfo(SENSOR_EXP_INFO_T * exp_info_ptr)
 				exp_info_ptr->sensor_mode_info[i].image_format =
 				    resolution_info_ptr->image_format;
 			}
-/*
-			SENSOR_PRINT
-			    ("SENSOR: SENSOR mode Info > mode = %d, width = %d, height = %d, format = %d.\n",
-			     i, resolution_info_ptr->width,
-			     resolution_info_ptr->height,
-			     exp_info_ptr->sensor_mode_info[i].image_format);
-*/
 		} else {
 			exp_info_ptr->sensor_mode_info[i].mode =
 			    SENSOR_MODE_MAX;
+		}
+		video_info_ptr = &sensor_info_ptr->video_tab_info_ptr[i];
+		if (PNULL != video_info_ptr) {
+			memcpy((void*)&exp_info_ptr->sensor_video_info[i], (void*)video_info_ptr,sizeof(SENSOR_VIDEO_INFO_T));
+/*			SENSOR_PRINT("mode1:%d,%d,%d,%d.",exp_info_ptr->sensor_video_info[i].ae_info[0].min_frate,exp_info_ptr->sensor_video_info[i].ae_info[0].max_frate,
+				exp_info_ptr->sensor_video_info[i].ae_info[0].gain,exp_info_ptr->sensor_video_info[i].ae_info[0].line_time);
+			SENSOR_PRINT("mode2:%d,%d,%d,%d.",exp_info_ptr->sensor_video_info[i].ae_info[1].min_frate,exp_info_ptr->sensor_video_info[i].ae_info[1].max_frate,
+				exp_info_ptr->sensor_video_info[i].ae_info[1].gain,exp_info_ptr->sensor_video_info[i].ae_info[1].line_time);
+			SENSOR_PRINT("mode3:%d,%d,%d,%d.",exp_info_ptr->sensor_video_info[i].ae_info[2].min_frate,exp_info_ptr->sensor_video_info[i].ae_info[2].max_frate,
+				exp_info_ptr->sensor_video_info[i].ae_info[2].gain,exp_info_ptr->sensor_video_info[i].ae_info[2].line_time);
+			SENSOR_PRINT("mode4:%d,%d,%d,%d.",exp_info_ptr->sensor_video_info[i].ae_info[3].min_frate,exp_info_ptr->sensor_video_info[i].ae_info[3].max_frate,
+				exp_info_ptr->sensor_video_info[i].ae_info[3].gain,exp_info_ptr->sensor_video_info[i].ae_info[3].line_time);*/
 		}
 	}
 	exp_info_ptr->sensor_interface = sensor_info_ptr->sensor_interface;

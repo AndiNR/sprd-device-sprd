@@ -190,7 +190,8 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mZoomLevel(0),
 	mCameraId(cameraId),
     miSPreviewFirstFrame(1),
-    mCaptureMode(CAMERA_ZSL_MODE)
+    mCaptureMode(CAMERA_ZSL_MODE),
+    mTimeCoeff(1)
 {
 	LOGV("openCameraHardware: E cameraId: %d.", cameraId);
 
@@ -842,11 +843,12 @@ bool SprdCameraHardware::setCameraDimensions()
 
 void SprdCameraHardware::setCameraPreviewMode()
 {
-	if (isRecordingMode()) {
+/*	if (isRecordingMode()) {
 		SET_PARM(CAMERA_PARM_PREVIEW_MODE, CAMERA_PREVIEW_MODE_MOVIE);
 	} else {
 		SET_PARM(CAMERA_PARM_PREVIEW_MODE, CAMERA_PREVIEW_MODE_SNAPSHOT);
-	}	
+	}*/
+	SET_PARM(CAMERA_PARM_PREVIEW_MODE, mParameters.getPreviewFameRate());
 }
 
 bool SprdCameraHardware::isRecordingMode()
@@ -1804,7 +1806,9 @@ status_t SprdCameraHardware::setCameraParameters()
 #endif		
 	}
 
-    SET_PARM(CAMERA_PARAM_SLOWMOTION, mParameters.getSlowmotion());
+/*  SET_PARM(CAMERA_PARAM_SLOWMOTION, mParameters.getSlowmotion());*/
+	mTimeCoeff = mParameters.getSlowmotion();
+	LOGI("mTimeCoeff:%d",mTimeCoeff);
 	SET_PARM(CAMERA_PARM_WB, mParameters.getWhiteBalance());
 	SET_PARM(CAMERA_PARM_CAMERA_ID, mParameters.getCameraId());
 	SET_PARM(CAMERA_PARM_JPEGCOMP, mParameters.getJpegQuality());
@@ -2065,6 +2069,10 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 		if ((mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) && isRecordingMode()) {
 			nsecs_t timestamp = systemTime();/*frame->timestamp;*/
 			LOGV("test timestamp = %lld, mIsStoreMetaData: %d.",timestamp, mIsStoreMetaData);
+			if (mTimeCoeff > 1) {
+				timestamp *= mTimeCoeff;
+			}
+			/*LOGV("test slowmotion:%lld.",timestamp);*/
 			if(mIsStoreMetaData) {
 				uint32_t *data = (uint32_t *)mMetadataHeap->data + offset * METADATA_SIZE / 4;
 				*data++ = kMetadataBufferTypeCameraSource;

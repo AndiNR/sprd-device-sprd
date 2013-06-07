@@ -414,7 +414,12 @@ SENSOR_INFO_T g_s5k4e1ga_mipi_raw_info = {
 	0,
 	0,
 	0,
+#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
+	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0},
+	PNULL
+#else
 	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0}
+#endif
 };
 
 LOCAL struct sensor_raw_info* Sensor_GetContext(void)
