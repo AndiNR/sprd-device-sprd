@@ -20,7 +20,6 @@ public class SetIMEI extends Activity  implements OnClickListener {
     private EditText     mIMEIEdit;
     private Button 		 mButtonR;
     private Button       mButtonW;
-    private int  mInt01;
 
     private int          mSocketID = 0;
     private engfetch     mEf;
