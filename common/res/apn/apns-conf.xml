@@ -20584,7 +20584,7 @@
         mmsc="http://mmsc.mms.02.co.uk:8002"
         user="T-Mobile"
         password="tm"
-        type="default,supl,mms"
+        type="default,supl"
         authtype="3"
     />
     <apn carrier="Picture Message"
