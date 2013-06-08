@@ -71,6 +71,10 @@ public:
 	int getFlashMode();
 	int getSlowmotion();
 	int getPreviewFameRate();
+	int getAutoExposureMode();
+	void getMeteringAreas(int *area, int *count, Size *preview_size,
+					 Rect *preview_rect, int orientation, bool mirror);
+
 
 	// These sizes have to be a multiple of 16 in each dimension
 	static const Size kPreviewSizes[];
@@ -78,6 +82,7 @@ public:
 	static const int kDefaultPreviewSize;
 
 	static const unsigned int kFocusZoneMax = 5;
+	static const unsigned int kMeteringAreasMax = 5;
 	static const int kInvalidValue = 0xffffffff;
 	static const int kFrontCameraConfigCount;
 	static const int kBackCameraConfigCount;
@@ -102,6 +107,8 @@ public:
 	static const char KEY_SATURATION[];
 	static const char KEY_SHARPNESS[];
 	static const char KEY_PREVIEWFRAMERATE[];
+	static const char KEY_AUTO_EXPOSURE[];
+	static const char KEY_METERING_AREAS[];
 
 private:
 

@@ -83,6 +83,8 @@ const char SprdCameraParameters::KEY_SLOWMOTION[] = "slow-motion";
 const char SprdCameraParameters::KEY_SATURATION[] = "saturation";
 const char SprdCameraParameters::KEY_SHARPNESS[] = "sharpness";
 const char SprdCameraParameters::KEY_PREVIEWFRAMERATE[] = "preview-frame-rate";
+const char SprdCameraParameters::KEY_AUTO_EXPOSURE[] = "auto-exposure";
+const char SprdCameraParameters::KEY_METERING_AREAS[] = "metering-areas";
 
 ////////////////////////////////////////////////////////////////////////////////////
 SprdCameraParameters::SprdCameraParameters():CameraParameters()
@@ -172,6 +174,42 @@ void SprdCameraParameters::getFocusAreas(int *area, int *count, Size *preview_si
 				if(focus_area[i+1] < 0) {
 					area_count = 0;
 					LOGV("error: focus area %d < 0, ignore focus \n", focus_area[i+1]);
+				}
+			}
+		}
+	}
+
+	*count = area_count;
+}
+
+//return rectangle: (x1, y1, x2, y2), the values are on the sensor's coordinate
+void SprdCameraParameters::getMeteringAreas(int *area, int *count, Size *preview_size,
+										 Rect *preview_rect,
+											int orientation, bool mirror)
+{
+	const char *p = get(KEY_METERING_AREAS);
+	int metering_area[4 * kMeteringAreasMax] = {0};
+	int area_count = 0;
+
+	LOGV("getMeteringAreas: %s", p);
+
+	parse_rect(&metering_area[0], &area_count, p, true);
+
+	if(area_count > 0) {
+		int ret = coordinate_convert(&metering_area[0], area_count, orientation, mirror,
+								preview_size, preview_rect);
+
+		if(ret) {
+			area_count = 0;
+			LOGV("error: coordinate_convert error, ignore focus \n");
+		} else {
+			coordinate_struct_convert(&metering_area[0], area_count * 4);
+
+			for (int i=0; i<area_count * 4; i++) {
+				area[i] = metering_area[i];
+				if(metering_area[i+1] < 0) {
+					area_count = 0;
+					LOGV("error: focus area %d < 0, ignore focus \n", metering_area[i+1]);
 				}
 			}
 		}
@@ -308,6 +346,14 @@ int SprdCameraParameters::getSlowmotion()
 
 	return lookup(slowmotion_map, p, CAMERA_SLOWMOTION_0);
 }
+
+int SprdCameraParameters::getAutoExposureMode()
+{
+	const char *p = get(KEY_AUTO_EXPOSURE);
+
+	return lookup(auto_exposure_mode_map, p, CAMERA_AE_FRAME_AVG);
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 //

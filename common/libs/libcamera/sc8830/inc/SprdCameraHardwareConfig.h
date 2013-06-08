@@ -183,6 +183,13 @@ enum {
 	CAMERA_SLOWMOTION_MAX
 };
 
+enum {
+	CAMERA_AE_FRAME_AVG = 0,
+	CAMERA_AE_CENTER_WEIGHTED,
+	CAMERA_AE_SPOT_METERING,
+	CAMERA_AE_MODE_MAX
+};
+
 struct str_map {
 	const char *const desc;
 	int val;
@@ -361,6 +368,14 @@ const struct str_map slowmotion_map[] = {
 	{"3",               CAMERA_SLOWMOTION_3},
 	{NULL,              0}
 };
+
+const struct str_map auto_exposure_mode_map[] = {
+	{"frame-average",   CAMERA_AE_FRAME_AVG},
+	{"center-weighted", CAMERA_AE_CENTER_WEIGHTED},
+	{"spot-metering",   CAMERA_AE_SPOT_METERING},
+	{NULL,              0}
+};
+
 
 struct config_element{
 	const char *const key;
@@ -546,7 +561,8 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"slow-motion-supported","true"},
 	{"max-slow-motion","3"},
 	{"slow-motion-values", "1,2,3"},
-	{"slow-motion", "1"}
+	{"slow-motion", "1"},
+	{"max-num-metering-areas", "1"}
 };
 
 #endif //_SPRD_CAMERA_HARDWARE_CONFIG_H_
