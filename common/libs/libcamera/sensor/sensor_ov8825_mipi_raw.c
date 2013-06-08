@@ -801,8 +801,8 @@ LOCAL const SENSOR_REG_T  s_ov8825_3264x2448_video_tab[SENSOR_VIDEO_MODE_MAX][1]
 
 LOCAL SENSOR_VIDEO_INFO_T s_ov8825_video_info[] = {
 	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
-	{{{30, 30, 264, 64}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},(SENSOR_REG_T**)&s_ov8825_1632x1224_video_tab},
-	{{{15, 15, 249, 64}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},(SENSOR_REG_T**)&s_ov8825_3264x2448_video_tab},
+	{{{30, 30, 264, 64}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},(SENSOR_REG_T**)s_ov8825_1632x1224_video_tab},
+	{{{15, 15, 249, 64}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},(SENSOR_REG_T**)s_ov8825_3264x2448_video_tab},
 	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
 	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
 	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
@@ -817,7 +817,7 @@ LOCAL uint32_t _ov8825_set_video_mode(uint32_t param)
 	uint16_t         i = 0x00;
 	uint32_t         mode;
 
-	if (param > SENSOR_VIDEO_MODE_MAX)
+	if (param >= SENSOR_VIDEO_MODE_MAX)
 		return 0;
 
 	if (SENSOR_SUCCESS != Sensor_GetMode(&mode)) {
@@ -825,11 +825,17 @@ LOCAL uint32_t _ov8825_set_video_mode(uint32_t param)
 		return SENSOR_FAIL;
 	}
 
-	sensor_reg_ptr = (SENSOR_REG_T_PTR)s_ov8825_video_info[mode].setting_ptr[param];
+	if (PNULL == s_ov8825_video_info[mode].setting_ptr) {
+		SENSOR_PRINT("fail.");
+		return SENSOR_FAIL;
+	}
+
+	sensor_reg_ptr = (SENSOR_REG_T_PTR)&s_ov8825_video_info[mode].setting_ptr[param];
 	if (PNULL == sensor_reg_ptr) {
 		SENSOR_PRINT("fail.");
 		return SENSOR_FAIL;
 	}
+
 	for (i=0x00; (0xffff!=sensor_reg_ptr[i].reg_addr)||(0xff!=sensor_reg_ptr[i].reg_value); i++) {
 		Sensor_WriteReg(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
 	}

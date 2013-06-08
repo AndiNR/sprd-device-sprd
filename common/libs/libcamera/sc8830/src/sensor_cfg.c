@@ -57,6 +57,7 @@ extern SENSOR_INFO_T g_ov8830_mipi_raw_info;
 const SENSOR_INFO_T* main_sensor_infor_tab[]=
 {
 #ifdef CONFIG_BACK_CAMERA_MIPI
+	&g_ov8825_mipi_raw_info,
 	&g_ov8830_mipi_raw_info,
 	&g_ov5640_mipi_yuv_info,
 	//&g_ov5640_mipi_raw_info, // aiden tmp 
@@ -66,7 +67,6 @@ const SENSOR_INFO_T* main_sensor_infor_tab[]=
 	//&g_ov5640_mipi_raw_info,
 	&g_ov5647_mipi_raw_info,
 	&g_ov5648_mipi_raw_info,
-	&g_ov8825_mipi_raw_info,
 #endif
 #ifdef CONFIG_BACK_CAMERA_CCIR
 	&g_ov5640_yuv_info,

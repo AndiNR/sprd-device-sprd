@@ -452,14 +452,9 @@ int camera_set_video_mode(uint32_t mode, uint32_t *skip_mode, uint32_t *skip_num
 	int                      ret = CAMERA_SUCCESS;
 
 	CMR_LOGI("preview mode %d", mode);
-	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
-		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = 0;
-	} else {
-		*skip_mode = IMG_SKIP_HW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
-		ret = Sensor_Ioctl(SENSOR_IOCTL_VIDEO_MODE, mode);
-	}
+	*skip_mode = IMG_SKIP_HW;
+	*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+	ret = Sensor_Ioctl(SENSOR_IOCTL_VIDEO_MODE, mode);
 
 	return ret;
 }

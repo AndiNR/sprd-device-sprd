@@ -191,7 +191,8 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mCameraId(cameraId),
     miSPreviewFirstFrame(1),
     mCaptureMode(CAMERA_ZSL_MODE),
-    mTimeCoeff(1)
+    mTimeCoeff(1),
+    mCaptureRawMode(0)
 {
 	LOGV("openCameraHardware: E cameraId: %d.", cameraId);
 
