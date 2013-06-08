@@ -1001,8 +1001,9 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 	char *ptr = NULL;
 	AUDIO_TOTAL_T *audio_ptr;
 	int audio_fd = -1;
-	
-	sprintf(rsp,"\r\nERROR\r\n");
+	if(rsp != NULL){
+		sprintf(rsp,"\r\nERROR\r\n");
+	}
 
 	if (( NULL == buf )||( NULL == rsp)) {
 		goto out;
