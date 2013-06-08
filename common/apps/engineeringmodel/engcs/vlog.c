@@ -104,7 +104,9 @@ void *eng_vlog_thread(void *x)
 	}else{
 		is_sdcard_exist = 1;
 	}
-	close(sdcard_fd);
+	if(sdcard_fd >= 0){
+		close(sdcard_fd);
+	}
 
 	ENG_LOG("eng_vlog put log data from pipe to serial\n");
 	while(1) {
