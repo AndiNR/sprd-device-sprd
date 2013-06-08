@@ -29,6 +29,32 @@ extern "C"
 #define INVALID_SET_WORD                              0xFFFFFFFF
 #define SCENE_MODE_NIGHT                              1
 
+enum cmr_focus_mode {
+	CAMERA_FOCUS_MODE_AUTO = 0,
+	CAMERA_FOCUS_MODE_AUTO_MULTI = 1,
+	CAMERA_FOCUS_MODE_MACRO = 2,
+	CAMERA_FOCUS_MODE_MAX
+};
+
+enum cmr_flash_mode {
+	CAMERA_FLASH_MODE_OFF = 0,
+	CAMERA_FLASH_MODE_ON = 1,
+	CAMERA_FLASH_MODE_TORCH = 2,
+	CAMERA_FLASH_MODE_AUTO = 3,
+	CAMERA_FLASH_MODE_MAX
+};
+
+enum cmr_flash_status {
+	FLASH_CLOSE = 0x0,
+	FLASH_OPEN = 0x1,
+	FLASH_TORCH = 0x2,	/*user only set flash to close/open/torch state */
+	FLASH_AUTO = 0x3,
+	FLASH_CLOSE_AFTER_OPEN = 0x10,	/* following is set to sensor */
+	FLASH_HIGH_LIGHT = 0x11,
+	FLASH_OPEN_ON_RECORDING = 0x22,
+	FLASH_STATUS_MAX
+};
+
 int camera_setting_init(void);
 int camera_setting_deinit(void);
 int camera_skip_frame_cb(uint32_t rtn,void *param_ptr);
@@ -48,8 +74,7 @@ int camera_set_ctrl(camera_parm_type id,
 int camera_isp_ctrl_done(uint32_t cmd, void* data);
 int camera_isp_af_done(void *data);
 int camera_set_hdr_ev(int ev_level);
-
-
+int camera_set_flashdevice(uint32_t param);
 
 #ifdef __cplusplus
 }

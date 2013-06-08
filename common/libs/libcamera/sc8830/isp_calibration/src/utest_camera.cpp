@@ -28,6 +28,7 @@
 #include <binder/MemoryHeapIon.h>
 #include <camera/Camera.h>
 #include <semaphore.h>
+#include "cmr_oem.h"
 #include "SprdOEMCamera.h"
 #include "isp_cali_interface.h"
 #include "sensor_drv_u.h"
@@ -38,6 +39,9 @@ using namespace android;
 #define INFO(x...) fprintf(stdout, ##x)
 
 #define UTEST_PARAM_NUM 11
+#define UTEST_PREVIEW_BUF_NUM 12
+#define UTEST_PREVIEW_WIDTH 640
+#define UTEST_PREVIEW_HEIGHT 480
 
 enum utest_sensor_id {
 	UTEST_SENSOR_MAIN = 0,
@@ -64,10 +68,16 @@ struct utest_cmr_context {
 	uint32_t cap_pmemory_size;
 	int cap_physical_addr ;
 	unsigned char* cap_virtual_addr;
+
 	sp<MemoryHeapIon> misc_pmem_hp;
 	uint32_t misc_pmemory_size;
 	int misc_physical_addr;
 	unsigned char* misc_virtual_addr;
+
+	sp<MemoryHeapIon> preview_pmem_hp[UTEST_PREVIEW_BUF_NUM];
+	uint32_t preview_pmemory_size[UTEST_PREVIEW_BUF_NUM];
+	int preview_physical_addr[UTEST_PREVIEW_BUF_NUM];
+	unsigned char* preview_virtual_addr[UTEST_PREVIEW_BUF_NUM];
 
 	sem_t sem_cap_done;
 };
@@ -144,7 +154,53 @@ static int utest_dcam_param_set(int argc, char **argv)
 	return 0;
 }
 
-static void utest_dcam_memory_release(void)
+static void utest_dcam_preview_mem_release(void)
+{
+	uint32_t i =0;
+	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
+
+	for (i = 0; i < UTEST_PREVIEW_BUF_NUM; i++) {
+		if (cmr_cxt_ptr->preview_physical_addr[i])
+			cmr_cxt_ptr->preview_pmem_hp[i].clear();
+	}
+}
+
+static int utest_dcam_preview_mem_alloc(void)
+{
+	uint32_t i =0;
+	uint32_t buf_size =0;
+
+	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
+
+	buf_size = (UTEST_PREVIEW_WIDTH * UTEST_PREVIEW_HEIGHT * 3) >> 1;
+	buf_size = camera_get_size_align_page(buf_size);
+
+	for (i = 0; i < UTEST_PREVIEW_BUF_NUM; i++) {
+		cmr_cxt_ptr->preview_pmem_hp[i] = new MemoryHeapIon("/dev/ion", buf_size,
+			MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+		if (cmr_cxt_ptr->preview_pmem_hp[i]->getHeapID() < 0) {
+			ERR("failed to alloc preview pmem buffer.\n");
+			return -1;
+		}
+		cmr_cxt_ptr->preview_pmem_hp[i]->get_phy_addr_from_ion((int *)(&cmr_cxt_ptr->preview_physical_addr[i]),
+			(int *)(&cmr_cxt_ptr->preview_pmemory_size[i]));
+		cmr_cxt_ptr->preview_virtual_addr[i] = (unsigned char*)cmr_cxt_ptr->preview_pmem_hp[i]->base();
+		if (!cmr_cxt_ptr->preview_physical_addr[i]) {
+			ERR("failed to alloc preview pmem buffer:addr is null.\n");
+			return -1;
+		}
+	}
+
+	if (camera_set_preview_mem((uint32_t)cmr_cxt_ptr->preview_physical_addr,
+								(uint32_t)cmr_cxt_ptr->preview_virtual_addr,
+								buf_size,
+								UTEST_PREVIEW_BUF_NUM))
+		return -1;
+
+	return 0;
+}
+
+static void utest_dcam_cap_memory_release(void)
 {
 	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
 
@@ -155,7 +211,7 @@ static void utest_dcam_memory_release(void)
 		cmr_cxt_ptr->misc_pmem_hp.clear();
 }
 
-static int utest_dcam_memory_alloc(void)
+static int utest_dcam_cap_memory_alloc(void)
 {
 	uint32_t local_width, local_height;
 	uint32_t mem_size0, mem_size1;
@@ -197,7 +253,7 @@ static int utest_dcam_memory_alloc(void)
 		cmr_cxt_ptr->misc_virtual_addr = (unsigned char*)cmr_cxt_ptr->misc_pmem_hp->base();
 		if (!cmr_cxt_ptr->misc_physical_addr) {
 			ERR("failed to alloc misc  pmem buffer:addr is null.\n");
-			utest_dcam_memory_release();
+			utest_dcam_cap_memory_release();
 			return -1;
 		}
 	}
@@ -210,7 +266,7 @@ static int utest_dcam_memory_alloc(void)
 			(uint32_t)cmr_cxt_ptr->misc_physical_addr,
 			(uint32_t)cmr_cxt_ptr->misc_virtual_addr,
 			(uint32_t)cmr_cxt_ptr->misc_pmemory_size)) {
-				utest_dcam_memory_release();
+				utest_dcam_cap_memory_release();
 				return -1;
 		}
 	} else {
@@ -221,7 +277,7 @@ static int utest_dcam_memory_alloc(void)
 			0,
 			0,
 			0)) {
-				utest_dcam_memory_release();
+				utest_dcam_cap_memory_release();
 				return -1;
 		}
 	}
@@ -231,7 +287,8 @@ static int utest_dcam_memory_alloc(void)
 
 static void utest_dcam_close(void)
 {
-	utest_dcam_memory_release();
+	utest_dcam_preview_mem_release();
+	utest_dcam_cap_memory_release();
 	camera_stop(NULL, NULL);
 }
 
@@ -273,9 +330,9 @@ static int32_t utest_dcam_awb(void)
 		return -1;
 	}
 #else
-dst_addr.y_addr = img_addr.y_addr;
-dst_addr.uv_addr = img_addr.uv_addr;
-dst_addr.v_addr = img_addr.v_addr;
+	dst_addr.y_addr = img_addr.y_addr;
+	dst_addr.uv_addr = img_addr.uv_addr;
+	dst_addr.v_addr = img_addr.v_addr;
 #endif
 
 	if (ISP_Cali_RawRGBStat(&dst_addr, &rect, &img_size, &stat_param)) {
@@ -356,9 +413,9 @@ static int32_t utest_dcam_flashlight(void)
 		return -1;
 	}
 #else
-dst_addr.y_addr = img_addr.y_addr;
-dst_addr.uv_addr = img_addr.uv_addr;
-dst_addr.v_addr = img_addr.v_addr;
+	dst_addr.y_addr = img_addr.y_addr;
+	dst_addr.uv_addr = img_addr.uv_addr;
+	dst_addr.v_addr = img_addr.v_addr;
 #endif
 
 	if (ISP_Cali_RawRGBStat(&dst_addr, &rect, &img_size, &stat_param)) {
@@ -400,8 +457,6 @@ awb_exit:
 	}
 	return rtn;
 }
-
-
 
 static int32_t utest_dcam_lsc(void)
 {
@@ -500,6 +555,89 @@ lsc_exit:
 	return rtn;
 }
 
+static int32_t utest_dcam_preview_flash_eb(void)
+{
+	int32_t rtn = 0;
+	SENSOR_FLASH_LEVEL_T flash_level;
+	struct camera_context *cxt = camera_get_cxt();
+	struct isp_alg flash_param;
+
+	if (Sensor_GetFlashLevel(&flash_level))
+		return -1;
+
+	flash_param.mode=ISP_AE_BYPASS;
+	flash_param.flash_eb=0x01;
+	if (isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param))
+		return -1;
+
+	sem_wait(&cxt->cmr_set.isp_alg_sem);
+
+	if (camera_set_flashdevice((uint32_t)FLASH_OPEN))
+		return -1;
+
+	flash_param.mode=ISP_ALG_FAST;
+	flash_param.flash_eb=0x01;
+	flash_param.flash_ratio=flash_level.high_light*256/flash_level.low_light;
+	if (isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param))
+		return -1;
+
+	return 0;
+}
+
+static int32_t utest_dcam_preview_flash_dis(void)
+{
+	struct camera_context *cxt = camera_get_cxt();
+
+	sem_wait(&cxt->cmr_set.isp_alg_sem);
+
+	if (camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN))
+		return -1;
+
+	return 0;
+}
+
+static int32_t utest_dcam_capture_flash_eb(void)
+{
+	int ret = 0;
+
+	if (isp_ioctl(ISP_CTRL_FLASH_EG,0))
+		return -1;
+
+	if (camera_set_flashdevice((uint32_t)FLASH_HIGH_LIGHT))
+		return -1;
+
+	return 0;
+}
+
+static int32_t utest_dcam_capture_flash_dis(void)
+{
+	if (camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN))
+		return -1;
+
+	return 0;
+}
+
+static void utest_dcam_preview_cb(camera_cb_type cb,
+			const void *client_data,
+			camera_func_type func,
+			int32_t parm4)
+{
+	if (CAMERA_FUNC_START_PREVIEW == func) {
+
+		switch(cb) {
+		case CAMERA_EVT_CB_FRAME:
+			{
+				camera_frame_type *frame = (camera_frame_type *)parm4;
+
+				camera_release_frame(frame->buf_id);
+			}
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 static void utest_dcam_cap_cb(camera_cb_type cb,
 			const void *client_data,
 			camera_func_type func,
@@ -529,10 +667,72 @@ static void utest_dcam_cap_cb(camera_cb_type cb,
 	}
 }
 
-int main(int argc, char **argv)
+static int32_t utest_dcam_preview(void)
+{
+	if (camerea_set_preview_format(1))
+		return -1;
+
+	if (utest_dcam_preview_mem_alloc())
+		return -1;
+
+	if (camera_start_preview(utest_dcam_preview_cb, NULL,CAMERA_NORMAL_MODE))
+		return -1;
+
+	usleep(1000000);
+
+	if (utest_dcam_preview_flash_eb())
+		return -1;
+
+	if (utest_dcam_preview_flash_dis())
+		return -1;
+
+	usleep(500000);
+
+	if (camera_stop_preview())
+		return -1;
+
+	return 0;
+}
+
+static int32_t utest_dcam_capture(void)
 {
 	int32_t rtn = 0;
 	struct timespec ts;
+	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
+
+	if (utest_dcam_cap_memory_alloc())
+		return -1;
+
+	if (utest_dcam_capture_flash_eb())
+		return -1;
+
+	if (CAMERA_SUCCESS != camera_take_picture_raw(utest_dcam_cap_cb,
+								NULL, CAMERA_RAW_MODE)) {
+		rtn = -1;
+		goto cap_exit;
+	}
+
+	if (clock_gettime(CLOCK_REALTIME, &ts)) {
+		rtn = -1;
+		goto cap_exit;
+	}
+
+	ts.tv_sec += 3;
+
+	if (sem_timedwait(&(cmr_cxt_ptr->sem_cap_done), &ts)) {
+		rtn = -1;
+		goto cap_exit;
+	}
+
+cap_exit:
+
+	utest_dcam_capture_flash_dis();
+	return rtn;
+}
+
+int main(int argc, char **argv)
+{
+	int32_t rtn = 0;
 	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
 
 	if (utest_dcam_param_set(argc, argv))
@@ -546,28 +746,17 @@ int main(int argc, char **argv)
 
 	camera_set_dimensions(cmr_cxt_ptr->capture_width,
 					cmr_cxt_ptr->capture_height,
-					cmr_cxt_ptr->capture_width,
-					cmr_cxt_ptr->capture_height,
+					UTEST_PREVIEW_WIDTH,/*cmr_cxt_ptr->capture_width,*/
+					UTEST_PREVIEW_HEIGHT,/*cmr_cxt_ptr->capture_height,*/
 					NULL,
 					NULL);
 
-	if (utest_dcam_memory_alloc()) {
+	if (utest_dcam_preview()) {
 		rtn = -1;
 		goto cali_exit;
 	}
 
-	if (CAMERA_SUCCESS != camera_take_picture_raw(utest_dcam_cap_cb,
-		NULL, CAMERA_RAW_MODE)) {
-		rtn = -1;
-		goto cali_exit;
-	}
-
-	if (clock_gettime(CLOCK_REALTIME, &ts)) {
-		rtn = -1;
-		goto cali_exit;
-	}
-	ts.tv_sec += 3;
-	if (sem_timedwait(&(cmr_cxt_ptr->sem_cap_done), &ts)) {
+	if (utest_dcam_capture()) {
 		rtn = -1;
 		goto cali_exit;
 	} else {
@@ -588,6 +777,7 @@ int main(int argc, char **argv)
 	}
 
 cali_exit:
+
 	utest_dcam_close();
 	return rtn;
 }

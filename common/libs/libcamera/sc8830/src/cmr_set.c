@@ -17,31 +17,6 @@
 #include "cmr_set.h"
 #include "sensor_drv_u.h"
 
-enum cmr_focus_mode {
-	CAMERA_FOCUS_MODE_AUTO = 0,
-	CAMERA_FOCUS_MODE_AUTO_MULTI = 1,
-	CAMERA_FOCUS_MODE_MACRO = 2,
-	CAMERA_FOCUS_MODE_MAX
-};
-
-enum cmr_flash_mode {
-	CAMERA_FLASH_MODE_OFF = 0,
-	CAMERA_FLASH_MODE_ON = 1,
-	CAMERA_FLASH_MODE_TORCH = 2,
-	CAMERA_FLASH_MODE_AUTO = 3,
-	CAMERA_FLASH_MODE_MAX
-};
-
-enum cmr_flash_status {
-	FLASH_CLOSE = 0x0,
-	FLASH_OPEN = 0x1,
-	FLASH_TORCH = 0x2,	/*user only set flash to close/open/torch state */
-	FLASH_AUTO = 0x3,
-	FLASH_CLOSE_AFTER_OPEN = 0x10,	/* following is set to sensor */
-	FLASH_HIGH_LIGHT = 0x11,
-	FLASH_OPEN_ON_RECORDING = 0x22,
-	FLASH_STATUS_MAX
-};
 #define DV_FLASH_ON_DV_WITH_PREVIEW 1
 
 static int camera_autofocus_need_exit(void);
@@ -59,7 +34,6 @@ static int camera_set_flicker(uint32_t flicker_mode, uint32_t *skip_mode, uint32
 static int camera_set_iso(uint32_t iso, uint32_t *skip_mode, uint32_t *skip_num);
 static int camera_set_flash(uint32_t flash_mode, uint32_t *skip_mode, uint32_t *skip_num);
 static int camera_set_video_mode(uint32_t mode, uint32_t *skip_mode, uint32_t *skip_num);
-static int camera_set_flashdevice(uint32_t param);
 static int camera_get_video_mode(uint32_t frame_rate, uint32_t *video_mode);
 
 
