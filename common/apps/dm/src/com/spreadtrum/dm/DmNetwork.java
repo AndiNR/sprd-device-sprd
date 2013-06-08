@@ -59,6 +59,7 @@ public class DmNetwork {
 
     public void end() {
         unregiste_netstate_receiver();
+	mConnMgr = null;
 	  isInit = false;
     }
 
@@ -80,7 +81,13 @@ public class DmNetwork {
     }
 
     private boolean isNetworkAvailable(String modem) {
-        // return mConnMgr.isAvailable(ConnectivityManager.TYPE_MOBILE, modem);
+        NetworkInfo networkInfo;
+
+        if(mConnMgr!=null){
+            networkInfo = mConnMgr.getActiveNetworkInfo();
+            if(null == networkInfo || !networkInfo.isConnected())
+                return false;
+        }
         return true;
     }
 
@@ -100,11 +107,19 @@ public class DmNetwork {
         //connectiontype = ConnectivityManager.TYPE_MOBILE_MMS;
 
         if (isNetworkAvailable(null)) {
-            mConnectStatus = mConnMgr.startUsingNetworkFeature(ConnectivityManager.TYPE_MOBILE,
-		PhoneFactory.getServiceName(Phone.FEATURE_ENABLE_DM, DmService.getInstance().getCurrentPhoneID()));
         } else {
-            mConnectStatus = Phone.APN_TYPE_NOT_AVAILABLE;
+           
+            synchronized(mConnectLock)
+            	{
+            	try{
+            	mConnectLock.wait(5 * 1000);
+		}catch (InterruptedException e) {
+                        Log.d(TAG, " Active networkinfo InterruptedException ");
+                    }
+            	}
         }
+       mConnectStatus = mConnMgr.startUsingNetworkFeature(ConnectivityManager.TYPE_MOBILE,
+		PhoneFactory.getServiceName(Phone.FEATURE_ENABLE_DM, DmService.getInstance().getCurrentPhoneID()));
 
         switch (mConnectStatus) {
             case Phone.APN_REQUEST_STARTED: {

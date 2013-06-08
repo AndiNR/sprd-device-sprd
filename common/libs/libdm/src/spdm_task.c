@@ -191,12 +191,17 @@ static void * dmtask(void *arg)
 	unsigned int msglen;
 	SPRD_DM_PARSE_RESULT lret;
 	char *xmlptr = NULL;
+	char *mempool = NULL;
 
        spdm_print("dmtask running... \n");
 
 	 mState = SPRD_DM_STATE_IDLE;
 	dm_task_running = TRUE;
-
+	xmlptr = malloc(XML_MAX_LEN);
+#if LOCAL_MEMPOOL
+#else
+        mempool = malloc(MAX_LOCAL_POOL_LEN);
+#endif		
 	while(!finished)
 	{
 	pthread_mutex_lock(&mMutex);
@@ -226,8 +231,11 @@ static void * dmtask(void *arg)
 					spdm_print("dmtask session id set:%x ! \n", sessionid);
 					//MMIDM_setSessionId(sessionid);
 					MMIDM_setSessionId(sessionid);
+#if LOCAL_MEMPOOL
+#else
+					MMIDM_setMemPool(mempool, MAX_LOCAL_POOL_LEN);
+#endif
 					//MMIDM_SendData(char *msg, int msglen);
-					xmlptr = malloc(XML_MAX_LEN);
 					memset(xmlptr, 0, XML_MAX_LEN);
 					msglen = XML_MAX_LEN;
 					lret = MMIDM_GenerateDmData(xmlptr, &msglen);
@@ -372,7 +380,6 @@ static void * dmtask(void *arg)
 			if ( lret == SPRD_DM_PARSE_RESULT_START)
 				{
 				spdm_print("spdmtask MMIDM_NotifyAlertResult ok begin send to java\n");
-					xmlptr = malloc(XML_MAX_LEN);
 					memset(xmlptr, 0, XML_MAX_LEN);
 					msglen = XML_MAX_LEN;
 					
@@ -443,7 +450,6 @@ static void * dmtask(void *arg)
 				{
 				spdm_print("spdmtask MMIDM_ParseReceiveData return start %d \n", lret);
 
-					xmlptr = malloc(XML_MAX_LEN);
 					memset(xmlptr, 0, XML_MAX_LEN);
 					msglen = XML_MAX_LEN;
 					
@@ -512,14 +518,19 @@ static void * dmtask(void *arg)
 		}
 
 	spdm_remove_queue();
+	pthread_mutex_unlock(&mMutex);
+	}
+
 	if (xmlptr != NULL)
 		{
 		free(xmlptr);
 		xmlptr= 0;
 		}
-	pthread_mutex_unlock(&mMutex);
-	}
-
+	if (mempool !=NULL)
+		{
+		free(mempool);
+		mempool=NULL;
+		}
 	if (gbl_notify_ptr != NULL)
 		{
 		if (gbl_notify_ptr->buf != NULL)

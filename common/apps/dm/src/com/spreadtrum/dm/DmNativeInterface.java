@@ -14,14 +14,14 @@ import android.util.Log;
 public class DmNativeInterface {
     private String TAG = DmReceiver.DM_TAG + "DmNativeInterface: ";
     public static final int STOP_DM_REASON_DEFAULT = 0;
-    private Context mContext;
+    private static Context mContext;
     private  DMTransaction mDmTransaction;
-    private MyTreeIoHandler mMyTreeIoHandler;
+    //private static MyTreeIoHandler mMyTreeIoHandler;
 
     public DmNativeInterface(Context context, Handler handler) {
         mContext = context;
         mDmTransaction = new DMTransaction(mContext, handler);
-	mMyTreeIoHandler = new	MyTreeIoHandler(mContext);
+	//mMyTreeIoHandler = new	MyTreeIoHandler(mContext);
     }
 
     static {
@@ -53,6 +53,7 @@ public class DmNativeInterface {
         String uri = null;
         if(_uri != null && _uri.length > 0)
             uri = new String(_uri);
+	DmNetwork.getInstance().init();		
 
         boolean connected = DmNetwork.getInstance().beginConnectivity(null) != -1;
         if(connected){
@@ -89,27 +90,27 @@ public class DmNativeInterface {
 
     public void spdm_writeNullCb(int handletype) {
         Log.i(TAG, "spdm_writeNullCb be referenced.");
-        mMyTreeIoHandler.writenull(handletype);
+        MyTreeIoHandler.getInstance(mContext).writenull(handletype);
     }
 
     public void spdm_writeCb(int handletype, byte[] data, int offset, int size) {
         Log.i(TAG, "spdm_writeCb be referenced.");
-        mMyTreeIoHandler.write(handletype, offset, data, size);
+        MyTreeIoHandler.getInstance(mContext).write(handletype, offset, data, size);
     }
 
     //?????????????????? void --> int
     public void spdm_readCb(int handletype, byte[] buf, int offset, int bufsize) {
         Log.i(TAG, "spdm_readCb be referenced.");
-        mMyTreeIoHandler.read(handletype, offset, buf);
+        MyTreeIoHandler.getInstance(mContext).read(handletype, offset, buf);
     }
 
     public void spdm_exitNotifyCb(int reason) {
         Log.i(TAG, "spdm_exitNotifyCb be referenced.");
 
+        Vdmc.getInstance().stopVDM();
         DmNetwork.getInstance().endConnectivity();
         DmNetwork.getInstance().end();
 
-        Vdmc.getInstance().stopVDM();
     }
     //java method define for lib end --
 }

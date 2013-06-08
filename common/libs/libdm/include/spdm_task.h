@@ -7,6 +7,7 @@
 extern "C" {
 #endif  
 
+
 typedef enum{
 	SPDM_TASK_START = 0,
   	SPDM_TASK_EXIT,

@@ -21,6 +21,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.content.ContentResolver;
 import android.content.Intent;
+import android.database.ContentObserver;
 import java.lang.Thread;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneFactory;
@@ -95,7 +96,13 @@ public class Vdmc {
     public static String tmpdmpwapport=null;
     public static String tmpdmpwapproxy=null;
     public static String tmpdmpwapconn=null;
-	
+
+    public static boolean tmpUpdateStream = false;
+    public static boolean tmpStreamUpdated = false;
+    public static int tmpUpdateStreamNum = 0;
+    public static int tmpStreamUpdatedNum = 0;
+    private final Object mwait = new Object();
+		
     public enum DM_START_RESULT_E {
         DM_START_NONE, DM_START_SUCC, DM_START_FAIL, DM_START_DONE,
     };
@@ -158,7 +165,38 @@ public class Vdmc {
         }
 
     }
-
+	
+  private ContentObserver mob = new ContentObserver(new Handler()) {
+     		  public void onChange(final boolean selfChange) {
+                Log.v(TAG, "DMContentObserver received notification");
+			synchronized(mwait)
+				{
+				   	try{
+						tmpStreamUpdatedNum++;
+                				Log.v(TAG, "DMContentObserver received notification" +tmpStreamUpdatedNum );
+						tmpStreamUpdated = true;
+						mwait.notifyAll();
+				   		}catch (Exception e) {
+                                        Log.d(TAG, e.toString());
+                                    }
+				}
+       			 }
+            } ;
+  /*
+   public void registerVDMobserver()
+   	{
+	  final Uri CURI = Uri.parse("content://com.android.gallery3d/movieview");
+           tmpUpdateStreamNum++;
+	   Log.d(TAG,"dm registerVDMobserver ok:"+tmpUpdateStreamNum);   	
+   	    if ( !tmpUpdateStream )
+   	    	{
+   	    	Log.d(TAG,"dm registerVDMobserver ok");
+   	     _appContext.getContentResolver().registerContentObserver(
+           		 CURI, true, mob);
+		tmpUpdateStream = true;
+   	    }
+   	}
+   */
     public void startVDM(Context context, SessionType type, byte[] message, String msgOrigin) {
 
         int result;
@@ -166,7 +204,11 @@ public class Vdmc {
         // Log.d(TAG, "startVDM : message = " + message);
         Log.d(TAG, "startVDM : msgOrigin = " + msgOrigin);
         Log.d(TAG, "startVDM : me = " + me);
-
+	
+	tmpUpdateStream = false;
+	tmpStreamUpdated = false;
+	tmpUpdateStreamNum = 0;
+	tmpStreamUpdatedNum = 0;
         // back up session type
         _sessionType = type;
   //      _msgHandler = new VdmcMsgHandler();
@@ -239,7 +281,7 @@ public class Vdmc {
     };
 
     public void stopVDM() {
-        Log.d(TAG, "stopVDM : End!");
+        Log.d(TAG, "stopVDM : begin!");
 
         _sessionType = SessionType.DM_SESSION_NONE;
         if (isDmSetting) 
@@ -253,8 +295,8 @@ public class Vdmc {
             Log.d(TAG, "writeCMCCDMParam 	selection:	= " + selection);
             ContentValues values = new ContentValues();
             values.put(Telephony.Carriers.APN, tmpdmwapapn);
-            values.put(Telephony.Carriers.PORT, tmpdmpwapproxy);
-            values.put(Telephony.Carriers.PROXY, tmpdmpwapport);
+            values.put(Telephony.Carriers.PORT, tmpdmpwapport);
+            values.put(Telephony.Carriers.PROXY, tmpdmpwapproxy);
 
             int c = values.size() > 0 ? DmService.getInstance().getContext().getContentResolver().update(
                      (DmService.getInstance().getCurrentPhoneID()==0)?Telephony.Carriers.CONTENT_URI:Telephony.Carriers.CONTENT_URI_SIM2, 
@@ -405,15 +447,35 @@ public class Vdmc {
 		tmpdmpwapport = null;
 		tmpdmpwapproxy = null;
 		tmpdmpwapconn = null;
-
+		/*
+		while (tmpUpdateStream && tmpStreamUpdatedNum<tmpUpdateStreamNum)
+		{
+			synchronized(mwait)
+				{
+				  try{
+				  	Log.d(TAG, " STOP VDMC waiting streaming update ");
+            				mwait.wait(8* 1000);
+					}catch (InterruptedException e) {
+                      		       Log.d(TAG, " STOP VDMC wait Exception ");
+                   			 }
+				}
+		}
+	_appContext.getContentResolver().unregisterContentObserver(mob);
+	*/
+	tmpUpdateStream = false;
+	tmpStreamUpdated = false;
+	
         _appContext = null;
         me = null;
-
+	
         if (mWakeLock != null && mWakeLock.isHeld()) {
             Log.d(TAG, "stopVDM : release wake lock ");
             mWakeLock.release();
         }
-	System.gc();		
+	System.gc();	
+        Log.d(TAG, "stopVDM : END!");
+	//System.runFinalization(); 
+	
 	//DmService.getInstance().clearDmNativeInterface();
 	//DmService.getInstance().getDmNativeInterface();
     }

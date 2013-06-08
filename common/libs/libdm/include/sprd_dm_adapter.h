@@ -76,7 +76,6 @@ typedef unsigned char BOOL;
 */
 #ifndef SCI_ALLOC
 #define SCI_ALLOC(_SIZE)      /*(!_SIZE)?PNULL:*/malloc(_SIZE) 
-#define SCI_ALLOCA(_SIZE)    /*(!_SIZE)?PNULL:*/malloc(_SIZE)   
 #define SCI_MPFREE(_MEM_PTR)  free(_MEM_PTR);   
 #define SCI_FREE(_MEM_PTR)  free(_MEM_PTR);  
 #endif

@@ -260,6 +260,7 @@ typedef struct DMXML_TAG_REPLACE
 /*****************************************************************************/
  SPRD_DM_PARSE_RESULT MMIDM_ParseReceiveData(char* data);
 
+void MMIDM_setMemPool(char *ptr, unsigned int len);
 /******************************************************************* 
 ** 函数名:mmidm_calc_b64_cred
 ** 功能描述：计算b64 authentication所用的cred值

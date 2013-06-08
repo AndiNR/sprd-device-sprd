@@ -375,6 +375,7 @@ public class DmService extends Service {
             mNetwork = new DmNetwork(mContext);
         } else {
         }
+		
         if (mTreeIoHandler == null) {
             mTreeIoHandler = new MyTreeIoHandler(mContext);
         } else {
@@ -587,7 +588,7 @@ public class DmService extends Service {
         }
 
         // init apn/proxy/port
-        initConnectParam();
+        //initConnectParam();
     }
 
     // init dm connect network param,include apn/proxy/port
@@ -644,8 +645,9 @@ public class DmService extends Service {
 
     private void createDmApn() {
         // Add new apn
-        String numeric = android.os.SystemProperties.get(
-                PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");
+//        String numeric = android.os.SystemProperties.get(
+//                PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");
+	 String numeric = mTelephonyManager[curPhoneId].getNetworkOperator();		
         if (numeric == null || numeric.length() < 5) {
             Log.d(TAG, "createDMApn numeric: " + numeric);
             return;
@@ -939,9 +941,9 @@ public class DmService extends Service {
 
     private String getInitApn(Context context) {
         String str = null;
+	 String numeric = mTelephonyManager[curPhoneId].getNetworkOperator();		
         final String selection = "name = 'CMCC DM' and numeric=\""
-                + android.os.SystemProperties.get(
-                        PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
+                + numeric + "\"";
         Log.d(TAG, "getInitApn: selection = " + selection);
         Cursor cursor = context.getContentResolver().query((curPhoneId == 0)?Telephony.Carriers.CONTENT_URI:Telephony.Carriers.CONTENT_URI_SIM2, null,
                 selection, null, null);
@@ -1352,6 +1354,7 @@ public class DmService extends Service {
     // Send self registe message
     private void sendSelfRegMsg() {
         Log.d(TAG, "enter sendSelfRegMsg()");
+         initConnectParam();
         if (!getSelfRegSwitch()) {
             Log.d(TAG, "sendSelfRegMsg: self registe switch is closed, no need send self registe message!");
             stopListeningServiceState();
