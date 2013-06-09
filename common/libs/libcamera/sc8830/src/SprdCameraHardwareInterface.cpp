@@ -658,7 +658,7 @@ status_t SprdCameraHardware::setParameters(const SprdCameraParameters& params)
 	}
 
 	if ((1 == params.getInt("zsl")) &&
-		((mCaptureMode != CAMERA_ZSL_CONTINUE_SHOT_MODE) || (mCaptureMode != CAMERA_ZSL_MODE))) {
+		((mCaptureMode != CAMERA_ZSL_CONTINUE_SHOT_MODE) && (mCaptureMode != CAMERA_ZSL_MODE))) {
 		LOGI("mode change:stop preview.");
 		if (isPreviewing()) {
 			mPreviewStartFlag = 2;
