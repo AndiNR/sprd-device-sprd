@@ -347,11 +347,13 @@ static int verify_video_layer(struct hwc_context_t *context, hwc_layer_t * l)
  		src_width = context->src_rect.w;
 		src_height = context->src_rect.h;
 	}
+//if use gpu we needn't care the scale capability
+#ifndef USE_GPU_PROCESS_VIDEO
 	if(4*src_width < dest_width || src_width > 4*dest_width ||
 		4*src_height < dest_height || src_height > 4*dest_height){//dcam support 1/4-4 scaling
 		return 0;
 	}
-
+#endif
 	return SPRD_LAYERS_IMG;	
 }
 
