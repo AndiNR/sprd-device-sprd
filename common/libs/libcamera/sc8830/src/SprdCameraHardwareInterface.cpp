@@ -475,22 +475,23 @@ status_t SprdCameraHardware::startRecording()
 	LOGV("mLock:startRecording S.\n");
 	Mutex::Autolock l(&mLock);
 
-#if STOP_PREVIEW_BEFORE_CAPTURE			
+#if 1
 	if (isPreviewing()) {
-		LOGV("wxz call stopPreviewInternal in startRecording().");
-		setCameraState(SPRD_INTERNAL_PREVIEW_STOPPING, STATE_PREVIEW);
-		
-		if(CAMERA_SUCCESS != camera_stop_preview()){
-			setCameraState(SPRD_ERROR, STATE_PREVIEW);
+		if (camera_is_need_stop_preview()) {
+			LOGV("wxz call stopPreviewInternal in startRecording().");
+			setCameraState(SPRD_INTERNAL_PREVIEW_STOPPING, STATE_PREVIEW);
+			if(CAMERA_SUCCESS != camera_stop_preview()){
+				setCameraState(SPRD_ERROR, STATE_PREVIEW);
+				freePreviewMem();
+				LOGE("startRecording: fail to camera_stop_preview().");
+				return INVALID_OPERATION;
+			}
+
+			WaitForPreviewStop();
+
+			LOGV("startRecording: Freeing preview heap.");
 			freePreviewMem();
-			LOGE("startRecording: fail to camera_stop_preview().");
-			return INVALID_OPERATION;
 		}
-
-		WaitForPreviewStop();
-
-		LOGV("startRecording: Freeing preview heap.");
-		freePreviewMem();
 	}
 #endif
 
@@ -1537,7 +1538,7 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 		return NO_ERROR;		
 	}
 	//to do it
-/*	if (!iSZslMode()) {
+	if (!iSZslMode()) {
 		// We check for these two states explicitly because it is possible
 		// for startPreview() to be called in response to a raw or JPEG
 		// callback, but before we've updated the state from SPRD_WAITING_RAW
@@ -1554,7 +1555,7 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 			LOGV("mLock:startPreview E.\n");
 			return INVALID_OPERATION;
 	    }
-	}*/
+	}
 	setRecordingMode(isRecording);
 
 	if (!initPreview()) {

@@ -1248,12 +1248,16 @@ int camera_capture_sensor_mode(void)
 		g_cxt->capture_size.width  = g_cxt->picture_size.width;
 		g_cxt->capture_size.height = g_cxt->picture_size.height;
 	}
-
-	ret = camera_get_sensor_capture_mode(&g_cxt->capture_size, &g_cxt->sn_cxt.capture_mode);
-	if (ret) {
-		CMR_LOGE("Unsupported picture size");
-		ret = -CAMERA_NOT_SUPPORTED;
-	}
+    if (1 != g_cxt->is_dv_mode) {
+		ret = camera_get_sensor_capture_mode(&g_cxt->capture_size, &g_cxt->sn_cxt.capture_mode);
+		if (ret) {
+			CMR_LOGE("Unsupported picture size");
+			ret = -CAMERA_NOT_SUPPORTED;
+		}
+    } else {
+		g_cxt->sn_cxt.capture_mode = g_cxt->sn_cxt.preview_mode;
+		CMR_LOGI("use preview mode for record.");
+    }
 	sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode];
 
 	if (SENSOR_IMAGE_FORMAT_YUV422 == sensor_mode->image_format) {
@@ -5662,5 +5666,15 @@ int camera_get_preview_rect(int *rect_x, int *rect_y, int *rect_width, int *rect
 	CMR_LOGE("camera_get_preview_rect: x=%d, y=%d, w=%d, h=%d \n",
 		*rect_x, *rect_y, *rect_width, *rect_height);
 
+	return ret;
+}
+
+int camera_is_need_stop_preview(void)
+{
+	int        ret = 0;
+	if (IS_PREVIEW) {
+		ret = (g_cxt->sn_cxt.capture_mode == g_cxt->sn_cxt.preview_mode) ? 0 : 1;
+	}
+	CMR_LOGI("need:%d.",ret);
 	return ret;
 }

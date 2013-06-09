@@ -820,17 +820,19 @@ LOCAL void Sensor_SetExportInfo(SENSOR_EXP_INFO_T * exp_info_ptr)
 			exp_info_ptr->sensor_mode_info[i].mode =
 			    SENSOR_MODE_MAX;
 		}
-		video_info_ptr = &sensor_info_ptr->video_tab_info_ptr[i];
-		if (PNULL != video_info_ptr) {
-			memcpy((void*)&exp_info_ptr->sensor_video_info[i], (void*)video_info_ptr,sizeof(SENSOR_VIDEO_INFO_T));
-/*			SENSOR_PRINT("mode1:%d,%d,%d,%d.",exp_info_ptr->sensor_video_info[i].ae_info[0].min_frate,exp_info_ptr->sensor_video_info[i].ae_info[0].max_frate,
-				exp_info_ptr->sensor_video_info[i].ae_info[0].gain,exp_info_ptr->sensor_video_info[i].ae_info[0].line_time);
-			SENSOR_PRINT("mode2:%d,%d,%d,%d.",exp_info_ptr->sensor_video_info[i].ae_info[1].min_frate,exp_info_ptr->sensor_video_info[i].ae_info[1].max_frate,
-				exp_info_ptr->sensor_video_info[i].ae_info[1].gain,exp_info_ptr->sensor_video_info[i].ae_info[1].line_time);
-			SENSOR_PRINT("mode3:%d,%d,%d,%d.",exp_info_ptr->sensor_video_info[i].ae_info[2].min_frate,exp_info_ptr->sensor_video_info[i].ae_info[2].max_frate,
-				exp_info_ptr->sensor_video_info[i].ae_info[2].gain,exp_info_ptr->sensor_video_info[i].ae_info[2].line_time);
-			SENSOR_PRINT("mode4:%d,%d,%d,%d.",exp_info_ptr->sensor_video_info[i].ae_info[3].min_frate,exp_info_ptr->sensor_video_info[i].ae_info[3].max_frate,
-				exp_info_ptr->sensor_video_info[i].ae_info[3].gain,exp_info_ptr->sensor_video_info[i].ae_info[3].line_time);*/
+		if (PNULL != sensor_info_ptr->video_tab_info_ptr) {
+			video_info_ptr = &sensor_info_ptr->video_tab_info_ptr[i];
+			if (PNULL != video_info_ptr) {
+				memcpy((void*)&exp_info_ptr->sensor_video_info[i], (void*)video_info_ptr,sizeof(SENSOR_VIDEO_INFO_T));
+	/*			SENSOR_PRINT("mode1:%d,%d,%d,%d.",exp_info_ptr->sensor_video_info[i].ae_info[0].min_frate,exp_info_ptr->sensor_video_info[i].ae_info[0].max_frate,
+					exp_info_ptr->sensor_video_info[i].ae_info[0].gain,exp_info_ptr->sensor_video_info[i].ae_info[0].line_time);
+				SENSOR_PRINT("mode2:%d,%d,%d,%d.",exp_info_ptr->sensor_video_info[i].ae_info[1].min_frate,exp_info_ptr->sensor_video_info[i].ae_info[1].max_frate,
+					exp_info_ptr->sensor_video_info[i].ae_info[1].gain,exp_info_ptr->sensor_video_info[i].ae_info[1].line_time);
+				SENSOR_PRINT("mode3:%d,%d,%d,%d.",exp_info_ptr->sensor_video_info[i].ae_info[2].min_frate,exp_info_ptr->sensor_video_info[i].ae_info[2].max_frate,
+					exp_info_ptr->sensor_video_info[i].ae_info[2].gain,exp_info_ptr->sensor_video_info[i].ae_info[2].line_time);
+				SENSOR_PRINT("mode4:%d,%d,%d,%d.",exp_info_ptr->sensor_video_info[i].ae_info[3].min_frate,exp_info_ptr->sensor_video_info[i].ae_info[3].max_frate,
+					exp_info_ptr->sensor_video_info[i].ae_info[3].gain,exp_info_ptr->sensor_video_info[i].ae_info[3].line_time);*/
+			}
 		}
 	}
 	exp_info_ptr->sensor_interface = sensor_info_ptr->sensor_interface;

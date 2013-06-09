@@ -489,6 +489,7 @@ int camera_set_change_size(uint32_t cap_width,uint32_t cap_height,uint32_t previ
 int camera_get_preview_rect(int *rect_x, int *rect_y, int *rect_width, int *rect_height);
 camera_ret_code_type camera_take_picture_raw(camera_cb_f_type    callback,
 					void                 *client_data,takepicture_mode cap_mode);
+int camera_is_need_stop_preview(void);
 
 #ifdef __cplusplus
 }
