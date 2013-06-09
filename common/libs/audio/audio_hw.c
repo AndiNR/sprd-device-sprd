@@ -80,7 +80,11 @@
 #define CARD_SPRDPHONE "sprdphone"
 #define CARD_VAUDIO    "VIRTUAL AUDIO"
 #define CARD_VAUDIO_W  "VIRTUAL AUDIO W"
+#ifdef VOIP_DSP_PROCESS
+#define CARD_SCO    "saudiovoip"
+#else
 #define CARD_SCO    "bt-i2s"
+#endif
 
 /* ALSA ports for sprd */
 #define PORT_MM 0
@@ -1373,8 +1377,12 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
         return bytes;
     }
 #endif
-
-    if((adev->mode ==AUDIO_MODE_IN_COMMUNICATION) && (adev->devices & AUDIO_DEVICE_OUT_ALL_SCO)){
+#ifdef VOIP_DSP_PROCESS
+	if(adev->mode ==AUDIO_MODE_IN_COMMUNICATION)
+#else
+    if((adev->mode ==AUDIO_MODE_IN_COMMUNICATION) && (adev->devices & AUDIO_DEVICE_OUT_ALL_SCO))
+#endif
+	{
         if(!out->is_sco ) {      
             out->is_sco=true;
             do_output_standby(out);
@@ -1589,9 +1597,10 @@ static int start_input_stream(struct tiny_stream_in *in)
         if (!pcm_is_ready(in->pcm)) {
             goto err;
         }      
-
+#ifndef VOIP_DSP_PROCESS
          in->active_rec_proc = init_rec_process(get_mode_from_devices(in->device), in->config.rate);
         ALOGI("record process sco module created is %s.", in->active_rec_proc ? "successful" : "failed");
+#endif
     }
     else if(adev->call_start) {
 	int card=0;
@@ -2219,7 +2228,12 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
     }
 #endif
 
-    if((adev->mode == AUDIO_MODE_IN_COMMUNICATION) && (adev->devices & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET)){
+#ifdef VOIP_DSP_PROCESS
+	if(adev->mode ==AUDIO_MODE_IN_COMMUNICATION)
+#else
+    if((adev->mode == AUDIO_MODE_IN_COMMUNICATION) && (adev->devices & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET))
+#endif
+	{
         if(!in->is_sco ) {       
             ALOGE(": in_read sco start  and do standby");
             do_input_standby(in);
