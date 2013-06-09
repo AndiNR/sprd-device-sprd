@@ -3,23 +3,13 @@
  */
 package com.spreadtrum.android.eng;
 
-import java.io.File;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.List;
 
 import android.app.Activity;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.net.wifi.ScanResult;
-import android.net.wifi.WifiManager;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 import android.widget.TextView;
 
@@ -41,6 +31,15 @@ public class FlashBlockInfo extends Activity {
 	protected void onResume() {
 		super.onResume();
 		File file = new File(MTD_PATH);
+        /*
+         * Add 20130609 spreadst of 157181 no information in flashblockinfo
+         * start
+         */
+        if (!file.exists() || !file.canRead()) {
+            mFlashblock.setText("the file /proc/mtd don't exist or can't read!");
+            return;
+        }
+        /* Add 20130609 spreadst of 157181 no information in flashblockinfo end */
         BufferedReader reader = null;
         try {
         	reader = new BufferedReader(new FileReader(file));
