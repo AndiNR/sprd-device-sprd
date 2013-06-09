@@ -43,6 +43,7 @@ PRODUCT_PACKAGES := \
 
 # own copyright packages files
 PRODUCT_PACKAGES += \
+    FileExplorer \
     AppBackup \
     AudioProfile \
     SprdNote \
@@ -58,8 +59,8 @@ PRODUCT_PACKAGES += \
 
 
 # prebuild files
-PRODUCT_PACKAGES += \
-    ES_File_Explorer.apk
+# PRODUCT_PACKAGES += \
+#    ES_File_Explorer.apk
 
 PRODUCT_PACKAGES += \
 	charge \

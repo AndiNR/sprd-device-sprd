@@ -40,6 +40,7 @@ PRODUCT_PACKAGES := \
 
 # own copyright packages files
 PRODUCT_PACKAGES += \
+    FileExplorer \
     AudioProfile \
     ValidationTools \
     libvalidationtoolsjni \
@@ -50,8 +51,8 @@ PRODUCT_PACKAGES += \
     libstagefright_sprd_h264dec	
 
 # prebuild files
-PRODUCT_PACKAGES += \
-    ES_File_Explorer.apk
+# PRODUCT_PACKAGES += \
+#    ES_File_Explorer.apk
 
 PRODUCT_PACKAGES += \
 	modem_control\
