@@ -52,6 +52,9 @@ typedef struct sprd_camera_memory {
 }sprd_camera_memory_t;
 
 
+#define MAX_MISCHEAP_NUM 1024
+
+
 class SprdCameraHardware : public virtual RefBase {
 public:
 	SprdCameraHardware(int cameraId);
@@ -128,6 +131,8 @@ private:
 		AshmemPool(int buffer_size, int num_buffers, int frame_size,
 						int frame_offset, const char *name);
 	};
+
+	static int Callback_AllocPmem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir);
 	
 	void                  FreeCameraMem(void);
 	sprd_camera_memory_t* GetPmem(int buf_size, int num_bufs);
@@ -263,8 +268,12 @@ private:
 
 	sprd_camera_memory_t            *mRawHeap;
 	uint32_t                        mRawHeapSize;
+
 	sprd_camera_memory_t            *mMiscHeap;
 	uint32_t                        mMiscHeapSize;
+	sp<MemoryHeapIon>    mMiscHeapArray[MAX_MISCHEAP_NUM];
+	uint32_t                             mMiscHeapNum;
+
 	sp<AshmemPool>                  mJpegHeap;
 	uint32_t                        mJpegHeapSize;
 	uint32_t                        mFDAddr;

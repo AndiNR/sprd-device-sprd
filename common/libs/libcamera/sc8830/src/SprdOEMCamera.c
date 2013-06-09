@@ -4057,7 +4057,9 @@ int camera_capture_ability(SENSOR_MODE_INFO_T *sn_mode,
 
 	sensor_size.width  = sn_mode->width;
 	sensor_size.height = sn_mode->height;
-	ret = camera_arrange_capture_buf(&g_cxt->cap_2_mems,
+	if (g_cxt->cap_2_mems.minor_frm.buf_size > 0)
+	{
+		ret = camera_arrange_capture_buf(&g_cxt->cap_2_mems,
 					&sensor_size,
 					&sn_trim_rect,
 					&g_cxt->max_size,
@@ -4067,6 +4069,20 @@ int camera_capture_ability(SENSOR_MODE_INFO_T *sn_mode,
 					g_cxt->cap_mem,
 					((IMG_ROT_0 != g_cxt->cap_rot) || g_cxt->is_cfg_rot_cap),
 					g_cxt->total_cap_num);
+	}
+	else
+	{
+		ret = camera_arrange_capture_buf2(&g_cxt->cap_2_mems,
+					&sensor_size,
+					&sn_trim_rect,
+					&g_cxt->max_size,
+					g_cxt->cap_original_fmt,
+					&g_cxt->cap_orig_size,
+					&g_cxt->thum_size,
+					g_cxt->cap_mem,
+					(IMG_ROT_0 != g_cxt->cap_rot),
+					g_cxt->total_cap_num);
+	}
 
 	if (0 == ret) {
 		if ((IMG_ROT_0 != g_cxt->cap_rot) || g_cxt->is_cfg_rot_cap) {
@@ -4348,8 +4364,16 @@ int camera_set_capture_mem(uint32_t     cap_index,
 	g_cxt->cap_2_mems.major_frm.addr_vir.addr_y = vir_addr0;
 
 	g_cxt->cap_2_mems.minor_frm.buf_size = mem_size1;
-	g_cxt->cap_2_mems.minor_frm.addr_phy.addr_y = phy_addr1;
-	g_cxt->cap_2_mems.minor_frm.addr_vir.addr_y = vir_addr1;
+	if (mem_size1 > 0)
+	{
+		g_cxt->cap_2_mems.minor_frm.addr_phy.addr_y = phy_addr1;
+		g_cxt->cap_2_mems.minor_frm.addr_vir.addr_y = vir_addr1;
+	}
+	else
+	{
+		g_cxt->cap_2_mems.alloc_mem = phy_addr1;
+		g_cxt->cap_2_mems.handle = vir_addr1;
+	}
 
 	return ret;
 }

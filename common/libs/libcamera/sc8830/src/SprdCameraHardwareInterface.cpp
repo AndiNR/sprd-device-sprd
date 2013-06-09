@@ -170,6 +170,7 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mRawHeapSize(0),
 	mMiscHeapSize(0),
 	mJpegHeapSize(0),
+	mMiscHeapNum(0),
 	mPreviewHeapSize(0),    
 	mPreviewHeapNum(0),
 	mPreviewHeapArray(NULL),
@@ -204,6 +205,7 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 
 	memset(mPreviewHeapArray_phy, 0, sizeof(mPreviewHeapArray_phy));
 	memset(mPreviewHeapArray_vir, 0, sizeof(mPreviewHeapArray_vir));
+	memset(mMiscHeapArray, NULL, sizeof(mMiscHeapArray));
 
 	setCameraState(SPRD_INIT, STATE_CAMERA);
 
@@ -1128,7 +1130,38 @@ bool SprdCameraHardware::startCameraIfNecessary()
 
 
 
+int SprdCameraHardware::Callback_AllocPmem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir)
+{
+	LOGE("Callback_AllocPmem size = %d", size);
 
+	SprdCameraHardware* camera = (SprdCameraHardware*)handle;
+	if (camera == NULL)
+	{
+		return -1;
+	}
+	if (camera->mMiscHeapNum >= MAX_MISCHEAP_NUM)
+	{
+		return -1;
+	}
+
+	sp<MemoryHeapIon> pHeapIon = new MemoryHeapIon("/dev/ion", size , MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+	if (pHeapIon == NULL)
+	{
+		return -1;
+	}
+	if (pHeapIon->getHeapID() < 0)
+	{
+		return -1;
+	}
+
+	pHeapIon->get_phy_addr_from_ion((int*)addr_phy, (int*)&size);
+	*addr_vir = (int)(pHeapIon->base());
+	camera->mMiscHeapArray[camera->mMiscHeapNum++] = pHeapIon;
+
+	LOGE("Callback_AllocPmem mMiscHeapNum = %d", camera->mMiscHeapNum);
+
+	return 0;
+}
 
 sprd_camera_memory_t* SprdCameraHardware::GetPmem(int buf_size, int num_bufs)
 {	
@@ -1490,8 +1523,8 @@ bool SprdCameraHardware::initCapture(bool initJpegHeap)
 								(uint32_t)mRawHeap->phys_addr,
 								(uint32_t)mRawHeap->data,
 								(uint32_t)mRawHeap->phys_size,
-								0,
-								0,
+								(uint32_t)Callback_AllocPmem,
+								(uint32_t)this,
 								0))
 			return false;		
 	}
@@ -1502,7 +1535,25 @@ bool SprdCameraHardware::initCapture(bool initJpegHeap)
 
 void SprdCameraHardware::deinitCapture()
 {
-	camera_set_capture_mem(0, 0, 0, 0, 0, 0, 0);							
+	if (NULL != mMiscHeap)
+	{
+		camera_set_capture_mem(0, 0, 0, 0, 0, 0, 0);
+	}
+	else
+	{
+		int i;
+		for (i=0; i<mMiscHeapNum; i++)
+		{
+			sp<MemoryHeapIon> pHeapIon = mMiscHeapArray[i];
+			if (pHeapIon != NULL)
+			{
+				pHeapIon.clear();
+			}
+			mMiscHeapArray[i] = NULL;
+		}
+		mMiscHeapNum = 0;
+	}
+
 	freeCaptureMem();	
 }
 
