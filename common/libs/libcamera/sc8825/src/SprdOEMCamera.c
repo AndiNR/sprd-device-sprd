@@ -3028,8 +3028,6 @@ int camera_preview_init(int format_mode)
 	sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.preview_mode];
 
 	g_cxt->prev_rot_index = 0;
-	g_cxt->skip_mode = IMG_SKIP_HW;
-	g_cxt->skip_num  = g_cxt->sn_cxt.sensor_info->preview_skip_num;
 	g_cxt->pre_frm_cnt  = 0;
 	v4l2_cfg.cfg0.need_isp = 0;
 	v4l2_cfg.cfg0.need_binning = 0;
@@ -3037,7 +3035,6 @@ int camera_preview_init(int format_mode)
 		g_cxt->sn_cxt.sn_if.img_fmt = V4L2_SENSOR_FORMAT_YUV;
 	} else if (SENSOR_IMAGE_FORMAT_RAW == sensor_mode->image_format) {
 		g_cxt->sn_cxt.sn_if.img_fmt = V4L2_SENSOR_FORMAT_RAWRGB;
-		g_cxt->skip_mode = IMG_SKIP_SW;
 		v4l2_cfg.cfg0.need_isp = 1;
 	} else {
 		CMR_LOGE("Unsupported sensor format %d for preview", sensor_mode->image_format);

@@ -831,11 +831,7 @@ int camera_set_ctrl(camera_parm_type id,
 				CMR_RTN_IF_ERR(ret);
 			}
 			skip_mode = IMG_SKIP_HW;
-			if(SCENE_MODE_NIGHT == cxt->cmr_set.scene_mode){
-				skip_number = 3;
-			} else {
-				skip_number = 0;
-			}
+			skip_number = 0;
 			CMR_RTN_IF_ERR(ret);
 			cxt->prev_rot = parm;
 			camera_set_rot_angle(&cxt->prev_rot);
@@ -956,11 +952,7 @@ int camera_set_ctrl(camera_parm_type id,
 					CMR_RTN_IF_ERR(ret);
 				}
 				skip_mode = IMG_SKIP_HW;
-				if(SCENE_MODE_NIGHT == cxt->cmr_set.scene_mode){
-					skip_number = 3;
-				} else {
-					skip_number = 0;
-				}
+				skip_number = 0;
 				CMR_RTN_IF_ERR(ret);
 				if (after_set) {
 					ret = (*after_set)(RESTART_LIGHTLY, skip_mode, skip_number);
