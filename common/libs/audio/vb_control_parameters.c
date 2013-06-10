@@ -178,6 +178,7 @@ static int  ReadParas_Mute(int fd_pipe,  set_mute_t *paras_ptr);
 
 void *vbc_ctrl_thread_routine(void *args);
 
+extern int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type);
 /*
  * local functions definition.
  */
@@ -1060,6 +1061,13 @@ RESTART:
                 SetParas_OpenHal_Incall(para->vbpipe_fd);   //get sim card number
                 adev->cur_vbpipe_fd = para->vbpipe_fd;
 		adev->cp_type = para->cp_type;
+
+	        if(adev->devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+		    if(adev->cp_type == CP_TG)
+			i2s_pin_mux_sel(adev,1);
+		    else if(adev->cp_type == CP_W)
+			i2s_pin_mux_sel(adev,0);
+		}
                 pthread_mutex_unlock(&adev->lock);
                 MY_TRACE("VBC_CMD_HAL_OPEN OUT, cur_vbpipe_id:%d, vbpipe_name:%s.", adev->cur_vbpipe_fd, para->vbpipe);
             }
@@ -1095,40 +1103,34 @@ RESTART:
             case VBC_CMD_SET_MODE:
             {
                 MY_TRACE("VBC_CMD_SET_MODE IN.");
-                int i=0;
-                while(i<s_vbc_pipe_count)
-                {
-                    if((st_vbc_ctrl_thread_para+i)->vbpipe_fd!=-1)
-                    {
-                        ret = SetParas_Route_Incall((st_vbc_ctrl_thread_para+i)->vbpipe_fd,adev);
-                        if(ret < 0){
-                            MY_TRACE("VBC_CMD_SET_MODE SetParas_Route_Incall error. pipe:%s, s_is_exit:%d ",
-                                (st_vbc_ctrl_thread_para+i)->vbpipe, (st_vbc_ctrl_thread_para+i)->is_exit);
-                            (st_vbc_ctrl_thread_para+i)->is_exit = 1;
-                        }
-                    }
-                    i++;
-                }
+
+		if(para->vbpipe_fd!=-1)
+		{
+		    ret = SetParas_Route_Incall(para->vbpipe_fd,adev);
+		    if(ret < 0){
+			MY_TRACE("VBC_CMD_SET_MODE SetParas_Route_Incall error. pipe:%s, s_is_exit:%d ",
+			    para->vbpipe, para->is_exit);
+			para->is_exit = 1;
+		    }
+		}
+
                 MY_TRACE("VBC_CMD_SET_MODE OUT.");
             }
             break;
             case VBC_CMD_SET_GAIN:
             {
                 MY_TRACE("VBC_CMD_SET_GAIN IN.");
-                int i=0;
-                while(i<s_vbc_pipe_count)
-                {
-                    if((st_vbc_ctrl_thread_para+i)->vbpipe_fd!=-1)
-                    {
-                        ret = SetParas_Volume_Incall((st_vbc_ctrl_thread_para+i)->vbpipe_fd,adev);
-                        if(ret < 0){
-                            MY_TRACE("VBC_CMD_SET_GAIN SetParas_Route_Incall error. pipe:%s, s_is_exit:%d ",
-                                (st_vbc_ctrl_thread_para+i)->vbpipe, (st_vbc_ctrl_thread_para+i)->is_exit);
-                            (st_vbc_ctrl_thread_para+i)->is_exit = 1;
-                        }
-                    }
-                    i++;
-                }
+    
+		if(para->vbpipe_fd!=-1)
+		{
+		    ret = SetParas_Volume_Incall(para->vbpipe_fd,adev);
+		    if(ret < 0){
+		        MY_TRACE("VBC_CMD_SET_GAIN SetParas_Route_Incall error. pipe:%s, s_is_exit:%d ",
+		                para->vbpipe, para->is_exit);
+		        para->is_exit = 1;
+		    }
+		}
+                
                 MY_TRACE("VBC_CMD_SET_GAIN OUT.");
             }
             break;

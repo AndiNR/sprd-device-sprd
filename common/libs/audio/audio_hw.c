@@ -252,6 +252,7 @@ struct tiny_audio_device {
     audio_modem_t *cp;
 
     struct stream_routing_manager  routing_mgr;
+    int pin_fd;
 };
 
 struct tiny_stream_out {
@@ -420,6 +421,28 @@ static int out_dump_release(FILE **fd);
 
 #include "at_commands_generic.c"
 #include "mmi_audio_loop.c"
+
+int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
+{
+    int count = 0;
+
+    ALOGW("i2s_pin_mux_sel in fd is %d, type is %d",adev->pin_fd,type);
+
+    if(adev->pin_fd == -1) {
+	return -1;
+    }
+    
+    if(type == 0) {
+	count = write(adev->pin_fd,"1",1);
+    }
+    else if (type == 1){
+	count = write(adev->pin_fd,"2",1);
+    }
+    else if(type == 2) {
+	count = write(adev->pin_fd,"0",1);
+    }
+    return (count==1);
+}
 
 static cp_type_t get_cur_cp_type( struct tiny_audio_device *adev )
 {
@@ -1186,6 +1209,15 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
             adev->devices |= val;
             ALOGW("out_set_parameters want to set devices:0x%x old_mode:%d new_mode:%d call_start:%d ",adev->devices,cur_mode,adev->mode,adev->call_start);
+
+	    if(AUDIO_MODE_IN_CALL == adev->mode) {
+		if(adev->devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+		    if(adev->cp_type == CP_TG)
+			i2s_pin_mux_sel(adev,1);
+		    else if(adev->cp_type == CP_W)
+			i2s_pin_mux_sel(adev,0);
+		}
+	    }
             cur_mode = adev->mode;
             #ifndef _VOICE_CALL_VIA_LINEIN
             if(!adev->call_start)
@@ -2520,6 +2552,13 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
                 adev->devices |= val;
 
+		if(adev->devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+		    if(adev->cp_type == CP_TG)
+			i2s_pin_mux_sel(adev,1);
+		    else if(adev->cp_type == CP_W)
+			i2s_pin_mux_sel(adev,0);
+		}
+	        
 		pthread_mutex_unlock(&adev->lock);
                 ret = at_cmd_route(adev);  //send at command to cp
                 if (ret < 0) {
@@ -3406,6 +3445,12 @@ static int adev_open(const hw_module_t* module, const char* name,
         ALOGE("Unable to load sound card, aborting.");
         goto ERROR;
     }
+
+    adev->pin_fd = open("/d/efuse/iis-0",O_RDWR | O_SYNC);
+    if(adev->pin_fd == -1) {
+	ALOGE(" audio_hw_primary: could not open /dev/mem,errno is %d",errno);
+    }
+
     adev->mixer = mixer_open(s_tinycard);
     if (!adev->mixer) {
         ALOGE("Unable to open the mixer, aborting.");
