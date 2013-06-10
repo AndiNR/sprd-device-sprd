@@ -364,6 +364,9 @@ struct camera_context {
 	struct camera_settings   cmr_set;
 	uint32_t                 orientation;
 	uint32_t                 hdr_cnt;
+
+	uint32_t                 is_cfg_rot_cap;/*0:normal capture,1:rotation capture*/
+	uint32_t                 cfg_cap_rot;
 };
 
 uint32_t camera_get_rot_angle(uint32_t degree);
@@ -392,6 +395,7 @@ int camera_save_sensormark(void);
 
 int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 	uint32_t width, uint32_t height, struct img_addr *addr);
+uint32_t getOrientationFromRotationDegrees(int degrees);
 
 #ifdef __cplusplus
 }

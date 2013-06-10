@@ -780,7 +780,8 @@ int camera_set_ctrl(camera_parm_type id,
 		&& (CAMERA_PARM_SATURATION != id)
 		&& (CAMERA_PARM_AUTO_EXPOSURE_MODE != id)
 		&& (CAMERA_PARM_EXPOSURE_METERING != id)
-		&& (CAMERA_PARM_SHARPNESS != id)) {
+		&& (CAMERA_PARM_SHARPNESS != id)
+		&& (CAMERA_PARAM_ROTATION_CAPTURE != id)) {
 		return ret;
 	}
 
@@ -792,6 +793,10 @@ int camera_set_ctrl(camera_parm_type id,
 	}
 
 	switch (id) {
+	case CAMERA_PARAM_ROTATION_CAPTURE:
+		cxt->is_cfg_rot_cap = parm;
+		CMR_LOGI("is_cfg_rot_cap:%d.",parm);
+		break;
 	case CAMERA_PARM_SHARPNESS:
 		if (parm != cxt->cmr_set.sharpness) {
 			if (CMR_PREVIEW == cxt->preview_status) {
@@ -859,11 +864,32 @@ int camera_set_ctrl(camera_parm_type id,
 		break;
 		
 	case CAMERA_PARM_ENCODE_ROTATION: /* 0, 90, 180, 270 degrees */
-		/*if (CMR_CAPTURE == cxt->preview_status || CMR_CAPTURE_SLICE == cxt->camera_status) {
-			
+		if (cxt->is_cfg_rot_cap) {
+			uint32_t orientation;
+			cxt->jpeg_cxt.set_encode_rotation = 0;
+			orientation = getOrientationFromRotationDegrees(parm);
+			switch (orientation) {
+			case 1:
+				cxt->cfg_cap_rot = IMG_ROT_0;
+				break;
+			case 3:
+				cxt->cfg_cap_rot = IMG_ROT_180;
+				break;
+			case 6:
+				cxt->cfg_cap_rot = IMG_ROT_90;
+				break;
+			case 8:
+				cxt->cfg_cap_rot = IMG_ROT_270;
+				break;
+			default:
+				cxt->cfg_cap_rot = IMG_ROT_0;
+				break;
+			}
+		} else {
+			cxt->jpeg_cxt.set_encode_rotation = parm;
+			cxt->cfg_cap_rot = IMG_ROT_0;
 		}
-		cxt->cap_rot = 0;//(uint32_t)camera_get_rot_angle(parm);*/
-		cxt->jpeg_cxt.set_encode_rotation = parm;
+		CMR_LOGI("is_cfg_rot_cap :%d,rot:%d.",cxt->is_cfg_rot_cap,cxt->cfg_cap_rot);
 		break;
 
 

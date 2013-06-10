@@ -799,6 +799,45 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 			capture_mem[i].scale_tmp.buf_size);
 
 	}
+
+	if (need_rot) {
+		if (camera_get_is_noscale()) {
+			for (i = 1; i < img_cnt; i++) {
+				memcpy((void*)&capture_mem[i].cap_yuv_rot,
+					(void*)&capture_mem[i].target_yuv,
+					sizeof(struct img_frm));
+				CMR_LOGI("cap_yuv_rot, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+					capture_mem[i].cap_yuv_rot.addr_phy.addr_y,
+					capture_mem[i].cap_yuv_rot.addr_phy.addr_u,
+					capture_mem[i].cap_yuv_rot.addr_vir.addr_y,
+					capture_mem[i].cap_yuv_rot.addr_vir.addr_u,
+					capture_mem[i].cap_yuv_rot.buf_size);
+			}
+			for (i = 1; i < img_cnt; i++) {
+				memcpy((void*)&capture_mem[i].target_yuv,
+					(void*)&capture_mem[0].target_yuv,
+					sizeof(struct img_frm));
+			}
+		} else {
+			for (i = 1; i < img_cnt; i++) {
+				memcpy((void*)&capture_mem[i].cap_yuv_rot,
+					(void*)&capture_mem[i].cap_yuv,
+					sizeof(struct img_frm));
+				CMR_LOGI("cap_yuv_rot, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+					capture_mem[i].cap_yuv_rot.addr_phy.addr_y,
+					capture_mem[i].cap_yuv_rot.addr_phy.addr_u,
+					capture_mem[i].cap_yuv_rot.addr_vir.addr_y,
+					capture_mem[i].cap_yuv_rot.addr_vir.addr_u,
+					capture_mem[i].cap_yuv_rot.buf_size);
+			}
+			for (i = 1; i < img_cnt; i++) {
+				memcpy((void*)&capture_mem[i].cap_yuv,
+					(void*)&capture_mem[0].cap_yuv,
+					sizeof(struct img_frm));
+			}
+		}
+	}
+
 	/*Alloc other image buffer include RAW and CAP YUV , End*/
 
 	return 0;

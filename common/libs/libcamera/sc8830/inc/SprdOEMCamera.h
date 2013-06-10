@@ -371,6 +371,7 @@ typedef enum {
 	CAMERA_PARM_DCDV_MODE,
 	CAMERA_PARM_SHOT_NUM,
 	CAMERA_PARAM_SLOWMOTION,
+	CAMERA_PARAM_ROTATION_CAPTURE,
 	CAMERA_PARM_MAX
 } camera_parm_type;
 
@@ -490,6 +491,7 @@ int camera_get_preview_rect(int *rect_x, int *rect_y, int *rect_width, int *rect
 camera_ret_code_type camera_take_picture_raw(camera_cb_f_type    callback,
 					void                 *client_data,takepicture_mode cap_mode);
 int camera_is_need_stop_preview(void);
+int camera_get_is_scale(void);
 
 #ifdef __cplusplus
 }

@@ -190,15 +190,20 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mIsFreqChanged(false),
 	mZoomLevel(0),
 	mCameraId(cameraId),
-    miSPreviewFirstFrame(1),
-    mCaptureMode(CAMERA_ZSL_MODE),
-    mTimeCoeff(1),
-    mCaptureRawMode(0)
+	miSPreviewFirstFrame(1),
+	mCaptureMode(CAMERA_ZSL_MODE),
+	mTimeCoeff(1),
+	mCaptureRawMode(0),
+#ifdef CONFIG_CAMERA_ROTATION_CAPTURE
+	mIsRotCapture(1)
+#else
+	mIsRotCapture(0)
+#endif
 {
 	LOGV("openCameraHardware: E cameraId: %d.", cameraId);
 
-    memset(mPreviewHeapArray_phy, 0, sizeof(mPreviewHeapArray_phy));
-    memset(mPreviewHeapArray_vir, 0, sizeof(mPreviewHeapArray_vir));
+	memset(mPreviewHeapArray_phy, 0, sizeof(mPreviewHeapArray_phy));
+	memset(mPreviewHeapArray_vir, 0, sizeof(mPreviewHeapArray_vir));
 
 	setCameraState(SPRD_INIT, STATE_CAMERA);
 
@@ -1742,6 +1747,13 @@ status_t SprdCameraHardware::setCameraParameters()
 		return UNKNOWN_ERROR;
 	}
 	LOGV("setCameraParameters: preview size: wxmax", w, h);
+
+	LOGV("mIsRotCapture:%d.",mIsRotCapture);
+	if (mIsRotCapture) {
+		SET_PARM(CAMERA_PARAM_ROTATION_CAPTURE, 1);
+	} else {
+		SET_PARM(CAMERA_PARAM_ROTATION_CAPTURE, 0);
+	}
 
 	// Default Rotation - none
 	int rotation = mParameters.getInt("rotation");

@@ -302,6 +302,7 @@ private:
 	int                             miSPreviewFirstFrame;
 	takepicture_mode                mCaptureMode;
 	bool                            mCaptureRawMode;
+	bool                            mIsRotCapture;
 	uint32_t                        mTimeCoeff;
 };
 

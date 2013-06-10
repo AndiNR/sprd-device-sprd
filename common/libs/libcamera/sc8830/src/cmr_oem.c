@@ -132,7 +132,7 @@ int camera_get_trim_rect(struct img_rect *src_trim_rect, uint32_t zoom_level, st
 	return CAMERA_SUCCESS;
 }
 
-static uint32_t getOrientationFromRotationDegrees(int degrees)
+uint32_t getOrientationFromRotationDegrees(int degrees)
 {
 	uint32_t orientation = 1;/*ExifInterface.ORIENTATION_NORMAL;*/
 	degrees %= 360;
