@@ -1,4 +1,4 @@
-et*
+/*
 * hardware/sprd/hsdroid/libcamera/sprdcamerahardwareinterface.cpp
  * Dcam HAL based on sc8800g2
  *
