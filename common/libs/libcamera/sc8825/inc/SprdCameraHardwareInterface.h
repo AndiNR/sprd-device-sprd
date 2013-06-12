@@ -83,7 +83,7 @@ public:
                                       bool cancel_raw, bool cancel_jpeg);*/
     virtual status_t    cancelPicture();                                      
     virtual status_t    setParameters(const CameraParameters& params);
-    virtual CameraParameters  getParameters() const;
+    virtual CameraParameters  getParameters() ; //const;
 
     virtual void release();
 
@@ -288,7 +288,7 @@ private:
     void receivePostLpmRawPicture(camera_frame_type *frame);
     void receiveRawPicture(camera_frame_type *frame);
     void receiveJpegPicture(JPEGENC_CBrtnType *encInfo);
-	void receiveJpegPictureError(void);
+	void receiveJpegPictureError(JPEGENC_CBrtnType *encInfo);
    bool  allocSwapBufferForCap(uint32_t swap_size);
 
     Mutex mLock; // API lock -- all public methods

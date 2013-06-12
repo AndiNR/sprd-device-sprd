@@ -706,6 +706,11 @@ LOCAL void Sensor_SetExportInfo(SENSOR_EXP_INFO_T * exp_info_ptr)
 
 	SENSOR_PRINT("SENSOR: Sensor_SetExportInfo.\n");
 
+	if (NULL == sensor_info_ptr) {
+		SENSOR_PRINT("SENSOR: s_sensor_info_ptr is NULL, direct return abnormal!");
+		return;
+	}
+
 	SENSOR_MEMSET(exp_info_ptr, 0x00, sizeof(SENSOR_EXP_INFO_T));
 	exp_info_ptr->name= sensor_info_ptr->name;
 	exp_info_ptr->image_format = sensor_info_ptr->image_format;
@@ -718,7 +723,9 @@ LOCAL void Sensor_SetExportInfo(SENSOR_EXP_INFO_T * exp_info_ptr)
 	    ((sensor_info_ptr->hw_signal_polarity >> 4) & 0x1);
 	exp_info_ptr->pclk_delay =
 	    ((sensor_info_ptr->hw_signal_polarity >> 5) & 0x07);
-	exp_info_ptr->raw_info_ptr = (struct sensor_raw_info*)sensor_info_ptr->raw_info_ptr;
+	if ((NULL != sensor_info_ptr) && (NULL!=sensor_info_ptr->raw_info_ptr)) {
+		exp_info_ptr->raw_info_ptr = (struct sensor_raw_info*)*sensor_info_ptr->raw_info_ptr;
+	}
 
 	exp_info_ptr->source_width_max = sensor_info_ptr->source_width_max;
 	exp_info_ptr->source_height_max = sensor_info_ptr->source_height_max;
@@ -1321,7 +1328,7 @@ LOCAL void _Sensor_SetStatus(SENSOR_ID_E sensor_id)
 	SENSOR_PRINT("_Sensor_SetStatus: 3");
 	//reset target sensor. and make normal.
 /*	Sensor_Reset_EX((BOOLEAN)s_sensor_info_ptr->power_down_level, s_sensor_info_ptr->reset_pulse_level);*/
-	Sensor_SetExportInfo(&s_sensor_exp_info);
+	//Sensor_SetExportInfo(&s_sensor_exp_info);
 	SENSOR_PRINT("_Sensor_SetStatus: 4");
 }
 
@@ -1573,6 +1580,8 @@ int Sensor_Open(uint32_t sensor_id)
 			SENSOR_PRINT("SENSOR: Sensor_Open: sensor identify not correct!!");
 			return SENSOR_FAIL;
 		}
+
+		Sensor_SetExportInfo(&s_sensor_exp_info);
 
 		ret_val = SENSOR_SUCCESS;
 		if (SENSOR_SUCCESS != Sensor_SetMode(SENSOR_MODE_COMMON_INIT)) {

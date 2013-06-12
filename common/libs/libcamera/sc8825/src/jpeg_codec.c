@@ -526,6 +526,30 @@ void _dec_callback(uint32_t buf_id, uint32_t stream_size, uint32_t is_last_slice
 	return;
 }
 
+static void _stream_snapshot(uint32_t handle)
+{
+	JPEG_DEC_T *dec_cxt_ptr = (JPEG_DEC_T *)handle;
+	uint32_t buf_addr = 0;
+	uint32_t buf_size = 0;
+	FILE *fp = NULL;
+	char stream_file[128] = {0};
+	int  write_cnt = 0;
+
+	buf_addr = dec_cxt_ptr->stream_buf_vir;
+	buf_size = dec_cxt_ptr->stream_buf_size;
+
+	sprintf(stream_file, "/data/stream_snapshot_%d.jpg", buf_size);
+
+	fp = fopen(stream_file, "wb+");
+	if(fp) {
+	    write_cnt = fwrite((const void*)buf_addr, 1, buf_size, fp);
+	    CMR_LOGE("write_cnt=%d, file:%s, stream_buf_size=%d", write_cnt, stream_file, buf_size);
+	    fclose(fp);
+	} else {
+	    CMR_LOGE("file open error");
+	}
+}
+
 static int _dec_start(uint32_t handle)
 {
 	int ret = JPEG_CODEC_SUCCESS;
@@ -572,7 +596,8 @@ static int _dec_start(uint32_t handle)
 	memset(&slice_out,0,sizeof(JPEGDEC_SLICE_OUT_T));
 
 	if(0 != JPEGDEC_Slice_Start(&jpegdec_params,  &slice_out)) {
-		ret = JPEG_CODEC_ERROR;
+		_stream_snapshot(handle);
+		return JPEG_CODEC_ERROR;
 	}
 
 	if(dec_cxt_ptr->slice_height == dec_cxt_ptr->size.height) {
@@ -581,6 +606,7 @@ static int _dec_start(uint32_t handle)
 			next_param.dst_addr_phy.addr_y = 0;
 			next_param.slice_height = JPEG_SLICE_HEIGHT;
 			if(JPEG_CODEC_SUCCESS != _dec_next(handle,&next_param)) {
+				_stream_snapshot(handle);
 				CMR_LOGE("dec next error!");
 				return JPEG_CODEC_ERROR;
 			}

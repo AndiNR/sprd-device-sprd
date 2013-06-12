@@ -68,6 +68,8 @@ static int camera_param_to_isp(uint32_t cmd, uint32_t in_param, uint32_t *ptr_ou
 	case ISP_CTRL_CONTRAST:
 	case ISP_CTRL_EV:
 	case ISP_CTRL_VIDEO_MODE:
+	case ISP_CTRL_ISO:
+	case ISP_CTRL_FLICKER:
 		*ptr_out_param = in_param;
 		break;
 
@@ -145,13 +147,6 @@ static int camera_param_to_isp(uint32_t cmd, uint32_t in_param, uint32_t *ptr_ou
 		}
 		break;
 	}
-	case ISP_CTRL_FLICKER:
-		*ptr_out_param = in_param;
-		break;
-
-	case ISP_CTRL_ISO:
-		*ptr_out_param = in_param;
-		break;
 
 	default :
 		break;
@@ -183,7 +178,13 @@ uint32_t camera_flash_mode_to_status(enum cmr_flash_mode f_mode)
 	#endif
 		break;
 	case CAMERA_FLASH_MODE_AUTO:
-		ret = Sensor_Ioctl(SENSOR_IOCTL_FLASH, (uint32_t)&autoflash);
+		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
+			ret = isp_capbility(ISP_FALSH_EB, (void *)&autoflash);
+			CMR_LOGV("isp auto flash value is %d", autoflash);
+		} else {
+			ret = Sensor_Ioctl(SENSOR_IOCTL_FLASH, (uint32_t)&autoflash);
+			CMR_LOGV("yuv auto flash value is %d", autoflash);
+		}
 		if(ret){
 			autoflash = 1;
 			CMR_LOGE("Failed to read auto flash mode, %d", ret);
@@ -605,6 +606,7 @@ int camera_preview_start_set(void)
 	}
 
 	ret = camera_flash_process(1);
+
 exit:
 	return ret;
 }
@@ -659,7 +661,7 @@ int camera_snapshot_stop_set(void)
 	if (ret) {
 		CMR_LOGE("Sensor can't work at this mode %d", cxt->sn_cxt.preview_mode);
 	} else {
-	
+
 	}
 
 	return ret;
@@ -817,8 +819,7 @@ int camera_set_ctrl(camera_parm_type id,
 		cxt->cap_rot = 0;//(uint32_t)camera_get_rot_angle(parm);*/
 		cxt->jpeg_cxt.set_encode_rotation = parm;
 		break;
-
-
+		
 	case CAMERA_PARM_SENSOR_ROTATION: /* 0, 90, 180, 270 degrees */
 		if (CMR_PREVIEW == cxt->camera_status) {
 			uint32_t tmp_rot = parm;
@@ -828,17 +829,17 @@ int camera_set_ctrl(camera_parm_type id,
 			}else{
 				if (before_set) {
 					ret = (*before_set)(RESTART_LIGHTLY);
+					CMR_RTN_IF_ERR(ret);
+				}
+				skip_mode = IMG_SKIP_HW;
+				skip_number = 0;
 				CMR_RTN_IF_ERR(ret);
-			}
-			skip_mode = IMG_SKIP_HW;
-			skip_number = 0;
-			CMR_RTN_IF_ERR(ret);
-			cxt->prev_rot = parm;
-			camera_set_rot_angle(&cxt->prev_rot);
-			cxt->cap_rot = cxt->prev_rot;
-			if (after_set) {
+				cxt->prev_rot = parm;
+				camera_set_rot_angle(&cxt->prev_rot);
+				cxt->cap_rot = cxt->prev_rot;
+				if (after_set) {
 					ret = (*after_set)(RESTART_LIGHTLY, skip_mode, skip_number);
-				CMR_RTN_IF_ERR(ret);
+					CMR_RTN_IF_ERR(ret);
 				}
 			}
 		}else {
@@ -1037,13 +1038,8 @@ int camera_set_ctrl(camera_parm_type id,
 		break;
 
 	case CAMERA_PARM_PREVIEW_MODE:   /* Use camera_preview_mode_type */
-		CMR_LOGV("parm=%d, cxt->cmr_set.video_mode = %d \n", parm, cxt->cmr_set.video_mode);
 		if (parm != cxt->cmr_set.video_mode) {
-
-			CMR_LOGV("cxt->camera_status = %d \n", cxt->camera_status);
-
 			if (CMR_PREVIEW == cxt->camera_status) {
-
 				if (before_set) {
 					ret = (*before_set)(RESTART_LIGHTLY);
 					CMR_RTN_IF_ERR(ret);
@@ -1166,7 +1162,6 @@ int camera_autofocus_start(void)
 			ret = Sensor_Ioctl(SENSOR_IOCTL_FOCUS, (uint32_t) & af_param);
 		}
 	}
-
 
 	if (cxt->cmr_set.flash) {
 		camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN);

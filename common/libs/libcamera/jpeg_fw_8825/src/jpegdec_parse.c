@@ -130,7 +130,7 @@ LOCAL JPEG_RET_E GetSOF(BOOLEAN isProgressive, JPEG_DEC_INPUT_PARA_T  *jpeg_dec_
 	
 	if ((jpeg_dec_input->input_height < 8)||(jpeg_dec_input->input_width < 8))
 	{
-		JPEG_TRACE("WARNING!!! width =%d, height = %d\n", jpeg_dec_input->input_height, jpeg_dec_input->input_width);
+		JPEG_TRACE("WARNING!!! width =%d, height = %d\n", jpeg_dec_input->input_width, jpeg_dec_input->input_height);
 	}
 
 	if (!get_char(&component_num)) /*get the component number*/

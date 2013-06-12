@@ -665,7 +665,7 @@ PUBLIC BOOLEAN Jpeg_WriteBlock(JPEG_WRITE_STREAM_CONTEXT_T *context_ptr,
 	{
 		for(i=0; i<block_size; i++)
 		{
-			Jpeg_WriteC(context_ptr, *block_buf_ptr++);
+			JPEG_WRITE_DATA(Jpeg_WriteC, context_ptr, *block_buf_ptr++, return JPEG_FAILED);
 		}
 	}
 #else

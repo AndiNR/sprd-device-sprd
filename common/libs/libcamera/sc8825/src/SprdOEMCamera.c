@@ -179,7 +179,7 @@ int camera_sensor_init(int32_t camera_id)
 		ret = -CAMERA_NO_SENSOR;
 		goto exit;
 	} else {
-		if ((uint32_t)camera_id >= sensor_num) {
+		if ((SENSOR_ATV != (uint32_t)camera_id) && ((uint32_t)camera_id >= sensor_num)) {
 			CMR_LOGE("No sensor %d", sensor_num);
 			ret = -CAMERA_NO_SENSOR;
 			goto exit;
@@ -899,12 +899,16 @@ camera_ret_code_type camera_release_frame(uint32_t index)
 	index += CAMERA_PREV_ID_BASE;
 	if (IMG_ROT_0 == g_cxt->prev_rot) {
 		if (index >= CAMERA_PREV_ID_BASE &&
-			index < CAMERA_PREV_ID_BASE + CAMERA_PREV_FRM_CNT) {
-			ret = cmr_v4l2_free_frame(0, index);
-			CMR_LOGV("release the frame whose index is 0x%x, rot %d, ret %d",
+		index < CAMERA_PREV_ID_BASE + CAMERA_PREV_FRM_CNT) {
+			if ((CMR_IDLE == g_cxt->camera_status) && (V4L2_IDLE == g_cxt->v4l2_cxt.v4l2_state)) {
+				CMR_LOGV("IDLE status, v4l2 buf will be reconfig, need not release.");
+			} else {
+				ret = cmr_v4l2_free_frame(0, index);
+				CMR_LOGV("release the frame whose index is 0x%x, rot %d, ret %d",
 				index,
 				g_cxt->prev_rot,
 				ret);
+			}
 		} else {
 			CMR_LOGE("wrong index, 0x%x ", index);
 		}
@@ -1177,6 +1181,13 @@ int camera_after_set_internal(enum restart_mode re_mode)
 		ret  = camera_start_preview_internal();
 		break;
 	case RESTART_MIDDLE:
+#ifdef __PREV_THREAD
+			ret = camera_prev_thread_init();
+			if (ret) {
+				CMR_LOGE("Failed to init preview manager %d", ret);
+				return -CAMERA_FAILED;
+			}
+#endif
 		ret = camera_preview_init(g_cxt->preview_fmt);
 		if (ret) {
 			CMR_LOGE("Failed to restart preview");
@@ -1588,8 +1599,12 @@ int camera_take_picture_continue_shot(void)
 		return -CAMERA_NO_MEMORY;
 	}
 
+	if (IMG_SKIP_HW == g_cxt->skip_mode) {
+		skip_number = g_cxt->sn_cxt.sensor_info->capture_skip_num;
+	}
+
 	//ret = cmr_v4l2_cap_resume(0);
-	ret = cmr_v4l2_cap_start(0);
+	ret = cmr_v4l2_cap_start(skip_number);
 	if (ret) {
 		CMR_LOGE("Fail to start V4L2 Capture");
 		return -CAMERA_FAILED;
@@ -2385,6 +2400,14 @@ int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info
 
 		break;
 
+	case CMR_EVT_CAP_CANCEL:
+		camera_call_cb(CAMERA_EXIT_CB_FAILED,
+					camera_get_client_data(),
+					CAMERA_FUNC_TAKE_PICTURE,
+					(uint32_t)NULL);
+		CMR_LOGV("capture cancel done.");
+		break;
+
 	default:
 		break;
 
@@ -2742,9 +2765,14 @@ int camera_rotation_handle(uint32_t evt_type, uint32_t sub_type, struct img_frm 
 	uint32_t                 tmp;
 	int                      ret = CAMERA_SUCCESS;
 
-	if (IMG_CVT_ROTATING != g_cxt->rot_cxt.rot_state) {
-		CMR_LOGE("invalid state %d, directly return", g_cxt->rot_cxt.rot_state);
-		return CAMERA_INVALID_STATE;
+	if (IS_PREVIEW || IS_CAPTURE) {
+	    if (IMG_CVT_ROTATING != g_cxt->rot_cxt.rot_state) {
+	        CMR_LOGE("invalid state %d, directly return", g_cxt->rot_cxt.rot_state);
+	        return CAMERA_INVALID_STATE;
+	    }
+	} else {
+	    CMR_LOGE("Don't handle");
+	    return ret;
 	}
 
 	(void)sub_type;
@@ -2929,7 +2957,6 @@ void *camera_af_thread_proc(void *data)
 			if(camera_autofocus_need_exit()){
 				camera_autofocus();
 			}
-
 			CMR_PRINT_TIME;
 			break;
 		case CMR_EVT_AF_CANCEL:
@@ -3028,6 +3055,8 @@ int camera_preview_init(int format_mode)
 	sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.preview_mode];
 
 	g_cxt->prev_rot_index = 0;
+	g_cxt->skip_mode = IMG_SKIP_HW;
+	g_cxt->skip_num  = g_cxt->sn_cxt.sensor_info->preview_skip_num;
 	g_cxt->pre_frm_cnt  = 0;
 	v4l2_cfg.cfg0.need_isp = 0;
 	v4l2_cfg.cfg0.need_binning = 0;
@@ -3035,6 +3064,7 @@ int camera_preview_init(int format_mode)
 		g_cxt->sn_cxt.sn_if.img_fmt = V4L2_SENSOR_FORMAT_YUV;
 	} else if (SENSOR_IMAGE_FORMAT_RAW == sensor_mode->image_format) {
 		g_cxt->sn_cxt.sn_if.img_fmt = V4L2_SENSOR_FORMAT_RAWRGB;
+		g_cxt->skip_mode = IMG_SKIP_SW;
 		v4l2_cfg.cfg0.need_isp = 1;
 	} else {
 		CMR_LOGE("Unsupported sensor format %d for preview", sensor_mode->image_format);
@@ -3112,8 +3142,6 @@ int camera_preview_dcam_init(int format_mode)
 	sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.preview_mode];
 
 	g_cxt->prev_rot_index = 0;
-	g_cxt->skip_mode = IMG_SKIP_HW;
-	g_cxt->skip_num  = g_cxt->sn_cxt.sensor_info->preview_skip_num;
 	g_cxt->pre_frm_cnt  = 0;
 	v4l2_cfg.cfg0.need_isp = 0;
 	v4l2_cfg.cfg0.need_binning = 0;
@@ -3121,7 +3149,6 @@ int camera_preview_dcam_init(int format_mode)
 		g_cxt->sn_cxt.sn_if.img_fmt = V4L2_SENSOR_FORMAT_YUV;
 	} else if (SENSOR_IMAGE_FORMAT_RAW == sensor_mode->image_format) {
 		g_cxt->sn_cxt.sn_if.img_fmt = V4L2_SENSOR_FORMAT_RAWRGB;
-		g_cxt->skip_mode = IMG_SKIP_SW;
 		v4l2_cfg.cfg0.need_isp = 1;
 	} else {
 		CMR_LOGE("Unsupported sensor format %d for preview", sensor_mode->image_format);
@@ -3354,7 +3381,8 @@ int camera_get_sensor_preview_mode(struct img_size* target_size, uint32_t *work_
 
 	CMR_LOGV("search_height = %d", search_height);
 	for (i = SENSOR_MODE_PREVIEW_ONE; i < SENSOR_MODE_MAX; i++) {
-		if (SENSOR_MODE_MAX != sn_info->sensor_mode_info[i].mode) {
+		if (SENSOR_MODE_MAX != sn_info->sensor_mode_info[i].mode &&
+			SENSOR_IMAGE_FORMAT_JPEG != sn_info->sensor_mode_info[i].image_format) {
 			height = sn_info->sensor_mode_info[i].height;
 			CMR_LOGV("height = %d", height);
 			if (search_height <= height) {
@@ -3996,7 +4024,15 @@ void camera_capture_hdr_data(struct frm_info *data)
 #endif
 			break;
 		case IMG_DATA_TYPE_JPEG:
-			CMR_LOGE("dont support this type.");
+			if (IMG_ROT_0 == g_cxt->cap_rot) {
+				if (0 == g_cxt->zoom_level) {
+					addr = g_cxt->cap_mem[frm_id].target_yuv.addr_vir;
+				} else {
+					addr = g_cxt->cap_mem[frm_id].cap_yuv.addr_vir;
+				}
+			} else {
+				addr = g_cxt->cap_mem[frm_id].cap_yuv_rot.addr_vir;
+			}
 			break;
 		case IMG_DATA_TYPE_YUV420:
 			if (IMG_ROT_0 == g_cxt->cap_rot) {
@@ -4054,7 +4090,7 @@ int camera_v4l2_capture_handle(struct frm_info *data)
 						camera_start_isp_process(data);
 						camera_wait_isp_done();
 					}
-					camera_capture_hdr_data	(data);
+					camera_capture_hdr_data(data);
 				}
 				if (g_cxt->cap_cnt == g_cxt->total_cap_num) {
 					ret = camera_snapshot_stop_set();
@@ -4345,6 +4381,7 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 	JINF_EXIF_INFO_T         *exif_ptr;
 	struct jpeg_enc_exif_param      wexif_param;
 	struct jpeg_wexif_cb_param    wexif_output;
+	uint32_t                 tmp = 0;
 	int                      ret = CAMERA_SUCCESS;
 
 	jpg_frm = &g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg;
@@ -4391,6 +4428,13 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 
 		//continue mode process
 		if ((CAMERA_CONTINUE_SHOT_MODE == g_cxt->cap_mode) && (g_cxt->cap_cnt < g_cxt->total_cap_num)) {
+			if (IMG_ROT_90 == g_cxt->cap_rot || IMG_ROT_270 == g_cxt->cap_rot) {
+				//need reswap
+				tmp = g_cxt->cap_orig_size.width;
+				g_cxt->cap_orig_size.width = g_cxt->cap_orig_size.height;
+				g_cxt->cap_orig_size.height = tmp;
+			}
+
 			ret = camera_take_picture_continue_shot();
 			if (ret) {
 				CMR_LOGE("Failed to camera_take_picture_continue_shot %d.", ret);

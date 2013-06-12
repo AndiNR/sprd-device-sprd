@@ -137,10 +137,14 @@ static void lower_emc_freq(char flag)
 {
 	int fp_emc_freq = -1;
 	fp_emc_freq = open("/sys/emc/emc_freq", O_WRONLY);
-	if (fp_emc_freq > 0) {
+	if (fp_emc_freq > 0)
+	{
 		write(fp_emc_freq, &flag, sizeof(flag));
 		close(fp_emc_freq);
 		LOGV("lower_emc_freq: %c \n", flag);
+	} else if (-1 != fp_emc_freq) {
+		close(fp_emc_freq);
+		LOGV("lower_emc_freq: direct close!");
 	} else {
 		LOGV("lower_emc_freq: fp_emc_freq open failed \n");
 	}
@@ -285,6 +289,9 @@ void SprdCameraHardware::enableMsgType(int32_t msgType)
         LOGV("mLock:enableMsgType S .\n");
         Mutex::Autolock lock(mLock);
         mMsgEnabled |= msgType;
+        if (CAMERA_MSG_VIDEO_FRAME == msgType) {
+                mRecordingRunState = RECORDING_STARTING;  //add for start record lock issue
+        }
         LOGV("mLock:enableMsgType E .\n");
 }
 
@@ -705,7 +712,7 @@ status_t SprdCameraHardware::startPreviewInternal()
 
 void SprdCameraHardware::stopPreviewInternal()
 {
-        LOGV("stopPreviewInternal E");
+       LOGV("stopPreviewInternal Enter");
 
 #ifdef CMCC_POWER_OPT
 	if (flag_lower_emc_freq) {
@@ -808,6 +815,8 @@ bool SprdCameraHardware::previewEnabled()
 
 status_t SprdCameraHardware::startRecording()
 {
+        status_t ret = NO_ERROR;
+
         LOGV("mLock:startRecording S.\n");
         Mutex::Autolock l(&mLock);
         Mutex::Autolock stateLock(&mStateLock);
@@ -839,7 +848,9 @@ status_t SprdCameraHardware::startRecording()
         }
         mRecordingMode = 1;
         LOGV("startRecording,mRecordingMode=%d.",mRecordingMode);
-        return startPreviewInternal();
+        ret = startPreviewInternal();
+        mRecordingRunState = RECORDING_RUNING;
+        return ret;
     }
 
 void SprdCameraHardware::stopRecording()
@@ -849,6 +860,7 @@ void SprdCameraHardware::stopRecording()
         Mutex::Autolock l(&mLock);
         Mutex::Autolock statelock(&mStateLock);
         stopPreviewInternal();
+        mRecordingRunState = RECORDING_STOP;
         LOGV("stopRecording: X");
         LOGV("mLock:stopRecording E.\n");
 }
@@ -1190,7 +1202,7 @@ status_t SprdCameraHardware::setParameters(const CameraParameters& params)
          return NO_ERROR;
     }
 
-CameraParameters SprdCameraHardware::getParameters() const
+CameraParameters SprdCameraHardware::getParameters()// const
 {
         LOGV("getParameters: EX");
         return mParameters;
@@ -1349,16 +1361,19 @@ void SprdCameraHardware::receivePreviewFDFrame(camera_frame_type *frame)
 
 void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 {
-        Mutex::Autolock cbLock(&mCallbackLock);
+	Mutex::Autolock cbLock(&mCallbackLock);
+	LOGE("get mCallbackLock");
+
         ssize_t offset = frame->buf_id;
         camera_frame_metadata_t metadata;
         camera_face_t face_info[FACE_DETECT_NUM];
         uint32_t k = 0;
-
-       if ((mCameraState != QCS_PREVIEW_IN_PROGRESS)||(mSettingPreviewWindowState == PREVIEW_WINDOW_SET_IDLE)
-              || (mSettingPreviewWindowState == PREVIEW_WINDOW_SETTING)){
-              LOGE("directly return!");
-              if(CAMERA_SUCCESS != camera_release_frame(frame->buf_id)){
+	if ((mCameraState != QCS_PREVIEW_IN_PROGRESS)
+		|| (mSettingPreviewWindowState == PREVIEW_WINDOW_SETTING)
+		|| (mRecordingRunState == RECORDING_STARTING)) {
+		LOGE("directly return! mCameraState is %d mSettingPreviewWindowState is %d mRecordingRunState is %d ",
+			mCameraState, mSettingPreviewWindowState, mRecordingRunState);
+		if(CAMERA_SUCCESS != camera_release_frame(frame->buf_id)){
                         LOGE("receivePreviewFrame: fail to camera_release_frame().offset: %d.", frame->buf_id);
               }
              return;
@@ -1497,13 +1512,17 @@ callbacks:
                         nsecs_t timestamp = systemTime();/*frame->timestamp;*/
                         LOGV("test timestamp = %lld, mIsStoreMetaData: %d.",timestamp, mIsStoreMetaData);
 
-			if ((mCameraState != QCS_PREVIEW_IN_PROGRESS)||(mSettingPreviewWindowState == PREVIEW_WINDOW_SET_IDLE)
-			    || (mSettingPreviewWindowState == PREVIEW_WINDOW_SETTING)) {
-				LOGE("directly return!");
-				if(CAMERA_SUCCESS != camera_release_frame(frame->buf_id)){
-				LOGE("receivePreviewFrame: fail to camera_release_frame().offset: %d.", frame->buf_id);
-				}
-				return;
+                        if ((mCameraState != QCS_PREVIEW_IN_PROGRESS)
+					|| (mSettingPreviewWindowState == PREVIEW_WINDOW_SETTING)
+					|| (mRecordingRunState == RECORDING_STARTING)) {
+
+					LOGE("directly return! mCameraState is %d mSettingPreviewWindowState is %d mRecordingRunState is %d ",
+						mCameraState, mSettingPreviewWindowState, mRecordingRunState);
+
+					if(CAMERA_SUCCESS != camera_release_frame(frame->buf_id)){
+					LOGE("receivePreviewFrame: fail to camera_release_frame().offset: %d.", frame->buf_id);
+					}
+					return;
 			}
 
 			if(mIsStoreMetaData) {
@@ -1948,7 +1967,7 @@ void   SprdCameraHardware::receiveJpegPosPicture(void)//(camera_frame_type *fram
     }
 
     void
-    SprdCameraHardware::receiveJpegPictureError(void)
+    SprdCameraHardware::receiveJpegPictureError(JPEGENC_CBrtnType *encInfo)
     {
         LOGV("receiveJpegPictureError.");
         print_time();
@@ -1964,10 +1983,12 @@ void   SprdCameraHardware::receiveJpegPosPicture(void)//(camera_frame_type *fram
         } else LOGV("JPEG callback was cancelled--not delivering image.");
         // NOTE: the JPEG encoder uses the raw image contained in mRawHeap, so we need
         // to keep the heap around until the encoding is complete.
-        FreePmem(mRawHeap);
-        mRawHeap = NULL;
-        FreePmem(mMiscHeap);
-        mMiscHeap = NULL;
+	if (encInfo->need_free) {
+		FreePmem(mRawHeap);
+		mRawHeap = NULL;
+		FreePmem(mMiscHeap);
+		mMiscHeap = NULL;
+	}
         print_time();
         LOGV("receiveJpegPictureError: X callback done.");
     }
@@ -2695,7 +2716,7 @@ LOGV("start to getCameraStateStr.");
 	if((cb == CAMERA_EXIT_CB_FAILED)&&(func == CAMERA_FUNC_TAKE_PICTURE)){
 		obj->FreeCameraMem();
 	}else if((cb == CAMERA_EXIT_CB_FAILED)&&(func == CAMERA_FUNC_ENCODE_PICTURE)){
-		obj->receiveJpegPictureError();
+		obj->receiveJpegPictureError((JPEGENC_CBrtnType *)parm4);
 	}
 
                 TRANSITION_ALWAYS(QCS_ERROR);
@@ -2726,6 +2747,9 @@ LOGV("start to getCameraStateStr.");
                         // transition to QCS_ERROR
                         LOGE("camera cb: invalid state %s for preview!",
                              obj->getCameraStateStr(obj->mCameraState));
+                             if(CAMERA_SUCCESS != camera_release_frame(((camera_frame_type *)parm4)->buf_id)){
+                                 LOGE("camera cb: fail to camera_release_frame().offset: %d.", ((camera_frame_type *)parm4)->buf_id);
+                             }
                         break;
                     }
                     break;
@@ -2842,7 +2866,7 @@ LOGV("start to getCameraStateStr.");
                               obj->getCameraStateStr(obj->mCameraState));
                     break;
                 case CAMERA_EXIT_CB_FAILED:
-                    obj->receiveJpegPictureError();
+                    obj->receiveJpegPictureError((JPEGENC_CBrtnType *)parm4);
                     break;
 	       case CAMERA_EVT_CB_SNAPSHOT_JPEG_DONE:
 			 	TRANSITION_LOCKED(QCS_WAITING_RAW,
@@ -2891,10 +2915,10 @@ LOGV("start to getCameraStateStr.");
                         break;
                     case CAMERA_EXIT_CB_ABORT:
                         LOGE("camera cb: autofocus aborted");
-                        //break;
+                        break;
                     case CAMERA_EXIT_CB_FAILED: {
                         LOGE("camera cb: autofocus failed");
-                        //Mutex::Autolock lock(&obj->mStateLock);
+                        Mutex::Autolock lock(&obj->mStateLock);
                         if (obj->mMsgEnabled & CAMERA_MSG_FOCUS)
                         	obj->mNotify_cb(CAMERA_MSG_FOCUS, 0, 0, obj->mUser);
                     }
@@ -3099,11 +3123,11 @@ status_t SprdCameraHardware::sendCommand(int32_t cmd, int32_t arg1, int32_t arg2
 	} else if(CAMERA_CMD_STOP_FACE_DETECTION == cmd) {
 	    LOGE("sendCommand: not support the CAMERA_CMD_STOP_FACE_DETECTION.");
         camera_set_start_facedetect(0);
-        FreePmem(mFDHeap);
-        mFDHeap = NULL;
+//        FreePmem(mFDHeap);
+//        mFDHeap = NULL;
         FreeFdmem();
 	}
-
+	LOGE("sendCommand end.");
 	return NO_ERROR;
 }
 

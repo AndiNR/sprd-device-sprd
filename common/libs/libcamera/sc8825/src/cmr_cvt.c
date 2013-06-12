@@ -73,11 +73,11 @@ static char               scaler_dev_name[50] = "/dev/sprd_scale";
 static int                scaler_fd = -1;
 static cmr_evt_cb         scaler_evt_cb = NULL;
 static pthread_mutex_t    scaler_cb_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t     scaler_cond;
 static pthread_t          scaler_thread;
 static struct scale_cxt   *sc_cxt;
 static sem_t              scaler_sem;
 static sem_t              scaler_init_sem;
+static sem_t              scaler_cond_sem;
 
 static int   cmr_rot_create_thread(void);
 static int   cmr_rot_kill_thread(void);
@@ -316,7 +316,7 @@ int cmr_rot_deinit(void)
 {
 	int                      ret = 0;
 
-	CMR_LOGV("Start to close rotation device.");
+	CMR_LOGE("Start to close rotation device.");
 
 	if (-1 == rot_fd) {
 		CMR_LOGE("Invalid fd");
@@ -346,7 +346,7 @@ int cmr_rot_deinit(void)
 	rot_evt_cb = NULL;
 	pthread_mutex_unlock(&rot_cb_mutex);
 	pthread_mutex_destroy(&rot_cb_mutex);
-	CMR_LOGV("close device.");
+	CMR_LOGE("close device.");
 	return 0;
 }
 
@@ -365,7 +365,7 @@ static int   cmr_rot_create_thread(void)
 static int cmr_rot_kill_thread(void)
 {
 	int                      ret = 0;
-	char                     write_ch;
+	char                     write_ch = 0;
 	void                     *dummy;
 
 	if (-1 == rot_fd) {
@@ -393,7 +393,7 @@ static void* cmr_rot_thread_proc(void* data)
 
 	while(1) {
 		if (-1 == ioctl(rot_fd, ROT_IO_IS_DONE, &param)) {
-			CMR_LOGV("To exit rot thread");
+			CMR_LOGE("To exit rot thread");
 			break;
 		} else {
 			CMR_LOGV("rot done OK. 0x%x", (uint32_t)rot_evt_cb);
@@ -421,7 +421,7 @@ int cmr_scale_init(void)
 	int                      ret = 0;
 	int                      time_out = 3;
 
-	CMR_LOGV("In");
+	CMR_LOGE("In");
 	CMR_PRINT_TIME;
 
 	for ( ;time_out > 0; time_out--) {
@@ -446,10 +446,10 @@ int cmr_scale_init(void)
 		CMR_LOGE("Failed to init mutex : %d", ret);
 		exit(EXIT_FAILURE);
 	}
-	pthread_cond_init(&scaler_cond, NULL);
 
 	sem_init(&scaler_sem, 0, 1);
 	sem_init(&scaler_init_sem, 0, 0);
+	sem_init(&scaler_cond_sem, 0, 0);
 	ret = cmr_scale_create_thread();
 	sem_wait(&scaler_init_sem);
 
@@ -567,9 +567,11 @@ int cmr_scale_local_init(uint32_t slice_height,
 }
 int cmr_scale_evt_reg(cmr_evt_cb  scale_event_cb)
 {
+	CMR_LOGE("s.");
 	pthread_mutex_lock(&scaler_cb_mutex);
 	scaler_evt_cb = scale_event_cb;
 	pthread_mutex_unlock(&scaler_cb_mutex);
+	CMR_LOGE("e");
 	return 0;
 
 }
@@ -593,7 +595,7 @@ int  cmr_scale_start(uint32_t slice_height,
 		return -ENODEV;
 	}
 
-	CMR_LOGI("src, w h %d %d, addr 0x%x 0x%x, fmt %d, endian %d %d",
+	CMR_LOGE("src, w h %d %d, addr 0x%x 0x%x, fmt %d, endian %d %d",
 		src_img->size.width,
 		src_img->size.height,
 		src_img->addr_phy.addr_y,
@@ -617,6 +619,7 @@ int  cmr_scale_start(uint32_t slice_height,
 		rect->width,
 		rect->height);
 	sem_wait(&scaler_sem);
+	CMR_LOGE("wait ok.");
 	ret = cmr_scale_local_init(slice_height,
 				src_img,
 				rect,
@@ -674,7 +677,7 @@ int  cmr_scale_start(uint32_t slice_height,
 		}
 		if (sc_cxt->is_started) {
 			act_height = sc_cxt->ready_height - sc_cxt->total_height;
-			CMR_LOGI("ready_height %d, total_height %d",
+			CMR_LOGV("ready_height %d, total_height %d",
 				sc_cxt->ready_height,
 				sc_cxt->total_height);
 			ret = ioctl(scaler_fd, SCALE_IO_SLICE_SCALE_HEIGHT, &act_height);
@@ -683,14 +686,20 @@ int  cmr_scale_start(uint32_t slice_height,
 	CVT_EXIT_IF_ERR(ret);
 
 	if (sc_cxt->is_started) {
+		CMR_LOGV("SCALE_IO_START before");
 		ret = ioctl(scaler_fd, SCALE_IO_START, NULL);
+		CMR_LOGV("SCALE_IO_START after");
 		CVT_EXIT_IF_ERR(ret);
 		pthread_mutex_lock(&scaler_cb_mutex);
 		if (NULL == scaler_evt_cb) {
-			pthread_cond_wait(&scaler_cond, &scaler_cb_mutex);
+			pthread_mutex_unlock(&scaler_cb_mutex);
+			CMR_LOGV("waiting cond sem before");
+			sem_wait(&scaler_cond_sem);
+			CMR_LOGV("wait cond sem after");
+			pthread_mutex_lock(&scaler_cb_mutex);
 		}
 		pthread_mutex_unlock(&scaler_cb_mutex);
-		CMR_LOGI("End");
+		CMR_LOGV("scaler_cb_mutex unlock");
 		CMR_PRINT_TIME;
 	}
 	sc_cxt->total_height = sc_cxt->slice_height;
@@ -698,7 +707,7 @@ int  cmr_scale_start(uint32_t slice_height,
 exit:
 	if (ret) {
 		sem_post(&scaler_sem);
-		CMR_LOGV("Err, %d", ret);
+		CMR_LOGE("Err, %d", ret);
 	}
 	return ret;
 }
@@ -883,7 +892,7 @@ int cmr_scale_capability(uint32_t *width, uint32_t *sc_factor)
 	ret = read(scaler_fd, rd_word, 2*sizeof(uint32_t));
 	*width = rd_word[0];
 	*sc_factor = rd_word[1];
-	CMR_LOGV("width %d, sc_factor %d", *width, *sc_factor);
+	CMR_LOGE("width %d, sc_factor %d", *width, *sc_factor);
 	return ret;
 }
 
@@ -891,7 +900,7 @@ int cmr_scale_deinit(void)
 {
 	int                      ret = 0;
 
-	CMR_LOGV("Start to close scale device.");
+	CMR_LOGE("Start to close scale device.");
 
 	if (-1 == scaler_fd) {
 		CMR_LOGE("Fail to open scaler device.");
@@ -900,7 +909,7 @@ int cmr_scale_deinit(void)
 
 	pthread_mutex_lock(&scaler_cb_mutex);
 	if (NULL == scaler_evt_cb) {
-		pthread_cond_signal(&scaler_cond);
+		sem_post(&scaler_cond_sem);
 	}
 	pthread_mutex_unlock(&scaler_cb_mutex);
 	sem_wait(&scaler_sem);
@@ -915,6 +924,8 @@ int cmr_scale_deinit(void)
 
 	sem_destroy(&scaler_sem);
 	sem_destroy(&scaler_init_sem);
+	sem_destroy(&scaler_cond_sem);
+
 
 	/* then close fd */
 	if (-1 == close(scaler_fd)) {
@@ -931,8 +942,7 @@ int cmr_scale_deinit(void)
 	scaler_evt_cb = NULL;
 	pthread_mutex_unlock(&scaler_cb_mutex);
 	pthread_mutex_destroy(&scaler_cb_mutex);
-	pthread_cond_destroy(&scaler_cond);
-	CMR_LOGV("close device.");
+	CMR_LOGE("close device.");
 	return 0;
 }
 
@@ -951,7 +961,7 @@ static int   cmr_scale_create_thread(void)
 static int cmr_scale_kill_thread(void)
 {
 	int                      ret = 0;
-	char                     write_ch;
+	char                     write_ch = 0;
 	void                     *dummy;
 
 	if (-1 == scaler_fd) {
@@ -981,15 +991,19 @@ static void* cmr_scale_thread_proc(void* data)
 
 	while(1) {
 		if (-1 == ioctl(scaler_fd, SCALE_IO_IS_DONE, &sc_frm)) {
-			CMR_LOGV("To exit scaler thread");
+			CMR_LOGE("To exit scaler thread");
 			break;
 		} else {
+			CMR_LOGV("waiting for cb lock");
 			pthread_mutex_lock(&scaler_cb_mutex);
+			CMR_LOGV("wait cb lock ok");
 			if (NULL == scaler_evt_cb) {
-				pthread_cond_signal(&scaler_cond);
+				CMR_LOGV("signal scaler_cond before.");
+				sem_post(&scaler_cond_sem);
+				CMR_LOGV("signal scaler_cond after.");
 			} else {
 				evt_id = CMR_IMG_CVT_SC_DONE;
-				CMR_LOGI("out height %d", sc_frm.height);
+				CMR_LOGV("out height %d", sc_frm.height);
 
 				if (sc_cxt->need_downsample) {
 					src = sc_cxt->tmp_slice.addr_vir.addr_u;

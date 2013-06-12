@@ -43,8 +43,9 @@ PUBLIC void OutPutRstMarker(void)
 	
 	SCI_ASSERT(jpeg_fw_codec != PNULL);
 	
-	READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write");
-
+	if (READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM,Polling the bsm rfifo can read/write")) {
+		return JPEG_FAILED;
+	}
 	if (jpeg_fw_codec->RST_Count > M_RST7)
 	{
 		jpeg_fw_codec->RST_Count = M_RST0;

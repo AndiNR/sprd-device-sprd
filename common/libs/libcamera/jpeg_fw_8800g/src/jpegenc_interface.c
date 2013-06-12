@@ -181,8 +181,10 @@ PUBLIC JPEG_RET_E JPEG_HWWriteHead(APP1_T *app1_t)
 PUBLIC JPEG_RET_E JPEG_HWWriteTail(void)
 {
 	//wxz:??? this bit is not match with doc.
-	READ_REG_POLL(VSP_VLC_REG_BASE+VLC_ST_OFF, 0x4, 0x4, TIME_OUT_CLK, "VLC_CTRL_OFF: polling the vlc is done!");
-	
+	if (READ_REG_POLL(VSP_VLC_REG_BASE+VLC_ST_OFF, 0x4, 0x4, TIME_OUT_CLK, "VLC_CTRL_OFF: polling the vlc is done!")) {
+		return JPEG_FAILED;
+	}
+
 	//clear vlc, Hardware should flush vlc internal buffer and byte align(if the last aligned byte value is 0xff, then 0x00 will be followed).
 	VSP_WRITE_REG(VSP_VLC_REG_BASE+VLC_ST_OFF, 1, "VLC_ST_OFF: clear vlc module");
 	
@@ -190,7 +192,9 @@ PUBLIC JPEG_RET_E JPEG_HWWriteTail(void)
 	write_nbits(0xffd9, 16, 0);
 #endif //_CMODEL_
 
-	READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, 1, 1, TIME_OUT_CLK, "BSM_READY: polling bsm rfifo ready");
+	if (READ_REG_POLL(VSP_BSM_REG_BASE+BSM_READY_OFF, 1, 1, TIME_OUT_CLK, "BSM_READY: polling bsm rfifo ready")) {
+		return JPEG_FAILED;
+	}
 
 	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG2_OFF, (16<<24), "BSM_CFG2: configure 16 bit for writing");
 	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_WDATA_OFF, 0xffd9, "BSM_WDATA: configure the value to be written to bitstream");
@@ -222,10 +226,15 @@ PUBLIC uint32  JPEG_HWGetSize(void)
 			;
 		}
 
-		READ_REG_POLL(VSP_DCAM_REG_BASE+DCAM_INT_STS_OFF, 0x100, 0x100, TIME_OUT_CLK, "DCAM_INT_STS: polling the vlc is done!");
+		if (READ_REG_POLL(VSP_DCAM_REG_BASE+DCAM_INT_STS_OFF, 0x100, 0x100, TIME_OUT_CLK, "DCAM_INT_STS: polling the vlc is done!")) {
+			return JPEG_FAILED;
+		}
 	#endif//SMALL_SYS
 
-		READ_REG_POLL(VSP_VLC_REG_BASE+VLC_ST_OFF, 0x4, 0x4, TIME_OUT_CLK, "VLC_CTRL_OFF: polling the vlc is done!");
+		if (READ_REG_POLL(VSP_VLC_REG_BASE+VLC_ST_OFF, 0x4, 0x4, TIME_OUT_CLK, "VLC_CTRL_OFF: polling the vlc is done!")) {
+			return JPEG_FAILED;
+		}
+
 
 		//clear vlc, Hardware should flush vlc internal buffer and byte align(if the last aligned byte value is 0xff, then 0x00 will be followed).
 		VSP_WRITE_REG(VSP_VLC_REG_BASE+VLC_ST_OFF, 1, "VLC_ST_OFF: clear vlc module");
@@ -238,7 +247,10 @@ PUBLIC uint32  JPEG_HWGetSize(void)
 
 	//get the length;
 	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG2_OFF, 2, "BSM_CFG2: Move data remain in FIFO to external memory");
-	READ_REG_POLL(VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "BSM_DEBUG: polling bsm status");	
+	if (READ_REG_POLL(VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "BSM_DEBUG: polling bsm status")) {
+		return JPEG_FAILED;
+	}
+
 #if _CMODEL_
 	clear_bsm_fifo();
 	//clear_bsm_bfr(1, 0);

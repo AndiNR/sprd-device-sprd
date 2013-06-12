@@ -654,7 +654,7 @@ typedef struct sensor_info_tag {
 	uint32_t image_pattern;
 	SENSOR_REG_TAB_INFO_T_PTR resolution_tab_info_ptr;
 	SENSOR_IOCTL_FUNC_TAB_T_PTR ioctl_func_tab_ptr;
-	struct sensor_raw_info*  raw_info_ptr; /*sensor_raw_info*/
+	struct sensor_raw_info**  raw_info_ptr; /*sensor_raw_info*/
 	SENSOR_EXTEND_INFO_T_PTR ext_info_ptr;
 	SENSOR_AVDD_VAL_E iovdd_val;
 	SENSOR_AVDD_VAL_E dvdd_val;

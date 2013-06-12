@@ -363,7 +363,7 @@ int cmr_v4l2_buff_cfg (struct buffer_cfg *buf_cfg)
 		v4l2_buf.reserved   = buf_cfg->addr[i].addr_v;
 		ret = ioctl(fd, VIDIOC_QBUF, &v4l2_buf);
 		if (ret) {
-			CMR_LOGE("Failed to QBuf, %d", ret);
+			CMR_LOGE("Failed to QBuf, %d, index is %d", ret, i);
 			break;
 		}
 	}
@@ -477,7 +477,7 @@ int cmr_v4l2_free_frame(uint32_t channel_num, uint32_t index)
 	int                      ret = 0;
 	struct v4l2_buffer       v4l2_buf;
 
-	CMR_LOGV("channel %d, index 0x%x", channel_num, index);
+	CMR_LOGV("channel %d, index 0x%x is_on = %d", channel_num, index, is_on);
 
 	CMR_CHECK_FD;
 
@@ -558,7 +558,7 @@ static int   cmr_v4l2_create_thread(void)
 static int cmr_v4l2_kill_thread(void)
 {
 	int                      ret = 0;
-	char                     write_ch;
+	char                     write_ch = 0;
 	void                     *dummy;
 
 	CMR_CHECK_FD;
