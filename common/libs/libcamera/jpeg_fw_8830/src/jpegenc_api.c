@@ -49,7 +49,7 @@ int JPG_reset_cb(int fd)
 LOCAL void JPEGENC_init_fw_param(JPEGENC_PARAMS_T *jpegenc_params, 
 									JPEG_ENC_INPUT_PARA_T *enc_fw_info_ptr)
 {
-	uint32_t slice_height;
+	uint32_t slice_height = 0;
 
 	enc_fw_info_ptr->is_first_slice = TRUE;
 #if 0

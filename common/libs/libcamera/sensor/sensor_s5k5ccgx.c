@@ -576,11 +576,10 @@ LOCAL uint32_t s5k5ccgx_set_brightness(uint32_t level)
 				break;
 		}	
 #else
-	if(level >= 10)
+	if(level >= 9)
 		return SENSOR_OP_PARAM_ERR;
-	
-	 s5k5ccgx_I2C_write((SENSOR_REG_T*) s5k5ccgx_brightness_tab[level]);	
- 
+
+	s5k5ccgx_I2C_write((SENSOR_REG_T*) s5k5ccgx_brightness_tab[level]);
 	CAM_DEBUG("s5k5ccgx_set_brightness: level = %d", level);
 	   
 #endif	   

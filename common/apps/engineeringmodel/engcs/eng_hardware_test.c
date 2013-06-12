@@ -34,9 +34,9 @@ static void hardware_broadcom_wifi_test(char* buf)
 		ALOGE("hardware_broadcom_wifi_test STOP");
 		wifieut(CLOSE_WIFI,req);
 		if (!strcmp(req,EUT_WIFI_OK)) {
-			memcpy(socket_write_buf,TEST_OK,SOCKET_BUF_LEN);
+			memcpy(socket_write_buf,TEST_OK,strlen(TEST_OK)+1);
 		} else {
-			memcpy(socket_write_buf,TEST_ERROR,SOCKET_BUF_LEN);
+			memcpy(socket_write_buf,TEST_ERROR,strlen(TEST_ERROR)+1);
 		}
 	} else if (0 == strncmp(buf+TYPE_OFFSET,"CWTEST",strlen("CWTEST"))) {
 		ALOGE("hardware_broadcom_wifi_test CWTEST");
@@ -46,7 +46,7 @@ static void hardware_broadcom_wifi_test(char* buf)
 		sprintf(cmd,"wl crusprs %d", channel);
 		system(cmd);
 		ALOGE("cmd = %s",cmd);
-		memcpy(socket_write_buf,TEST_OK,SOCKET_BUF_LEN);
+		memcpy(socket_write_buf,TEST_OK,strlen(TEST_OK)+1);
 	} else if (0 == strncmp(buf+TYPE_OFFSET,"TXTEST",strlen("TXTEST"))) {
 		ALOGE("hardware_broadcom_wifi_test type TXTEST");
 		PTEST_CMD_T *ptest = (PTEST_CMD_T *)(buf+TYPE_OFFSET+CMD_OFFSET);
@@ -60,9 +60,9 @@ static void hardware_broadcom_wifi_test(char* buf)
 
 		wifi_tx(OPEN_WIFI,req);
 		if (!strcmp(req,EUT_WIFI_OK)) {
-			memcpy(socket_write_buf,TEST_OK,SOCKET_BUF_LEN);
+			memcpy(socket_write_buf,TEST_OK,strlen(TEST_OK)+1);
 		} else {
-			memcpy(socket_write_buf,TEST_ERROR,SOCKET_BUF_LEN);
+			memcpy(socket_write_buf,TEST_ERROR,strlen(TEST_ERROR)+1);
 		}
 	} else if (0 == strncmp(buf+TYPE_OFFSET,"RXTEST",strlen("RXTEST"))) {
 		ALOGE("hardware_broadcom_wifi_test RXTEST");
@@ -72,9 +72,9 @@ static void hardware_broadcom_wifi_test(char* buf)
 		set_wifi_ch(channel,req);
 		wifi_rx(OPEN_WIFI,req);
 		if (!strcmp(req,EUT_WIFI_OK)) {
-			memcpy(socket_write_buf,TEST_OK,SOCKET_BUF_LEN);
+			memcpy(socket_write_buf,TEST_OK,strlen(TEST_OK)+1);
 		} else {
-			memcpy(socket_write_buf,TEST_ERROR,SOCKET_BUF_LEN);
+			memcpy(socket_write_buf,TEST_ERROR,strlen(TEST_ERROR)+1);
 		}
 	} else {
 		memcpy(socket_write_buf,TEST_ERROR,SOCKET_BUF_LEN);

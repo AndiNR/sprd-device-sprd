@@ -1183,7 +1183,9 @@ int camera_autofocus_start(void)
 	uint32_t                 *ptr = (uint32_t*)&cxt->cmr_set.focus_zone_param[0];
 	uint32_t                 i = 0;
 	uint32_t                 zone_cnt = *ptr++;
+
 	SENSOR_EXT_FUN_PARAM_T   af_param;
+	memset(&af_param,0,sizeof(af_param));
 
 	CMR_LOGV("zone_cnt %d, x y w h, %d %d %d %d", zone_cnt, ptr[0], ptr[1], ptr[2], ptr[3]);
 

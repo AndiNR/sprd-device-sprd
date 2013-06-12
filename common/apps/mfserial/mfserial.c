@@ -334,7 +334,7 @@ void cleanup_to_exit(void)
 
 int main(int argc, char **argv)
 {
-	char databuf[ENG_BUFFER_SIZE];
+	char databuf[ENG_BUFFER_SIZE+1];
 	int status, ret;
 	pid_t pid;
 	pthread_t tid1, tid2;

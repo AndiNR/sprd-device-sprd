@@ -138,7 +138,7 @@ isp_fun ispGetDownParamFunV0001(uint32_t cmd)
 	isp_fun fun_ptr=PNULL;
 	uint32_t i=0x00;
 
-	for(i=0x00; i<ISP_PACKET_MAX; i++)
+	for(i=0x00; i<(sizeof(s_isp_fun_tab_v0001)/sizeof(s_isp_fun_tab_v0001[0])); i++)
 	{
 		if(ISP_PACKET_MAX==isp_fun_ptr[i].cmd)
 		{

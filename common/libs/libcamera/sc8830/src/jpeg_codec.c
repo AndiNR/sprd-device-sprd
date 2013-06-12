@@ -610,6 +610,7 @@ static  int  _dec_next(uint32_t handle, struct jpeg_dec_next_param *param_ptr)
 
 	dec_cxt_ptr = (JPEG_DEC_T * )handle;
 
+	memset(&slice_param,0,sizeof(slice_param));
 	memset(&slice_out,0,sizeof(JPEGDEC_SLICE_OUT_T));
 	if(0 == param_ptr->dst_addr_phy.addr_y) {
 		CMR_LOGI("one buffer.");

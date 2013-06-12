@@ -220,6 +220,8 @@ int update_productinfofile_emmc(const char *src, const char *dst, unsigned long 
 	if (strcmp(src, dst) == 0)
 		return -1;
 
+        if (size>(sizeof(phasecheck_buffer)/sizeof(phasecheck_buffer[0]))-8)
+		return -1;
 	/* 5a is defined by raw data */
 	phasecheck_buffer[size] = 0x5a;
 	phasecheck_buffer[size + 1] = 0x5a;

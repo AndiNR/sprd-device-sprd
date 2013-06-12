@@ -1562,7 +1562,7 @@ void SprdCameraHardware::changeEmcFreq(char flag)
 	int fp_emc_freq = -1;
 	fp_emc_freq = open("/sys/emc/emc_freq", O_WRONLY);
 	
-	if (fp_emc_freq > 0) {
+	if (fp_emc_freq >= 0) {
 		write(fp_emc_freq, &flag, sizeof(flag));
 		close(fp_emc_freq);
 		LOGV("changeEmcFreq: %c \n", flag);

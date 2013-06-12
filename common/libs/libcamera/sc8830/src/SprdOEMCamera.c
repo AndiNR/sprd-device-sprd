@@ -1801,6 +1801,8 @@ int camera_take_picture_done(struct frm_info *data)
 	camera_frame_type        frame_type;
 	int                      ret = CAMERA_SUCCESS;
 
+	memset(&frame_type,0,sizeof(frame_type));
+
 	TAKE_PIC_CANCEL;
 	CMR_PRINT_TIME;
 	ret = camera_set_frame_type(&frame_type, data);
@@ -3462,6 +3464,7 @@ int camera_preview_init(int format_mode)
 	struct isp_video_start   isp_param;
 	SENSOR_AE_INFO_T         *sensor_aec_info;
 
+        memset(&v4l2_cfg,0,sizeof(v4l2_cfg));
 	sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode];
 
 	sensor_cfg.sn_size.width  = sensor_mode->width;
@@ -3477,6 +3480,7 @@ int camera_preview_init(int format_mode)
 	g_cxt->skip_mode      = IMG_SKIP_HW;
 	g_cxt->skip_num       = g_cxt->sn_cxt.sensor_info->preview_skip_num;
 	g_cxt->pre_frm_cnt    = 0;
+
 	v4l2_cfg.cfg.need_isp = 0;
 	v4l2_cfg.cfg.need_binning = 0;
 	if (SENSOR_IMAGE_FORMAT_YUV422 == sensor_mode->image_format) {
@@ -3567,6 +3571,7 @@ int camera_preview_weak_init(int format_mode)
 	struct buffer_cfg        buffer_info;
 	struct isp_video_start   isp_param;
 
+	memset(&v4l2_cfg,0,sizeof(v4l2_cfg));
 	sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode];
 
 	g_cxt->prev_rot_index = 0;
@@ -4383,6 +4388,7 @@ int camera_v4l2_preview_handle(struct frm_info *data)
 	camera_frame_type        frame_type;
 	int                      ret = CAMERA_SUCCESS;
 
+	memset(&frame_type,0,sizeof(camera_frame_type));
 	CMR_PRINT_TIME;
 
 	if (V4L2_IDLE == g_cxt->v4l2_cxt.v4l2_state) {
@@ -4821,6 +4827,7 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 	struct jpeg_wexif_cb_param    wexif_output;
 	int                      ret = CAMERA_SUCCESS;
 
+	memset(&wexif_param,0,sizeof(struct jpeg_enc_exif_param));
 	jpg_frm = &g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg;
 
 	CMR_LOGV("index %d, bitstream size %d", g_cxt->jpeg_cxt.index, jpg_frm->addr_vir.addr_u);

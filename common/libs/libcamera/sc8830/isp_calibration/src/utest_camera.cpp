@@ -344,7 +344,7 @@ static int32_t utest_dcam_awb(void)
 	sprintf(file_name, calibration_awb_file, sensor_ptr->name, cmr_cxt_ptr->capture_width,
 			cmr_cxt_ptr->capture_height, 0);
 	fp = fopen(file_name, "wb");
-	if (fp >= 0) {
+	if (fp != NULL) {
 		fwrite((void *)(&stat_param), 1, sizeof(stat_param), fp);
 		fclose(fp);
 	} else {
@@ -357,7 +357,7 @@ static int32_t utest_dcam_awb(void)
 		sprintf(file_name, "%s_%dX%d.raw", cmr_cxt_ptr->save_directory, cmr_cxt_ptr->capture_width,
 				cmr_cxt_ptr->capture_height);
 		fp = fopen(file_name, "wb");
-		if (fp >= 0) {
+		if (fp != NULL) {
 			fwrite((void *)cmr_cxt_ptr->capture_raw_vir_addr , 1, cmr_cxt_ptr->capture_width * 
 			cmr_cxt_ptr->capture_height * 2, fp);
 			fclose(fp);
