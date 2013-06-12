@@ -752,7 +752,7 @@ void eng_check_factorymode_fornand(void)
     property_get("persist.sys.usb.config", config_property, "");
     if((status==1)||(status == ENG_SQLSTR2INT_ERR)) {
         fd=open(ENG_FACOTRYMODE_FILE, O_RDWR|O_CREAT|O_TRUNC);
-        if(fd > 0)
+        if(fd >= 0)
             close(fd);
         /*
            if (strstr(config_property, "adb")) {
@@ -878,7 +878,8 @@ void eng_ctpcali(void)
             ALOGD("%s: Success!",__FUNCTION__);
         else
             ALOGD("%s: Fail!",__FUNCTION__);
-    close(fd);
+
+        close(fd);
     }
 }
 

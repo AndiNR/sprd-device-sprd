@@ -3390,12 +3390,20 @@ static int adev_modem_parse(struct tiny_audio_device *adev)
 	}
 
 	adev->cp = modem;
+	XML_ParserFree(parser);
+	fclose(file);
+	return ret;
+
 err_parse:
 	XML_ParserFree(parser);
 err_parser_create:
 	fclose(file);
 err_fopen:
 err_calloc:
+        if(modem){
+	  free(modem);
+          modem = NULL;
+        }
 	return ret;
 }
 
