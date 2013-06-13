@@ -25,14 +25,24 @@ extern	 "C"
 {
 #endif
 
-int32_t ISP_Cali_GetLensTabs(struct isp_addr_t img_addr, uint32_t grid, struct isp_size_t img_size, uint32_t* lens_tab, uint32_t x, uint32_t y);
+int32_t ISP_Cali_GetLensTabs(struct isp_addr_t img_addr,
+								uint32_t grid,
+								struct isp_size_t img_size,
+								uint32_t* lens_tab,
+								uint32_t x,
+								uint32_t y,
+								uint32_t type);
+
 int32_t ISP_Cali_RawRGBStat(struct isp_addr_t *img_addr,
 				struct isp_rect_t *rect,
 				struct isp_size_t *img_size,
 				struct isp_bayer_ptn_stat_t *stat_param);
+
 int32_t ISP_Cali_UnCompressedPacket(struct isp_addr_t src_addr, struct isp_addr_t dst_addr, struct isp_size_t img_size, uint32_t edn_type);
+
 void ISP_Cali_GetLensTabSize(struct isp_size_t img_size, uint32_t grid, uint32_t *tab_size);
 
+uint32_t ISP_Cali_LensCorrection(struct isp_addr_t * src_data, struct isp_addr_t * dst_data, struct isp_size_t img_size, uint8_t grid, uint16_t *lnc_tab);
 #ifdef	 __cplusplus
 }
 #endif
