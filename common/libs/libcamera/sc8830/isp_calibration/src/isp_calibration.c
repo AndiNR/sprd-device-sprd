@@ -16,6 +16,8 @@
 #include "isp_calibration.h"
 #include "sensor_raw.h"
 
+#define CLIP(x, bottom, top) ((x)<bottom ? bottom : (x) > top ? top : (x))
+
 static uint32_t ISP_Alloc(uint32_t mem_len)
 {
 	uint32_t mem_addr = 0;
@@ -29,8 +31,9 @@ static uint32_t ISP_Alloc(uint32_t mem_len)
 	return mem_addr;
 }
 
-static int32_t  ISP_Free(uint32_t **mem_ptr)
+static int32_t  ISP_Free(void **mem_ptr)
 {
+	uint32_t** pointer = (uint32_t**)mem_ptr;
 	if (0 == mem_ptr) {
 		ISP_CALI_LOG("ISP_Alloc: param pointer is null \n");
 		return ISP_CALI_RTN_PT_NULL;
@@ -60,8 +63,8 @@ uint32_t ISP_Cali_Get_RawRGB_Stat(struct isp_addr_t *img_addr,
 	uint32_t stride = 0, inx = 0;
 	uint32_t st_x = 0, ed_x = 0;
 	uint32_t st_y = 0, ed_y = 0;
-	uint64_t sum[4] = {0};
-	uint32_t cnts[4] = {0};
+	uint64_t sum[4] = {0,0,0,0};
+	uint32_t cnts[4] = {0,0,0,0};
 	uint32_t img_w = 0, img_h = 0;
 
 	if ((!img_addr)
@@ -70,7 +73,7 @@ uint32_t ISP_Cali_Get_RawRGB_Stat(struct isp_addr_t *img_addr,
 	      ||(!stat_param)) {
 
 	      ISP_CALI_LOG("ISP_Cali_Get_RawRGB_Stat: params are NULL,addr=0x%x, rect=0x%x, size=0x%x, stat=0x%x\n",
-		img_addr,rect, img_size, stat_param);
+		(uint32_t)img_addr, (uint32_t)rect, (uint32_t)img_size, (uint32_t)stat_param);
 
 	      return ISP_CALI_RTN_PT_NULL;
 	}
@@ -194,7 +197,7 @@ int32_t _isp_Cali_LNCResAlloc(void *in_ptr, void *cali_ptr, void* gain_ptr)
 {
 	struct isp_lnc_cali_in *in_param_ptr = (struct isp_lnc_cali_in*)in_ptr;
 	struct isp_lnc_cali_info *cali_param_ptr = (struct isp_lnc_cali_info*)cali_ptr;
-	struct isp_lnc_cali_gain *gain_param_ptr = (struct isp_lnc_cali_info*)gain_ptr;
+	struct isp_lnc_cali_gain *gain_param_ptr = (struct isp_lnc_cali_gain*)gain_ptr;
 
 	uint16_t lnc_grid = 0;
 	uint16_t width = 0;
@@ -205,7 +208,7 @@ int32_t _isp_Cali_LNCResAlloc(void *in_ptr, void *cali_ptr, void* gain_ptr)
 	uint16_t grid_y = 0;
 	uint32_t length = 0;
 	if ((0 == in_ptr) || (0 == cali_ptr) || (0 == gain_ptr)) {
-		ISP_CALI_LOG("ISP_Cali_LNCResAlloc: input param is null, in =0x%x, cali=0x%x, gain=%d\n", in_ptr, cali_ptr, gain_ptr);
+		ISP_CALI_LOG("ISP_Cali_LNCResAlloc: input param is null, in =0x%x, cali=0x%x, gain=%d\n", (uint32_t)in_ptr, (uint32_t)cali_ptr, (uint32_t)gain_ptr);
 		return ISP_CALI_RTN_PT_NULL;
 	}
 
@@ -249,22 +252,22 @@ void _isp_Cali_LNCResFree(struct isp_lnc_cali_info *param_ptr, struct isp_lnc_ca
 {
 	if (0 == param_ptr) {
 		ISP_CALI_LOG("ISP_Cali_LNCResFree: free failed \n");
-		return ISP_CALI_RTN_PT_NULL;
+		return ;
 	}
 
-	ISP_Free(&param_ptr->tmp_buf0);
-	ISP_Free(&param_ptr->tmp_buf1);
+	ISP_Free((void**)&param_ptr->tmp_buf0);
+	ISP_Free((void**)&param_ptr->tmp_buf1);
 
-	ISP_Free(&param_ptr->chn_00.stat_ptr);
-	ISP_Free(&param_ptr->chn_01.stat_ptr);
-	ISP_Free(&param_ptr->chn_10.stat_ptr);
-	ISP_Free(&param_ptr->chn_11.stat_ptr);
+	ISP_Free((void**)&param_ptr->chn_00.stat_ptr);
+	ISP_Free((void**)&param_ptr->chn_01.stat_ptr);
+	ISP_Free((void**)&param_ptr->chn_10.stat_ptr);
+	ISP_Free((void**)&param_ptr->chn_11.stat_ptr);
 
-	ISP_Free(&gain_ptr->chn_00);
-	ISP_Free(&gain_ptr->chn_01);
-	ISP_Free(&gain_ptr->chn_10);
-	ISP_Free(&gain_ptr->chn_11);
-	return ISP_CALI_RTN_SUCCESS;
+	ISP_Free((void**)&gain_ptr->chn_00);
+	ISP_Free((void**)&gain_ptr->chn_01);
+	ISP_Free((void**)&gain_ptr->chn_10);
+	ISP_Free((void**)&gain_ptr->chn_11);
+	return;
 	
 }
 
@@ -491,7 +494,7 @@ int32_t _isp_Cali_LNCTabMerge(struct isp_lnc_cali_gain *gain_ptr, uint32_t grid_
 		lnc_tab[inx++] = gain_ptr->chn_10[i];
 	}
 
-	return ISP_CALI_RTN_SUCCESS;	
+	return ISP_CALI_RTN_SUCCESS;
 }
 
 void ISP_Cali_GetLNCTabSize(struct isp_size_t img_size, uint32_t grid, uint32_t *tab_size)
@@ -513,13 +516,13 @@ void ISP_Cali_GetLNCTabSize(struct isp_size_t img_size, uint32_t grid, uint32_t 
 int32_t ISP_Cali_LNCTaleCalc(struct isp_addr_t img_addr, uint32_t bayer_pttn, struct isp_size_t img_size, uint32_t grid, uint16_t *lnc_tab)
 {
 	int32_t rtn = ISP_CALI_RTN_SUCCESS;
-	struct isp_lnc_cali_in cali_in_param = {0x00};
-	struct isp_lnc_cali_info cali_info_param = {0x00};
-	struct isp_lnc_cali_gain cali_gain_param = {0x00};
+	struct isp_lnc_cali_in cali_in_param;
+	struct isp_lnc_cali_info cali_info_param;
+	struct isp_lnc_cali_gain cali_gain_param;
 
 	if ((0 == lnc_tab) || (0 == img_addr.y_addr)) {
 
-		ISP_CALI_LOG("ISP_Cali_LNCTaleCalc: raw img addr=0x%x, lnc tab addr=0x%x\n", img_addr.y_addr, lnc_tab);
+		ISP_CALI_LOG("ISP_Cali_LNCTaleCalc: raw img addr=0x%x, lnc tab addr=0x%x\n", img_addr.y_addr, (uint32_t)lnc_tab);
 		return ISP_CALI_RTN_PT_NULL;
 	}
 
@@ -530,7 +533,7 @@ int32_t ISP_Cali_LNCTaleCalc(struct isp_addr_t img_addr, uint32_t bayer_pttn, st
 
 	_isp_Cali_LNCResAlloc((void*)&cali_in_param, (void*)&cali_info_param, (void*)&cali_gain_param);
 	_isp_Cali_LNC_Calc((void*)&cali_in_param, (void*)&cali_info_param);
-	_isp_Cali_LNC_GainCalc(255, 8, bayer_pttn, 256, 256, 256, (void*)&cali_info_param, (void*)&cali_gain_param);
+	_isp_Cali_LNC_GainCalc(1024, 8, bayer_pttn, 256, 256, 256, (void*)&cali_info_param, (void*)&cali_gain_param);
 	_isp_Cali_LNCTabMerge(&cali_gain_param, cali_info_param.num, lnc_tab);
 	_isp_Cali_LNCResFree(&cali_info_param, &cali_gain_param);
 
@@ -892,3 +895,137 @@ int32_t ISP_Cali_Get_Advanced_LensShading(struct isp_addr_t *lnc_tg,
 	return ISP_CALI_RTN_SUCCESS;
 }
 
+uint32_t ISP_Cali_LNCCorrection(struct isp_addr_t * src_data, struct isp_addr_t * dst_data, struct isp_size_t img_size, uint8_t grid, uint16_t *lnc_tab)
+{
+	// u/v in Q15
+	uint32_t i, j;
+	uint32_t ii, jj;
+	uint32_t ii_step;
+	uint32_t jj_step;
+	uint16_t iWidth, iHeight;
+	uint16_t cor_ratio;
+	uint16_t u, v;
+	uint8_t LNC_GRID;
+	uint16_t GridX, GridY;//total grid number
+	uint16_t temp1,temp2,temp3,temp4;
+	uint16_t *r0c0_ptr;
+	uint16_t *r0c1_ptr;
+	uint16_t *r1c0_ptr;
+	uint16_t *r1c1_ptr;
+	uint16_t *src_ptr;
+	uint16_t *dst_ptr;
+	uint16_t row,col;// the actual row and col of slice in_data_ptr
+	uint16_t GridCurrentX,GridCurrentY;//use to index Lnc_cor_para_grid array
+
+	uint16_t RelativeX,RelativeY;//the relative position of current pixel inside the grid
+	uint16_t SliceX,SliceY;//use to index slice in_data_ptr
+
+	uint16_t startCol;
+	uint16_t startRow;
+	uint16_t iSliceWidth;
+	uint16_t iSliceHeight;
+
+	if ((0 == src_data)
+		||(0 == dst_data)) {
+		ISP_CALI_LOG("The lens_correction input data pointer is NULL\n");
+		return -1;
+	}
+
+	if ((0 == src_data->y_addr)
+		||(0 == dst_data->y_addr)) {
+		ISP_CALI_LOG("The len_correction output data pointer is NULL\n");
+		return -1;
+	}
+
+	LNC_GRID = grid;
+
+	src_ptr = (uint16_t*)src_data->y_addr;
+	dst_ptr = (uint16_t*)dst_data->y_addr;
+
+	iWidth = img_size.width;
+	iHeight = img_size.height;
+
+	startCol = 0;
+	startRow = 0;
+	iSliceWidth = iWidth;
+	iSliceHeight = iHeight;
+
+	r0c1_ptr = (uint16_t*)lnc_tab;
+	r0c0_ptr = (uint16_t*)lnc_tab + 1;
+	r1c1_ptr = (uint16_t*)lnc_tab + 2;
+	r1c0_ptr = (uint16_t*)lnc_tab + 3 ;
+
+	GridX = ((iWidth / 2 - 1) % LNC_GRID) ? ((iWidth / 2 -1) / LNC_GRID + 2) : ((iWidth / 2 -1) / LNC_GRID + 1);
+	GridY = ((iHeight / 2 - 1) % LNC_GRID) ? ((iHeight / 2 -1) / LNC_GRID + 2) : ((iHeight / 2 -1) / LNC_GRID + 1);
+
+	for ( row = startRow, SliceY = 0; row < startRow + iSliceHeight; row++, SliceY++) {
+		for (col = startCol, SliceX = 0; col < startCol + iSliceWidth; col++, SliceX++) {
+
+			GridCurrentX = (col / 2) / LNC_GRID;
+			GridCurrentY = (row / 2) / LNC_GRID;
+			RelativeX = (col / 2) % LNC_GRID;
+			RelativeY = (row / 2) % LNC_GRID;
+
+			if (((iWidth/2) % LNC_GRID ==1) && ((col / 2) == iWidth / 2 -1) ) {
+				GridCurrentX--;
+				RelativeX++;
+			}
+
+			if (((iHeight / 2) % LNC_GRID == 1) && ((row / 2) == iHeight / 2 -1)) {
+				GridCurrentY--;
+				RelativeY++;
+			}
+
+			ii = RelativeY;
+			jj = RelativeX;
+			i = GridCurrentY;
+			j = GridCurrentX;
+			ii_step = 32768 / LNC_GRID;
+			jj_step = 32768 / LNC_GRID;
+
+			u = (uint16_t)(ii * ii_step);//Q15
+			v = (uint16_t)(jj * jj_step);
+			temp1 = ((32768 - u) * (32768 - v))>>15;//Q15
+			temp2 = (u * (32768 - v))>>15;
+			temp3 = ((32768 - u) * v)>>15;
+			temp4 = (u * v)>>15;
+
+			if ((row & 1) && (col & 1)) {
+				cor_ratio = (uint16_t) ((r1c1_ptr[(i * GridX + j)* 4] * temp1
+					+r1c1_ptr[((i + 1) * GridX + j) * 4] * temp2
+					+ r1c1_ptr[(i * GridX + j +1) * 4] * temp3
+					+ r1c1_ptr[((i + 1) * GridX + j + 1)* 4] * temp4)>>15);
+			}
+
+			if (!(row & 1) && !(col & 1)) {
+				cor_ratio = (uint16_t) ((r0c0_ptr[(i * GridX + j) * 4] * temp1
+					+ r0c0_ptr[((i + 1) * GridX + j)* 4] * temp2
+					+ r0c0_ptr[(i * GridX + j +1 ) * 4] * temp3
+					+ r0c0_ptr[((i + 1) * GridX + j + 1)* 4] * temp4)>>15);
+			}
+
+			if ((row & 1) && !(col & 1)) {
+				cor_ratio = (uint16_t) ((r1c0_ptr[(i * GridX + j)* 4] * temp1
+					+ r1c0_ptr[((i + 1) * GridX + j)* 4] * temp2
+					+ r1c0_ptr[(i * GridX + j +1)* 4] * temp3
+					+ r1c0_ptr[((i + 1) * GridX + j + 1) * 4] * temp4)>>15);
+			}
+
+			if (!(row & 1) && (col & 1)) {
+				cor_ratio = (uint16_t) ((r0c1_ptr[(i * GridX + j) * 4] * temp1
+					+ r0c1_ptr[((i + 1) * GridX + j)* 4] * temp2
+					+ r0c1_ptr[(i * GridX + j +1 )* 4] * temp3
+					+ r0c1_ptr[((i + 1) * GridX +j + 1) * 4] * temp4)>>15);
+			}
+
+			temp1 = (uint16_t)((src_ptr[SliceY * iSliceWidth + SliceX] * (uint32_t)cor_ratio + 512)>>10);
+
+			temp1 = CLIP(temp1, 0, 1023);
+
+			dst_ptr[SliceY * iSliceWidth + SliceX] = temp1;
+
+		}
+	}
+
+	return 0;
+}

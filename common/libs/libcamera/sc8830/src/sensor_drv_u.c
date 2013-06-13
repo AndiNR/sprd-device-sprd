@@ -1540,7 +1540,7 @@ static int _sensor_cali_lnc_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 			break;
 		}
 
-		sprintf(file_name_ptr, "_lnc_%d_%d_0.dat", width, height);
+		sprintf(file_name_ptr, "_lnc_%d_%d_%d_rdm.dat", width, height, (i - 1));
 
 		fp = fopen(file_name, "rb");
 		if (0 == fp) {
@@ -1612,9 +1612,49 @@ static int _sensor_cali_awb_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 	str_len = sprintf(file_name, "%ssensor_%s",cfg_file_dir, sensor_name);
 	file_name_ptr = (char*)&file_name[0] + str_len;
 
-	sprintf(file_name_ptr, "_awb.dat");
+	sprintf(file_name_ptr, "_awb_rdm.dat");
 
 	SENSOR_PRINT("_sensor_cali_awb_param_update: %s\n", file_name);
+	fp = fopen(file_name, "rb");
+	if (0 == fp) {
+
+		SENSOR_PRINT("_sensor_cali_awb_param_update: does not find calibration file\n");
+
+		cali_info_ptr->r_sum = 1024;
+		cali_info_ptr->b_sum = 1024;
+		cali_info_ptr->gr_sum = 1024;
+		cali_info_ptr->gb_sum = 1024;
+
+		rtn = SENSOR_SUCCESS;
+
+	} else {
+		fseek(fp, 0L, SEEK_END);
+		file_size = ftell(fp);
+		fseek(fp, 0L, SEEK_SET);
+
+		fread(buf,1,file_size,fp);
+		fclose(fp);
+
+		stat_ptr = (struct isp_bayer_ptn_stat_t*)&buf[0];
+		cali_info_ptr->r_sum = stat_ptr->r_stat;
+		cali_info_ptr->b_sum = stat_ptr->b_stat;
+		cali_info_ptr->gr_sum = stat_ptr->gr_stat;
+		cali_info_ptr->gb_sum = stat_ptr->gb_stat;
+
+//		SENSOR_PRINT("_sensor_cali_awb_param_update: %d, %d, %d, %d\n",  stat_ptr->r_stat,  stat_ptr->b_stat, stat_ptr->gr_stat, stat_ptr->gb_stat);
+
+		rtn = SENSOR_SUCCESS;
+	}
+
+	memset (&file_name[0], 0x00, sizeof (file_name));
+	memset (&buf[0], 0x00, sizeof (buf));
+	str_len = sprintf(file_name, "%ssensor_%s",cfg_file_dir, sensor_name);
+	file_name_ptr = (char*)&file_name[0] + str_len;
+
+	sprintf(file_name_ptr, "_awb_gldn.dat");
+
+	SENSOR_PRINT("_sensor_cali_awb_param_update: %s\n", file_name);
+	cali_info_ptr = (struct sensor_cali_info*)&sensor_info_ptr->raw_info_ptr->cali_ptr->awb.golden_cali_info;
 	fp = fopen(file_name, "rb");
 	if (0 == fp) {
 
@@ -1661,24 +1701,30 @@ static int _sensor_cali_flashlight_param_update(char *cfg_file_dir,SENSOR_INFO_T
 	uint32_t str_len = 0;
 	int file_size = 0;
 	struct isp_bayer_ptn_stat_t *stat_ptr = PNULL;
+	struct sensor_cali_info *cali_info_ptr = PNULL;
 	struct sensor_raw_tune_info *raw_tune_info_ptr = PNULL;
 
 	if(SENSOR_IMAGE_FORMAT_RAW != sensor_info_ptr->image_format){
 		return SENSOR_FAIL;
 	}
 	raw_tune_info_ptr = (struct sensor_raw_tune_info*)sensor_info_ptr->raw_info_ptr->tune_ptr;
-
+	cali_info_ptr = (struct sensor_cali_info*)&sensor_info_ptr->raw_info_ptr->cali_ptr->flashlight.cali_info;
 
 	str_len = sprintf(file_name, "%ssensor_%s",cfg_file_dir, sensor_name);
 	file_name_ptr = (char*)&file_name[0] + str_len;
 
-	sprintf(file_name_ptr, "_flashlight.dat");
+	sprintf(file_name_ptr, "_flashlight_rdm.dat");
 
 	SENSOR_PRINT("_sensor_cali_flashlight_param_update: %s\n", file_name);
 	fp = fopen(file_name, "rb");
 	if (0 == fp) {
 
 		SENSOR_PRINT("_sensor_cali_flashlight_param_update: does not find calibration file\n");
+
+		cali_info_ptr->r_sum = 1024;
+		cali_info_ptr->b_sum = 1024;
+		cali_info_ptr->gr_sum = 1024;
+		cali_info_ptr->gb_sum = 1024;
 
 		rtn = SENSOR_SUCCESS;
 
@@ -1691,6 +1737,50 @@ static int _sensor_cali_flashlight_param_update(char *cfg_file_dir,SENSOR_INFO_T
 		fclose(fp);
 
 		stat_ptr = (struct isp_bayer_ptn_stat_t*)&buf[0];
+		cali_info_ptr->r_sum = stat_ptr->r_stat;
+		cali_info_ptr->b_sum = stat_ptr->b_stat;
+		cali_info_ptr->gr_sum = stat_ptr->gr_stat;
+		cali_info_ptr->gb_sum = stat_ptr->gb_stat;
+
+//		SENSOR_PRINT("_sensor_cali_flashlight_param_update: %d, %d, %d, %d\n",  stat_ptr->r_stat,  stat_ptr->b_stat, stat_ptr->gr_stat, stat_ptr->gb_stat);
+
+		rtn = SENSOR_SUCCESS;
+	}
+
+	memset (&file_name[0], 0x00, sizeof (file_name));
+	memset (&buf[0], 0x00, sizeof (buf));
+	str_len = sprintf(file_name, "%ssensor_%s",cfg_file_dir, sensor_name);
+	file_name_ptr = (char*)&file_name[0] + str_len;
+
+	sprintf(file_name_ptr, "_flashlight_gldn.dat");
+
+	SENSOR_PRINT("_sensor_cali_flashlight_param_update: %s\n", file_name);
+	cali_info_ptr = (struct sensor_cali_info*)&sensor_info_ptr->raw_info_ptr->cali_ptr->flashlight.golden_cali_info;
+	fp = fopen(file_name, "rb");
+	if (0 == fp) {
+
+		SENSOR_PRINT("_sensor_cali_flashlight_param_update: does not find calibration file\n");
+
+		cali_info_ptr->r_sum = 1024;
+		cali_info_ptr->b_sum = 1024;
+		cali_info_ptr->gr_sum = 1024;
+		cali_info_ptr->gb_sum = 1024;
+
+		rtn = SENSOR_SUCCESS;
+
+	} else {
+		fseek(fp, 0L, SEEK_END);
+		file_size = ftell(fp);
+		fseek(fp, 0L, SEEK_SET);
+
+		fread(buf,1,file_size,fp);
+		fclose(fp);
+
+		stat_ptr = (struct isp_bayer_ptn_stat_t*)&buf[0];
+		cali_info_ptr->r_sum = stat_ptr->r_stat;
+		cali_info_ptr->b_sum = stat_ptr->b_stat;
+		cali_info_ptr->gr_sum = stat_ptr->gr_stat;
+		cali_info_ptr->gb_sum = stat_ptr->gb_stat;
 
 //		SENSOR_PRINT("_sensor_cali_flashlight_param_update: %d, %d, %d, %d\n",  stat_ptr->r_stat,  stat_ptr->b_stat, stat_ptr->gr_stat, stat_ptr->gb_stat);
 

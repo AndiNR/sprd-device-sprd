@@ -37,7 +37,7 @@
 //yellow: color conversion;
 */
 /* Incandescent/U30/CWF/Fluorescent/Sun/Cloudy*/
-#define SENSOR_ISO_NUM 0x05
+#define SENSOR_ISO_NUM 0x05 //isp_ae.h's ISP_ISP_NUM alse need to modify
 #define SENSOR_AE_NUM 0x500
 #define SENSOR_AE_TAB_NUM 0x04
 #define SENSOR_AWB_CALI_NUM 0x09
@@ -414,6 +414,12 @@ struct sensor_raw_awb_cali{
 	struct sensor_cali_info golden_cali_info;
 };
 
+struct sensor_raw_flashlight_cali{
+	struct sensor_cali_info cali_info;
+	struct sensor_cali_info golden_cali_info;
+};
+
+
 struct sensor_raw_ae_cali{
 	struct sensor_ae_change_speed *speed_dark_to_bright;
 	uint32_t			step_dark_to_bright;
@@ -426,6 +432,7 @@ struct sensor_raw_ae_cali{
 struct sensor_raw_cali_info{
 	struct sensor_raw_ae_cali ae;
 	struct sensor_raw_awb_cali awb;
+	struct sensor_raw_flashlight_cali flashlight;
 };
 
 struct sensor_raw_info{

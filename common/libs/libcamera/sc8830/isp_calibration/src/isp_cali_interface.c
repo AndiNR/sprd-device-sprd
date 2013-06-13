@@ -16,6 +16,10 @@
 #include "isp_cali_interface.h"
 #include "sensor_drv_u.h"
 
+static char s_calibration_awb_file[] = "/data/sensor_%s_awb_%s.dat";
+static char s_calibration_flashlight_file[] = "/data/sensor_%s_flashlight_%s.dat";
+static char s_calibration_lsc_file[] = "/data/sensor_%s_lnc_%d_%d_%d_%s.dat";
+
 int32_t ISP_Cali_GetLNCTab(struct sensor_lnc_map_addr *lnc_map_addr, uint32_t x, uint32_t y )
 {
 #if 0
@@ -72,16 +76,25 @@ void ISP_Cali_GetLensTabSize(struct isp_size_t img_size, uint32_t grid, uint32_t
 	*tab_size = (grid_x * grid_y)*8;
 }
 
-int32_t ISP_Cali_GetLensTabs(struct isp_addr_t img_addr, uint32_t grid, struct isp_size_t img_size, uint32_t* lens_tab, uint32_t x, uint32_t y)
+int32_t ISP_Cali_GetLensTabs(struct isp_addr_t img_addr,
+								uint32_t grid,
+								struct isp_size_t img_size,
+								uint32_t* lens_tab,
+								uint32_t x,
+								uint32_t y,
+								uint32_t type)
 {
 	uint32_t rtn = 0;
 	uint32_t length = 0;
 	uint8_t *lnc_tab_buf = 0;
-	struct isp_addr_t tg_lnc = {0x00};
-	struct isp_addr_t mg_lnc = {0x00};
-	struct isp_addr_t mr_lnc = {0x00};
-	struct isp_addr_t final_lnc = {0x00};
+	uint8_t *lnc_tmp_buf = 0;
+	struct isp_addr_t tg_lnc;
+	struct isp_addr_t mg_lnc;
+	struct isp_addr_t mr_lnc;
+	struct isp_addr_t final_lnc;
 	SENSOR_EXP_INFO_T *sensor_exp_info = Sensor_GetInfo();
+	FILE* fp = 0;
+	char file_name[128] = {0};
 	#if 0
 	uint32_t img_pttn = sensor_exp_info->image_pattern;
 	struct sensor_raw_fix_info* fix_ptr = sensor_exp_info->raw_info_ptr->fix_ptr;
@@ -96,37 +109,72 @@ int32_t ISP_Cali_GetLensTabs(struct isp_addr_t img_addr, uint32_t grid, struct i
 	#endif
 
 	ISP_Cali_GetLNCTabSize(img_size, grid, &length);
+
 	lnc_tab_buf  = (uint8_t*)malloc(length);
 	if(!lnc_tab_buf) {
 		ISP_CALI_LOG("ISP_Cali_GetLensTabs: malloc failed\n");
-		return -1;
-
+		rtn = -1;
+		goto LensTabs_Exit;
 	}
 	memset((void*)lnc_tab_buf, 0x00, length);
+
 	rtn = ISP_Cali_LNCTaleCalc(img_addr, img_pttn,  img_size, grid, (uint16_t*)lnc_tab_buf);
 	if (rtn) {
 		ISP_CALI_LOG("ISP_Cali_GetLensTabs: len tab cal failed\n");
-		return -1;
+		rtn =  -1;
+		goto LensTabs_Exit;
 	}
 
-	tg_lnc.y_addr = (uint32_t)lnc_map.map[x][y].param_addr;
-	mg_lnc.y_addr = (uint32_t)lnc_map.map[x][y].param_addr;
-	mr_lnc.y_addr = (uint32_t)lnc_tab_buf;
-	final_lnc.y_addr = (uint32_t)lens_tab;
+	if (0 != type) {//random sample calibration
+		lnc_tmp_buf = (uint8_t*)malloc(length);
+		if (!lnc_tmp_buf) {
+			ISP_CALI_LOG("ISP_Cali_GetLensTabs: malloc failed\n");
+			rtn =  -1;
+			goto LensTabs_Exit;
+		}
+		memset(lnc_tmp_buf, 0x00, length);
 
-	rtn = ISP_Cali_Get_Advanced_LensShading(&tg_lnc,
-					&mr_lnc,
-					&mg_lnc,
-					&final_lnc,
-					length);
+		sprintf(file_name, s_calibration_lsc_file, sensor_exp_info->name, img_size.width,img_size.height, 0, "gldn");
+		fp = fopen(file_name, "rb");
+		if (!fp) {
+			ISP_CALI_LOG("ISP_Cali_GetLensTabs: open file failed\n");
+			rtn = -1;
+			goto LensTabs_Exit;
+		}
+		fread(lnc_tmp_buf, 1, length, fp);
 
-	if (0 != rtn) {
-		ISP_CALI_LOG("ISP_Cali_GetLensTabs: Get_Advanced_LensShading failed\n");
-		return -1;
+		tg_lnc.y_addr = (uint32_t)lnc_map.map[x][y].param_addr;
+		mg_lnc.y_addr = lnc_tmp_buf;
+		mr_lnc.y_addr = (uint32_t)lnc_tab_buf;
+		final_lnc.y_addr = (uint32_t)lens_tab;
+
+		rtn = ISP_Cali_Get_Advanced_LensShading(&tg_lnc,
+						&mr_lnc,
+						&mg_lnc,
+						&final_lnc,
+						length);
+		if (0 != rtn) {
+			ISP_CALI_LOG("ISP_Cali_GetLensTabs: Get_Advanced_LensShading failed\n");
+			rtn =  -1;
+			goto LensTabs_Exit;
+		}
+	} else {//golden sample calibration
+		memcpy(lens_tab, lnc_tab_buf, length);
 	}
 
-	return 0;
+LensTabs_Exit:
+
+	if (lnc_tab_buf) {
+		free(lnc_tab_buf);
+	}
+
+	if (lnc_tmp_buf) {
+		free(lnc_tmp_buf);
+	}
+
+	return rtn;
 }
+
 int32_t ISP_Cali_RawRGBStat(struct isp_addr_t *img_addr,
 								struct isp_rect_t *rect,
 								struct isp_size_t *img_size,
@@ -145,8 +193,18 @@ int32_t ISP_Cali_RawRGBStat(struct isp_addr_t *img_addr,
 	return rtn;
 }
 
+uint32_t ISP_Cali_LensCorrection(struct isp_addr_t * src_data, struct isp_addr_t * dst_data, struct isp_size_t img_size, uint8_t grid, uint16_t *lnc_tab)
+{
+	int32_t rtn = 0;
+
+	rtn  = ISP_Cali_LNCCorrection(src_data, dst_data, img_size, grid, lnc_tab);
+
+	return rtn;
+}
+
 int32_t ISP_Cali_UnCompressedPacket(struct isp_addr_t src_addr, struct isp_addr_t dst_addr, struct isp_size_t img_size, uint32_t edn_type)
 {
+	int32_t rtn = 0;
 	uint32_t indx = 0;
 	uint32_t length = 0;
 	uint8_t *tmp_buf = 0;
@@ -157,15 +215,16 @@ int32_t ISP_Cali_UnCompressedPacket(struct isp_addr_t src_addr, struct isp_addr_
 
 	if ((0 ==src_addr.y_addr)||(0 == dst_addr.y_addr)) {
 		ISP_CALI_LOG("ISP_Cali_UnCompressedPacket: img addrs are NULL\n");
-
-		return -1;
+		rtn = -1;
+		goto UnCompressedPacket_Exit;
 	}
 
 	length = img_size.width * img_size.width *2;
 	tmp_buf = (uint8_t*)malloc(length);
 	if (0 ==tmp_buf) {
 		ISP_CALI_LOG("ISP_Cali_UnCompressedPacket: malloc failed\n");
-		return -1;
+		rtn = -1;
+		goto UnCompressedPacket_Exit;
 	}
 	memset((void*)tmp_buf, 0x00, length);
 
@@ -223,8 +282,11 @@ int32_t ISP_Cali_UnCompressedPacket(struct isp_addr_t src_addr, struct isp_addr_
 
 	}
 
+UnCompressedPacket_Exit:
+
 	if (tmp_buf) {
 		free(tmp_buf);
 	}
-	return 0;
+
+	return rtn ;
 }

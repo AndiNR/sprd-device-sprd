@@ -118,6 +118,8 @@ uint32_t ISP_Cali_Get_RawRGB_Stat(struct isp_addr_t *img_addr,
 					uint32_t byer_pttn,
 					struct isp_bayer_ptn_stat_t *stat_param);
 
+uint32_t ISP_Cali_LNCCorrection(struct isp_addr_t * src_data, struct isp_addr_t * dst_data, struct isp_size_t img_size, uint8_t grid, uint16_t *lnc_tab);
+
 #ifdef	 __cplusplus
 }
 #endif

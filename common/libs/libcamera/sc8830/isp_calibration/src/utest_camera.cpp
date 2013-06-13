@@ -56,13 +56,19 @@ enum utest_calibration_cmd_id {
 	UTEST_CALIBRATION_MAX
 };
 
+enum utest_cali_sub_cmd_id {
+	UTEST_CALI_SUB_CMD_GOLDEN= 0,
+	UTEST_CALI_SUB_CMD_RANDOM,
+	UTEST_CALI_SUB_CMD_MAX,
+};
+
 struct utest_cmr_context {
 	uint32_t sensor_id;
 	uint32_t cmd;
+	uint32_t sub_cmd;
 	uint32_t capture_raw_vir_addr;
 	uint32_t capture_width;
 	uint32_t capture_height;
-	char *save_directory;
 
 	sp<MemoryHeapIon> cap_pmem_hp;
 	uint32_t cap_pmemory_size;
@@ -82,9 +88,10 @@ struct utest_cmr_context {
 	sem_t sem_cap_done;
 };
 
-static char calibration_awb_file[] = "/data/sensor_%s_awb.dat";
-static char calibration_flashlight_file[] = "/data/sensor_%s_flashlight.dat";
-static char calibration_lsc_file[] = "/data/sensor_%s_lnc_%d_%d_%d.dat";
+static char calibration_awb_file[] = "/data/sensor_%s_awb_%s.dat";
+static char calibration_flashlight_file[] = "/data/sensor_%s_flashlight_%s.dat";
+static char calibration_lsc_file[] = "/data/sensor_%s_lnc_%d_%d_%d_%s.dat";
+static char calibration_raw_data_file[] = "/data/sensor_%s_raw_%d_%d_%s.raw";
 
 static struct utest_cmr_context utest_cmr_cxt;
 static struct utest_cmr_context *g_utest_cmr_cxt_ptr = &utest_cmr_cxt;
@@ -92,7 +99,7 @@ static struct utest_cmr_context *g_utest_cmr_cxt_ptr = &utest_cmr_cxt;
 static void utest_dcam_usage()
 {
 	INFO("utest_dcam_usage:\n");
-	INFO("utest_camera -cmd cali_cmd -id sensor_id -w capture_width -h capture_height -d output_directory \n");
+	INFO("utest_camera -maincmd cali_main_cmd -subcmd cali_sub_cmd -id sensor_id -w capture_width -h capture_height \n");
 	INFO("-cmd	: calibration command\n");
 	INFO("-id	: select sensor id(0: main sensor / 1: sub sensor)\n");
 	INFO("-w	: captured picture size width\n");
@@ -114,10 +121,16 @@ static int utest_dcam_param_set(int argc, char **argv)
 	memset(cmr_cxt_ptr, 0, sizeof(utest_cmr_context));
 
 	for (i = 1; i < argc; i++) {
-		if (strcmp(argv[i], "-cmd") == 0 && (i < argc-1)) {
+		if (strcmp(argv[i], "-maincmd") == 0 && (i < argc-1)) {
 			cmr_cxt_ptr->cmd = atoi(argv[++i]);
 			if (UTEST_CALIBRATION_MAX <= cmr_cxt_ptr->cmd) {
 				ERR("the calibration command is invalid.\n");
+				return -1;
+			}
+		} else if (strcmp(argv[i], "-subcmd") == 0 && (i < argc-1)) {
+			cmr_cxt_ptr->sub_cmd= atoi(argv[++i]);
+			if (UTEST_CALI_SUB_CMD_MAX <= cmr_cxt_ptr->sub_cmd) {
+				ERR("the calibration sub-command is invalid.\n");
 				return -1;
 			}
 		}else if (strcmp(argv[i], "-id") == 0 && (i < argc-1)) {
@@ -140,8 +153,6 @@ static int utest_dcam_param_set(int argc, char **argv)
 				ERR("the height of captured picture is invalid.\n");
 				return -1;
 			}
-		} else if (strcmp(argv[i], "-d") == 0 && (i < argc-1)) {
-			cmr_cxt_ptr->save_directory = argv[++i];
 		} else if (strcmp(argv[i], "-help") == 0) {
 			utest_dcam_usage();
 			return -1;
@@ -292,7 +303,44 @@ static void utest_dcam_close(void)
 	camera_stop(NULL, NULL);
 }
 
-static int32_t utest_dcam_awb(void)
+static int32_t utest_dcam_save_raw_data(void)
+{
+	int32_t rtn = 0;
+	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
+	SENSOR_EXP_INFO_T *sensor_ptr = (SENSOR_EXP_INFO_T*)Sensor_GetInfo();
+	char file_name[128] = "capture_raw_tool_temp.raw";
+	FILE* fp = 0;
+
+	switch(cmr_cxt_ptr->cmd) {
+		case UTEST_CALIBRATION_AWB:
+			sprintf(file_name, calibration_raw_data_file, sensor_ptr->name, cmr_cxt_ptr->capture_width,
+					cmr_cxt_ptr->capture_height, "awb");
+			break;
+		case UTEST_CALIBRATION_LSC:
+			sprintf(file_name, calibration_raw_data_file, sensor_ptr->name, cmr_cxt_ptr->capture_width,
+					cmr_cxt_ptr->capture_height, "lsc");
+			break;
+		case UTEST_CALIBRATION_FLASHLIGHT:
+			sprintf(file_name, calibration_raw_data_file, sensor_ptr->name, cmr_cxt_ptr->capture_width,
+					cmr_cxt_ptr->capture_height, "flashlight");
+			break;
+		default:
+			break;
+	}
+
+	fp = fopen(file_name, "wb");
+	if (fp >= 0) {
+		fwrite((void *)cmr_cxt_ptr->capture_raw_vir_addr , 1, cmr_cxt_ptr->capture_width
+		* cmr_cxt_ptr->capture_height * 2, fp);
+		fclose(fp);
+	} else {
+		ERR("utest_dcam_save_raw_data: failed to open save_file.\n");
+		rtn = -1;
+	}
+	return rtn;
+}
+
+static int32_t utest_dcam_awb(uint8_t sub_cmd)
 {
 	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
 	SENSOR_EXP_INFO_T *sensor_ptr = (SENSOR_EXP_INFO_T*)Sensor_GetInfo();
@@ -301,10 +349,16 @@ static int32_t utest_dcam_awb(void)
 	struct isp_size_t img_size = {0, 0};
 	struct isp_bayer_ptn_stat_t stat_param;
 	struct isp_addr_t dst_addr = {0, 0, 0};
+	struct isp_addr_t tmp_addr = {0, 0, 0};
 	uint32_t *dst_temp_addr = NULL;
+	uint32_t *img_tmp_addr = NULL;
+	uint16_t *len_tab_addr = NULL;
+	uint32_t len_tab_size = 0;
+	uint32_t img_len = 0;
 	char file_name[128] = {0};
 	FILE *fp = NULL;
 	int32_t rtn = 0;
+	uint32_t lsc_grid =32;
 
 	memset(&stat_param, 0, sizeof(isp_bayer_ptn_stat_t));
 	img_addr.y_addr = cmr_cxt_ptr->capture_raw_vir_addr;
@@ -314,6 +368,7 @@ static int32_t utest_dcam_awb(void)
 	rect.height = cmr_cxt_ptr->capture_height;
 	img_size.width = cmr_cxt_ptr->capture_width;
 	img_size.height = cmr_cxt_ptr->capture_height;
+	img_len = img_size.width * img_size.height * 2;
 #if 0
 	dst_temp_addr = (uint32_t *)malloc(cmr_cxt_ptr->capture_width * cmr_cxt_ptr->capture_height * 2);
 
@@ -330,10 +385,44 @@ static int32_t utest_dcam_awb(void)
 		return -1;
 	}
 #else
-	dst_addr.y_addr = img_addr.y_addr;
-	dst_addr.uv_addr = img_addr.uv_addr;
-	dst_addr.v_addr = img_addr.v_addr;
+	tmp_addr.y_addr = img_addr.y_addr;
+	tmp_addr.uv_addr = img_addr.uv_addr;
+	tmp_addr.v_addr = img_addr.v_addr;
 #endif
+
+	ISP_Cali_GetLensTabSize(img_size, lsc_grid, &len_tab_size);
+
+	len_tab_addr = (uint16_t *)malloc(len_tab_size);
+	if (NULL == len_tab_addr) {
+		rtn = -1;
+		ERR("utest_dcam_awb: failed to alloc buffer.\n");
+		goto awb_exit;
+	}
+	memset(len_tab_addr, 0x00, len_tab_size);
+
+	img_tmp_addr = (uint32_t*)malloc(img_len);
+	if (0 == img_tmp_addr) {
+		rtn = -1;
+		ERR("utest_dcam_awb: failed to alloc buffer.\n");
+		goto awb_exit;
+	}
+	memset(img_tmp_addr, 0x00, img_len);
+
+	if (ISP_Cali_GetLensTabs(tmp_addr, lsc_grid, img_size, (uint32_t*)len_tab_addr, 0, 0, sub_cmd)) {
+		rtn = -1;
+		ERR("utest_dcam_lsc: fail to isp_cali_getlenstab.\n");
+		goto awb_exit;
+	}
+
+	dst_addr.y_addr = (uint32_t)img_tmp_addr;
+	dst_addr.v_addr = 0;
+	dst_addr.uv_addr = 0;
+
+	ISP_Cali_LensCorrection(&tmp_addr,
+							&dst_addr,
+							img_size,
+							lsc_grid,
+							len_tab_addr);
 
 	if (ISP_Cali_RawRGBStat(&dst_addr, &rect, &img_size, &stat_param)) {
 		ERR("utest_dcam_awb: failed to isp_cali_raw_rgb_status.\n");
@@ -341,8 +430,21 @@ static int32_t utest_dcam_awb(void)
 		goto awb_exit;
 	}
 
-	sprintf(file_name, calibration_awb_file, sensor_ptr->name, cmr_cxt_ptr->capture_width,
-			cmr_cxt_ptr->capture_height, 0);
+	switch (sub_cmd) {
+		case UTEST_CALI_SUB_CMD_GOLDEN:
+		{
+			sprintf(file_name, calibration_awb_file, sensor_ptr->name,"gldn");
+		}
+		break;
+		case UTEST_CALI_SUB_CMD_RANDOM:
+		{
+			sprintf(file_name, calibration_awb_file, sensor_ptr->name,"rdm");
+		}
+		break;
+		default:
+		break;
+	}
+
 	fp = fopen(file_name, "wb");
 	if (fp != NULL) {
 		fwrite((void *)(&stat_param), 1, sizeof(stat_param), fp);
@@ -353,28 +455,27 @@ static int32_t utest_dcam_awb(void)
 		goto awb_exit;
 	}
 
-	if (cmr_cxt_ptr->save_directory) {
-		sprintf(file_name, "%s_%dX%d.raw", cmr_cxt_ptr->save_directory, cmr_cxt_ptr->capture_width,
-				cmr_cxt_ptr->capture_height);
-		fp = fopen(file_name, "wb");
-		if (fp != NULL) {
-			fwrite((void *)cmr_cxt_ptr->capture_raw_vir_addr , 1, cmr_cxt_ptr->capture_width * 
-			cmr_cxt_ptr->capture_height * 2, fp);
-			fclose(fp);
-		} else {
-			ERR("utest_dcam_awb: failed to open save_directory.\n");
-			rtn = -1;
+	if (utest_dcam_save_raw_data())
 			goto awb_exit;
-		}
-	}
 
 awb_exit:
-	free(dst_temp_addr);
+	if (dst_temp_addr) {
+		free(dst_temp_addr);
+	}
+
+	if (img_tmp_addr) {
+		free(img_tmp_addr);
+	}
+
+	if (len_tab_addr) {
+		free(len_tab_addr);
+	}
+
 	return rtn;
 }
 
 
-static int32_t utest_dcam_flashlight(void)
+static int32_t utest_dcam_flashlight(uint8_t sub_cmd)
 {
 	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
 	SENSOR_EXP_INFO_T *sensor_ptr = (SENSOR_EXP_INFO_T*)Sensor_GetInfo();
@@ -390,10 +491,10 @@ static int32_t utest_dcam_flashlight(void)
 
 	memset(&stat_param, 0, sizeof(isp_bayer_ptn_stat_t));
 	img_addr.y_addr = cmr_cxt_ptr->capture_raw_vir_addr;
-	rect.x = 0;
-	rect.y = 0;
-	rect.width = cmr_cxt_ptr->capture_width;
-	rect.height = cmr_cxt_ptr->capture_height;
+	rect.x = cmr_cxt_ptr->capture_width * 4 / 6;
+	rect.y = cmr_cxt_ptr->capture_height * 4 / 6;
+	rect.width = cmr_cxt_ptr->capture_width / 6;
+	rect.height = cmr_cxt_ptr->capture_height / 6;
 	img_size.width = cmr_cxt_ptr->capture_width;
 	img_size.height = cmr_cxt_ptr->capture_height;
 
@@ -421,11 +522,27 @@ static int32_t utest_dcam_flashlight(void)
 	if (ISP_Cali_RawRGBStat(&dst_addr, &rect, &img_size, &stat_param)) {
 		ERR("utest_dcam_flashlight: failed to isp_cali_raw_rgb_status.\n");
 		rtn = -1;
-		goto awb_exit;
+		goto flashlight_exit;
 	}
 
-	sprintf(file_name, calibration_flashlight_file, sensor_ptr->name, cmr_cxt_ptr->capture_width,
-			cmr_cxt_ptr->capture_height, 0);
+	switch (sub_cmd) {
+		case UTEST_CALI_SUB_CMD_GOLDEN:
+		{
+			sprintf(file_name, calibration_flashlight_file, sensor_ptr->name, "gldn");
+		}
+		break;
+		case UTEST_CALI_SUB_CMD_RANDOM:
+		{
+			sprintf(file_name, calibration_flashlight_file, sensor_ptr->name, "rdm");
+		}
+		break;
+		default:
+		{
+			goto flashlight_exit;
+		}
+		break;
+	}
+
 	fp = fopen(file_name, "wb");
 	if (fp >= 0) {
 		fwrite((void *)(&stat_param), 1, sizeof(stat_param), fp);
@@ -433,32 +550,21 @@ static int32_t utest_dcam_flashlight(void)
 	} else {
 		ERR("utest_dcam_flashlight: failed to open calibration_awb_file.\n");
 		rtn = -1;
-		goto awb_exit;
+		goto flashlight_exit;
 	}
 
-	if (cmr_cxt_ptr->save_directory) {
-		sprintf(file_name, "%s_%dX%d.mipi_raw", cmr_cxt_ptr->save_directory, cmr_cxt_ptr->capture_width,
-				cmr_cxt_ptr->capture_height);
-		fp = fopen(file_name, "wb");
-		if (fp >= 0) {
-			fwrite((void *)cmr_cxt_ptr->capture_raw_vir_addr , 1, cmr_cxt_ptr->capture_width * 
-			cmr_cxt_ptr->capture_height * 2, fp);
-			fclose(fp);
-		} else {
-			ERR("utest_dcam_flashlight: failed to open save_directory.\n");
-			rtn = -1;
-			goto awb_exit;
-		}
-	}
+	if (utest_dcam_save_raw_data())
+			goto flashlight_exit;
 
-awb_exit:
+flashlight_exit:
+
 	if (dst_temp_addr) {
 		free(dst_temp_addr);
 	}
 	return rtn;
 }
 
-static int32_t utest_dcam_lsc(void)
+static int32_t utest_dcam_lsc(uint8_t sub_cmd)
 {
 	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
 	SENSOR_EXP_INFO_T *sensor_ptr = (SENSOR_EXP_INFO_T*)Sensor_GetInfo();
@@ -472,6 +578,7 @@ static int32_t utest_dcam_lsc(void)
 	int32_t rtn = 0;
 	char file_name[128] = {0};
 	FILE *fp = NULL;
+	uint32_t lsc_grid = 32;
 
 	img_addr.y_addr = cmr_cxt_ptr->capture_raw_vir_addr;
 	rect.x = 0;
@@ -481,7 +588,7 @@ static int32_t utest_dcam_lsc(void)
 	img_size.width = cmr_cxt_ptr->capture_width;
 	img_size.height = cmr_cxt_ptr->capture_height;
 
-	ISP_Cali_GetLensTabSize(img_size, 32, &len_tab_size);
+	ISP_Cali_GetLensTabSize(img_size, lsc_grid, &len_tab_size);
 
 	len_tab_addr = (uint32_t *)malloc(len_tab_size);
 	if (NULL == len_tab_addr) {
@@ -511,15 +618,27 @@ static int32_t utest_dcam_lsc(void)
 	dst_addr.v_addr = img_addr.v_addr;
 #endif
 
-	if (ISP_Cali_GetLensTabs(dst_addr, 32, img_size, len_tab_addr, 0, 0)) {
+	if (ISP_Cali_GetLensTabs(dst_addr, lsc_grid, img_size, len_tab_addr, 0, 0, sub_cmd)) {
 		rtn = -1;
 		ERR("utest_dcam_lsc: fail to isp_cali_getlenstab.\n");
 		goto lsc_exit;
 	}
 
+	switch (sub_cmd) {
+		case UTEST_CALI_SUB_CMD_GOLDEN:
+		sprintf(file_name, calibration_lsc_file,sensor_ptr->name, cmr_cxt_ptr->capture_width,
+				cmr_cxt_ptr->capture_height, 0, "gldn");
+		break;
 
-	sprintf(file_name, calibration_lsc_file,sensor_ptr->name, cmr_cxt_ptr->capture_width,
-			cmr_cxt_ptr->capture_height, 0);
+		case UTEST_CALI_SUB_CMD_RANDOM:
+		sprintf(file_name, calibration_lsc_file,sensor_ptr->name, cmr_cxt_ptr->capture_width,
+				cmr_cxt_ptr->capture_height, 0, "rdm");
+		break;
+
+		default:
+		break;
+	}
+
 	fp = fopen(file_name, "wb");
 	if (fp >= 0) {
 		fwrite(len_tab_addr, 1, len_tab_size, fp);
@@ -530,20 +649,8 @@ static int32_t utest_dcam_lsc(void)
 		goto lsc_exit;
 	}
 
-	if (cmr_cxt_ptr->save_directory) {
-		sprintf(file_name, "%s_%dX%d.raw", cmr_cxt_ptr->save_directory, cmr_cxt_ptr->capture_width,
-				cmr_cxt_ptr->capture_height);
-		fp = fopen(file_name, "wb");
-		if (fp >= 0) {
-			fwrite((void *)cmr_cxt_ptr->capture_raw_vir_addr , 1, cmr_cxt_ptr->capture_width * 
-			cmr_cxt_ptr->capture_height * 2, fp);
-			fclose(fp);
-		} else {
-			ERR("utest_dcam_lsc: failed to open save_directory.\n");
-			rtn = -1;
+	if (utest_dcam_save_raw_data())
 			goto lsc_exit;
-		}
-	}
 
 lsc_exit:
 	if (len_tab_addr)
@@ -557,63 +664,72 @@ lsc_exit:
 
 static int32_t utest_dcam_preview_flash_eb(void)
 {
-	int32_t rtn = 0;
-	SENSOR_FLASH_LEVEL_T flash_level;
-	struct camera_context *cxt = camera_get_cxt();
-	struct isp_alg flash_param;
+	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
 
-	if (Sensor_GetFlashLevel(&flash_level))
-		return -1;
+	if (UTEST_CALIBRATION_FLASHLIGHT == cmr_cxt_ptr->cmd) {
+		SENSOR_FLASH_LEVEL_T flash_level;
+		struct camera_context *cxt = camera_get_cxt();
+		struct isp_alg flash_param;
 
-	flash_param.mode=ISP_AE_BYPASS;
-	flash_param.flash_eb=0x01;
-	if (isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param))
-		return -1;
+		if (Sensor_GetFlashLevel(&flash_level))
+			return -1;
 
-	sem_wait(&cxt->cmr_set.isp_alg_sem);
+		flash_param.mode=ISP_AE_BYPASS;
+		flash_param.flash_eb=0x01;
+		if (isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param))
+			return -1;
 
-	if (camera_set_flashdevice((uint32_t)FLASH_OPEN))
-		return -1;
+		sem_wait(&cxt->cmr_set.isp_alg_sem);
 
-	flash_param.mode=ISP_ALG_FAST;
-	flash_param.flash_eb=0x01;
-	flash_param.flash_ratio=flash_level.high_light*256/flash_level.low_light;
-	if (isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param))
-		return -1;
+		if (camera_set_flashdevice((uint32_t)FLASH_OPEN))
+			return -1;
 
+		flash_param.mode=ISP_ALG_FAST;
+		flash_param.flash_eb=0x01;
+		flash_param.flash_ratio=flash_level.high_light*256/flash_level.low_light;
+		if (isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param))
+			return -1;
+	}
 	return 0;
 }
 
 static int32_t utest_dcam_preview_flash_dis(void)
 {
-	struct camera_context *cxt = camera_get_cxt();
+	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
 
-	sem_wait(&cxt->cmr_set.isp_alg_sem);
+	if (UTEST_CALIBRATION_FLASHLIGHT == cmr_cxt_ptr->cmd) {
+		struct camera_context *cxt = camera_get_cxt();
 
-	if (camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN))
-		return -1;
+		sem_wait(&cxt->cmr_set.isp_alg_sem);
 
+		if (camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN))
+			return -1;
+	}
 	return 0;
 }
 
 static int32_t utest_dcam_capture_flash_eb(void)
 {
-	int ret = 0;
+	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
 
-	if (isp_ioctl(ISP_CTRL_FLASH_EG,0))
-		return -1;
+	if (UTEST_CALIBRATION_FLASHLIGHT == cmr_cxt_ptr->cmd) {
+		if (isp_ioctl(ISP_CTRL_FLASH_EG,0))
+			return -1;
 
-	if (camera_set_flashdevice((uint32_t)FLASH_HIGH_LIGHT))
-		return -1;
-
+		if (camera_set_flashdevice((uint32_t)FLASH_HIGH_LIGHT))
+			return -1;
+	}
 	return 0;
 }
 
 static int32_t utest_dcam_capture_flash_dis(void)
 {
-	if (camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN))
-		return -1;
+	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
 
+	if (UTEST_CALIBRATION_FLASHLIGHT == cmr_cxt_ptr->cmd) {
+		if (camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN))
+			return -1;
+	}
 	return 0;
 }
 
@@ -762,13 +878,13 @@ int main(int argc, char **argv)
 	} else {
 		switch (cmr_cxt_ptr->cmd) {
 		case UTEST_CALIBRATION_AWB:
-			utest_dcam_awb();
+			utest_dcam_awb(cmr_cxt_ptr->sub_cmd);
 			break;
 		case UTEST_CALIBRATION_LSC:
-			utest_dcam_lsc();
+			utest_dcam_lsc(cmr_cxt_ptr->sub_cmd);
 			break;
 		case UTEST_CALIBRATION_FLASHLIGHT:
-			utest_dcam_flashlight();
+			utest_dcam_flashlight(cmr_cxt_ptr->sub_cmd);
 			break;
 		default:
 			rtn = -1;
