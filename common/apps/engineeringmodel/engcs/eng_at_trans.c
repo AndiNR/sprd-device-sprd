@@ -14,6 +14,9 @@ static char* s_at_ser_path = "/dev/ttyGS1";
 static int at_mux_fd = -1;
 static int pc_fd=-1;
 
+static char eng_pc_buf[ENG_BUFFER_SIZE << 3] = {0}; // 16K
+static char eng_modem_buf[ENG_BUFFER_SIZE << 3] = {0}; // 16K
+
 static int start_gser(char* name)
 {
     struct termios ser_settings;
@@ -51,19 +54,20 @@ static void *eng_readpcat_thread(void *par)
     int len;
     int written;
     int cur;
-    char engbuf[ENG_BUFFER_SIZE];
     int i;
 
     for(;;){
         ENG_LOG("%s: wait pcfd=%d\n",__func__,pc_fd);
 read_again:
-        memset(engbuf, 0, ENG_BUFFER_SIZE);
+        memset(eng_pc_buf, 0, ENG_BUFFER_SIZE << 3);
         if (pc_fd >= 0){
-            len = read(pc_fd, engbuf, ENG_BUFFER_SIZE);
-            ENG_LOG("%s: wait pcfd=%d buf=%s len=%d",__func__,pc_fd,engbuf,len);
+            len = read(pc_fd, eng_pc_buf, ENG_BUFFER_SIZE << 3);
+#if 0
+            ENG_LOG("%s: wait pcfd=%d buf=%s len=%d",__func__,pc_fd,eng_pc_buf,len);
             for (i=0;i<len;i++){
-                ENG_LOG("%c %x",engbuf[i],engbuf[i]);
+                ENG_LOG("%c %x",eng_pc_buf[i],eng_pc_buf[i]);
             }
+#endif
             if (len <= 0) {
                 ENG_LOG("%s: read length error %s",__FUNCTION__,strerror(errno));
                 sleep(1);
@@ -74,7 +78,7 @@ read_again:
                     cur = 0;
                     while (cur < len) {
                         do {
-                            written = write(at_mux_fd, engbuf + cur, len - cur);
+                            written = write(at_mux_fd, eng_pc_buf + cur, len - cur);
                             ENG_LOG("muxfd=%d written=%d",at_mux_fd,written);
                         } while (written < 0 && errno == EINTR);
                         if (written < 0) {
@@ -99,13 +103,14 @@ static void *eng_readmodemat_thread(void *par)
 {
     int ret;
     int len;
-    char engbuf[ENG_BUFFER_SIZE];
 
     for(;;){
         ENG_LOG("%s: wait pcfd=%d\n",__func__,pc_fd);
-        memset(engbuf, 0, ENG_BUFFER_SIZE);
-        len = read(at_mux_fd, engbuf, ENG_BUFFER_SIZE);
-        ENG_LOG("muxfd=%d buf=%s,len=%d\n",at_mux_fd,engbuf,len);
+        memset(eng_modem_buf, 0, ENG_BUFFER_SIZE);
+        len = read(at_mux_fd, eng_modem_buf, ENG_BUFFER_SIZE);
+#if 0
+        ENG_LOG("muxfd=%d buf=%s,len=%d\n",at_mux_fd,eng_modem_buf,len);
+#endif
         if (len <= 0) {
             ENG_LOG("%s: read length error %s\n",__FUNCTION__,strerror(errno));
             sleep(1);
@@ -113,7 +118,7 @@ static void *eng_readmodemat_thread(void *par)
         }else{
 write_again:
             if (pc_fd>=0){
-                ret = write(pc_fd,engbuf,len);
+                ret = write(pc_fd,eng_modem_buf,len);
                 if (ret <= 0) {
                     ENG_LOG("%s: write length error %s\n",__FUNCTION__,strerror(errno));
                     sleep(1);
