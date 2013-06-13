@@ -480,12 +480,8 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"picture-size", "640x480"},
 	{"preview-size-values", "1920x1080,352x288,176x144"},
 	{"preview-size", "1920x1080"},
-#ifndef CONFIG_CAMERA_SUPPORT_720P
-	{"video-size-values", "720x480,352x288,176x144"},
-#else
-	{"video-size-values", "1280x720,720x480,352x288,176x144"},
-#endif
-	{"video-size", "720x480"},
+	{"video-size-values", "1920x1080,1280x720,720x480,352x288,176x144"},
+	{"video-size", "1920x1080"},
 	{"preferred-preview-size-for-video", "352x288"},
 	{"video-frame-format-values", "yuv420sp,yuv420p"},
 	{"video-frame-format", "yuv420sp"},

@@ -3862,7 +3862,7 @@ int camera_alloc_preview_buf(struct buffer_cfg *buffer, uint32_t format)
 	if (NULL == buffer)
 		return -CAMERA_INVALID_PARM;
 
-	buffer_size = g_cxt->display_size.width * g_cxt->display_size.height;
+	buffer_size = ((g_cxt->display_size.width+15)&(~15)) * ((g_cxt->display_size.height+15)&(~15));
 	if (IMG_DATA_TYPE_YUV420 == format) {
 		frame_size = buffer_size * 3 / 2;
 		CMR_LOGI("420.");

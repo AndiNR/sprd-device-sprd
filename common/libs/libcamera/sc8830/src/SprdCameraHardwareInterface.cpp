@@ -392,9 +392,15 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
     }
 
     if (w->set_buffers_geometry(w,
-                                preview_width, preview_height,
+                                (preview_width+15)&(~15), (preview_height+15)&(~15),
                                 hal_pixel_format)) {
         LOGE("%s: could not set buffers geometry to %s",
+             __func__, str_preview_format);
+        return INVALID_OPERATION;
+    }
+
+    if (w->set_crop(w, 0, 0, preview_width, preview_height)) {
+        LOGE("%s: could not set crop to %s",
              __func__, str_preview_format);
         return INVALID_OPERATION;
     }
@@ -1368,7 +1374,7 @@ bool SprdCameraHardware::initPreview()
 	switch (mPreviewFormat) {
 	case 0:
 		case 1:	//yuv420
-		mPreviewHeapSize = mPreviewWidth * mPreviewHeight * 3 / 2;
+		mPreviewHeapSize = ((mPreviewWidth+15)&(~15)) * ((mPreviewHeight+15)&(~15)) * 3 / 2;
 		break;
 
 	default:
@@ -2024,7 +2030,7 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 	}
 
 	ret = mGrallocHal->lock(mGrallocHal, *buf_handle, GRALLOC_USAGE_SW_WRITE_OFTEN,
-							0, 0, width, height, &vaddr);
+							0, 0, (width+15)&(~15), (height+15)&(~15), &vaddr);
 	//if the ret is 0 and the vaddr is NULL, whether the unlock should be called?
 
 	if (0 != ret || NULL == vaddr)
@@ -2034,7 +2040,7 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 	}
 
 	//ret = camera_copy_data_virtual(width, height, phy_addr, (uint32_t)vaddr);
-	memcpy(vaddr, virtual_addr, width*height*3/2);
+	memcpy(vaddr, virtual_addr, ((width+15)&(~15))*((height+15)&(~15))*3/2);
 	mGrallocHal->unlock(mGrallocHal, *buf_handle);
 	
 	if(0 != ret) {
