@@ -262,7 +262,7 @@ service akmd /system/bin/akmd8963 -m 4
 
 service hciattach /system/bin/logwrapper /system/bin/hciattach -n /dev/ttyS0 bk3211 921600
     class main
-    user bluetooth
+    user system
     group bluetooth net_bt_admin
     disabled
     oneshot
