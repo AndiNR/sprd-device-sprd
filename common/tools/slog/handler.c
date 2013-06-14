@@ -939,7 +939,7 @@ void *modem_log_handler(void *arg)
 	}
 
 	free(ring_buffer_table);
-	ring_buffer_table == NULL;
+	ring_buffer_table = NULL;
 
 	/* close all open fds */
 	if(info->fd_device)
@@ -980,9 +980,6 @@ void *stream_log_handler(void *arg)
 			open_device(info, KERNEL_LOG_SOURCE);
 			info->fd_out = gen_outfd(info);
 			add_timestamp(info);
-		} else if(!strncmp(info->name, "modem", 5)) {
-			info = info->next;
-			continue;
 		} else if( !strncmp(info->name, "main", 4) || !strncmp(info->name, "system", 6) || !strncmp(info->name, "radio", 5) ){
 			sprintf(devname, "%s/%s", "/dev/log", info->name);
 			open_device(info, devname);
@@ -1065,15 +1062,13 @@ void *stream_log_handler(void *arg)
 
 				info->outbytecount += ret;
 				log_size_handler(info);
-			} else if(!strncmp(info->name, "modem", 5)) {
-				info = info->next;
-				continue;
 			} else if(!strncmp(info->name, "main", 4) || !strncmp(info->name, "system", 6)
 				|| !strncmp(info->name, "radio", 5) ) {
 				ret = read(info->fd_device, buf, LOGGER_ENTRY_MAX_LEN);
 				if(ret <= 0) {
 					err_log("read %s log failed!", info->name);
 					close(info->fd_device);
+					sleep(1);
 					sprintf(devname, "%s/%s", "/dev/log", info->name);
 					open_device(info, devname);
 					info = info->next;
@@ -1089,6 +1084,8 @@ void *stream_log_handler(void *arg)
 					close(info->fd_out);
 					info->fd_out = gen_outfd(info);
 					add_timestamp(info);
+					info = info->next;
+					continue;
 				}
 
 				info->outbytecount += ret;
