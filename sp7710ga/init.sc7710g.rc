@@ -76,6 +76,8 @@ on boot
     setprop wifi.interface wlan0
     chown system system /proc/sys/kernel/printk
 
+    chmod 666 /sys/module/ipc_sdio/parameters/sdio_tx_wait_time
+
     copy /dev/sprd-watchdog /dev/null
 
 on property:ro.debuggable=1
@@ -198,7 +200,7 @@ service wril-daemon /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -m
     socket rild-debug stream 660 radio system
     disabled
     user root
-    group radio cache inet misc audio sdcard_rw log
+    group radio cache inet misc audio sdcard_rw log shell
 
 service wril-daemon1 /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -m w -n 1
     class core
@@ -206,7 +208,7 @@ service wril-daemon1 /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -
     socket rild-debug1 stream 660 radio system
     disabled
     user root
-    group radio cache inet misc audio sdcard_rw log
+    group radio cache inet misc audio sdcard_rw log shell
 
 service wril-daemon2 /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -m w -n 2
     class core
@@ -214,7 +216,7 @@ service wril-daemon2 /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so 
     socket rild-debug2 stream 660 radio system
     disabled
     user root
-    group radio cache inet misc audio sdcard_rw log
+    group radio cache inet misc audio sdcard_rw log shell
 
 #nvitemd
 service nvitemd /system/bin/nvitemd /dev/ts0710mux20 ./nvitem.cfg
