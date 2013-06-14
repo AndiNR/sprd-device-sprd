@@ -524,7 +524,7 @@ void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
 	//LOGV("releaseRecordingFrame E. ");
 	Mutex::Autolock l(&mLock);
 	uint8_t *addr = (uint8_t *)opaque;
-	uint32_t index;
+	int32_t index;
 
 	if (!isPreviewing()) {
 		LOGE("releaseRecordingFrame: Preview not in progress!");
@@ -537,7 +537,7 @@ void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
 	else {
 		for (index=0; index<kPreviewBufferCount; index++)
 		{
-			if (addr == mPreviewHeapArray_vir[index])	break;
+			if ((uint32_t)addr == mPreviewHeapArray_vir[index])	break;
 		}
 	}
 
@@ -1136,27 +1136,23 @@ bool SprdCameraHardware::startCameraIfNecessary()
 
 
 
-int SprdCameraHardware::Callback_AllocPmem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir)
+int SprdCameraHardware::Callback_AllocCapturePmem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir)
 {
-	LOGE("Callback_AllocPmem size = %d", size);
+	LOGD("Callback_AllocCapturePmem size = %d", size);
 
 	SprdCameraHardware* camera = (SprdCameraHardware*)handle;
-	if (camera == NULL)
-	{
+	if (camera == NULL) {
 		return -1;
 	}
-	if (camera->mMiscHeapNum >= MAX_MISCHEAP_NUM)
-	{
+	if (camera->mMiscHeapNum >= MAX_MISCHEAP_NUM) {
 		return -1;
 	}
 
 	sp<MemoryHeapIon> pHeapIon = new MemoryHeapIon("/dev/ion", size , MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
-	if (pHeapIon == NULL)
-	{
+	if (pHeapIon == NULL) {
 		return -1;
 	}
-	if (pHeapIon->getHeapID() < 0)
-	{
+	if (pHeapIon->getHeapID() < 0) {
 		return -1;
 	}
 
@@ -1164,7 +1160,29 @@ int SprdCameraHardware::Callback_AllocPmem(void* handle, unsigned int size, unsi
 	*addr_vir = (int)(pHeapIon->base());
 	camera->mMiscHeapArray[camera->mMiscHeapNum++] = pHeapIon;
 
-	LOGE("Callback_AllocPmem mMiscHeapNum = %d", camera->mMiscHeapNum);
+	LOGD("Callback_AllocCapturePmem mMiscHeapNum = %d", camera->mMiscHeapNum);
+
+	return 0;
+}
+
+int SprdCameraHardware::Callback_FreeCapturePmem(void* handle)
+{
+	SprdCameraHardware* camera = (SprdCameraHardware*)handle;
+	if (camera == NULL) {
+		return -1;
+	}
+
+	LOGD("Callback_FreePmem mMiscHeapNum = %d", camera->mMiscHeapNum);
+
+	uint32_t i;
+	for (i=0; i<camera->mMiscHeapNum; i++) {
+		sp<MemoryHeapIon> pHeapIon = camera->mMiscHeapArray[i];
+		if (pHeapIon != NULL) {
+			pHeapIon.clear();
+		}
+		camera->mMiscHeapArray[i] = NULL;
+	}
+	camera->mMiscHeapNum = 0;
 
 	return 0;
 }
@@ -1259,24 +1277,21 @@ void SprdCameraHardware::FreeFdmem(void)
 //mPreviewHeapSize must be set before this function be called
 bool SprdCameraHardware::allocatePreviewMem()
 {
-	int i;
+	uint32_t i;
 	uint32_t buffer_size = camera_get_size_align_page(mPreviewHeapSize);
 	mPreviewHeapNum = kPreviewBufferCount;
 	
-	if(camera_get_rot_set())
-	{
+	if(camera_get_rot_set()) {
 		/* allocate more buffer for rotation */
 		mPreviewHeapNum += kPreviewRotBufferCount;
 		LOGV("initPreview: rotation, increase buffer: %d \n", mPreviewHeapNum);
 	}
 
 	mPreviewHeapArray = (sprd_camera_memory_t**)malloc(mPreviewHeapNum * sizeof(sprd_camera_memory_t*));
-	if (mPreviewHeapArray == NULL)
-	{
+	if (mPreviewHeapArray == NULL) {
 	        return false;
 	}
-	for (i=0; i<mPreviewHeapNum; i++)
-	{
+	for (i=0; i<mPreviewHeapNum; i++) {
 		sprd_camera_memory_t* mPreviewHeap = GetPmem(buffer_size, 1);
 		if(NULL == mPreviewHeap)
 			return false;
@@ -1293,7 +1308,7 @@ bool SprdCameraHardware::allocatePreviewMem()
 
                 mPreviewHeapArray[i] = mPreviewHeap;
                 mPreviewHeapArray_phy[i] = mPreviewHeap->phys_addr;
-                mPreviewHeapArray_vir[i] = mPreviewHeap->data;
+                mPreviewHeapArray_vir[i] = (uint32_t)mPreviewHeap->data;
 	}
 
 	return true;
@@ -1329,16 +1344,14 @@ void SprdCameraHardware::FreeReDisplayMem()
 
 void SprdCameraHardware::freePreviewMem()
 {
-	int i;
+	uint32_t i;
 	FreeFdmem();
 
-	for (i=0; i<mPreviewHeapNum; i++)
-	{
+	for (i=0; i<mPreviewHeapNum; i++) {
 		FreePmem(mPreviewHeapArray[i]);
 		mPreviewHeapArray[i] = NULL;
 	}
-	if (mPreviewHeapArray != NULL)
-	{
+	if (mPreviewHeapArray != NULL) {
 		free(mPreviewHeapArray);
 		mPreviewHeapArray = NULL;
 	}
@@ -1525,14 +1538,14 @@ bool SprdCameraHardware::initCapture(bool initJpegHeap)
 								(uint32_t)mMiscHeap->phys_size))
 			return false;
 	} else {
-		if (camera_set_capture_mem(0,
+		if (camera_set_capture_mem2(0,
 								(uint32_t)mRawHeap->phys_addr,
 								(uint32_t)mRawHeap->data,
 								(uint32_t)mRawHeap->phys_size,
-								(uint32_t)Callback_AllocPmem,
-								(uint32_t)this,
-								0))
-			return false;		
+								(uint32_t)Callback_AllocCapturePmem,
+								(uint32_t)Callback_FreeCapturePmem,
+								(uint32_t)this))
+			return false;
 	}
 	
 	LOGV("initCapture X success");
@@ -1541,18 +1554,13 @@ bool SprdCameraHardware::initCapture(bool initJpegHeap)
 
 void SprdCameraHardware::deinitCapture()
 {
-	if (NULL != mMiscHeap)
-	{
+	if (NULL != mMiscHeap) {
 		camera_set_capture_mem(0, 0, 0, 0, 0, 0, 0);
-	}
-	else
-	{
-		int i;
-		for (i=0; i<mMiscHeapNum; i++)
-		{
+	} else {
+		uint32_t i;
+		for (i=0; i<mMiscHeapNum; i++) {
 			sp<MemoryHeapIon> pHeapIon = mMiscHeapArray[i];
-			if (pHeapIon != NULL)
-			{
+			if (pHeapIon != NULL) {
 				pHeapIon.clear();
 			}
 			mMiscHeapArray[i] = NULL;
@@ -1803,7 +1811,7 @@ status_t SprdCameraHardware::setCameraParameters()
 		mParameters.setPreviewSize(640, 480);
 		return UNKNOWN_ERROR;
 	}
-	LOGV("setCameraParameters: preview size: wxmax", w, h);
+	LOGV("setCameraParameters: preview size: %dx%d", w, h);
 
 	LOGV("mIsRotCapture:%d.",mIsRotCapture);
 	if (mIsRotCapture) {
@@ -2173,7 +2181,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 		}
 		else {
 			if(CAMERA_SUCCESS != camera_release_frame(offset)){
-				LOGE("receivePreviewFrame: fail to camera_release_frame().offset: %d.", offset);
+				LOGE("receivePreviewFrame: fail to camera_release_frame().offset: %d.", (int)offset);
 			}
 		}
 		// When we are doing preview but not recording, we need to
@@ -2476,7 +2484,7 @@ void SprdCameraHardware::receiveJpegPicture(JPEGENC_CBrtnType *encInfo)
 
 	// NOTE: the JPEG encoder uses the raw image contained in mRawHeap, so we need
 	// to keep the heap around until the encoding is complete.
-	LOGV("receiveJpegPicture: free the Raw and Jpeg mem. 0x%x, 0x%x", mRawHeap, mMiscHeap);
+	LOGV("receiveJpegPicture: free the Raw and Jpeg mem. 0x%p, 0x%p", mRawHeap, mMiscHeap);
 
 	if (!iSZslMode()) {
 		if (encInfo->need_free) {

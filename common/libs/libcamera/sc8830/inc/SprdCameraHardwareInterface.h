@@ -132,7 +132,8 @@ private:
 						int frame_offset, const char *name);
 	};
 
-	static int Callback_AllocPmem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir);
+	static int Callback_AllocCapturePmem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir);
+	static int Callback_FreeCapturePmem(void* handle);
 	
 	void                  FreeCameraMem(void);
 	sprd_camera_memory_t* GetPmem(int buf_size, int num_bufs);
@@ -264,7 +265,7 @@ private:
 	uint32_t                        mPreviewHeapNum;
 	sprd_camera_memory_t*           *mPreviewHeapArray;
 	uint32_t                        mPreviewHeapArray_phy[kPreviewBufferCount+kPreviewRotBufferCount];
-	void*                           mPreviewHeapArray_vir[kPreviewBufferCount+kPreviewRotBufferCount];
+	uint32_t                           mPreviewHeapArray_vir[kPreviewBufferCount+kPreviewRotBufferCount];
 
 	sprd_camera_memory_t            *mRawHeap;
 	uint32_t                        mRawHeapSize;

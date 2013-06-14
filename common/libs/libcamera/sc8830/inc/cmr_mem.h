@@ -27,12 +27,15 @@ extern "C"
 #define CMR_ISP_YUV422  0
 
 typedef int (*alloc_mem_ptr)(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir);
+typedef int (*free_mem_ptr)(void* handle);
 
 struct cmr_cap_2_frm {
 	struct img_frm  major_frm;
 	struct img_frm  minor_frm;
+
 	void* handle;
 	alloc_mem_ptr alloc_mem;
+	free_mem_ptr free_mem;
 };
 
 struct cmr_cap_mem {

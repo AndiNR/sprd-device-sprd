@@ -3876,19 +3876,19 @@ int camera_alloc_preview_buf(struct buffer_cfg *buffer, uint32_t format)
 	}
 
 	frame_size = camera_get_size_align_page(frame_size);
-	if (NULL == g_cxt->prev_virt_addr_array || 0 == g_cxt->prev_phys_addr_array) {
+	if (NULL == g_cxt->prev_virt_addr_array || NULL == g_cxt->prev_phys_addr_array) {
 		CMR_LOGE("Fail to malloc preview memory.");
 		return -CAMERA_FAILED;
 	}
 	for (i = 0; i < CAMERA_PREV_FRM_CNT; i++) {
-		if ((NULL == g_cxt->prev_virt_addr_array[i]) || (NULL == g_cxt->prev_phys_addr_array[i])) {
+		if ((0 == g_cxt->prev_virt_addr_array[i]) || (0 == g_cxt->prev_phys_addr_array[i])) {
 			CMR_LOGE("Fail to malloc preview memory.");
 		         return  -CAMERA_FAILED;
 		}
 	}
 	if (g_cxt->prev_rot) {
 		for (i = CAMERA_PREV_FRM_CNT; i < CAMERA_PREV_FRM_CNT+ CAMERA_PREV_ROT_FRM_CNT; i++) {
-			if ((NULL == g_cxt->prev_virt_addr_array[i]) || (NULL == g_cxt->prev_phys_addr_array[i])) {
+			if ((0 == g_cxt->prev_virt_addr_array[i]) || (0 == g_cxt->prev_phys_addr_array[i])) {
 				CMR_LOGE("Fail to malloc preview memory.");
 		                  return  -CAMERA_FAILED;
 			}
@@ -3905,7 +3905,7 @@ int camera_alloc_preview_buf(struct buffer_cfg *buffer, uint32_t format)
 		return -CAMERA_NO_MEMORY;
 	}
 
-	CMR_LOGV("preview addr, vir 0x%x phy 0x%x", (uint32_t)g_cxt->prev_virt_addr_array, g_cxt->prev_phys_addr_array);
+	CMR_LOGV("preview addr, vir 0x%p phy 0x%p", g_cxt->prev_virt_addr_array, g_cxt->prev_phys_addr_array);
 	buffer->channel_id = CHN_1;
 	buffer->base_id    = CAMERA_PREV_ID_BASE;
 	buffer->count      = CAMERA_PREV_FRM_CNT;
@@ -4064,8 +4064,7 @@ int camera_capture_ability(SENSOR_MODE_INFO_T *sn_mode,
 
 	sensor_size.width  = sn_mode->width;
 	sensor_size.height = sn_mode->height;
-	if (g_cxt->cap_2_mems.minor_frm.buf_size > 0)
-	{
+	if (g_cxt->cap_2_mems.minor_frm.buf_size > 0) {
 		ret = camera_arrange_capture_buf(&g_cxt->cap_2_mems,
 					&sensor_size,
 					&sn_trim_rect,
@@ -4076,9 +4075,8 @@ int camera_capture_ability(SENSOR_MODE_INFO_T *sn_mode,
 					g_cxt->cap_mem,
 					((IMG_ROT_0 != g_cxt->cap_rot) || g_cxt->is_cfg_rot_cap),
 					g_cxt->total_cap_num);
-	}
-	else
-	{
+	} else {
+		g_cxt->cap_2_mems.free_mem(g_cxt->cap_2_mems.handle);
 		ret = camera_arrange_capture_buf2(&g_cxt->cap_2_mems,
 					&sensor_size,
 					&sn_trim_rect,
@@ -4338,7 +4336,7 @@ int camera_set_preview_mem(uint32_t phy_addr, uint32_t vir_addr, uint32_t mem_si
 
 	CMR_LOGV("phy_addr, 0x%x, vir_addr, 0x%x, mem_size 0x%x, mem_num %d", phy_addr, vir_addr, mem_size, mem_num);
 
-	g_cxt->prev_phys_addr_array = phy_addr;
+	g_cxt->prev_phys_addr_array = (uint32_t*)phy_addr;
 	g_cxt->prev_virt_addr_array = (uint32_t*)vir_addr;
 	g_cxt->prev_mem_size = mem_size;
 	g_cxt->prev_mem_num  = mem_num;
@@ -4371,16 +4369,40 @@ int camera_set_capture_mem(uint32_t     cap_index,
 	g_cxt->cap_2_mems.major_frm.addr_vir.addr_y = vir_addr0;
 
 	g_cxt->cap_2_mems.minor_frm.buf_size = mem_size1;
-	if (mem_size1 > 0)
-	{
-		g_cxt->cap_2_mems.minor_frm.addr_phy.addr_y = phy_addr1;
-		g_cxt->cap_2_mems.minor_frm.addr_vir.addr_y = vir_addr1;
+	g_cxt->cap_2_mems.minor_frm.addr_phy.addr_y = phy_addr1;
+	g_cxt->cap_2_mems.minor_frm.addr_vir.addr_y = vir_addr1;
+
+	return ret;
+}
+
+int camera_set_capture_mem2(uint32_t     cap_index,
+						uint32_t phy_addr0,
+						uint32_t vir_addr0,
+						uint32_t mem_size0,
+						uint32_t alloc_mem,
+						uint32_t free_mem,
+						uint32_t handle)
+{
+	struct img_size          max_size;
+	int                      ret = CAMERA_SUCCESS;
+
+	if (cap_index > CAMERA_CAP_FRM_CNT) {
+		CMR_LOGE("Invalid cap_index %d", cap_index);
+		return -CAMERA_NO_MEMORY;
 	}
-	else
-	{
-		g_cxt->cap_2_mems.alloc_mem = phy_addr1;
-		g_cxt->cap_2_mems.handle = vir_addr1;
+	if (0 == phy_addr0 || 0 == vir_addr0 || 0 == mem_size0) {
+		CMR_LOGE("Invalid parameter 0x%x 0x%x 0x%x", phy_addr0, vir_addr0, mem_size0);
+		return -CAMERA_NO_MEMORY;
 	}
+
+	g_cxt->cap_2_mems.major_frm.buf_size = mem_size0;
+	g_cxt->cap_2_mems.major_frm.addr_phy.addr_y = phy_addr0;
+	g_cxt->cap_2_mems.major_frm.addr_vir.addr_y = vir_addr0;
+	g_cxt->cap_2_mems.minor_frm.buf_size = 0;
+
+	g_cxt->cap_2_mems.alloc_mem = (alloc_mem_ptr)alloc_mem;
+	g_cxt->cap_2_mems.free_mem = (free_mem_ptr)free_mem;
+	g_cxt->cap_2_mems.handle = (void*)handle;
 
 	return ret;
 }
@@ -4506,7 +4528,7 @@ int camera_capture_yuv_process(struct frm_info *data)
 
 	TAKE_PIC_CANCEL;
 
-	CMR_LOGV("cap_zoom_mode %d, orig size %d %d, picture size %d %d, cap_original_fmt=%d, cfg_cap_rot",
+	CMR_LOGV("cap_zoom_mode %d, orig size %d %d, picture size %d %d, cap_original_fmt=%d, cfg_cap_rot=%d",
 		g_cxt->cap_zoom_mode,
 		g_cxt->cap_orig_size.width,
 		g_cxt->cap_orig_size.height,

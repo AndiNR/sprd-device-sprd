@@ -92,18 +92,18 @@ static const struct cap_size_to_mem back_cam_raw_mem_size_tab[IMG_SIZE_NUM] = {
 };
 #else
 static const struct cap_size_to_mem back_cam_mem_size_tab[IMG_SIZE_NUM] = {
-	{PIXEL_1P3_MEGA, (20 << 20), (50 << 20)},
-	{PIXEL_2P0_MEGA, (20 << 20), (50 << 20)},
-	{PIXEL_3P0_MEGA, (20 << 20), (50 << 20)},
-	{PIXEL_5P0_MEGA, (20 << 20), (50 << 20)},
-	{PIXEL_8P0_MEGA, (20 << 20), (50 << 20)},
+	{PIXEL_1P3_MEGA, (20 << 20), (0 << 20)},
+	{PIXEL_2P0_MEGA, (20 << 20), (0 << 20)},
+	{PIXEL_3P0_MEGA, (20 << 20), (0 << 20)},
+	{PIXEL_5P0_MEGA, (20 << 20), (0 << 20)},
+	{PIXEL_8P0_MEGA, (20 << 20), (0 << 20)},
 };
 static const struct cap_size_to_mem back_cam_raw_mem_size_tab[IMG_SIZE_NUM] = {
-	{PIXEL_1P3_MEGA, (20 << 20), (50 << 20)},
-	{PIXEL_2P0_MEGA, (20 << 20), (50 << 20)},
-	{PIXEL_3P0_MEGA, (20 << 20), (50 << 20)},
-	{PIXEL_5P0_MEGA, (20 << 20), (50 << 20)},
-	{PIXEL_8P0_MEGA, (20 << 20), (50 << 20)},
+	{PIXEL_1P3_MEGA, (20 << 20), (0 << 20)},
+	{PIXEL_2P0_MEGA, (20 << 20), (0 << 20)},
+	{PIXEL_3P0_MEGA, (20 << 20), (0 << 20)},
+	{PIXEL_5P0_MEGA, (20 << 20), (0 << 20)},
+	{PIXEL_8P0_MEGA, (20 << 20), (0 << 20)},
 };
 #endif
 
@@ -124,18 +124,18 @@ static const struct cap_size_to_mem front_cam_raw_mem_size_tab[IMG_SIZE_NUM] = {
 };
 #else
 static const struct cap_size_to_mem front_cam_mem_size_tab[IMG_SIZE_NUM] = {
-	{PIXEL_1P3_MEGA, (20 << 20), (50 << 20)},
-	{PIXEL_2P0_MEGA, (20 << 20), (50 << 20)},
-	{PIXEL_3P0_MEGA, (20 << 20), (50 << 20)},
-	{PIXEL_5P0_MEGA, (20 << 20), (50 << 20)},
-	{PIXEL_8P0_MEGA, (20 << 20), (50 << 20)},
+	{PIXEL_1P3_MEGA, (20 << 20), (0 << 20)},
+	{PIXEL_2P0_MEGA, (20 << 20), (0 << 20)},
+	{PIXEL_3P0_MEGA, (20 << 20), (0 << 20)},
+	{PIXEL_5P0_MEGA, (20 << 20), (0 << 20)},
+	{PIXEL_8P0_MEGA, (20 << 20), (0 << 20)},
 };
 static const struct cap_size_to_mem front_cam_raw_mem_size_tab[IMG_SIZE_NUM] = {
-	{PIXEL_1P3_MEGA, (20 << 20), (50 << 20)},
-	{PIXEL_2P0_MEGA, (20 << 20), (50 << 20)},
-	{PIXEL_3P0_MEGA, (20 << 20), (50 << 20)},
-	{PIXEL_5P0_MEGA, (20 << 20), (50 << 20)},
-	{PIXEL_8P0_MEGA, (20 << 20), (50 << 20)},
+	{PIXEL_1P3_MEGA, (20 << 20), (0 << 20)},
+	{PIXEL_2P0_MEGA, (20 << 20), (0 << 20)},
+	{PIXEL_3P0_MEGA, (20 << 20), (0 << 20)},
+	{PIXEL_5P0_MEGA, (20 << 20), (0 << 20)},
+	{PIXEL_8P0_MEGA, (20 << 20), (0 << 20)},
 };
 #endif
 /*for ATV*/
@@ -959,13 +959,12 @@ int camera_arrange_capture_buf2(struct cmr_cap_2_frm *cap_2_frm,
 			major_res -= uv_size;
 		} else {
 			unsigned int addr_phy, addr_vir;
-			if (cap_2_frm->alloc_mem(cap_2_frm->handle, uv_size, &addr_phy, &addr_vir) != 0)
-			{
+			if (cap_2_frm->alloc_mem(cap_2_frm->handle, uv_size, &addr_phy, &addr_vir) != 0) {
 				CMR_LOGE("Failed to alloc the buffer used in capture");
 				return -1;
 			}
-			cap_mem->target_yuv.addr_phy.addr_u = addr_phy;//cap_2_frm->minor_frm.addr_phy.addr_y;
-			cap_mem->target_yuv.addr_vir.addr_u = addr_vir;//cap_2_frm->minor_frm.addr_vir.addr_y;
+			cap_mem->target_yuv.addr_phy.addr_u = addr_phy;
+			cap_mem->target_yuv.addr_vir.addr_u = addr_vir;
 			minor_end += uv_size;
 		}
 		cap_mem->cap_yuv.addr_phy.addr_u = cap_mem->target_yuv.addr_phy.addr_u + (yy_to_y >> 1);
@@ -1082,16 +1081,14 @@ int camera_arrange_capture_buf2(struct cmr_cap_2_frm *cap_2_frm,
 			unsigned int addr_phy, addr_vir;
 			/* calculate the address of target_jpeg, start */
 			size_pixel = get_size[i](image_size->width, image_size->height, thum_size->width, thum_size->height);
-
-			if (cap_2_frm->alloc_mem(cap_2_frm->handle, size_pixel, &addr_phy, &addr_vir) != 0)
-			{
+			if (cap_2_frm->alloc_mem(cap_2_frm->handle, size_pixel, &addr_phy, &addr_vir) != 0) {
 				CMR_LOGE("Failed to alloc the buffer used in capture");
 				return -1;
 			}
 
 			img_frame[i].buf_size = size_pixel;
-			img_frame[i].addr_phy.addr_y = addr_phy;//cap_2_frm->minor_frm.addr_phy.addr_y + minor_end;
-			img_frame[i].addr_vir.addr_y = addr_vir;//cap_2_frm->minor_frm.addr_vir.addr_y + minor_end;;
+			img_frame[i].addr_phy.addr_y = addr_phy;
+			img_frame[i].addr_vir.addr_y = addr_vir;
 			img_frame[i].addr_phy.addr_u = img_frame[i].addr_phy.addr_y + size_pixel * 2 / 3;
 			img_frame[i].addr_vir.addr_u = img_frame[i].addr_vir.addr_y + size_pixel * 2 / 3;
 			/* re-calculate the currend end of major buffer */
@@ -1129,8 +1126,7 @@ int camera_arrange_capture_buf2(struct cmr_cap_2_frm *cap_2_frm,
 			cap_mem->cap_yuv_rot.fmt             = IMG_DATA_TYPE_YUV420;
 		} else  {
 			unsigned int addr_phy, addr_vir;
-			if (cap_2_frm->alloc_mem(cap_2_frm->handle, size_pixel, &addr_phy, &addr_vir) != 0)
-			{
+			if (cap_2_frm->alloc_mem(cap_2_frm->handle, size_pixel, &addr_phy, &addr_vir) != 0) {
 				CMR_LOGE("Failed to alloc the buffer used in capture");
 				return -1;
 			}
@@ -1283,13 +1279,13 @@ int camera_arrange_capture_buf2(struct cmr_cap_2_frm *cap_2_frm,
 		if (IMG_DATA_TYPE_RAW == orig_fmt) {
 			unsigned int addr_phy, addr_vir;
 			uv_size = channel_size >> 1;
-			if (cap_2_frm->alloc_mem(cap_2_frm->handle, uv_size, &addr_phy, &addr_vir) != 0)
-			{
+			if (cap_2_frm->alloc_mem(cap_2_frm->handle, uv_size, &addr_phy, &addr_vir) != 0) {
 				CMR_LOGE("Failed to alloc the buffer used in capture");
 				return -1;
 			}
-			cap_mem->target_yuv.addr_phy.addr_y = addr_phy;//cap_2_frm->minor_frm.addr_phy.addr_y + minor_end;
-			cap_mem->target_yuv.addr_vir.addr_y = addr_vir;//cap_2_frm->minor_frm.addr_vir.addr_y + minor_end;
+
+			cap_mem->target_yuv.addr_phy.addr_y = addr_phy;
+			cap_mem->target_yuv.addr_vir.addr_y = addr_vir;
 			cap_mem->cap_yuv.addr_phy.addr_y = cap_mem->target_yuv.addr_phy.addr_y + yy_to_y;
 			cap_mem->cap_yuv.addr_vir.addr_y = cap_mem->target_yuv.addr_vir.addr_y + yy_to_y;
 			cap_mem->cap_raw.addr_phy.addr_y = cap_mem->cap_yuv.addr_phy.addr_y + y_to_raw;
@@ -1311,13 +1307,13 @@ int camera_arrange_capture_buf2(struct cmr_cap_2_frm *cap_2_frm,
 			unsigned int addr_phy, addr_vir;
 			channel_size = (uint32_t)(image_size->width * image_size->height);
 			offset = (channel_size * 3) >> 1;
-			if (cap_2_frm->alloc_mem(cap_2_frm->handle, offset, &addr_phy, &addr_vir) != 0)
-			{
+			if (cap_2_frm->alloc_mem(cap_2_frm->handle, offset, &addr_phy, &addr_vir) != 0) {
 				CMR_LOGE("Failed to alloc the buffer used in capture");
 				return -1;
 			}
-			cap_mem->target_yuv.addr_phy.addr_y = addr_phy;//cap_2_frm->minor_frm.addr_phy.addr_y + minor_end;
-			cap_mem->target_yuv.addr_vir.addr_y = addr_vir;//cap_2_frm->minor_frm.addr_vir.addr_y + minor_end;
+
+			cap_mem->target_yuv.addr_phy.addr_y = addr_phy;
+			cap_mem->target_yuv.addr_vir.addr_y = addr_vir;
 			cap_mem->target_yuv.addr_phy.addr_u = cap_mem->target_yuv.addr_phy.addr_y + channel_size;
 			cap_mem->target_yuv.addr_vir.addr_u = cap_mem->target_yuv.addr_vir.addr_y + channel_size;
 

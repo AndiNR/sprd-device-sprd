@@ -321,7 +321,7 @@ struct camera_context {
 	struct img_frm           prev_rot_frm[CAMERA_PREV_ROT_FRM_CNT];
 
 	uint32_t*                 prev_phys_addr_array;
-	uint32_t*                 *prev_virt_addr_array;
+	uint32_t*                 prev_virt_addr_array;
 	uint32_t                 prev_mem_size;
 	uint32_t                 prev_mem_num;
 

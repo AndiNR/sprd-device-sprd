@@ -462,7 +462,13 @@ int camera_set_capture_mem(uint32_t     cap_index,
 						uint32_t phy_addr1, 
 						uint32_t vir_addr1,
 						uint32_t mem_size1);
-
+int camera_set_capture_mem2(uint32_t     cap_index,
+						uint32_t phy_addr0,
+						uint32_t vir_addr0,
+						uint32_t mem_size0,
+						uint32_t alloc_mem,
+						uint32_t free_mem,
+						uint32_t handle);
 int camera_copy_data(uint32_t width,
 				uint32_t height,
 				uint32_t in_addr,
