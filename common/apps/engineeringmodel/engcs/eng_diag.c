@@ -56,6 +56,7 @@ int is_audio_at_cmd_need_to_handle(char *buf,int len);
 int eng_diag_factorymode(char *buf,int len, char *rsp);
 int get_sub_str(char *buf,char **revdata, char a, char b);
 int get_cmd_index(char *buf);
+int eng_diag_decode7d7e(char *buf,int len);
 
 static const char *at_sadm="AT+SADM4AP";
 static const char *at_spenha="AT+SPENHA";
@@ -112,10 +113,12 @@ int eng_diag_parse(char *buf,int len)
 	int i;
 	int ret=CMD_COMMON;
 	MSG_HEAD_T *head_ptr=NULL;
-	head_ptr =(MSG_HEAD_T *)(buf+1);
 
+    eng_diag_decode7d7e((char *)(buf + 1), (len - 1));
+    head_ptr =(MSG_HEAD_T *)(buf+1);
+    ENG_LOG("%s: cmd=0x%x; subcmd=0x%x\n",__FUNCTION__, head_ptr->type, head_ptr->subtype);
+    //ENG_LOG("%s: cmd is:%s \n", __FUNCTION__, (buf + DIAG_HEADER_LENGTH + 1));
 
-	ENG_LOG("%s: cmd=0x%x; subcmd=0x%x\n",__FUNCTION__, head_ptr->type, head_ptr->subtype);
 
 	switch(head_ptr->type) {
 		case DIAG_CMD_CHANGEMODE:
@@ -477,7 +480,6 @@ int eng_diag(char *buf,int len)
 	MSG_HEAD_T head,*head_ptr=NULL;
 	
 	memset(rsp, 0, sizeof(rsp));
-
 
 	type = eng_diag_parse(buf,len);
 

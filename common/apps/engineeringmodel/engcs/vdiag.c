@@ -86,11 +86,11 @@ int get_user_diag_buf(char* buf,int len)
 		}
 	}
 
-	if ( is_find ) {
-		for(i = 0; i < ext_buf_len; i++) {
-			ENG_LOG("eng_vdiag 0x%x, ",ext_data_buf[i]);
-		}
-	}
+//	if ( is_find ) {
+//		for(i=0; i<ext_buf_len; i++) {
+//			ENG_LOG("0x%x, ",ext_data_buf[i]);
+//		}
+//	}
 	return is_find;
 }
 
