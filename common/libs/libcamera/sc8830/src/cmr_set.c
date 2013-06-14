@@ -622,6 +622,8 @@ int camera_snapshot_start_set(void)
 	int                      ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
 
+	camera_preflash();
+
 	if (cxt->cmr_set.flash && (CAMERA_ZSL_MODE == cxt->cap_mode)) {
 		/*open flash*/
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
@@ -1176,25 +1178,13 @@ int camera_set_hdr_ev(int ev_level)
 	return ret;
 }
 
-int camera_autofocus_start(void)
+int camera_preflash(void)
 {
 	int                      ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
-	uint32_t                 *ptr = (uint32_t*)&cxt->cmr_set.focus_zone_param[0];
-	uint32_t                 i = 0;
-	uint32_t                 zone_cnt = *ptr++;
 
-	SENSOR_EXT_FUN_PARAM_T   af_param;
-	memset(&af_param,0,sizeof(af_param));
-
-	CMR_LOGV("zone_cnt %d, x y w h, %d %d %d %d", zone_cnt, ptr[0], ptr[1], ptr[2], ptr[3]);
-
-	CMR_PRINT_TIME;
-	if (camera_autofocus_need_exit()) {
-		ret = CAMERA_INVALID_STATE;
-		CMR_RTN_IF_ERR(ret);
-	}
-	
+#ifdef CONFIG_CAMERA_FLASH_CTRL
+	CMR_LOGI("start.");
 	if ((cxt->cmr_set.flash) &&((CAMERA_ZSL_MODE == cxt->cap_mode)||(CAMERA_NORMAL_MODE == cxt->cap_mode))) {
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 			struct isp_alg flash_param;
@@ -1219,7 +1209,60 @@ int camera_autofocus_start(void)
 			}
 		}
 	}
+	if ((cxt->cmr_set.flash) && ((CAMERA_ZSL_MODE == cxt->cap_mode)||(CAMERA_NORMAL_MODE == cxt->cap_mode))) {
+		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
+			sem_wait(&cxt->cmr_set.isp_alg_sem);
+		}
+		camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN);
+	}
+#endif
+	return ret;
+}
 
+int camera_autofocus_start(void)
+{
+	int                      ret = CAMERA_SUCCESS;
+	struct camera_context    *cxt = camera_get_cxt();
+	uint32_t                 *ptr = (uint32_t*)&cxt->cmr_set.focus_zone_param[0];
+	uint32_t                 i = 0;
+	uint32_t                 zone_cnt = *ptr++;
+
+	SENSOR_EXT_FUN_PARAM_T   af_param;
+	memset(&af_param,0,sizeof(af_param));
+
+	CMR_LOGV("zone_cnt %d, x y w h, %d %d %d %d", zone_cnt, ptr[0], ptr[1], ptr[2], ptr[3]);
+
+	CMR_PRINT_TIME;
+	if (camera_autofocus_need_exit()) {
+		ret = CAMERA_INVALID_STATE;
+		CMR_RTN_IF_ERR(ret);
+	}
+#ifndef CONFIG_CAMERA_FLASH_CTRL
+	if ((cxt->cmr_set.flash) &&((CAMERA_ZSL_MODE == cxt->cap_mode)||(CAMERA_NORMAL_MODE == cxt->cap_mode))) {
+		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
+			struct isp_alg flash_param;
+			SENSOR_FLASH_LEVEL_T flash_level;
+			if (Sensor_GetFlashLevel(&flash_level)) {
+				CMR_LOGE("get flash level error.");
+			}
+			flash_param.mode=ISP_AE_BYPASS;
+			flash_param.flash_eb=0x01;
+			ret = isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param);
+			if (CAMERA_SUCCESS != ret) {
+				CMR_LOGE("ISP_CTRL_FLASH_EG error.");
+			}
+			sem_wait(&cxt->cmr_set.isp_alg_sem);
+			camera_set_flashdevice((uint32_t)FLASH_OPEN);
+			flash_param.mode=ISP_ALG_FAST;
+			flash_param.flash_eb=0x01;
+			flash_param.flash_ratio=flash_level.high_light*256/flash_level.low_light;
+			ret = isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param);
+			if (CAMERA_SUCCESS != ret) {
+				CMR_LOGE("ISP_CTRL_FLASH_EG error.");
+			}
+		}
+	}
+#endif
 	if (CAMERA_FOCUS_MODE_MACRO == cxt->cmr_set.af_mode) {
 		af_param.cmd = SENSOR_EXT_FOCUS_START;
 		af_param.param = SENSOR_EXT_FOCUS_MACRO;
@@ -1284,13 +1327,14 @@ int camera_autofocus_start(void)
 			ret = Sensor_Ioctl(SENSOR_IOCTL_FOCUS, (uint32_t) & af_param);
 		}
 	}
+#ifndef CONFIG_CAMERA_FLASH_CTRL
 	if ((cxt->cmr_set.flash) && ((CAMERA_ZSL_MODE == cxt->cap_mode)||(CAMERA_NORMAL_MODE == cxt->cap_mode))) {
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 			sem_wait(&cxt->cmr_set.isp_alg_sem);
 		}
 		camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN);
 	}
-
+#endif
 	CMR_PRINT_TIME;
 	CMR_LOGV("End. %d", ret);
 
