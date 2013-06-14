@@ -879,6 +879,7 @@ void *camera_cap_thread_proc(void *data)
 				ret = camera_cap_post(data);
 				if (CAMERA_EXIT == ret) {
 					CMR_LOGI("normal exit.");
+					cmr_v4l2_free_frame(data->channel_id, data->frame_id);
 					break;
 				}
 				ret = camera_v4l2_capture_handle(data);
@@ -890,6 +891,7 @@ void *camera_cap_thread_proc(void *data)
 							(uint32_t)NULL);
 				}
 				camera_wait_takepicdone(g_cxt);
+				cmr_v4l2_free_frame(data->channel_id, data->frame_id);
 				if ((g_cxt->cap_cnt == g_cxt->total_capture_num)||(CAMERA_HDR_MODE == g_cxt->cap_mode)) {
 					camera_snapshot_stop_set();
 					camera_set_take_picture(TAKE_PICTURE_NO);
