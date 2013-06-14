@@ -1177,5 +1177,5 @@ out:
 	if (audio_fd >=0)
 		close(audio_fd);
 
-	return strlen(rsp);
+	return rsp != NULL ? strlen(rsp):0;
 }
