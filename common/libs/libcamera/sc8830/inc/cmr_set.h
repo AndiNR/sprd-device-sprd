@@ -75,6 +75,7 @@ int camera_isp_ctrl_done(uint32_t cmd, void* data);
 int camera_isp_af_done(void *data);
 int camera_set_hdr_ev(int ev_level);
 int camera_set_flashdevice(uint32_t param);
+int camera_preflash(void);
 
 #ifdef __cplusplus
 }
