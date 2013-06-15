@@ -143,7 +143,9 @@ void backlight_init(void)
 			SPRD_DBG("%s: read %s fail",__func__, LCD_BACKLIGHT_MAX_DEV);
 		}
 	}
-
+	if(fd >= 0){
+		close(fd);
+	}
 	//get key backlight max level
 	fd = open(KEY_BACKLIGHT_MAX_DEV, O_RDONLY);
 	if(fd < 0) {
@@ -158,7 +160,9 @@ void backlight_init(void)
 	}
 
 	SPRD_DBG("%s max_lcd=%d; max_key=%d",__func__, max_lcd, max_key);
-
+	if(fd >= 0){
+		close(fd);
+	}
 	//show screen
 //	eng_backlighttest_show();
 //	
