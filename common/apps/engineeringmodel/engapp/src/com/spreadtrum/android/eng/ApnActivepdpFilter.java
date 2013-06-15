@@ -19,7 +19,7 @@ import com.android.internal.telephony.ITelephony;
 public class ApnActivepdpFilter extends PreferenceActivity{
     private static final boolean DEBUG = Debug.isDebug();
 	private String LOG_TAG = "ApnActivepdpFilter";
-	private int mPrefCount = 0;
+	//private int mPrefCount = 0;
 	private boolean mChecked = false;
 	private CheckBoxPreference mFilterAll;
 	private CheckBoxPreference mFilterDefault;
@@ -63,7 +63,7 @@ public class ApnActivepdpFilter extends PreferenceActivity{
 
         addPreferencesFromResource(R.layout.apn_activepdp_filter);
 
-		mPrefCount = getPreferenceScreen().getPreferenceCount();
+		//mPrefCount = getPreferenceScreen().getPreferenceCount();
 		mFilterAll = (CheckBoxPreference) findPreference(APN_TYPE_ALL);
 		mFilterDefault= (CheckBoxPreference) findPreference(APN_TYPE_DEFAULT);
 		mFilterMms= (CheckBoxPreference) findPreference(APN_TYPE_MMS);
