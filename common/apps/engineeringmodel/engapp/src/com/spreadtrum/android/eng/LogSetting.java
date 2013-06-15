@@ -67,7 +67,6 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
     	mEf = new engfetch();
     	mSocketID = mEf.engopen();
 
-	mATline = new String();
 
         // register preference change listener
         SharedPreferences defaultPrefs = PreferenceManager.getDefaultSharedPreferences(this);
