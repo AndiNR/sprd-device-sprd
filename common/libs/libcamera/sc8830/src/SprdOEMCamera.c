@@ -4085,7 +4085,7 @@ int camera_capture_ability(SENSOR_MODE_INFO_T *sn_mode,
 					&g_cxt->cap_orig_size,
 					&g_cxt->thum_size,
 					g_cxt->cap_mem,
-					(IMG_ROT_0 != g_cxt->cap_rot),
+					((IMG_ROT_0 != g_cxt->cap_rot) || g_cxt->is_cfg_rot_cap),
 					g_cxt->total_cap_num);
 	}
 
