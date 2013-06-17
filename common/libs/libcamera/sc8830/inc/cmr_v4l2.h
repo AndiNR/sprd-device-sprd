@@ -102,7 +102,7 @@ int cmr_v4l2_buff_cfg(struct buffer_cfg *buf_cfg);
 int cmr_v4l2_cap_start(uint32_t skip_num);
 int cmr_v4l2_cap_stop(void);
 int cmr_v4l2_cap_resume(uint32_t channel_id, uint32_t skip_number, uint32_t deci_factor);
-int cmr_v4l2_cap_pause(uint32_t channel_id);
+int cmr_v4l2_cap_pause(uint32_t channel_id, uint32_t reconfig_flag);
 int cmr_v4l2_free_frame(uint32_t channel_id, uint32_t index);
 int cmr_v4l2_scale_capability(uint32_t *width, uint32_t *sc_factor);
 
