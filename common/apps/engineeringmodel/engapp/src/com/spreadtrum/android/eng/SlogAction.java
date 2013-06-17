@@ -134,7 +134,6 @@ public class SlogAction {
 
     private static Context mContext;
 
-    public static String tester;
 
     // Temp Solution.
     private static boolean MMC_SUPPORT = "1".equals(android.os.SystemProperties.get("ro.device.support.mmc"));
