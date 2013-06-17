@@ -20,6 +20,11 @@ else
 LOCAL_SRC_FILES += nvitem_channel.c
 endif
 
+ifeq ($(strip $(BOARD_SP7710G2)),true)
+LOCAL_CFLAGS := -DBOARD_SP7710G2
+LOCAL_SRC_FILES += special_nvitemd.c
+endif
+
 LOCAL_SHARED_LIBRARIES := \
     libhardware_legacy \
     libc \
