@@ -31,7 +31,8 @@ public class SlogUISnapService extends Service {
         // TODO Auto-generated method stub
 
         notification = new Notification(android.R.drawable.ic_btn_speak_now,
-                getText(R.string.notification_snapsvc_statusbarprompt), 0);
+                getText(R.string.notification_snapsvc_statusbarprompt),
+                0);
 
         // The PendingIntent to launch our activity if the user selects this
         // notification

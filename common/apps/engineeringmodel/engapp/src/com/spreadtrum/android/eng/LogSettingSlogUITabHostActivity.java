@@ -100,8 +100,25 @@ public class LogSettingSlogUITabHostActivity extends TabActivity {
                 mProgressDialog.show();
                 break;
             case SlogAction.MESSAGE_DUMP_STOP:
+                if (mContext != null) {
+                    Toast.makeText(mContext, R.string.slog_dump_ok, Toast.LENGTH_LONG).show();
+                }
                 mProgressDialog.cancel();
                 mProgressDialog.setCancelable(true);
+                break;
+            case SlogAction.MESSAGE_DUMP_FAILED:
+                mProgressDialog.cancel();
+                mProgressDialog.setCancelable(true);
+                if (mContext != null) {
+                    Toast.makeText(mContext, R.string.slog_dump_failed, Toast.LENGTH_LONG).show();
+                }
+                break;
+            case SlogAction.MESSAGE_DUMP_OUTTIME:
+                mProgressDialog.cancel();
+                mProgressDialog.setCancelable(true);
+                if (mContext != null) {
+                    Toast.makeText(mContext, R.string.slog_dump_failed, Toast.LENGTH_LONG).show();
+                }
                 break;
             case SlogAction.MESSAGE_CLEAR_START:
                 mProgressDialog.setCancelable(false);

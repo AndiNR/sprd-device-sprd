@@ -354,6 +354,13 @@
         <service android:name=".SlogUISnapService" >
         </service>
         <service android:name=".EngInstallHelperService" />
+
+        <provider
+            android:name="com.spreadtrum.android.eng.SlogProvider"
+            android:authorities="com.spreadtrum.android.eng"
+            android:exported="false" >
+            <grant-uri-permission android:pathPattern=".*" />
+        </provider>
   <!-- SlogUI Added Done  -->
       <activity
           android:name=".EngInstallActivity" >

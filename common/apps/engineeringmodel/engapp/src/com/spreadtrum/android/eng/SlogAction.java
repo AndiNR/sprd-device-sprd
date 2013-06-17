@@ -2,14 +2,18 @@ package com.spreadtrum.android.eng;
 
 import com.spreadtrum.android.eng.engconstents;
 import com.spreadtrum.android.eng.engfetch;
+import com.spreadtrum.android.eng.SlogProvider;
 
 import com.android.internal.app.IMediaContainerService;
 
 import android.content.BroadcastReceiver;
+import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.os.Handler;
 import android.os.Looper;
@@ -91,7 +95,7 @@ public class SlogAction {
     public static final String MUTI_MODEM_1KEY = "stream\tmodem1\t";
     public static final String MAINKEY = "stream\tmain\t";
     public static final String TCPKEY = "stream\ttcp\t";
-    public static final String BULETOOTHKEY = "stream\tbt\t";
+    public static final String BLUETOOTHKEY = "stream\tbt\t";
     public static final String MISCKEY = "misc\tmisc\t";
     public static final String CLEARLOGAUTOKEY = "var\tslogsaveall\t";
 
@@ -131,6 +135,8 @@ public class SlogAction {
     public static final int MESSAGE_CLEAR_END = 20;
     public static final int MESSAGE_SNAP_SUCCESSED = 21;
     public static final int MESSAGE_SNAP_FAILED = 22;
+    public static final int MESSAGE_DUMP_OUTTIME = 23;
+    public static final int MESSAGE_DUMP_FAILED = 24;
 
     private static Context mContext;
 
@@ -406,6 +412,88 @@ public class SlogAction {
     }
 
     // ====================================================================================================SetState
+
+    public static void setAllStates(Context context, int id) {
+        Cursor c = context.getContentResolver().query(
+                ContentUris.withAppendedId(
+                    SlogProvider.URI_ID_MODES, id), null, null, null, null);
+        if (c.moveToNext()) {
+            setAllStatesWithCursor(c);
+        }
+        c.close();
+    }
+
+    public static void setAllStatesWithCursor(Cursor cursor) {
+
+        SetState(GENERALKEY, cursor.getString(
+                cursor.getColumnIndex(
+                        SlogProvider.Contract.COLUMN_GENERAL)), true);
+        SetState(KERNELKEY, (cursor.getInt(
+                cursor.getColumnIndex(
+                        SlogProvider.Contract.COLUMN_KERNEL)) == 1), false);
+        SetState(MAINKEY, (cursor.getInt(
+                cursor.getColumnIndex(
+                        SlogProvider.Contract.COLUMN_MAIN)) == 1), false);
+        SetState(RADIOKEY, (cursor.getInt(
+                cursor.getColumnIndex(
+                        SlogProvider.Contract.COLUMN_RADIO)) == 1), false);
+        SetState(SYSTEMKEY, (cursor.getInt(
+                cursor.getColumnIndex(
+                        SlogProvider.Contract.COLUMN_SYSTEM)) == 1), false);
+        SetState(MODEMKEY, (cursor.getInt(
+                cursor.getColumnIndex(
+                        SlogProvider.Contract.COLUMN_MODEM)) == 1), false);
+        SetState(TCPKEY, (cursor.getInt(
+                cursor.getColumnIndex(
+                        SlogProvider.Contract.COLUMN_TCP)) == 1), false);
+        SetState(BLUETOOTHKEY, (cursor.getInt(
+                cursor.getColumnIndex(
+                        SlogProvider.Contract.COLUMN_BLUETOOTH)) == 1), false);
+        SetState(MISCKEY, (cursor.getInt(
+                cursor.getColumnIndex(
+                        SlogProvider.Contract.COLUMN_MISC)) == 1), false);
+        SetState(CLEARLOGAUTOKEY, (cursor.getInt(
+                cursor.getColumnIndex(
+                        SlogProvider.Contract.COLUMN_CLEAR_AUTO)) == 1), false);
+
+    }
+
+    public static void saveAsNewMode(String name, Context context) {
+        ContentValues values = getAllStatesInContentValues();
+        values.put(SlogProvider.Contract.COLUMN_MODE, name);
+        context.getContentResolver()
+                .insert(SlogProvider.URI_MODES, values);
+    }
+
+    public static void updateMode(Context context, int id) {
+        context.getContentResolver().
+                update(ContentUris.withAppendedId(
+                        SlogProvider.URI_ID_MODES, id),
+                        getAllStatesInContentValues(),
+                        null, null);
+    }
+    
+    public static void deleteMode(Context context, int id) {
+        context.getContentResolver().delete(
+                ContentUris.withAppendedId(SlogProvider.URI_ID_MODES, id), null, null);
+    }
+
+    private static ContentValues getAllStatesInContentValues() {
+        ContentValues cv = new ContentValues();
+
+        cv.put(SlogProvider.Contract.COLUMN_GENERAL, GetState(GENERALKEY, true));
+        cv.put(SlogProvider.Contract.COLUMN_KERNEL, GetState(KERNELKEY) ? 1:0);
+        cv.put(SlogProvider.Contract.COLUMN_MAIN, GetState(MAINKEY) ? 1:0);
+        cv.put(SlogProvider.Contract.COLUMN_RADIO, GetState(RADIOKEY) ? 1:0);
+        cv.put(SlogProvider.Contract.COLUMN_SYSTEM, GetState(SYSTEMKEY) ? 1:0);
+        cv.put(SlogProvider.Contract.COLUMN_MODEM, GetState(MODEMKEY) ? 1:0);
+        cv.put(SlogProvider.Contract.COLUMN_TCP, GetState(TCPKEY) ? 1:0);
+        cv.put(SlogProvider.Contract.COLUMN_BLUETOOTH, GetState(BLUETOOTHKEY) ? 1:0);
+        cv.put(SlogProvider.Contract.COLUMN_CLEAR_AUTO, GetState(CLEARLOGAUTOKEY) ? 1:0);
+        cv.put(SlogProvider.Contract.COLUMN_MISC, GetState(MISCKEY) ? 1:0);
+
+        return cv;
+    }
 
     // Temp Solution for MMC
     
@@ -818,12 +906,15 @@ public class SlogAction {
                             + " exit value=" + proc.exitValue()
                             + ",maybe it has some problem");
                 }
+                
             } catch (InterruptedException e) {
                 Log.e(NowMethodName, "InterruptedException->" + e);
+                msg.what = MESSAGE_DUMP_OUTTIME;
             }
 
         } catch (Exception e) {
             Log.e(NowMethodName, e.toString());
+            msg.what = MESSAGE_DUMP_FAILED;
             LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
             return;
         }
@@ -1017,7 +1108,8 @@ public class SlogAction {
     }
 
     public static void SlogStart() {
-        runSlogCommand(SLOG_COMMAND_START);
+        // Feature changed, remove effect of slog in C.
+        // runSlogCommand(SLOG_COMMAND_START);
     }
 
     /**

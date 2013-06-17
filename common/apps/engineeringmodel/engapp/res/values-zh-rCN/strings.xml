@@ -65,6 +65,18 @@
   <string name="toast_freespace_sdcard">SD卡剩余空间</string>
   <string name="low_free_space_title">请及时清理或导出Log</string>
   <string name="low_free_space_message">存储Log的空用空间正在减小，为避免丢失已保存Log，请及时导出或清理Log</string>
+  <string name="slog_dump_ok">完成</string>
+  <string name="slog_dump_failed">失败</string>
+  <string name="slog_dump_outtime">等待结果超时</string>
+  <string name="mode_dialog_add_title">新建模式</string>
+  <string name="mode_dialog_delete_title">删除模式</string>
+  <string name="mode_dialog_update_title">更新至</string>
+  <string name="mode_dialog_save_title">另存为</string>
+  <string name="mode_dialog_select_title">选择模式</string>
+  <string name="mode_dialog_duplicate_title">模式已存在</string>
+  <string name="mode_dialog_duplicate_message">您输入的模式已经存在，请再考虑一下，是否更新或尝试其他名字</string>
+  <string name="mode_dialog_duplicate_positive">更新</string>
+  <string name="mode_dialog_duplicate_negative">重命名</string>
   
   <!-- SlogUI Added Done -->
 
