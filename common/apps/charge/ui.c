@@ -255,7 +255,7 @@ static void *progress_thread(void *cookie)
 #define WakeFileName  "/sys/power/wait_for_fb_wake"
 void *charge_thread(void *cookie)
 {
-	int fd = -1, err;
+	int fd, err;
 	char buf;
 	int bat_stat = 0;
 	int bat_level = 0;
@@ -268,6 +268,10 @@ void *charge_thread(void *cookie)
 			gProgressBarType = PROGRESSBAR_TYPE_NORMAL;
 		}
 		fd = open(WakeFileName, O_RDONLY, 0);
+		if (fd < 0) {
+		LOGD("Couldn't open file /sys/power/wait_for_fb_wake\n");
+		return NULL;
+		}
 		do {
 			err = read(fd, &buf, 1);
 			LOGD("return from WakeFileName err: %d errno: %d\n", err, strerror(errno));
