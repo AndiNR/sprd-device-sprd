@@ -160,6 +160,7 @@ public class DmService extends Service {
 
     private static final String LAB_APN = APN_CMWAP;
 
+    private final Object keepcurphone = new Object(); 
     //TODO: to be confirm
 //    private DmJniInterface mDmInterface;
 
@@ -256,8 +257,8 @@ public class DmService extends Service {
             @Override
             public void onServiceStateChanged(ServiceState serviceState) {
                 Log.d(TAG, "onServiceStateChanged: phoneId = " + phoneId + ",current state = " + serviceState.getState());
-
-
+		synchronized(keepcurphone)
+		{
                 // judge if network is ready
                 if (ServiceState.STATE_IN_SERVICE == serviceState.getState()) {
                     Log.d(TAG, "onServiceStateChanged: STATE_IN_SERVICE");
@@ -298,6 +299,7 @@ public class DmService extends Service {
                                 + mTelephonyManager[phoneId].getSimState());
                     }
                 }
+		} //synchronized
             }
         };
         return phoneStateListener;
@@ -316,6 +318,7 @@ public class DmService extends Service {
         mPhoneCnt = TelephonyManager.getPhoneCount();
         mSmsReady = new boolean[mPhoneCnt];
         mInService = new boolean[mPhoneCnt];
+
 	Log.d(TAG, "onCreate: mPhoneCnt "+mPhoneCnt);
 	
         mTelephonyManager = new TelephonyManager[mPhoneCnt];
@@ -1300,9 +1303,11 @@ public class DmService extends Service {
         Log.d(TAG, "sendMsgBody: IS_CONFIG_SELFREG_REPLY = " + IS_CONFIG_SELFREG_REPLY);
         if (false == IS_CONFIG_SELFREG_REPLY){
             Intent sentIntent = new Intent(SENT_SMS_ACTION);  
+	    sentIntent.putExtra("phone_id", curPhoneId);
             PendingIntent sentPI = PendingIntent.getBroadcast(this, 0, sentIntent,  0);  
               
             Intent deliverIntent = new Intent(DELIVERED_SMS_ACTION);  
+	    deliverIntent.putExtra("phone_id", curPhoneId);
             PendingIntent deliverPI = PendingIntent.getBroadcast(this, 0,  deliverIntent, 0);
 
             IntentFilter mFilter = new IntentFilter(SENT_SMS_ACTION);
@@ -1327,11 +1332,14 @@ public class DmService extends Service {
             public void onReceive(Context context, Intent intent) {
                         String actionName = intent.getAction();
                         int resultCode = getResultCode();
+			int phoneid = intent.getIntExtra("phone_id", 0);
+			Log.d(TAG, "sendMessageReceiver onReceive phoneid=" + phoneid);
 			Log.d(TAG, "sendMessageReceiver onReceive actionName=" + actionName + " resultCode="+resultCode);
                         if (actionName.equals(SENT_SMS_ACTION) 
                             || actionName.equals(DELIVERED_SMS_ACTION) ){
                                 switch (resultCode) {
                                 case Activity.RESULT_OK:
+					curPhoneId = phoneid;
                                         TelephonyManager mTelephonyManager = (TelephonyManager) mContext.getSystemService(
                                                 PhoneFactory.getServiceName(mContext.TELEPHONY_SERVICE, curPhoneId));
                                         
@@ -1368,12 +1376,15 @@ public class DmService extends Service {
         }
 
         Log.d(TAG, "sendSelfRegMsg: Enter!");
+        stopListeningServiceState();
         if (isNeedSelfReg()) {
-            sendMsgBody();
+	    synchronized( keepcurphone)
+	    	{
+            	sendMsgBody();
+	    	}
             setIsHaveSendSelfRegMsg(mContext, true);
         } else {
             setSelfRegState(mContext, true);
-            stopListeningServiceState();
         }
     }
 
