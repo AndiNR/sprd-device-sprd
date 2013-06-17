@@ -54,7 +54,7 @@ public class WifiCMCCTest extends PreferenceActivity {
 
     private CheckBoxPreference mRunTestCheckbox;
 
-    private ProgressDialog mDialog;
+    //private ProgressDialog mDialog;
 
     public boolean isAnritsu;
 
@@ -76,9 +76,9 @@ public class WifiCMCCTest extends PreferenceActivity {
 
                     break;
                 case DISMISS_DIALOG:
-                    if (mDialog != null) {
+                  /*  if (mDialog != null) {
                         mDialog.dismiss();
-                    }
+                    }*/
                     break;
                 case WIFI_ON_FAIL:
                     checkbox.setSummary("wifi open failed");
