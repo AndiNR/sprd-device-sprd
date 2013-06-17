@@ -596,6 +596,31 @@ public class DmService extends Service {
 
     // init dm connect network param,include apn/proxy/port
     private void initConnectParam() {
+
+       //add for 106648 begin
+        int attempts = 0;
+        
+        while (attempts < 60) {
+          String numeric = android.os.SystemProperties.get(
+                  PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");
+            
+            if (numeric != null && numeric.length() >= 5) {
+                Log.d(TAG, "initConnectParam numeric: " + numeric);
+                break;
+            }
+            
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ie) {
+                // Keep on going until max attempts is reached.
+                Log.e(TAG, "initConnectParam attempts error!!");
+            }
+            attempts++;
+        }
+        Log.d(TAG, "initConnectParam attempts: " + attempts);
+        //add for 106648 end
+
+	
         createDmApn();
 
         // according to cmcc test flag to decide current server relative
@@ -648,9 +673,9 @@ public class DmService extends Service {
 
     private void createDmApn() {
         // Add new apn
-//        String numeric = android.os.SystemProperties.get(
-//                PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");
-	 String numeric = mTelephonyManager[curPhoneId].getNetworkOperator();		
+          String numeric = android.os.SystemProperties.get(
+                  PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");
+	
         if (numeric == null || numeric.length() < 5) {
             Log.d(TAG, "createDMApn numeric: " + numeric);
             return;
@@ -944,7 +969,8 @@ public class DmService extends Service {
 
     private String getInitApn(Context context) {
         String str = null;
-	 String numeric = mTelephonyManager[curPhoneId].getNetworkOperator();		
+         String numeric = android.os.SystemProperties.get(
+                  PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");
         final String selection = "name = 'CMCC DM' and numeric=\""
                 + numeric + "\"";
         Log.d(TAG, "getInitApn: selection = " + selection);
@@ -969,6 +995,7 @@ public class DmService extends Service {
 
     public String getAPN() {
         Log.d(TAG, "getAPN: " + mApn);
+	mApn = getInitApn(mContext);
         return mApn;
     }
 
@@ -1010,7 +1037,7 @@ public class DmService extends Service {
             mApn = apn;
             final String selection = "name = 'CMCC DM' and numeric=\""
                     + android.os.SystemProperties.get(
-                            PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
+                           PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
             Log.d(TAG, "setAPN: selection = " + selection);
 
             ContentValues values = new ContentValues();
@@ -1042,8 +1069,8 @@ public class DmService extends Service {
 
         String str = null;
         final String selection = "name = 'CMCC DM' and numeric=\""
-                + android.os.SystemProperties.get(
-                        PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
+               + android.os.SystemProperties.get(
+                            PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
 
 	
         Cursor cursor = 	context.getContentResolver().query(
@@ -1106,7 +1133,7 @@ public class DmService extends Service {
         // final String selection = "name = 'CMCC DM' and numeric=\""
         final String selection = "name = 'CMCC DM' and numeric=\""
                 + android.os.SystemProperties.get(
-                        PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
+                            PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
 
         Cursor cursor = context.getContentResolver().query(
         (curPhoneId== 0)?Telephony.Carriers.CONTENT_URI:Telephony.Carriers.CONTENT_URI_SIM2,
@@ -1381,8 +1408,8 @@ public class DmService extends Service {
 	    synchronized( keepcurphone)
 	    	{
             	sendMsgBody();
+	        setIsHaveSendSelfRegMsg(mContext, true);
 	    	}
-            setIsHaveSendSelfRegMsg(mContext, true);
         } else {
             setSelfRegState(mContext, true);
         }
