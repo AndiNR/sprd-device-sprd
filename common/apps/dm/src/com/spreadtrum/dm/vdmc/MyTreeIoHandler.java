@@ -1503,29 +1503,6 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
         return;
     }
 
-	
-    Handler apnhandler = new Handler(){
-
-        @Override
-        public void handleMessage(Message msg) {
-            Bundle bundle = (Bundle)msg.obj;
-            String name = bundle.getString("name");
-            String apn = bundle.getString("apn");
-            String where = "numeric=?" + " and name=?";
-            ContentValues values = new ContentValues();
-            values.put("apn", apn);
-            
-            ContentResolver cr = _context.getContentResolver();
-            int rowId = cr.update(
-		 (DmService.getInstance().getCurrentPhoneID()==0)?Telephony.Carriers.CONTENT_URI:Telephony.Carriers.CONTENT_URI_SIM2, 
-		values, where,
-                    new String[] {
-                            android.os.SystemProperties.get(
-                            PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), ""),name
-                    });
-        }
-      
-    };
 
 		//write WAP param
 	private void writeWapParam(int type, String str)
@@ -1792,6 +1769,7 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
             i.putExtra("value", str);
             _context.sendBroadcast(i);
             Log.d(TAG, "DM Broadcast streaming info");
+//	    Vdmc.getInstance().registerVDMobserver();
         }
         // write direct to the database.
         

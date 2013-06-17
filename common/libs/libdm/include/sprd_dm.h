@@ -19,6 +19,9 @@ typedef  enum{
 	SPRD_DM_FINISH
 }SPRD_DM_REASON;
 
+#define  LOCAL_MEMPOOL   1  //we use global memory pool
+#define MAX_LOCAL_POOL_LEN	512*1024
+
 bool spdm_start(int type, char * data, int datalen); 
 
 bool spdm_receiveData(char * data, int datalen);

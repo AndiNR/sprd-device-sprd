@@ -75,21 +75,19 @@ public class DmAlertDialog extends Activity {
                     // DMNativeMethod.JVDM_notifyNIASessionProceed();
 
                    // notifyNIASessionProceed(); 2012-3-31@hong
-		        DmService.getInstance().getDmNativeInterface().spdm_jni_dialogConfirm(true);
-
                     builder.dismiss();
-
                     finish();
                     DestroyAlertDialog();
+    	            DmService.getInstance().getDmNativeInterface().spdm_jni_dialogConfirm(true);
 
                     break;
 
                 case Vdmc.DM_NIA_CONFIRM_DIALOG:
-                    DmService.getInstance().getDmNativeInterface().spdm_jni_stopDm(DmNativeInterface.STOP_DM_REASON_DEFAULT);
                     // Vdmc.getInstance().stopVDM();
                     builder.dismiss();
                     finish();
                     DestroyAlertDialog();
+                    DmService.getInstance().getDmNativeInterface().spdm_jni_stopDm(DmNativeInterface.STOP_DM_REASON_DEFAULT);
                     break;
 
                 case Vdmc.DM_ALERT_CONFIRM_DIALOG:
@@ -175,7 +173,7 @@ public class DmAlertDialog extends Activity {
 
         stopTimer();
         releaseUnlock();
-	System.gc();
+	//System.gc();
     }
 
     public static DmAlertDialog getInstance() {
@@ -336,9 +334,9 @@ public class DmAlertDialog extends Activity {
                         // start dial up
                         // DmJniInterface.startPppConnect();
                         // DMNativeMethod.JVDM_notifyNIASessionProceed();
+                        notifyNIASessionProceed();
                         DmService.getInstance().getDmNativeInterface().spdm_jni_dialogConfirm(true);
                         
-                        notifyNIASessionProceed();
                     }
                 })
                 .setOnCancelListener(new DialogInterface.OnCancelListener() {
@@ -349,9 +347,9 @@ public class DmAlertDialog extends Activity {
                         // start dial up
                         // DmJniInterface.startPppConnect();
                         // DMNativeMethod.JVDM_notifyNIASessionProceed();
+                        notifyNIASessionProceed();
                         DmService.getInstance().getDmNativeInterface().spdm_jni_dialogConfirm(true);
 
-                        notifyNIASessionProceed();
                     }
                 })
                 .show();
@@ -371,10 +369,10 @@ public class DmAlertDialog extends Activity {
                         Log.d(TAG, "createNiaConfirmDialog: onClick Yes, notifyNIASessionProceed");
                         // start dial up
                         // DMNativeMethod.JVDM_notifyNIASessionProceed();
-                        DmService.getInstance().getDmNativeInterface().spdm_jni_dialogConfirm(true);
-                        //notifyNIASessionProceed(); hong2012
                         finish();
                         DestroyAlertDialog();
+                        DmService.getInstance().getDmNativeInterface().spdm_jni_dialogConfirm(true);
+                        //notifyNIASessionProceed(); hong2012
                         // DmService.getInstance().startPppConnect();
                     }
                 }).setNegativeButton(softkey_no, new DialogInterface.OnClickListener() {
@@ -382,18 +380,18 @@ public class DmAlertDialog extends Activity {
                         Log.d(TAG, "createNiaConfirmDialog: onClick No, cancel dm session!");
                         //DmService.getInstance().getDmNativeInterface().spdm_jni_stopDm(DmNativeInterface.STOP_DM_REASON_DEFAULT);
                         // Vdmc.getInstance().stopVDM();
-                       DmService.getInstance().getDmNativeInterface().spdm_jni_dialogConfirm(false);
                         finish();
                         DestroyAlertDialog();
+                       DmService.getInstance().getDmNativeInterface().spdm_jni_dialogConfirm(false);
                     }
                 }).setOnCancelListener(new DialogInterface.OnCancelListener() {
                     public void onCancel(DialogInterface dialog) {
                         Log.d(TAG, "createNiaConfirmDialog: onCancel, default cancel dm session!");
                         // Vdmc.getInstance().stopVDM();
-                        DmService.getInstance().getDmNativeInterface().spdm_jni_dialogConfirm(false);
-//                        DmService.getInstance().getDmNativeInterface().spdm_jni_stopDm(DmNativeInterface.STOP_DM_REASON_DEFAULT);
                         finish();
                         DestroyAlertDialog();
+                        DmService.getInstance().getDmNativeInterface().spdm_jni_dialogConfirm(false);
+//                        DmService.getInstance().getDmNativeInterface().spdm_jni_stopDm(DmNativeInterface.STOP_DM_REASON_DEFAULT);
                     }
                 })
                 .show();
@@ -421,25 +419,25 @@ public class DmAlertDialog extends Activity {
                 Log.d(TAGCONF,
                         "createAlertConfirmDialog: onClick Yes, notifyConfirmationResult true");
                 // observer.notifyConfirmationResult(true);
-                DmService.getInstance().getDmNativeInterface().spdm_jni_dialogConfirm(true);
                 DmAlertDialog.getInstance().finishDialog();
+                DmService.getInstance().getDmNativeInterface().spdm_jni_dialogConfirm(true);
             }
         }).setNegativeButton(rightSfk, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
                 Log.d(TAGCONF,
                         "createAlertConfirmDialog: onClick Yes, notifyConfirmationResult false");
+                DmAlertDialog.getInstance().finishDialog();
                 DmService.getInstance().getDmNativeInterface().spdm_jni_dialogConfirm(false);
                 // observer.notifyConfirmationResult(false);//lihui
                 // hs_dm_mmi_confirmationQuerycb
-                DmAlertDialog.getInstance().finishDialog();
             }
         }).setOnCancelListener(new DialogInterface.OnCancelListener() {
             public void onCancel(DialogInterface dialog) {
                 Log.d(TAGCONF,
                         "createAlertConfirmDialog: onClick Yes, notifyCancelEvent");
                 // observer.notifyCancelEvent();
-                DmService.getInstance().getDmNativeInterface().spdm_jni_dialogConfirm(false);
                 DmAlertDialog.getInstance().finishDialog();
+                DmService.getInstance().getDmNativeInterface().spdm_jni_dialogConfirm(false);
             }
         })
 
@@ -450,12 +448,13 @@ public class DmAlertDialog extends Activity {
         Log.d(TAGCONF, "handleTimeoutEvent: alert window timeout");
         // observer.notifyCancelEvent();
         // DmAlertDialog.getInstance().finishDialog();
-        DmService.getInstance().getDmNativeInterface().spdm_jni_dialogConfirm(false);
         builder.dismiss();
         DmAlertDialog.getInstance().finishDialog();
+        DmService.getInstance().getDmNativeInterface().spdm_jni_dialogConfirm(false);
     }
 
     private void notifyNIASessionProceed() {
+/*		do nothing here.
         Thread t = new Thread() {
             public void run() {
                 Log.d(TAG, "Thread notifyNIASessionProceed ");
@@ -466,5 +465,6 @@ public class DmAlertDialog extends Activity {
             }
         };
         t.start();
+*/        
     }
 }

@@ -337,6 +337,23 @@ static char   s_g_tresUri[MAX_RESURI_LEN] ={0};
 
 static char   s_g_nonce[MAX_NONCE_LEN] ={0};
 
+
+static char  *s_g_memptr = NULL;
+static char  *s_tag_memptr = NULL;
+static char  *s_xml_memptr = NULL;
+static char  *s_oth_memptr = NULL;
+
+static unsigned int     s_g_mem_size = 0;
+static unsigned int     s_g_mem_used = 0;
+
+#define MAX_TAG_COUNT 	50
+#define MAX_XML_COUNT   20
+
+static char max_tag_count[MAX_TAG_COUNT];
+static int first_tag = 0;
+static char max_xml_count[MAX_XML_COUNT];	
+static char first_xml = 0;
+
 LOCAL const DMXML_TAG_INFO_T  s_dmxml_tag_tab[] =
 {
     {"VerDTD",                       TAG_VERDTD},
@@ -375,6 +392,104 @@ LOCAL const DMXML_TAG_INFO_T  s_dmxml_tag_tab[] =
     {"Exec",                         TAG_EXECID},
 };
 
+LOCAL void *SCI_ALLOCA(int _SIZE) 
+{
+	int i;
+	unsigned int found = 0xff;
+	if (s_g_memptr!=NULL)
+	{
+		if (_SIZE == MAX_TAG_BUF_SIZE && first_tag != 0xff)
+		{
+			if (max_tag_count[first_tag] == 0 )
+				{
+					found = first_tag;
+					max_tag_count[found] = 1;
+					for (i=first_tag; i<MAX_TAG_COUNT;i++)
+					{
+						if (max_tag_count[i]== 0) break;
+					}
+					first_tag = (i<MAX_TAG_COUNT)?i:0xff;
+					
+					SCI_TRACE_LOW("DM SCI_ALLOCA s_tag_memptr %d next:%d",found, first_tag);
+					memset(s_tag_memptr+MAX_TAG_BUF_SIZE*found,0,MAX_TAG_BUF_SIZE);
+					
+					return (s_tag_memptr+MAX_TAG_BUF_SIZE*found);
+				}
+			else
+				SCI_TRACE_LOW("DM SCI_ALLOCA s_tag_memptr FAILED");
+				return NULL;
+		}else if (_SIZE == MAX_XML_BUF_SIZE && first_xml != 0xff)
+		{
+			if (max_xml_count[first_xml] == 0 )
+				{
+					found = first_xml;
+					max_xml_count[found] = 1;
+					for (i=first_xml; i<MAX_XML_COUNT;i++)
+					{
+						if (max_xml_count[i]== 0) break;
+					}
+					first_xml = (i<MAX_XML_COUNT)?i:0xff;
+					SCI_TRACE_LOW("DM SCI_ALLOCA s_xml_memptr %d",found);
+					memset(s_xml_memptr+MAX_XML_BUF_SIZE*found,0,MAX_XML_BUF_SIZE);
+					
+					return (s_xml_memptr+MAX_XML_BUF_SIZE*found);
+				}
+			else
+				SCI_TRACE_LOW("DM SCI_ALLOCA s_xml_memptr FAILED");
+				return NULL;		
+		} 
+		else if (s_oth_memptr+_SIZE+1+s_g_mem_used < s_g_memptr+s_g_mem_size)
+		{
+			memset(s_oth_memptr+s_g_mem_used, 0, _SIZE+1);
+			s_g_mem_used +=_SIZE+1; 
+			
+			SCI_TRACE_LOW("DM SCI_ALLOCA s_other_memptr size:%d used:%d total:%d",
+				_SIZE, s_g_mem_used,s_g_memptr+s_g_mem_size-s_oth_memptr);
+			return s_oth_memptr+s_g_mem_used-_SIZE-1;
+		} 
+	}
+	return malloc(_SIZE);
+}
+
+LOCAL void SCI_FREEAA(void *ptr)
+{
+	if ((char *)ptr>=s_tag_memptr && (char *)ptr < (s_xml_memptr))
+	{
+	//local pool
+		int i ;
+		i = ((char *)ptr -s_tag_memptr)/MAX_TAG_BUF_SIZE;
+		if ((char *)ptr != s_tag_memptr+i*MAX_TAG_BUF_SIZE)
+			{
+			SCI_TRACE_LOW("SCI_FREEAA s_tag_memptr FREE Fail %d", ((char *)ptr -s_tag_memptr));
+			}
+		else
+			{
+				if (first_tag> i) first_tag = i;
+				max_tag_count[i]=0; 
+				SCI_TRACE_LOW("SCI_FREEAA s_tag_memptr free %d next:%d", i, first_tag);
+			}
+	}else if ((char *)ptr>=s_xml_memptr && (char *)ptr < (s_oth_memptr))
+	{
+		int i ;
+		i = ((char *)ptr -s_xml_memptr)/MAX_XML_BUF_SIZE;
+		if ((char *)ptr != s_xml_memptr+i*MAX_XML_BUF_SIZE)
+			{
+			SCI_TRACE_LOW("SCI_FREEAA s_xml_memptr FREE Fail %d", ((char *)ptr -s_xml_memptr));
+			}
+		else
+			{
+				if (first_xml> i) first_xml = i;
+				max_xml_count[i]=0; 
+			SCI_TRACE_LOW("SCI_FREEAA s_xml_memptr free %d next:%d", i, first_xml);
+			}	//local pool
+	}else if ((char *)ptr>=s_oth_memptr && (char *)ptr < (s_g_mem_size+s_tag_memptr))
+	{
+	//local pool  do nothing
+	}
+	else
+	free(ptr);
+}
+
 /*****************************************************************************/
 //  Description :设置session的id
 //  Global resource dependence :
@@ -384,10 +499,50 @@ LOCAL const DMXML_TAG_INFO_T  s_dmxml_tag_tab[] =
 /*****************************************************************************/
  void MMIDM_setSessionId(uint32 id)
 {
+   
    SCI_TRACE_LOW("MMIDM_setSessionId id %d", id);
    s_g_SessionID = id;
-}
+#if LOCAL_MEMPOOL
+     if (s_g_memptr != NULL)
+     	{
+	  	 free(s_g_memptr);
+	  	 s_g_memptr = NULL;
+     	}
+	s_g_mem_size = 0;
+	s_g_mem_used = 0;  
+	s_g_memptr = malloc(MAX_LOCAL_POOL_LEN);
+	memset(s_g_memptr,0,MAX_LOCAL_POOL_LEN);
+	if (s_g_memptr !=NULL)
+	{
+		s_g_mem_size = MAX_LOCAL_POOL_LEN;
+		s_tag_memptr = s_g_memptr;
+		s_xml_memptr = s_g_memptr + MAX_TAG_COUNT*MAX_TAG_BUF_SIZE;	
+		s_oth_memptr = s_xml_memptr + MAX_XML_COUNT*MAX_XML_BUF_SIZE;
+		s_g_mem_used = 0;  
+	}
+	{
+	int i;
+	for (i=0; i<MAX_TAG_COUNT;i++)
+		{
+		max_tag_count[i]=0;
+		}
+	for (i=0; i<MAX_XML_COUNT;i++)
+		{
+		max_xml_count[i]=0;
+		}	
 
+	first_tag = 0;
+	first_xml = 0;
+	}
+   SCI_TRACE_LOW("MMIDM_setSessionId s_g_memptr SIZE %d", s_g_mem_size);
+#endif   
+}
+void MMIDM_setMemPool(char *ptr, unsigned int len)
+{
+	s_g_memptr = ptr;
+	s_g_mem_size = len;
+	s_g_mem_used = 0;  
+}
 /*****************************************************************************/
 //  Description :设置session的step
 //  Global resource dependence :
@@ -579,7 +734,7 @@ LOCAL BOOLEAN MMIDM_CreateTag(DMXML_TAG_T* tag_info, char* buf, uint16 buf_size,
 
         if(PNULL!=tag_info->tagContent && if_free)
         {
-            SCI_FREE(tag_info->tagContent);
+            SCI_FREEAA(tag_info->tagContent);
             tag_info->tagContent = PNULL;
         }
     }while(0);
@@ -990,21 +1145,21 @@ LOCAL BOOLEAN InitDMXMLHeader(char* headerbuf, uint16 buf_size)
     {
         if(PNULL!=ptr->tagContent)
         {
-            SCI_FREE( ptr->tagContent);
+            SCI_FREEAA( ptr->tagContent);
              ptr->tagContent = PNULL;
         }
 
-        SCI_FREE(ptr);
+        SCI_FREEAA(ptr);
         ptr = PNULL;
     }
     if(PNULL!=buf)
     {
-        SCI_FREE(buf);
+        SCI_FREEAA(buf);
         buf =PNULL;
     }
     if(PNULL!=buf2)
     {
-        SCI_FREE(buf2);
+        SCI_FREEAA(buf2);
         buf2 =PNULL;
 
     }
@@ -1139,22 +1294,22 @@ LOCAL BOOLEAN MMIDM_BuildAlert(char* alert_buf, uint16 buf_size)
     while(PNULL!=s_alerTag_head)
     {
         cur_tag = s_alerTag_head->next;
-        SCI_FREE(s_alerTag_head);
+        SCI_FREEAA(s_alerTag_head);
         s_alerTag_head= cur_tag;
     }
     if(PNULL!=ptr)
     {
-        SCI_FREE(ptr);
+        SCI_FREEAA(ptr);
         ptr = PNULL;
     }
     if(PNULL!=buf)
     {
-        SCI_FREE(buf);
+        SCI_FREEAA(buf);
         buf = PNULL;
     }
     if(PNULL!=buf2)
     {
-        SCI_FREE(buf2);
+        SCI_FREEAA(buf2);
         buf2 = PNULL;
     }
     SCI_TRACE_LOW("LEAVE MMIDM_BuildAlert");
@@ -1243,23 +1398,23 @@ LOCAL BOOLEAN MMIDM_BuildISource(DMXML_TAG_SOURCE_T source_info, char* source_bu
     } while(0);
     if(PNULL != buf)
     {
-        SCI_FREE(buf);
+        SCI_FREEAA(buf);
         buf = PNULL;
     }
     if(PNULL != buf2)
     {
-        SCI_FREE(buf2);
+        SCI_FREEAA(buf2);
         buf2 = PNULL;
     }
     if(PNULL != ptr)
     {
         if(PNULL != ptr->tagContent)
         {
-            SCI_FREE(ptr->tagContent);
+            SCI_FREEAA(ptr->tagContent);
             ptr->tagContent = PNULL;
         }
 
-        SCI_FREE(ptr);
+        SCI_FREEAA(ptr);
         ptr = PNULL;
     }
     if(!ret)
@@ -1353,23 +1508,23 @@ LOCAL BOOLEAN MMIDM_BuildIMeta(DMXML_TAG_META_T *meta_info, char* meta_buf, uint
 
     if(PNULL != buf)
     {
-        SCI_FREE(buf);
+        SCI_FREEAA(buf);
         buf = PNULL;
     }
     if(PNULL != buf2)
     {
-        SCI_FREE(buf2);
+        SCI_FREEAA(buf2);
         buf2 = PNULL;
     }
     if(PNULL != ptr)
     {
         if(PNULL != ptr->tagContent)
         {
-            SCI_FREE(ptr->tagContent);
+            SCI_FREEAA(ptr->tagContent);
             ptr->tagContent = PNULL;
         }
 
-        SCI_FREE(ptr);
+        SCI_FREEAA(ptr);
         ptr = PNULL;
     }
     if(!ret)
@@ -1478,23 +1633,23 @@ LOCAL BOOLEAN MMIDM_BuildItem(DMXML_TAG_ITEM_T *item_info, char* item_buf, uint1
     } while(0);
     if(PNULL != buf)
     {
-        SCI_FREE(buf);
+        SCI_FREEAA(buf);
         buf = PNULL;
     }
     if(PNULL != buf2)
     {
-        SCI_FREE(buf2);
+        SCI_FREEAA(buf2);
         buf2 = PNULL;
     }
     if(PNULL != ptr)
     {
         if(PNULL != ptr->tagContent)
         {
-            SCI_FREE(ptr->tagContent);
+            SCI_FREEAA(ptr->tagContent);
             ptr->tagContent = PNULL;
         }
 
-        SCI_FREE(ptr);
+        SCI_FREEAA(ptr);
         ptr = PNULL;
     }
     if(!ret)
@@ -1609,11 +1764,11 @@ LOCAL BOOLEAN MMIDM_BuildReplace(char* replace_buf, uint16 buf_size)
 		    {
 		        if(PNULL != ptr->tagContent)
 		        {
-		            SCI_FREE(ptr->tagContent);
+		            SCI_FREEAA(ptr->tagContent);
 		            ptr->tagContent = PNULL;
 		        }
 
-		        SCI_FREE(ptr);
+		        SCI_FREEAA(ptr);
 		        ptr = PNULL;
 		    }  //2013-2-20@hong
             }
@@ -1629,33 +1784,33 @@ LOCAL BOOLEAN MMIDM_BuildReplace(char* replace_buf, uint16 buf_size)
         while(PNULL!=s_replaceTag_head->item_ptr)
         {
             item_tag = s_replaceTag_head->item_ptr->next;
-            SCI_FREE(s_replaceTag_head->item_ptr);
+            SCI_FREEAA(s_replaceTag_head->item_ptr);
             s_replaceTag_head->item_ptr= item_tag;
         }
         cur_tag = s_replaceTag_head->next;
-        SCI_FREE(s_replaceTag_head);
+        SCI_FREEAA(s_replaceTag_head);
         s_replaceTag_head= cur_tag;
     }
 
     if(PNULL != buf)
     {
-        SCI_FREE(buf);
+        SCI_FREEAA(buf);
         buf = PNULL;
     }
     if(PNULL != buf2)
     {
-        SCI_FREE(buf2);
+        SCI_FREEAA(buf2);
         buf2 = PNULL;
     }
     if(PNULL != ptr)
     {
         if(PNULL != ptr->tagContent)
         {
-            SCI_FREE(ptr->tagContent);
+            SCI_FREEAA(ptr->tagContent);
             ptr->tagContent = PNULL;
         }
 
-        SCI_FREE(ptr);
+        SCI_FREEAA(ptr);
         ptr = PNULL;
     }
     if(!ret)
@@ -1728,18 +1883,18 @@ LOCAL BOOLEAN MMIDM_BuildIChal(DMXML_TAG_CHAL_T *chal_info, char* chal_buf)
     } while(0);
     if(PNULL != buf)
     {
-        SCI_FREE(buf);
+        SCI_FREEAA(buf);
         buf = PNULL;
     }
     if(PNULL != ptr)
     {
         if(PNULL != ptr->tagContent)
         {
-            SCI_FREE(ptr->tagContent);
+            SCI_FREEAA(ptr->tagContent);
             ptr->tagContent = PNULL;
         }
 
-        SCI_FREE(ptr);
+        SCI_FREEAA(ptr);
         ptr = PNULL;
     }
     if(!ret)
@@ -1933,11 +2088,11 @@ LOCAL BOOLEAN MMIDM_BuildStatus(char* status_buf, uint16 buf_size)
 		    {
 		        if(PNULL != ptr->tagContent)
 		        {
-		            SCI_FREE(ptr->tagContent);
+		            SCI_FREEAA(ptr->tagContent);
 		            ptr->tagContent = PNULL;
 		        }
 
-		        SCI_FREE(ptr);
+		        SCI_FREEAA(ptr);
 		        ptr = PNULL;
 		    }		//2013-2-20@hong
 		   SCI_TRACE_LOW("MMIDM_BuildStatus status_buf  %s",status_buf);
@@ -1950,30 +2105,30 @@ LOCAL BOOLEAN MMIDM_BuildStatus(char* status_buf, uint16 buf_size)
     while(PNULL!=s_statusTag_head)
     {
         cur_tag = s_statusTag_head->next;
-        SCI_FREE(s_statusTag_head);
+        SCI_FREEAA(s_statusTag_head);
         s_statusTag_head= cur_tag;
     }
     if(PNULL != buf)
     {
          SCI_TRACE_LOW("MMIDM_BuildStatus buf %s",buf);
-        SCI_FREE(buf);
+        SCI_FREEAA(buf);
         buf = PNULL;
     }
     if(PNULL != buf2)
     {
            SCI_TRACE_LOW("MMIDM_BuildStatus buf2 %s",buf2);
-        SCI_FREE(buf2);
+        SCI_FREEAA(buf2);
         buf2 = PNULL;
     }
     if(PNULL != ptr)
     {
         if(PNULL != ptr->tagContent)
         {
-            SCI_FREE(ptr->tagContent);
+            SCI_FREEAA(ptr->tagContent);
             ptr->tagContent = PNULL;
         }
 
-        SCI_FREE(ptr);
+        SCI_FREEAA(ptr);
         ptr = PNULL;
     }
 
@@ -2137,7 +2292,7 @@ LOCAL BOOLEAN MMIDM_BuildResult(char* result_buf, uint16 buf_size)
                 ptr->tagContent = SCI_ALLOCA(strlen(buf)+1);
                 if(PNULL==  ptr->tagContent)
                 {
-                    SCI_FREE(ptr);
+                    SCI_FREEAA(ptr);
 		    ptr= PNULL;  //coverity-47450. free ptr and set to PNULL.
                     SCI_TRACE_LOW("MMIDM_BuildResult PNULL==  ptr->tagContent");
                     ret = FALSE;
@@ -2159,32 +2314,32 @@ LOCAL BOOLEAN MMIDM_BuildResult(char* result_buf, uint16 buf_size)
         while(PNULL!=s_resultTag_head->item_ptr)
         {
             item_tag = s_resultTag_head->item_ptr->next;
-            SCI_FREE(s_resultTag_head->item_ptr);
+            SCI_FREEAA(s_resultTag_head->item_ptr);
             s_resultTag_head->item_ptr= item_tag;
         }
         cur_tag = s_resultTag_head->next;
-        SCI_FREE(s_resultTag_head);
+        SCI_FREEAA(s_resultTag_head);
         s_resultTag_head= cur_tag;
     }
     if(PNULL != buf)
     {
-        SCI_FREE(buf);
+        SCI_FREEAA(buf);
         buf = PNULL;
     }
     if(PNULL != buf2)
     {
-        SCI_FREE(buf2);
+        SCI_FREEAA(buf2);
         buf2 = PNULL;
     }
     if(PNULL != ptr)
     {
         if(PNULL != ptr->tagContent)
         {
-            SCI_FREE(ptr->tagContent);
+            SCI_FREEAA(ptr->tagContent);
             ptr->tagContent = PNULL;
         }
 
-        SCI_FREE(ptr);
+        SCI_FREEAA(ptr);
         ptr = PNULL;
     }
     if(!ret)
@@ -2635,18 +2790,18 @@ LOCAL BOOLEAN MMIDM_CodecXmlBody(char* bodybuf, uint16 buf_size)
 
     if(PNULL != buf)
     {
-        SCI_FREE(buf);
+        SCI_FREEAA(buf);
         buf = PNULL;
     }
     if(PNULL != ptr)
     {
         if(PNULL != ptr->tagContent)
         {
-            SCI_FREE(ptr->tagContent);
+            SCI_FREEAA(ptr->tagContent);
             ptr->tagContent = PNULL;
         }
 
-        SCI_FREE(ptr);
+        SCI_FREEAA(ptr);
         ptr = PNULL;
     }
 
@@ -2707,7 +2862,7 @@ LOCAL char* MMIDM_getNextXmlTagBuf(char* xmlbuf, MMI_DM_TAGID_E tagid, char* con
         scanner_ptr +=tag_len;
     }
     scanner_ptr +=tag_len;
-    while(PNULL!=scanner_ptr)
+    while(0 != *scanner_ptr)
     {
         if(scanner_ptr[0] == '>')
         {
@@ -2719,7 +2874,7 @@ LOCAL char* MMIDM_getNextXmlTagBuf(char* xmlbuf, MMI_DM_TAGID_E tagid, char* con
             scanner_ptr++;/*lint !e831*/
         }
     }
-    if(PNULL == scanner_ptr)/*lint !e774*/
+    if(0 == *scanner_ptr)/*lint !e774*/
     {
         return PNULL;
     }
@@ -2830,22 +2985,22 @@ LOCAL BOOLEAN MMIDM_generateXMLData(char* sendbuf)
 
     if(PNULL != sendContent)
     {
-        SCI_FREE(sendContent);
+        SCI_FREEAA(sendContent);
         sendContent = PNULL;
     }
     if(PNULL != bodybuf)
     {
-        SCI_FREE(bodybuf);
+        SCI_FREEAA(bodybuf);
         bodybuf = PNULL;
     }
     if(PNULL != ptr)
     {
         if(PNULL != ptr->tagContent)
         {
-            SCI_FREE(ptr->tagContent);
+            SCI_FREEAA(ptr->tagContent);
             ptr->tagContent = PNULL;
         }
-        SCI_FREE(ptr);
+        SCI_FREEAA(ptr);
         ptr = PNULL;
     }
    SCI_TRACE_LOW(" MMIDM_generateXMLData ret %d",ret);
@@ -3066,12 +3221,12 @@ LOCAL BOOLEAN MMIDM_ParseXMLExec(char* xmlbuf)
 
     if(PNULL != body_buf)
     {
-        SCI_FREE(body_buf);
+        SCI_FREEAA(body_buf);
         body_buf = PNULL;
     }
     if(PNULL != exec_buf)
     {
-        SCI_FREE(exec_buf);
+        SCI_FREEAA(exec_buf);
         exec_buf = PNULL;
     }
     if(!ret)
@@ -3372,12 +3527,12 @@ LOCAL BOOLEAN MMIDM_ParseXMLStatus(char* xmlbuf)
 
     if(PNULL != body_buf)
     {
-        SCI_FREE(body_buf);
+        SCI_FREEAA(body_buf);
         body_buf = PNULL;
     }
     if(PNULL != status_buf)
     {
-        //SCI_FREE(status_buf);
+        SCI_FREEAA(status_buf);
         status_buf = PNULL;
     }
      if(!ret)
@@ -3717,7 +3872,7 @@ LOCAL BOOLEAN MMIDM_DealWithGetData(char* getbuf)
 			}
 /*      DM2012  */
 	  	}
-            SCI_FREE(item_buff);
+            SCI_FREEAA(item_buff);
 
             if(s_resultTag_head == PNULL)
             {
@@ -3742,7 +3897,7 @@ LOCAL BOOLEAN MMIDM_DealWithGetData(char* getbuf)
 
     if(PNULL != content)
     {
-        SCI_FREE(content);
+        SCI_FREEAA(content);
         content = PNULL;
     }
      if(!ret)
@@ -3800,12 +3955,12 @@ LOCAL BOOLEAN MMIDM_ParseXMLGet(char* xmlbuf)
 
      if(PNULL != body_buf)
     {
-        SCI_FREE(body_buf);
+        SCI_FREEAA(body_buf);
         body_buf = PNULL;
     }
      if(PNULL != get_buf)
     {
-        SCI_FREE(get_buf);
+        SCI_FREEAA(get_buf);
         get_buf = PNULL;
     }
      if(!ret)
@@ -4012,17 +4167,17 @@ LOCAL BOOLEAN MMIDM_DealWithReplaceData(char* replacebuf)
     } while(0);
 
      if(PNULL != content)
-     {
-         SCI_FREE(content);
-         content = PNULL;
-     }
+    {
+        SCI_FREEAA(content);
+        content = PNULL;
+    }
      if(PNULL != data)
-     {
-         SCI_FREE(data);
-         data = PNULL;
-     }
-     if (item_buff != PNULL)
-	 SCI_FREE(item_buff);
+    {
+        SCI_FREEAA(data);
+        data = PNULL;
+    }
+	 if (item_buff != PNULL)
+	 SCI_FREEAA(item_buff);
      if(!ret)
      {
         // MMIDM_SendSigToDmTask(DM_TASK_DM_CLOSE,MMIDM_GetDmTaskID(),PNULL);
@@ -4081,12 +4236,12 @@ LOCAL BOOLEAN MMIDM_ParseXMLReplace(char* xmlbuf)
 
     if(PNULL != body_buf)
     {
-        SCI_FREE(body_buf);
+        SCI_FREEAA(body_buf);
         body_buf = PNULL;
     }
      if(PNULL != replace_buf)
     {
-        SCI_FREE(replace_buf);
+        SCI_FREEAA(replace_buf);
         replace_buf = PNULL;
     }
      if(!ret)
@@ -4341,12 +4496,12 @@ LOCAL BOOLEAN MMIDM_DealWithAlertData(char* alertbuf)
 
     if(PNULL != item)
     {
-        SCI_FREE(item);
+        SCI_FREEAA(item);
         item = PNULL;
     }
      if(PNULL != subdata)
     {
-        SCI_FREE(subdata);
+        SCI_FREEAA(subdata);
         subdata = PNULL;
     }
      if(!ret)
@@ -4408,12 +4563,12 @@ LOCAL BOOLEAN MMIDM_ParseXMLAlert(char* xmlbuf)
 
     if(PNULL != alert_buf)
     {
-        SCI_FREE(alert_buf);
+        SCI_FREEAA(alert_buf);
         alert_buf = PNULL;
     }
      if(PNULL != body_buf)
     {
-        SCI_FREE(body_buf);
+        SCI_FREEAA(body_buf);
         body_buf = PNULL;
     }
      if(!ret)
@@ -4436,32 +4591,32 @@ LOCAL void MMIDM_releaseItemContent(DMXML_TAG_ITEM_T* item_tag)
 {
     if(PNULL != item_tag->data.tagContent)
     {
-        SCI_FREE(item_tag->data.tagContent);
+        SCI_FREEAA(item_tag->data.tagContent);
         item_tag->data.tagContent == PNULL;
     }
      if(PNULL != s_resultTag_head->item_ptr->meta.format.tagContent)
     {
-        SCI_FREE(item_tag->meta.format.tagContent);
+        SCI_FREEAA(item_tag->meta.format.tagContent);
         item_tag->meta.format.tagContent == PNULL;
     }
      if(PNULL != item_tag->meta.nextnonce.tagContent)
     {
-        SCI_FREE(item_tag->meta.nextnonce.tagContent);
+        SCI_FREEAA(item_tag->meta.nextnonce.tagContent);
         item_tag->meta.nextnonce.tagContent == PNULL;
     }
      if(PNULL != item_tag->meta.type.tagContent)
     {
-        SCI_FREE(item_tag->meta.type.tagContent);
+        SCI_FREEAA(item_tag->meta.type.tagContent);
         item_tag->meta.type.tagContent == PNULL;
     }
      if(PNULL != item_tag->source.locname.tagContent)
     {
-        SCI_FREE(item_tag->source.locname.tagContent);
+        SCI_FREEAA(item_tag->source.locname.tagContent);
         item_tag->source.locname.tagContent == PNULL;
     }
      if(PNULL != item_tag->source.locuri.tagContent)
     {
-        SCI_FREE(item_tag->source.locuri.tagContent);
+        SCI_FREEAA(item_tag->source.locuri.tagContent);
         item_tag->source.locuri.tagContent == PNULL;
     }
 }
@@ -4471,32 +4626,32 @@ LOCAL void MMIDM_releaseResultContent(DMXML_TAG_RESULT_T* result_tag)
 {
     if(PNULL != result_tag->cmd.tagContent)
     {
-        SCI_FREE(result_tag->cmd.tagContent);
+        SCI_FREEAA(result_tag->cmd.tagContent);
         result_tag->cmd.tagContent = PNULL;
     }
     if(PNULL != result_tag->CmdId.tagContent)
     {
-        SCI_FREE(result_tag->CmdId.tagContent);
+        SCI_FREEAA(result_tag->CmdId.tagContent);
         result_tag->CmdId.tagContent = PNULL;
     }
     if(PNULL != result_tag->cmdRef.tagContent)
     {
-        SCI_FREE(result_tag->cmdRef.tagContent);
+        SCI_FREEAA(result_tag->cmdRef.tagContent);
         result_tag->cmdRef.tagContent = PNULL;
     }
     if(PNULL != result_tag->msgRef.tagContent)
     {
-        SCI_FREE(result_tag->msgRef.tagContent);
+        SCI_FREEAA(result_tag->msgRef.tagContent);
         result_tag->msgRef.tagContent = PNULL;
     }
     if(PNULL != result_tag->sourceRef.tagContent)
     {
-        SCI_FREE(result_tag->sourceRef.tagContent);
+        SCI_FREEAA(result_tag->sourceRef.tagContent);
         result_tag->sourceRef.tagContent = PNULL;
     }
     if(PNULL != result_tag->targetRef.tagContent)
     {
-        SCI_FREE(result_tag->targetRef.tagContent);
+        SCI_FREEAA(result_tag->targetRef.tagContent);
         result_tag->targetRef.tagContent = PNULL;
     }
 }
@@ -4505,52 +4660,52 @@ LOCAL void MMIDM_releaseStatusContent(DMXML_TAG_STATUS_T* status_tag)
 {
         if(PNULL != status_tag->cmd.tagContent)
         {
-            SCI_FREE(status_tag->cmd.tagContent);
+            SCI_FREEAA(status_tag->cmd.tagContent);
             status_tag->cmd.tagContent = PNULL;
         }
         if(PNULL != status_tag->CmdId.tagContent)
         {
-            SCI_FREE(status_tag->CmdId.tagContent);
+            SCI_FREEAA(status_tag->CmdId.tagContent);
             status_tag->CmdId.tagContent = PNULL;
         }
         if(PNULL != status_tag->cmdRef.tagContent)
         {
-            SCI_FREE(status_tag->cmdRef.tagContent);
+            SCI_FREEAA(status_tag->cmdRef.tagContent);
             status_tag->cmdRef.tagContent = PNULL;
         }
         if(PNULL != status_tag->data.tagContent)
         {
-            SCI_FREE(status_tag->data.tagContent);
+            SCI_FREEAA(status_tag->data.tagContent);
             status_tag->data.tagContent = PNULL;
         }
         if(PNULL != status_tag->msgRef.tagContent)
         {
-            SCI_FREE(status_tag->msgRef.tagContent);
+            SCI_FREEAA(status_tag->msgRef.tagContent);
             status_tag->msgRef.tagContent = PNULL;
         }
         if(PNULL != status_tag->sourceRef.tagContent)
         {
-            SCI_FREE(status_tag->sourceRef.tagContent);
+            SCI_FREEAA(status_tag->sourceRef.tagContent);
             status_tag->sourceRef.tagContent = PNULL;
         }
         if(PNULL != status_tag->targetRef.tagContent)
         {
-            SCI_FREE(status_tag->targetRef.tagContent);
+            SCI_FREEAA(status_tag->targetRef.tagContent);
             status_tag->targetRef.tagContent = PNULL;
         }
         if(PNULL != status_tag->chal.meta.format.tagContent)
         {
-            SCI_FREE(status_tag->chal.meta.format.tagContent);
+            SCI_FREEAA(status_tag->chal.meta.format.tagContent);
             status_tag->chal.meta.format.tagContent = PNULL;
         }
         if(PNULL != status_tag->chal.meta.nextnonce.tagContent)
         {
-            SCI_FREE(status_tag->chal.meta.nextnonce.tagContent);
+            SCI_FREEAA(status_tag->chal.meta.nextnonce.tagContent);
             status_tag->chal.meta.nextnonce.tagContent = PNULL;
         }
         if(PNULL != status_tag->chal.meta.type.tagContent)
         {
-            SCI_FREE(status_tag->chal.meta.type.tagContent);
+            SCI_FREEAA(status_tag->chal.meta.type.tagContent);
             status_tag->chal.meta.type.tagContent = PNULL;
         }
 }
@@ -4559,7 +4714,7 @@ LOCAL void MMIDM_releaseReplaceContent(DMXML_TAG_REPLACE_T* replace_tag)
 {
         if(PNULL != replace_tag->CmdId.tagContent)
         {
-            SCI_FREE(replace_tag->CmdId.tagContent);
+            SCI_FREEAA(replace_tag->CmdId.tagContent);
             replace_tag->CmdId.tagContent = PNULL;
         }
 }
@@ -4586,13 +4741,13 @@ LOCAL void MMIDM_ReleaseXMLData(void)
 
             item_tag = s_resultTag_head->item_ptr->next;
             MMIDM_releaseItemContent(s_resultTag_head->item_ptr);
-            SCI_FREE(s_resultTag_head->item_ptr);
+            SCI_FREEAA(s_resultTag_head->item_ptr);
             s_resultTag_head->item_ptr= item_tag;
         }
 
         result_cur_tag = s_resultTag_head->next;
         MMIDM_releaseResultContent(s_resultTag_head);
-        SCI_FREE(s_resultTag_head);
+        SCI_FREEAA(s_resultTag_head);
         s_resultTag_head= result_cur_tag;
     }
 
@@ -4602,7 +4757,7 @@ LOCAL void MMIDM_ReleaseXMLData(void)
 
         status_cur_tag = s_statusTag_head->next;
         MMIDM_releaseStatusContent(s_statusTag_head);
-        SCI_FREE(s_statusTag_head);
+        SCI_FREEAA(s_statusTag_head);
         s_statusTag_head= status_cur_tag;
     }
 
@@ -4613,12 +4768,12 @@ LOCAL void MMIDM_ReleaseXMLData(void)
         {
             item_tag = s_replaceTag_head->item_ptr->next;
             MMIDM_releaseItemContent(s_replaceTag_head->item_ptr);
-            SCI_FREE(s_replaceTag_head->item_ptr);
+            SCI_FREEAA(s_replaceTag_head->item_ptr);
             s_replaceTag_head->item_ptr= item_tag;
         }
         replace_cur_tag = s_replaceTag_head->next;
         MMIDM_releaseReplaceContent(s_replaceTag_head);
-        SCI_FREE(s_replaceTag_head);
+        SCI_FREEAA(s_replaceTag_head);
         s_replaceTag_head= replace_cur_tag;
     }
     SCI_TRACE_LOW("LEAVE MMIDM_ReleaseXMLData");
@@ -4734,6 +4889,17 @@ LOCAL void MMIDM_ParseXMLData(char* xmlbuf)
 {
    MMIDM_ReleaseXMLData();//free the memory alloc the tag content
    MMIDM_clearDmXmlData();
+#if LOCAL_MEMPOOL   
+   if (s_g_memptr != NULL)
+     	{
+	  	 free(s_g_memptr);
+	  	 s_g_memptr = NULL;
+		s_xml_memptr = NULL;	
+		s_oth_memptr = NULL;
+     	}
+	s_g_mem_size = 0;
+	s_g_mem_used = 0;     
+#endif	
 }
 
 /*****************************************************************************/
@@ -4773,7 +4939,7 @@ LOCAL void MMIDM_ParseXMLData(char* xmlbuf)
     MMIDM_ParseXMLData(data);
     //s_g_MsgID++;  //@hong2012
 
-    if((s_g_step == STEP_CREDED) && (PNULL == s_alerTag_head) && (PNULL == s_replaceTag_head) && (PNULL == s_statusTag_head->next) && (PNULL == s_resultTag_head))
+    if((s_g_step == STEP_CREDED) && (PNULL == s_alerTag_head) && (PNULL == s_replaceTag_head) && (PNULL == s_statusTag_head->next  ) && (PNULL == s_resultTag_head))
     {
         SCI_TRACE_LOW("MMIDM_ParseReceiveData NO PACKET TO SEND");
         if(s_g_callClearFunc)
