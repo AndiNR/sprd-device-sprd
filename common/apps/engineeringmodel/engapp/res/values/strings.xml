@@ -211,6 +211,30 @@
     <string name="low_free_space_title">Request clean or dump logs</string>
     <string name="low_free_space_message">The free space of current logpath is low, this may effect saved logs or dumping log, please dump them or clean them in time</string>
 
+    <string name="slog_dump_ok">Done</string>
+    <string name="slog_dump_failed">Dumping long failed</string>
+    <string name="slog_dump_outtime">Out of time during dumping log</string>
+
+    <string name="menu_mode_add">Save to </string>
+    <string name="menu_mode_select">Select mode</string>
+    <string name="menu_mode_delete">Delete mode</string>
+    <string name="dialog_button_slog_create_new_mode">Save to </string>
+    <string name="dialog_button_slog_update_mode">Save to </string>
+    <string name="menu_add_to">Save to </string>
+
+    <string name="mode_dialog_add_title">Add mode</string>
+    <string name="mode_dialog_delete_title">Remove mode</string>
+    <string name="mode_dialog_update_title">Update to</string>
+    <string name="mode_dialog_save_title">Save as</string>
+    <string name="mode_dialog_select_title">Select mode</string>
+    <string name="mode_dialog_duplicate_title">Duplicated mode</string>
+    <string name="mode_dialog_duplicate_message">The mode name just input is duplicated, update the mode or rename instead</string>
+    <string name="mode_dialog_duplicate_positive">Update</string>
+    <string name="mode_dialog_duplicate_negative">Rename</string>
+    <string name="slog_clear_ok">Clear done</string>
+    <string name="slog_clear_failed">Failed to clear</string>
+
+    <string name="slog_version_info">Updated on 2013-6-19, add MediaScanner, fix prompt when dump and clear log</string>
 	<!-- SlogUI Added Done -->
 
 </resources>

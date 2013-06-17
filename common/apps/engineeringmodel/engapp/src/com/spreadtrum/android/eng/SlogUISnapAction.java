@@ -15,7 +15,7 @@ public class SlogUISnapAction extends Activity {
         super.onCreate(snap);
         //if (true)
         try {
-            SlogAction.snap();
+            SlogAction.snap(this);
         } catch (ExceptionInInitializerError error) {
             // TODO: NEED IMPROVE. If the activity have not started, we can't
             // send message to the main thread of application, because it have

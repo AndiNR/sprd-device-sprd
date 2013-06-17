@@ -313,7 +313,7 @@
             android:name=".LogSettingSlogUITabHostActivity"
             android:label="@string/label_slogui"
             android:configChanges="orientation|screenSize|locale"
-            android:launchMode="singleInstance" >
+            android:launchMode="singleTask" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
@@ -354,6 +354,13 @@
         <service android:name=".SlogUISnapService" >
         </service>
         <service android:name=".EngInstallHelperService" />
+
+        <provider
+            android:name="com.spreadtrum.android.eng.SlogProvider"
+            android:authorities="com.spreadtrum.android.eng"
+            android:exported="false" >
+            <grant-uri-permission android:pathPattern=".*" />
+        </provider>
   <!-- SlogUI Added Done  -->
       <activity
           android:name=".EngInstallActivity" >

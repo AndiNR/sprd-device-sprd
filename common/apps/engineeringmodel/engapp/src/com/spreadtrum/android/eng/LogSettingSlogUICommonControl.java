@@ -1,26 +1,35 @@
 package com.spreadtrum.android.eng;
 
 import com.spreadtrum.android.eng.R;
+import com.spreadtrum.android.eng.SlogProvider;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.ComponentName;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.content.ServiceConnection;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Message;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.CursorAdapter;
 import android.widget.EditText;
 import android.widget.RadioButton;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.internal.app.IMediaContainerService;
@@ -41,6 +50,15 @@ public class LogSettingSlogUICommonControl extends Activity implements SlogUISyn
     private Intent intentSvc;
     private Intent intentSnap;
     private Intent intentMedia;
+
+    private AlertDialog.Builder mModeListDialogBuilder;
+    private EditText mNewModeNameEditText;
+    private AlertDialog mNewModeDialog;
+    private CursorAdapter mModeListAdapter;
+    private DialogInterface.OnClickListener mUpdateListener;
+    private DialogInterface.OnClickListener mSettingListener;
+    private DialogInterface.OnClickListener mDeleteListener;
+
     private IMediaContainerService mMediaContainer;
     private static final ComponentName DEFAULT_CONTAINER_COMPONENT = new ComponentName(
             "com.android.defcontainer", "com.android.defcontainer.DefaultContainerService");
@@ -55,7 +73,7 @@ public class LogSettingSlogUICommonControl extends Activity implements SlogUISyn
         public void onServiceDisconnected(ComponentName name) {
         }
     };
-    
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -86,13 +104,38 @@ public class LogSettingSlogUICommonControl extends Activity implements SlogUISyn
         if (!success) {
             Log.e("SlogUI", "Unable to bind MediaContainerService!");
         }
+        
+        final LayoutInflater inflater = (LayoutInflater) getSystemService(
+                                            Context.LAYOUT_INFLATER_SERVICE);
+
+        mModeListAdapter = new CursorAdapter(this, getContentResolver()
+                .query(SlogProvider.URI_MODES, null,null, null, null), true) {
+
+            @Override
+            public View newView(Context context, Cursor cursor, ViewGroup parent) {
+                View view = inflater.inflate(
+                        android.R.layout.simple_list_item_1, parent, false);
+                return view;
+            }
+
+            @Override
+            public void bindView(View view, Context context, Cursor cursor) {
+                TextView text = (TextView) view
+                        .findViewById(android.R.id.text1);
+                text.setText(cursor.getString(cursor.getColumnIndex(
+                        SlogProvider.Contract.COLUMN_MODE)));
+
+            }
+        };
+
         // Sync view's status
         syncState();
+        prepareModeListDialogs();
 
         chkAlwaysRun.setChecked (SlogAction.isAlwaysRun (SlogAction.SERVICESLOG));
         chkSnap.setChecked (SlogAction.isAlwaysRun (SlogAction.SERVICESNAP));
         chkClearLogAuto.setChecked (SlogAction.GetState (SlogAction.CLEARLOGAUTOKEY));
-        
+
         if (chkAlwaysRun.isChecked()) {
             startService(intentSvc);
         }
@@ -114,6 +157,151 @@ public class LogSettingSlogUICommonControl extends Activity implements SlogUISyn
         chkAlwaysRun.setOnClickListener(clickListen);
         chkSnap.setOnClickListener(clickListen);
         chkClearLogAuto.setOnClickListener(clickListen);
+
+    }
+
+    private void prepareModeListDialogs() {
+
+        mNewModeNameEditText = new EditText(
+                LogSettingSlogUICommonControl.this);
+        if (mNewModeNameEditText == null) {
+            return ;
+        }
+        mNewModeNameEditText.setSingleLine(true);
+        mNewModeDialog = new AlertDialog.Builder(LogSettingSlogUICommonControl.this)
+                .setTitle(R.string.mode_dialog_add_title)
+                .setView(mNewModeNameEditText)
+                .setPositiveButton(R.string.alert_dump_dialog_ok,
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog,
+                                    int whichButton) {
+                                if (null == mNewModeNameEditText.getText()) {
+                                   return;
+                                }
+                                String modeName = mNewModeNameEditText.getText().toString();
+                                if ("".equals(modeName)) {
+                                    return;
+                                }
+                                Cursor cursor = LogSettingSlogUICommonControl.this.
+                                        getContentResolver().query(
+                                                SlogProvider.URI_MODES, null, null, null, null);
+                                while (cursor.moveToNext()) {
+                                    if (modeName.equals(
+                                            cursor.getString(cursor.getColumnIndex(
+                                                    SlogProvider.Contract.COLUMN_MODE)))) {
+                                        final int id = cursor.getInt(cursor.getColumnIndex(
+                                                SlogProvider.Contract._ID));
+                                        showDuplicatedModeDialog(modeName, id);
+
+                                        cursor.close();
+                                        return;
+                                    }
+                                }
+                                cursor.close();
+                                SlogAction.saveAsNewMode(modeName,
+                                        LogSettingSlogUICommonControl.this);
+
+                        }
+                })
+                .setNegativeButton(R.string.alert_dump_dialog_cancel,
+                    new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog,
+                                    int whichButton) {
+
+                                /* User clicked cancel so do some stuff */
+                            }
+                        }).create();
+        mModeListDialogBuilder = new AlertDialog
+                                .Builder(LogSettingSlogUICommonControl.this);
+        mUpdateListener = new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                int id = (int) mModeListAdapter.getItemId(which);
+                SlogAction.updateMode(LogSettingSlogUICommonControl.this, id);
+            }
+        };
+
+        mSettingListener = new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, final int which) {
+                Thread setThread = new Thread() {
+                    @Override
+                    public void run() {
+                        SlogAction.setAllStates(LogSettingSlogUICommonControl.this,
+                                    (int) mModeListAdapter.getItemId(which));
+                        LogSettingSlogUICommonControl.this.syncState();
+                    }
+                };
+                setThread.run();
+            }
+        };
+        
+        mDeleteListener = new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, final int which) {
+                int id = (int) mModeListAdapter.getItemId(which);
+                SlogAction.deleteMode(LogSettingSlogUICommonControl.this, id);
+            }
+        };
+    }
+
+    private void showDuplicatedModeDialog(String modeName, final int modeId) {
+        DialogInterface.OnClickListener listener =
+                new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, final int which) {
+                SlogAction.updateMode(LogSettingSlogUICommonControl.this, modeId);
+            }
+        };
+        DialogInterface.OnClickListener listenerCancel =
+                new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, final int which) {
+                mNewModeDialog.show();
+            }
+        };
+        new AlertDialog.Builder(LogSettingSlogUICommonControl.this)
+                .setTitle(R.string.mode_dialog_duplicate_title)
+                .setMessage(R.string.mode_dialog_duplicate_message)
+                .setPositiveButton(
+                        R.string.mode_dialog_duplicate_positive, listener)
+                .setNegativeButton(
+                        R.string.mode_dialog_duplicate_negative, listenerCancel)
+                .create().show();
+
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.slog_mode_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+        case R.id.slog_add_mode:
+            mNewModeDialog.show();
+            return true;
+        case R.id.slog_delete:
+            mModeListAdapter.notifyDataSetChanged();
+            mModeListDialogBuilder.setTitle(R.string.mode_dialog_delete_title)
+                .setAdapter(mModeListAdapter, mDeleteListener).create().show();
+            return true;
+        case R.id.slog_select:
+            mModeListAdapter.notifyDataSetChanged();
+            mModeListDialogBuilder.setTitle(R.string.mode_dialog_select_title)
+                .setAdapter(mModeListAdapter, mSettingListener).create().show();
+            return true;
+        case R.id.slog_update:
+            mModeListAdapter.notifyDataSetChanged();
+            mModeListDialogBuilder.setTitle(R.string.mode_dialog_update_title)
+                .setAdapter(mModeListAdapter, mUpdateListener).create().show();
+            return true;
+        default:
+            return super.onOptionsItemSelected(item);
+        }
 
     }
 
@@ -200,7 +388,7 @@ public class LogSettingSlogUICommonControl extends Activity implements SlogUISyn
             case R.id.chk_general_android_switch:
                 SlogAction.SetState(SlogAction.ANDROIDKEY,
                         chkAndroid.isChecked());
-                break;
+            break;
 
             case R.id.chk_general_modem_switch:
                 SlogAction.SetState(SlogAction.MODEMKEY, chkModem.isChecked(),
