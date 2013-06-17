@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+ifneq ($(filter sp7710ga%, $(TARGET_PRODUCT)),)
+  TARGET_LOWCOST_SUPPORT := true
+endif
+
 PRODUCT_MAKEFILES := $(LOCAL_DIR)/prod_sp7710ga.mk
 #PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_sp7710gahvga.mk
 PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_sp7710gatri.mk

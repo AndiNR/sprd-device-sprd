@@ -40,8 +40,11 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.modem.w.tty=/dev/ts0710mux \
 	ro.modem.w.eth=veth \
 	ro.modem.w.id=0 \
-	ro.modem.w.count=2 \
-	persist.sys.lowcost=true
+	ro.modem.w.count=2 
+
+ifeq ($(TARGET_LOWCOST_SUPPORT),true)
+  PRODUCT_PROPERTY_OVERRIDES += persist.sys.lowcost=true
+endif
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1
@@ -85,8 +88,6 @@ $(call inherit-product, $(BOARDDIR)/base.mk)
 $(call inherit-product, $(BOARDDIR)/proprietories.mk)
 $(call inherit-product, vendor/sprd/operator/cucc/specA/res/boot/boot_res.mk)
 
-# Switch for Low Cost case
-TARGET_LOWCOST_SUPPORT := true
 
 # include standard configs
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base.mk)
