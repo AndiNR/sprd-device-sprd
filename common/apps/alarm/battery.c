@@ -130,6 +130,11 @@ int  set_state(char *state)
 		plight = "0";
 		g_sleep = 1;
 	}
+	else
+	{
+		LOGD(" the value of state: %s is not what we expected.\n", state);
+		return -1;
+	}
 	fd = open(LCD_BACKLIGHT_BRIGHTNESS_PATH,O_RDWR|O_TRUNC);
 	if(fd < 0)
 	{
