@@ -177,7 +177,7 @@ service wril-daemon2 /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so 
     group radio cache inet misc audio sdcard_rw log
 
 #nvitemd
-service nvitemd /system/bin/nvitemd /dev/ts0710mux20 ./nvitem.cfg
+service nvitemd /system/bin/nvitemd /dev/ts0710mux20 ./nvitem.cfg  FALSE
     class core
     user root
     group system radio shell
