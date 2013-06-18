@@ -4,6 +4,9 @@
 #include <semaphore.h>
 #include <binder/MemoryHeapIon.h>
 #include "vsync.h"
+#ifdef _HWCOMPOSER_USE_GSP
+#include "sc8830/gsp_hal.h"
+#endif
 struct sprd_img {
     uint32_t w;
     uint32_t h;
@@ -24,6 +27,9 @@ struct hwc_context_t {
     int fb_height;
     int pre_fb_layer_count;
 
+#ifdef _HWCOMPOSER_USE_GSP
+	gsp_device_t *gsp_dev;
+#endif
     //the following are for osd overlay layer
     int osd_overlay_flag;
     int osd_overlay_phy_addr;
