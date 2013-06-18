@@ -18,6 +18,10 @@ void log_init(void)
 	static const char *name = "/dev/__kmsg__";
 	if (mknod(name, S_IFCHR | 0600, (1 << 8) | 11) == 0) {
 		log_fd = open(name, O_WRONLY);
+		if(log_fd < 0){
+			LOGE("%s: open file/dev/__kmsg__ fail.\n",__func__);
+			return;
+		}
 		fcntl(log_fd, F_SETFD, FD_CLOEXEC);
 		unlink(name);
 	}
