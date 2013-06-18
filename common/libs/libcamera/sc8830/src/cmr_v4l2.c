@@ -57,6 +57,10 @@ enum
 	0x1001           skip number for CAP sub-module     capture.reserved[0];
 	0x1002           image width/height from sensor     capture.reserved[2], capture.reserved[3];
 	0x1003           base id for each frame             capture.reserved[1];
+
+	0x2000           path skip and deci number          recerved[0] channel, [1] deci number
+	0x2001           path pause                         recerved[0] channel
+	0x2002           path resume                        recerved[0] channel
 */
 enum dcam_parm_id {
 	CAPTURE_MODE = 0x1000,
@@ -458,6 +462,24 @@ int cmr_v4l2_cap_pause(uint32_t channel_id, uint32_t reconfig_flag)
 	stream_parm.parm.capture.reserved[1] = reconfig_flag;
 	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
 	return ret;
+}
+
+int cmr_v4l2_get_cap_time(uint32_t *sec, uint32_t *usec)
+{
+	int                      ret = 0;
+	struct v4l2_streamparm   stream_parm;
+
+	stream_parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	ret = ioctl(fd, VIDIOC_G_PARM, &stream_parm);
+	CMR_RTN_IF_ERR(ret);
+
+	*sec  = stream_parm.parm.capture.timeperframe.numerator;
+	*usec = stream_parm.parm.capture.timeperframe.denominator;
+	CMR_LOGV("sec=%d, usec=%d \n", *sec, *usec);
+
+exit:
+	return ret;
+
 }
 
 int cmr_v4l2_free_frame(uint32_t channel_id, uint32_t index)

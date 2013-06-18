@@ -271,6 +271,7 @@ struct camera_context {
 	uint32_t                 is_take_picture;
 	pthread_mutex_t          take_mutex;
 	pthread_mutex_t          take_raw_mutex;
+	pthread_mutex_t          main_prev_mutex;
 	uint32_t                 chn_0_status;
 	uint32_t                 chn_1_status;
 	uint32_t                 chn_2_status;
@@ -287,6 +288,9 @@ struct camera_context {
 	uint32_t                 skip_mode;
 	uint32_t                 skip_num;
 	uint32_t                 pre_frm_cnt;
+	int64_t                  restart_timestamp;
+	uint32_t                 restart_skip_cnt;
+	uint32_t                 restart_skip_en;
 	pthread_mutex_t          prev_mutex;
 	sem_t                    af_sync_sem;
 	sem_t                    init_sem;
