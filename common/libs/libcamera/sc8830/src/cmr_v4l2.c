@@ -254,7 +254,7 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *config)
 	struct v4l2_format       format;
 	uint32_t                 found = 0;
 	uint32_t                 pxl_fmt;
-	uint32_t                 cfg_id = config->channel_id;
+	uint32_t                 cfg_id = 0;
 	enum v4l2_buf_type       buf_type;
 	struct v4l2_streamparm   stream_parm;
 	
@@ -264,7 +264,7 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *config)
 		return -1;
 
 	CMR_LOGV("channel_id %d", config->channel_id);
-
+        cfg_id = config->channel_id;
 	stream_parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	stream_parm.parm.capture.capability = PATH_FRM_DECI;
 
