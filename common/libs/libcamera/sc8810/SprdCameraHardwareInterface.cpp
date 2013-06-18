@@ -117,31 +117,36 @@ gralloc_module_t const* SprdCameraHardware::mGrallocHal;
 
     SprdCameraHardware::SprdCameraHardware(int cameraId)
         : mParameters(),
-        mPreviewHeight(-1),
-        mPreviewWidth(-1),
-        mRawHeight(-1),
-        mRawWidth(-1),
-        mCameraState(QCS_INIT),
-        mPreviewFrameSize(0),
-        mRawSize(0),
-        mPreviewCount(0),
-        mNotify_cb(0),
-        mData_cb(0),
-        mData_cb_timestamp(0),
-        mUser(0),
-        mMsgEnabled(0),
-        mPreviewHeap(NULL),
-        mRawHeap(NULL),
-        mJpegencHWHeap(NULL),
-        mTempHWHeap(NULL),
-        mTempJpegSliceHeap(NULL),
-        mJpegencZoomHeap(NULL),
-        mMetadataHeap(NULL),
-        mJpegencSwapHeap(NULL),
-       mFDHeap(NULL),
-        mIsStoreMetaData(false),
-        mPreviewWindow(NULL),
-        mSettingPreviewWindowState(PREVIEW_WINDOW_SET_IDLE)
+	mPreviewHeight(-1),
+	mPreviewWidth(-1),
+	mRawHeight(-1),
+	mRawWidth(-1),
+
+	mPreviewHeap(NULL),
+	mRawHeap(NULL),
+	mJpegencHWHeap(NULL),
+	mTempHWHeap(NULL),
+	mTempJpegSliceHeap(NULL),
+	mFDHeap(NULL),
+	mJpegencZoomHeap(NULL),
+	mJpegencSwapHeap(NULL),
+	mMetadataHeap(NULL),
+
+	mCameraState(QCS_INIT),
+
+	mPreviewFrameSize(0),
+	mRawSize(0),
+	mPreviewCount(0),
+
+	mNotify_cb(0),
+	mData_cb(0),
+	mData_cb_timestamp(0),
+
+	mUser(0),
+	mPreviewWindow(NULL),
+	mMsgEnabled(0),
+	mIsStoreMetaData(false),
+	mSettingPreviewWindowState(PREVIEW_WINDOW_SET_IDLE)
     {
         ALOGV("openCameraHardware: call createInstance. cameraId: %d.", cameraId);
 
@@ -323,7 +328,7 @@ sprd_camera_memory_t* SprdCameraHardware::GetCachePmem(const char *device_name, 
 		goto getpmem_end;
 	}
 	if (NULL == pHeapIon->getBase()
-		|| 0xffffffff == (long)pHeapIon->getBase()) {
+		|| 0xffffffff == (uint32_t)pHeapIon->getBase()) {
 		goto getpmem_end;
 	}
 
@@ -376,7 +381,7 @@ sprd_camera_memory_t* SprdCameraHardware::GetPmem(const char *device_name, int b
 		goto getpmem_end;
 	}
 	if (NULL == pHeapIon->getBase()
-		|| 0xffffffff == (long)pHeapIon->getBase()) {
+		|| 0xffffffff == (uint32_t)pHeapIon->getBase()) {
 		goto getpmem_end;
 	}
 
@@ -449,7 +454,7 @@ bool SprdCameraHardware::initPreview()
 	mPreviewFrameSize = width * mPreviewHeight * 3 / 2;
 	buffer_size = camera_get_size_align_page(mPreviewWidth * mPreviewHeight *2);
 	buffer_size = (mPreviewFrameSize + 256 - 1) & ~(256 - 1);
-        if(mOrientation_parm)
+        if(1) //mOrientation_parm)
         {
                 /* allocate 1 more buffer for rotation */
                 preview_buff_cnt += 1;
@@ -500,7 +505,7 @@ bool SprdCameraHardware::initRaw(bool initJpegHeap)
         camera_get_sensor_mode();
         cap_format = camera_get_capture_format(mRawWidth);
         camera_get_sensor_output_size(&sensor_output_w, &sensor_output_h);
-        if(sensor_output_w * sensor_output_h > mRawWidth * mRawHeight)
+        if((int32_t)(sensor_output_w * sensor_output_h) > mRawWidth * mRawHeight)
                 is_need_scaledown = 1;
         ALOGV("initRaw: picture size=%dx%d, sensor output size=%dx%d, sensor output format = %d.\n",
                 mRawWidth, mRawHeight, sensor_output_w, sensor_output_h, cap_format);
@@ -538,7 +543,7 @@ bool SprdCameraHardware::initRaw(bool initJpegHeap)
 
         camera_get_sensor_max_size(&sensor_max_width,&sensor_max_height);
 
-        if(mRawWidth > sensor_max_width || is_need_scaledown)
+        if((uint32_t)mRawWidth > sensor_max_width || is_need_scaledown)
         {
                 interpoation_flag = 1;
         }
@@ -868,7 +873,7 @@ void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
         //ALOGV("releaseRecordingFrame E. ");
         Mutex::Autolock l(&mLock);
         uint8_t *addr = (uint8_t *)opaque;
-        uint32_t index;
+        int32_t index;
 
         if ((mCameraState != QCS_PREVIEW_IN_PROGRESS)  || (0 == mPreviewCount)){
                 ALOGE("releaseRecordingFrame warning: not release frame: mCameraState=%d, mPreviewCount=%d ",
@@ -1556,7 +1561,7 @@ void SprdCameraHardware::receivePreviewFDFrame(camera_frame_type *frame)
 void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 {
         Mutex::Autolock cbLock(&mCallbackLock);
-        ssize_t offset = frame->buf_id;
+        uint32_t offset = frame->buf_id;
 	bool is_release_frame = true;
 
 
@@ -1573,7 +1578,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 Mutex::Autolock previewLock(&mPreviewLock);
 if(PREVIEW_WINDOW_SET_OK == mSettingPreviewWindowState)
 {
-        int width, height, frame_size, offset_size;
+        uint32_t width, height, frame_size, offset_size;
         uint32_t i;
         void *src_addr,*dst_addr;
 	bool is_cancel_buffer = false;
@@ -1635,8 +1640,8 @@ if(PREVIEW_WINDOW_SET_OK == mSettingPreviewWindowState)
 				}
 #else
 				ALOGE("receivePreviewFrame cp buf_addr=0x%x,phy_addr=0x%x", \
-					  frame->buffer_phy_addr, vaddr);
-				if(stride != width){
+					  frame->buffer_phy_addr, (uint32_t)vaddr);
+				if((uint32_t)stride != width){
 					dst_addr = vaddr;
 					src_addr = frame->buf_Virt_Addr;
 					src_width = width + width%4;
@@ -1845,7 +1850,7 @@ void SprdCameraHardware::receiveRawPicture(camera_frame_type *frame)
                 //ALOGI("OK to get gralloc buffer. vaddr: 0x%x, frame_addr: 0x%x, frame->buf_Virt_Addr: 0x%x.", (uint32_t)vaddr, (uint32_t)frame_addr, (uint32_t)frame->buf_Virt_Addr);
             }
 
-            ALOGV("width %d, height %d, stride %d, frame->dx %d, frame->dy %.", width, height, stride, frame->dx, frame->dy);
+            ALOGV("width %d, height %d, stride %d, frame->dx %d, frame->dy %d.", width, height, stride, frame->dx, frame->dy);
 #ifdef USE_ION_MEM
             if( 0 != camera_get_data_redisplay(phy_addr, width, height, frame->buffer_phy_addr, frame->dx, frame->dy)){
                 ALOGE("Fail to camera_get_data_redisplay.");
@@ -2202,7 +2207,7 @@ static int lookup(const struct str_map *const arr, const char *name, int def)
 {
         int ret = lookupvalue(arr, name);
 
-        return 0xFFFFFFFF == ret ? def : ret;
+        return (int)0xFFFFFFFF == ret ? def : ret;
 }
 static uint32_t lookupsizewh(uint32_t *arr, const char *size_str)
 {
@@ -2375,7 +2380,7 @@ static void discard_zone_weight(int *arr, uint32_t size)
 
 static void coordinate_struct_convert(int *rect_arr,int arr_size)
 {
-    uint32_t i =0;
+    int i =0;
     int left = 0,top=0,right=0,bottom=0;
     int *rect_arr_copy = rect_arr;
 
@@ -2570,7 +2575,7 @@ static uint32_t s_focus_zone[25];
             coordinate_struct_convert(&s_save_zone_info[1],size_cnt*4);
 	}
 #else
-	uint32_t size_cnt = 0;
+	int32_t size_cnt = 0;
         int is_mirror=0;
 
         is_mirror = (g_camera_id == 1) ? 1 : 0;
@@ -2603,7 +2608,7 @@ static uint32_t s_focus_zone[25];
 	//SET_PARM(CAMERA_PARM_FOCUS_RECT,(int32_t)s_focus_zone);
 	SET_PARM(CAMERA_PARM_FOCUS_RECT,(int32_t)s_save_zone_info);
 #ifndef CONFIG_CAMERA_788
-	if(0xFFFFFFFF == lookupvalue(focus_mode_map,
+	if((int)0xFFFFFFFF == lookupvalue(focus_mode_map,
                         mParameters.get("focus-mode"))){
 		mParameters.set("focus-mode", "auto");
 		return UNKNOWN_ERROR;
@@ -2660,7 +2665,7 @@ static uint32_t s_focus_zone[25];
 
 #ifndef CONFIG_CAMERA_788
 	if (g_camera_id == 0) {
-	if(0xFFFFFFFF == lookupvalue(flash_mode_map,
+	if((int)0xFFFFFFFF == lookupvalue(flash_mode_map,
                         mParameters.get("flash-mode"))){
 		mParameters.set("flash-mode", "off");
 		return UNKNOWN_ERROR;
@@ -3335,7 +3340,7 @@ ALOGV("start to getCameraStateStr.");
         return NO_ERROR;
     }
 
-const char* const SprdCameraHardware::getCameraStateStr(
+const char* SprdCameraHardware::getCameraStateStr(
         SprdCameraHardware::Sprd_camera_state s)
     {
         static const char* states[] = {
@@ -3347,6 +3352,7 @@ const char* const SprdCameraHardware::getCameraStateStr(
             STATE_STR(QCS_WAITING_RAW),
             STATE_STR(QCS_WAITING_JPEG),
             STATE_STR(QCS_INTERNAL_PREVIEW_STOPPING),
+            STATE_STR(QCS_INTERNAL_CAPTURE_STOPPING),
             STATE_STR(QCS_INTERNAL_PREVIEW_REQUESTED),
             STATE_STR(QCS_INTERNAL_RAW_REQUESTED),
             STATE_STR(QCS_INTERNAL_STOPPING),
@@ -3955,6 +3961,8 @@ extern "C" {
           name          : "Sprd camera HAL",
           author        : "Spreadtrum Corporation",
           methods       : &camera_module_methods,
+          dso		:NULL,
+          reserved	:{0},
       },
       get_number_of_cameras : HAL_getNumberOfCameras,
       get_camera_info       : HAL_getCameraInfo
