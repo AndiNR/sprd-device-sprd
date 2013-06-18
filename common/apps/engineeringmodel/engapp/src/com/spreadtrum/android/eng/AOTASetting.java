@@ -68,7 +68,7 @@ public class AOTASetting extends PreferenceActivity {
 
     @Override
     public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
-        LocalSocket clientSocket = new LocalSocket();
+        //LocalSocket clientSocket = new LocalSocket();
         if (preference == mUser) {
             SystemProperties.set("persist.sys.synchronism.enable", mUser.isChecked() ? "1" : "0");  
             boolean isAOTAEnable = SystemProperties.getBoolean("persist.sys.synchronism.enable", false);
