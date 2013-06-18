@@ -2,12 +2,19 @@
 
 /sdcard		vfat		/dev/block/platform/sprd-sdhci.0/mmcblk0p1
 /system		yaffs2		system
-/data		yaffs2		userdata
 /cache		yaffs2		cache
+/data		yaffs2		userdata
 /misc 		mtd 		misc
 /boot		mtd		boot
 /recovery	mtd		recovery
-/fixnv1		yaffs2		fixnv1
-/fixnv2      	yaffs2		fixnv2
-/runtimenv1	yaffs2		runtimenv1
-/runtimenv2	yaffs2		runtimenv2
+/fixnv		yaffs2		fixnv		no-checkpoint,tags-ecc-off,no-rest-block
+/runtimenv		yaffs2		runtimenv		no-checkpoint,tags-ecc-off,no-rest-block
+/backupfixnv		yaffs2		backupfixnv		no-checkpoint,tags-ecc-off,no-rest-block
+/productinfo		yaffs2		productinfo		no-checkpoint,tags-ecc-off,no-rest-block
+/intmemory      yaffs2          intmemory
+# added new fstypes
+/modem		mtd		modem
+/vmjaluna		mtd		vmjaluna
+/dsp		mtd		dsp
+/uboot		mtd		2ndbl
+/spl        mtd     spl 

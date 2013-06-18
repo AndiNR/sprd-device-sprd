@@ -95,3 +95,17 @@ BOARD_ORI_INSTALL := 7
 BOARD_HAVE_PLS := LTR558ALS
 
 USE_BOOT_AT_DIAG := true
+
+BOARD_SP7710G2 := true
+#############################################
+#which to update
+UPDATE_ANDROID_IMG := true
+UPDATE_MODEM_IMG := true
+UPDATE_BOOTLOADER_IMG := true
+ERASE_USER_DATA := true
+ERASE_PRODUCT_INFO := true
+#how to update
+#NEED_REBOOT := true
+#should always be true,for incremental update is not done by this
+SPRD_OTA_UPDATE := true
+##############################################

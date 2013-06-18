@@ -48,14 +48,24 @@ struct image_info download_image_info[] = {
 		0x40000000,
 	},
 	{ //fixvn
+#ifdef BOARD_SP7710G2
+		"/fixnv/fixnv.bin",
+		"/fixnv/fixnvbkup.bin",
+#else
 		"/fixnv/fixnv.bin",
 		"/backupfixnv/fixnv.bin",
+#endif
 		0x1F000,
 		0x400,
 	},
 	{ //fixvn
+#ifdef BOARD_SP7710G2
+		"/fixnv/fixnv.bin",
+		"/fixnv/fixnvbkup.bin",
+#else
 		"/fixnv/fixnv.bin",
 		"/backupfixnv/fixnv.bin",
+#endif
 		0x1F000,
 		0x02100000,
 	},
@@ -66,14 +76,24 @@ struct image_info download_image_info[] = {
 		0x00020000,
 	},
 	{ //ARM code
+#ifdef BOARD_SP7710G2
+		"/dev/mtd/mtd4",
+		"/dev/mtd/mtd4",
+#else
 		"/dev/mtd/mtd19",
 		"/dev/mtd/mtd19",
+#endif
 		0x009F8000,
 		0x00400000,
 		},
 	{ //running nv
+#ifdef BOARD_SP7710G2
+		"/runtimenv/runtimenv.bin",
+		"/runtimenv/runtimenvbkup.bin",
+#else
 		"/runtimenv/runtimenv.bin",
 		"/runtimenv/runtimenv.bin",
+#endif
 		0x40000,
 		0x02120000,
 	},
