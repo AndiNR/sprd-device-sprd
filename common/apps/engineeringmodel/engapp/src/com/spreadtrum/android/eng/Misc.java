@@ -1,6 +1,7 @@
 
 package com.spreadtrum.android.eng;
 
+
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
@@ -12,6 +13,7 @@ import android.os.Bundle;
 import android.os.Debug;
 import android.os.Handler;
 import android.os.Message;
+import android.os.SystemProperties;
 import android.preference.CheckBoxPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
@@ -27,6 +29,7 @@ public class Misc extends PreferenceActivity {
     private Dialog dialog;
     private CheckBoxPreference smsFillMemoryPref ;
     private CheckBoxPreference mmsFillMemoryPref ;
+    private CheckBoxPreference showMMSReplyChoicePref ;
 
     BroadcastReceiver receiver = new BroadcastReceiver() {
 
@@ -55,6 +58,17 @@ public class Misc extends PreferenceActivity {
         addPreferencesFromResource(R.layout.prefs_misc);
         smsFillMemoryPref = (CheckBoxPreference)findPreference("sms_fill_memory");
         mmsFillMemoryPref = (CheckBoxPreference)findPreference("mms_fill_memory");
+        showMMSReplyChoicePref = (CheckBoxPreference)findPreference("show_mms_reply_choice");
+        boolean status= SystemProperties.getBoolean("persist.sys.mms.showreplypath", false);
+        if(status){
+            Log.d(TAG, "show showMMSReplyChoicePref");
+            showMMSReplyChoicePref.setChecked(true);
+            showMMSReplyChoicePref.setSummary("Show MMS Reply Choice");
+        }else{
+            Log.d(TAG, "Don't show showMMSReplyChoicePref");
+            showMMSReplyChoicePref.setChecked(false);
+            showMMSReplyChoicePref.setSummary("NO MMS Reply Choice");
+        }
     }
 
     @Override
@@ -106,6 +120,15 @@ public class Misc extends PreferenceActivity {
                 showDialog(MEM_STOP);
                 smsFillMemoryPref.setEnabled(true);
                 preference.setSummary("");
+            }
+        }else if("show_mms_reply_choice".equals(key)){
+            CheckBoxPreference checkbox = (CheckBoxPreference) preference;
+            if(checkbox.isChecked()){
+                SystemProperties.set("persist.sys.mms.showreplypath", "true");
+                showMMSReplyChoicePref.setSummary("Show MMS Reply Choice");
+            }else {
+                SystemProperties.set("persist.sys.mms.showreplypath", "false");
+                showMMSReplyChoicePref.setSummary("NO MMS Reply Choice");
             }
         }
         return super.onPreferenceTreeClick(preferenceScreen, preference);
