@@ -500,6 +500,29 @@ static int sdcard_mounted()
 	return 0;
 }
 
+static void check_sdcard_volume()
+{
+	struct statfs diskInfo;
+	char cmd[MAX_NAME_LEN];
+	unsigned int ret;
+
+	if(!strncmp(current_log_path, external_storage, strlen(external_storage))) {
+		if( statfs(external_path, &diskInfo) < 0 ) {
+			err_log("statfs return err!");
+			return;
+		}
+		unsigned int blocksize = diskInfo.f_bsize;
+		unsigned int availabledisk = diskInfo.f_bavail * blocksize;
+		ret = availabledisk >> 20;
+		if(ret < 50) {
+			err_log("sdcard available %dM", ret);
+			sprintf(cmd, "%s", "am start -n com.spreadtrum.android.eng/.SlogUILowStorage");
+			system(cmd);
+			sleep(300);
+		}
+	}
+}
+
 static int recv_socket(int sockfd, void* buffer, int size)
 {
 	int received = 0, result;
@@ -982,6 +1005,9 @@ int main(int argc, char *argv[])
 
 	handle_low_power();
 
-	while(1) sleep(10);
+	while(1) {
+		sleep(10);
+		check_sdcard_volume();
+	}
 	return 0;
 }
