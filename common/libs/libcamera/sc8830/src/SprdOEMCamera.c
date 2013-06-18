@@ -973,6 +973,7 @@ int camera_local_init(void)
 	pthread_mutex_init(&g_cxt->af_cb_mutex, NULL);
 	pthread_mutex_init(&g_cxt->cancel_mutex, NULL);
 	pthread_mutex_init(&g_cxt->take_raw_mutex, NULL);
+	pthread_mutex_init(&g_cxt->main_prev_mutex, NULL);
 	ret = camera_sync_var_init(g_cxt);
 
 	return ret;
@@ -993,6 +994,7 @@ int camera_local_deinit(void)
 	pthread_mutex_destroy (&g_cxt->data_mutex);
 	pthread_mutex_destroy (&g_cxt->cb_mutex);
 	pthread_mutex_destroy (&g_cxt->take_raw_mutex);
+	pthread_mutex_destroy (&g_cxt->main_prev_mutex);
 	cmr_msg_queue_destroy(g_cxt->msg_queue_handle);
 	g_cxt->msg_queue_handle = 0;
 
@@ -1384,6 +1386,8 @@ camera_ret_code_type camera_start(camera_cb_f_type callback,
 int camera_before_set_internal(enum restart_mode re_mode)
 {
 	int                      ret = CAMERA_SUCCESS;
+	uint32_t                 sec = 0;
+	uint32_t                 usec = 0;
 
 	CMR_LOGV("restart mode %d", re_mode);
 	if (re_mode >= RESTART_MAX) {
@@ -1400,6 +1404,8 @@ int camera_before_set_internal(enum restart_mode re_mode)
 		}
 		break;
 	case RESTART_LIGHTLY:
+		ret = cmr_v4l2_get_cap_time(&sec, &usec);
+		g_cxt->restart_timestamp = sec * 1000000000LL + usec * 1000;
 		break;
 	case RESTART_ZOOM:
 		if ((CAMERA_ZSL_MODE == g_cxt->cap_mode)
@@ -1478,6 +1484,10 @@ int camera_after_set_internal(enum restart_mode re_mode)
 		}*/
 		break;
 	case RESTART_LIGHTLY:
+		pthread_mutex_lock(&g_cxt->main_prev_mutex);
+		g_cxt->restart_skip_cnt=0;
+		g_cxt->restart_skip_en = 1;
+		pthread_mutex_unlock(&g_cxt->main_prev_mutex);
 		break;
 	case RESTART_ZOOM:
 
@@ -1656,6 +1666,8 @@ int camera_stop_capture_raw_internal(void)
 	g_cxt->chn_0_status       = CHN_IDLE;
 
 	g_cxt->pre_frm_cnt = 0;
+	g_cxt->restart_skip_cnt = 0;
+	g_cxt->restart_skip_en = 0;
 	if (CMR_IDLE == g_cxt->preview_status) {
 		ret = cmr_v4l2_cap_stop();
 		g_cxt->v4l2_cxt.v4l2_state = V4L2_IDLE;
@@ -1700,6 +1712,9 @@ int camera_stop_preview_internal(void)
 	CMR_PRINT_TIME;
 
 	g_cxt->pre_frm_cnt = 0;
+	g_cxt->restart_skip_cnt = 0;
+	g_cxt->restart_skip_en = 0;
+
 	if (V4L2_PREVIEW == g_cxt->v4l2_cxt.v4l2_state) {
 		ret = cmr_v4l2_cap_stop();
 		g_cxt->v4l2_cxt.v4l2_state = V4L2_IDLE;
@@ -3480,6 +3495,8 @@ int camera_preview_init(int format_mode)
 	g_cxt->skip_mode      = IMG_SKIP_HW;
 	g_cxt->skip_num       = g_cxt->sn_cxt.sensor_info->preview_skip_num;
 	g_cxt->pre_frm_cnt    = 0;
+	g_cxt->restart_skip_cnt = 0;
+	g_cxt->restart_skip_en = 0;
 
 	v4l2_cfg.cfg.need_isp = 0;
 	v4l2_cfg.cfg.need_binning = 0;
@@ -4338,12 +4355,38 @@ int camera_v4l2_preview_handle(struct frm_info *data)
 	}
 
 	g_cxt->pre_frm_cnt++;
+
 	if (IMG_SKIP_SW == g_cxt->skip_mode) {
 		if (g_cxt->pre_frm_cnt <= g_cxt->skip_num) {
 			CMR_LOGV("Ignore this frame, preview cnt %d, total skip num %d",
 				g_cxt->pre_frm_cnt, g_cxt->skip_num);
 			ret = cmr_v4l2_free_frame(data->channel_id, data->frame_id);
 			return ret;
+		}
+	}
+
+	if ((IMG_SKIP_SW == g_cxt->skip_mode) && g_cxt->restart_skip_en) {
+		int64_t timestamp = data->sec * 1000000000LL + data->usec * 1000;
+		CMR_LOGV("Restart skip: frame time = %lld, restart time=%lld \n", timestamp, g_cxt->restart_timestamp);
+		if (timestamp > g_cxt->restart_timestamp) {
+			pthread_mutex_lock(&g_cxt->main_prev_mutex);
+			g_cxt->restart_skip_cnt++;
+			pthread_mutex_unlock(&g_cxt->main_prev_mutex);
+
+			if (g_cxt->restart_skip_cnt <= g_cxt->skip_num) {
+				CMR_LOGV("Restart skip: Ignore this frame, preview cnt %d, total skip num %d",
+					g_cxt->restart_skip_cnt, g_cxt->skip_num);
+				ret = cmr_v4l2_free_frame(data->channel_id, data->frame_id);
+				return ret;
+			} else {
+				pthread_mutex_lock(&g_cxt->main_prev_mutex);
+				g_cxt->restart_skip_cnt = 0;
+				g_cxt->restart_skip_en  = 0;
+				pthread_mutex_unlock(&g_cxt->main_prev_mutex);
+				CMR_LOGV("Restart skip: end \n");
+			}
+		} else {
+			CMR_LOGV("Restart skip: frame is before restart, no need to skip this frame \n");
 		}
 	}
 

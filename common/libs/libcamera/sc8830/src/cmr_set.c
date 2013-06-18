@@ -255,7 +255,7 @@ int camera_set_brightness(uint32_t brightness, uint32_t *skip_mode, uint32_t *sk
 		camera_param_to_isp(ISP_CTRL_BRIGHTNESS, brightness, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_BRIGHTNESS, (void *)&isp_param);
 	} else {
-		*skip_mode = IMG_SKIP_HW;
+		*skip_mode = IMG_SKIP_SW;
 		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_BRIGHTNESS, brightness);
 	}
@@ -276,7 +276,7 @@ int camera_set_contrast(uint32_t contrast, uint32_t *skip_mode, uint32_t *skip_n
 		camera_param_to_isp(ISP_CTRL_CONTRAST, contrast, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_CONTRAST, (void *)&isp_param);
 	} else {
-		*skip_mode = IMG_SKIP_HW;
+		*skip_mode = IMG_SKIP_SW;
 		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_CONTRAST, contrast);
 	}
@@ -297,10 +297,12 @@ int camera_set_saturation(uint32_t saturation, uint32_t *skip_mode, uint32_t *sk
 		camera_param_to_isp(ISP_CTRL_SATURATION, saturation, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_SATURATION, (void *)&isp_param);
 	} else {
-		*skip_mode = IMG_SKIP_HW;
+		*skip_mode = IMG_SKIP_SW;
 		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_SATURATION, saturation);
 	}
+
+	CMR_LOGI ("skip_mode=%d, skip_num=%d", *skip_mode, *skip_num);
 
 	return ret;
 }
@@ -318,7 +320,7 @@ int camera_set_sharpness(uint32_t sharpness, uint32_t *skip_mode, uint32_t *skip
 /*		camera_param_to_isp(ISP_CTRL_SATURATION, sharpness, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_SATURATION, (void *)&isp_param);*/
 	} else {
-		*skip_mode = IMG_SKIP_HW;
+		*skip_mode = IMG_SKIP_SW;
 		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_SHARPNESS, sharpness);
 	}
@@ -339,7 +341,7 @@ int camera_set_effect(uint32_t effect, uint32_t *skip_mode, uint32_t *skip_num)
 		camera_param_to_isp(ISP_CTRL_SPECIAL_EFFECT, effect, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_SPECIAL_EFFECT, (void *)&isp_param);
 	} else {
-		*skip_mode = IMG_SKIP_HW;
+		*skip_mode = IMG_SKIP_SW;
 		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_IMAGE_EFFECT, effect);
 	}
@@ -360,7 +362,7 @@ int camera_set_ev(uint32_t expo_compen, uint32_t *skip_mode, uint32_t *skip_num)
 		camera_param_to_isp(ISP_CTRL_EV, expo_compen, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_EV, (void *)&isp_param);
 	} else {
-		*skip_mode = IMG_SKIP_HW;
+		*skip_mode = IMG_SKIP_SW;
 		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_EXPOSURE_COMPENSATION, expo_compen);
 	}
@@ -381,7 +383,7 @@ int camera_set_wb(uint32_t wb_mode, uint32_t *skip_mode, uint32_t *skip_num)
 		camera_param_to_isp(ISP_CTRL_AWB_MODE, wb_mode, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_AWB_MODE, (void *)&isp_param);
 	} else {
-		*skip_mode = IMG_SKIP_HW;
+		*skip_mode = IMG_SKIP_SW;
 		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_SET_WB_MODE, wb_mode);
 	}
@@ -399,7 +401,7 @@ int camera_set_scene(uint32_t scene_mode, uint32_t *skip_mode, uint32_t *skip_nu
 		*skip_mode = IMG_SKIP_SW;
 		*skip_num  = 0;
 	} else {
-		*skip_mode = IMG_SKIP_HW;
+		*skip_mode = IMG_SKIP_SW;
 		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_PREVIEWMODE, scene_mode);
 	}
@@ -428,7 +430,7 @@ int camera_set_flicker(uint32_t flicker_mode, uint32_t *skip_mode, uint32_t *ski
 		camera_param_to_isp(ISP_CTRL_FLICKER, flicker_mode, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_FLICKER, (void *)&isp_param);
 	} else {
-		*skip_mode = IMG_SKIP_HW;
+		*skip_mode = IMG_SKIP_SW;
 		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_ANTI_BANDING_FLICKER, flicker_mode);
 	}
@@ -449,7 +451,7 @@ int camera_set_iso(uint32_t iso, uint32_t *skip_mode, uint32_t *skip_num)
 		camera_param_to_isp(ISP_CTRL_ISO, iso, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_ISO, (void *)&isp_param);
 	} else {
-		*skip_mode = IMG_SKIP_HW;
+		*skip_mode = IMG_SKIP_SW;
 		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_ISO, iso);
 	}
@@ -481,7 +483,7 @@ int camera_set_video_mode(uint32_t mode, uint32_t *skip_mode, uint32_t *skip_num
 	int                      ret = CAMERA_SUCCESS;
 
 	CMR_LOGI("preview mode %d", mode);
-	*skip_mode = IMG_SKIP_HW;
+	*skip_mode = IMG_SKIP_SW;
 	*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
 	ret = Sensor_Ioctl(SENSOR_IOCTL_VIDEO_MODE, mode);
 
@@ -906,7 +908,7 @@ int camera_set_ctrl(camera_parm_type id,
 					ret = (*before_set)(RESTART_LIGHTLY);
 				CMR_RTN_IF_ERR(ret);
 			}
-			skip_mode = IMG_SKIP_HW;
+			skip_mode = IMG_SKIP_SW;
 			if(SCENE_MODE_NIGHT == cxt->cmr_set.scene_mode){
 				skip_number = 3;
 			} else {
