@@ -30,6 +30,7 @@
 #include <cutils/logprint.h>
 #include <cutils/event_tag_map.h>
 #include <cutils/properties.h>
+#include "private/android_filesystem_config.h"
 
 #include "slog.h"
 
@@ -319,11 +320,18 @@ void *notify_log_handler(void *arg)
 			info = info->next;
 			continue;
 		}
-		ret = mkdir(info->content, S_IRWXU | S_IRWXG | S_IRWXO);
+		ret = mkdir(info->content, S_IRWXU | S_IRWXG | S_IXOTH);
 		if (-1 == ret && (errno != EEXIST)) {
 			err_log("mkdir %s failed.", info->content);
 			exit(0);
 		}
+
+		ret = chown(info->content, AID_SYSTEM, AID_SYSTEM);
+		if (ret < 0) {
+			err_log("chown failed.");
+			exit(0);
+		}
+
 		debug_log("notify add watch %s\n", info->content);
 		wd = inotify_add_watch(notify_fd, info->content, IN_MODIFY);
 		if(wd == -1) {
