@@ -31,6 +31,7 @@ typedef struct
 }_RAMNV_CTL;
 
 static _RAMNV_CTL ramNvCtl;
+extern BOOLEAN is_cali_mode;
 
 
 //----------------------------
@@ -195,6 +196,7 @@ BOOLEAN backupData(uint32 id)
 
 	getMutex();
 
+    NVITEM_PRINT("NVITEM:backupData is_cali_mode 0x%x\n",is_cali_mode);
 	memcpy(ramNvCtl.part[id].backup.diskbuf, ramNvCtl.part[id].fromChannel.diskbuf, RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum);
 	for(i = 0; i < RAMNV_DIRTYTABLE_MAXSIZE; i++)
 	{
@@ -202,7 +204,14 @@ BOOLEAN backupData(uint32 id)
 	}
 
 	putMutex();
-	giveEvent();
+	if(is_cali_mode)
+	{
+	    saveToDisk();
+	}
+	else
+	{
+	    giveEvent();
+	}
 
 //---for test---
 //	__getData(id);
