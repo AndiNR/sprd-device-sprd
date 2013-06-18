@@ -575,7 +575,10 @@ PUBLIC void mmidm_calc_b64_cred(char* creddata, unsigned long cbLength)
     }
     outputdata = xppMalloc(cbLength * 2 + 4);
     SCI_TRACE_LOW("SCI_ALLOCA %d",cbLength * 2 + 4)  ;
-   if(outputdata==PNULL)  SCI_TRACE_LOW("SCI_ALLOCA NULL")  ;
+   if(outputdata==PNULL){
+	SCI_TRACE_LOW("SCI_ALLOCA NULL")  ;
+	return;
+    }
     cbCopied = mmidm_base64Encode ((unsigned char*)outputdata, cbDigestSize,
                      (unsigned char*) creddata,
                      &cbLength, &cbOffset, 1, (unsigned char *)abSave);
