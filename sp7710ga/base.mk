@@ -58,6 +58,7 @@ PRODUCT_PACKAGES += \
 	mcom_monitor \
 	nvitemd \
 	charge \
+	vcharged7 \
 	poweroff_alarm \
 	mplayer \
 	sqlite3 \

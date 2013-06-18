@@ -150,6 +150,11 @@ service engpcclientt /system/bin/engpcclient -t 1
     group system radio shell
     disabled
     oneshot
+service vcharged7 /bin/vcharged7
+    class core
+    user system
+    group system shell
+    oneshot
 
 service engservicew /system/bin/engservice -t 0
     socket engw stream 660 system system

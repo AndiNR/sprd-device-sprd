@@ -22,7 +22,7 @@
 #include <errno.h>
 
 #define _BUF_SIZE 100
-#define VBPIPE_PATH "/dev/vbpipe3"
+//#define VBPIPE_PATH "/dev/vbpipe3"
 #define CHR_DEV_NAME "/dev/battery_capcity_dev"
 char buf[_BUF_SIZE] = {0};
 int uevent_fd = -1;
@@ -48,7 +48,6 @@ void *charge_record_capacity_thread(void *cookie)
                 write(fp0,&test,1);
                 fsync(fp0);
                 lseek(fp0,0,SEEK_SET);
-		sleep(3);
         }
         close(fp0);
         close(fd);
@@ -60,7 +59,7 @@ void *charge_record_capacity_thread(void *cookie)
 int
 main(int argc, char **argv) {
     int ret = -1;
-    int vbpipe_fd = -1;
+    //int vbpipe_fd = -1;
     int pre_usb_online = -1;
     int usb_online, ac_online, need_notify=0, need_start=0;
     int pre_ac_online = -1;
@@ -75,7 +74,7 @@ main(int argc, char **argv) {
     }
 
 reopen_channel:
-	vbpipe_fd = -1;
+	/*vbpipe_fd = -1;
     while(vbpipe_fd < 0){
         vbpipe_fd = open(VBPIPE_PATH, O_RDWR);
         if(vbpipe_fd < 0){
@@ -84,11 +83,12 @@ reopen_channel:
         }
     }
     LOGD("open vcharge channel success vbpipe_fd=%d\n",vbpipe_fd);
+	*/
     pre_usb_online = read_usb();
     pre_ac_online = read_ac();
-    LOGD("inital status usb: %d ac: %d\n", pre_usb_online, pre_ac_online);
+    //LOGD("inital status usb: %d ac: %d\n", pre_usb_online, pre_ac_online);
     if(pre_usb_online || pre_ac_online){
-        ret = vcharge_write(vbpipe_fd, CMD_START, NULL);
+        //ret = vcharge_write(vbpipe_fd, CMD_START, NULL);
 		get_nv();
         LOGD("vcharge start\n");
         if(ret <= 0){
@@ -96,14 +96,14 @@ reopen_channel:
             goto err_handle;
         }
     }
-    ret = battery_calibration(vbpipe_fd);
-    if(ret < 0){
-        LOGE("update adc calibration failed\n");
-        goto err_handle;
-    }
+    //ret = battery_calibration(vbpipe_fd);
+    //if(ret < 0){
+    //    LOGE("update adc calibration failed\n");
+    //    goto err_handle;
+    //}
         int ret_thread = 0;
         pthread_t t_1;
-	ret_thread = pthread_create(&t_1, NULL, charge_record_capacity_thread, NULL);
+    	ret_thread = pthread_create(&t_1, NULL, charge_record_capacity_thread, NULL);
         if(ret_thread){
                 return -1;
         }
@@ -132,12 +132,12 @@ reopen_channel:
         if(need_notify){
             need_notify = 0;
 			if(need_start){
-				ret = vcharge_write(vbpipe_fd, CMD_START, NULL);
+				//ret = vcharge_write(vbpipe_fd, CMD_START, NULL);
 				get_nv();
                 LOGD("vcharge start\n");
 			}
 			else{
-				ret = vcharge_write(vbpipe_fd, CMD_STOP, NULL);
+				//ret = vcharge_write(vbpipe_fd, CMD_STOP, NULL);
 				write_nv();
                 LOGD("vcharge stop\n");
 			}
@@ -149,7 +149,7 @@ reopen_channel:
     }
 
 err_handle:
-    close(vbpipe_fd);
+    //close(vbpipe_fd);
     sleep(10);
     goto reopen_channel;
 
@@ -257,7 +257,7 @@ int read_ac(void)
     }
     return 0;
 }
-
+/*
 int vcharge_write(int fd, int32_t cmd_type, int32_t * data)
 {
     struct vcharge_cmd cmd_data;
@@ -282,7 +282,7 @@ int vcharge_read(int fd, char * data_buf, int32_t cnt)
     ret = read(fd, data_buf, cnt);
     return ret;
 }
-
+*/
 #define NV_FILE "/data/.battery_nv"
 #define BATTERY_NV_NODE "/sys/class/power_supply/battery/hw_switch_point"
 void get_nv(void)
@@ -353,7 +353,7 @@ void write_nv(void)
 	close(sys_fd);
 	close(file_fd);
 }
-
+/*
 int battery_calibration(int vbpipe_fd)
 {
     int ret = -1;
@@ -388,4 +388,4 @@ int battery_calibration(int vbpipe_fd)
     }while(1);
     LOGD("update adc calibration value success\n");
     return 0;
-}
+}*/

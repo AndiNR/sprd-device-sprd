@@ -307,6 +307,8 @@ on boot
     chown system system /sys/kernel/ipv4/tcp_rmem_def
     chown system system /sys/kernel/ipv4/tcp_rmem_max
     chown root radio /proc/cmdline
+    chown system system /dev/battery_capcity_dev
+    chown system system /data/battery_capcity
     chown system system /dev/vbpipe3
     chown system system /sys/class/power_supply/usb/online
     chown system system /sys/class/power_supply/ac/online

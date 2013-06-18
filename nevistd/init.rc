@@ -95,7 +95,14 @@ loglevel 3
     write /dev/cpuctl/cpu.shares 1024
     write /dev/cpuctl/cpu.rt_runtime_us 950000
     write /dev/cpuctl/cpu.rt_period_us 1000000
-
+    chown system system /dev/battery_capcity_dev
+    chown system system /data/battery_capcity
+    chown system system /dev/vbpipe3
+    chown system system /sys/class/power_supply/usb/online
+    chown system system /sys/class/power_supply/ac/online
+    chown system system /sys/class/power_supply/battery/battery_0
+    chown system system /sys/class/power_supply/battery/battery_1
+    chown system system /sys/class/power_supply/battery/hw_switch_point
     mkdir /dev/cpuctl/apps
     chown system system /dev/cpuctl/apps/tasks
     chmod 0666 /dev/cpuctl/apps/tasks
