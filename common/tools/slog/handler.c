@@ -30,6 +30,7 @@
 #include <cutils/logprint.h>
 #include <cutils/event_tag_map.h>
 #include <cutils/properties.h>
+#include "private/android_filesystem_config.h"
 
 #include "slog.h"
 
@@ -319,11 +320,18 @@ void *notify_log_handler(void *arg)
 			info = info->next;
 			continue;
 		}
-		ret = mkdir(info->content, S_IRWXU | S_IRWXG | S_IRWXO);
+		ret = mkdir(info->content, S_IRWXU | S_IRWXG | S_IXOTH);
 		if (-1 == ret && (errno != EEXIST)) {
 			err_log("mkdir %s failed.", info->content);
 			exit(0);
 		}
+
+		ret = chown(info->content, AID_SYSTEM, AID_SYSTEM);
+		if (ret < 0) {
+			err_log("chown failed.");
+			exit(0);
+		}
+
 		debug_log("notify add watch %s\n", info->content);
 		wd = inotify_add_watch(notify_fd, info->content, IN_MODIFY);
 		if(wd == -1) {
@@ -939,7 +947,7 @@ void *modem_log_handler(void *arg)
 	}
 
 	free(ring_buffer_table);
-	ring_buffer_table == NULL;
+	ring_buffer_table = NULL;
 
 	/* close all open fds */
 	if(info->fd_device)
@@ -980,9 +988,6 @@ void *stream_log_handler(void *arg)
 			open_device(info, KERNEL_LOG_SOURCE);
 			info->fd_out = gen_outfd(info);
 			add_timestamp(info);
-		} else if(!strncmp(info->name, "modem", 5)) {
-			info = info->next;
-			continue;
 		} else if( !strncmp(info->name, "main", 4) || !strncmp(info->name, "system", 6) || !strncmp(info->name, "radio", 5) ){
 			sprintf(devname, "%s/%s", "/dev/log", info->name);
 			open_device(info, devname);
@@ -1065,15 +1070,13 @@ void *stream_log_handler(void *arg)
 
 				info->outbytecount += ret;
 				log_size_handler(info);
-			} else if(!strncmp(info->name, "modem", 5)) {
-				info = info->next;
-				continue;
 			} else if(!strncmp(info->name, "main", 4) || !strncmp(info->name, "system", 6)
 				|| !strncmp(info->name, "radio", 5) ) {
 				ret = read(info->fd_device, buf, LOGGER_ENTRY_MAX_LEN);
 				if(ret <= 0) {
 					err_log("read %s log failed!", info->name);
 					close(info->fd_device);
+					sleep(1);
 					sprintf(devname, "%s/%s", "/dev/log", info->name);
 					open_device(info, devname);
 					info = info->next;
@@ -1089,6 +1092,8 @@ void *stream_log_handler(void *arg)
 					close(info->fd_out);
 					info->fd_out = gen_outfd(info);
 					add_timestamp(info);
+					info = info->next;
+					continue;
 				}
 
 				info->outbytecount += ret;
