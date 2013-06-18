@@ -744,7 +744,7 @@ int eng_linuxcmd_chargertest(char *req, char *rsp)
 			status = atoi(ptr);
 			ENG_LOG("%s: status=%d\n",__FUNCTION__, status);
 			if(status==1) {
-				ENG_LOG("%s: Create %s",__FUNCTION__,ENG_CHARGERTEST_FILE); 
+				ENG_LOG("%s: Create %s",__FUNCTION__,ENG_CHARGERTEST_FILE);
 				fd=open(ENG_CHARGERTEST_FILE, O_RDWR|O_CREAT|O_TRUNC);
 				if(fd >= 0)
 					close(fd);
@@ -752,8 +752,12 @@ int eng_linuxcmd_chargertest(char *req, char *rsp)
 
 			} else if(status==0){
 				ENG_LOG("%s: Delete %s",__FUNCTION__,ENG_CHARGERTEST_FILE); 
-				remove(ENG_CHARGERTEST_FILE);
-				sprintf(rsp, "%s\r\n", SPRDENG_OK);
+				if (remove(ENG_CHARGERTEST_FILE) >= 0) {
+					sprintf(rsp, "%s\r\n", SPRDENG_OK);
+				} else {
+					ENG_LOG(" remove %s fail,errno = %d",ENG_CHARGERTEST_FILE,errno);
+					sprintf(rsp, "%s\r\n", SPRDENG_ERROR);
+				}
 			} else {
 				sprintf(rsp, "%s\r\n", SPRDENG_ERROR);
 			}
