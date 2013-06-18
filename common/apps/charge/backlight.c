@@ -150,6 +150,7 @@ void backlight_init(void)
 		if(ret < 0) {
 			SPRD_DBG("%s: read %s fail",__func__, LCD_BACKLIGHT_MAX_DEV);
 		}
+		close(fd);
 	}
 
 #ifdef K_BACKLIGHT
@@ -163,6 +164,7 @@ void backlight_init(void)
 		if(ret < 0) {
 			SPRD_DBG("%s: read %s fail",__func__, KEY_BACKLIGHT_MAX_DEV);
 		}
+		close(fd);
 	}
 #endif
 
