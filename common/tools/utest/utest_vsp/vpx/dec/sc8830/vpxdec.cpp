@@ -487,7 +487,7 @@ int main(int argc, char **argv)
 	}
 #endif
 	
-	format = 5;
+	format = 4;
 
 	
 	/* bs buffer */
