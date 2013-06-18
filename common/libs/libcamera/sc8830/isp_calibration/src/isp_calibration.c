@@ -533,7 +533,7 @@ int32_t ISP_Cali_LNCTaleCalc(struct isp_addr_t img_addr, uint32_t bayer_pttn, st
 
 	_isp_Cali_LNCResAlloc((void*)&cali_in_param, (void*)&cali_info_param, (void*)&cali_gain_param);
 	_isp_Cali_LNC_Calc((void*)&cali_in_param, (void*)&cali_info_param);
-	_isp_Cali_LNC_GainCalc(1024, 8, bayer_pttn, 256, 256, 256, (void*)&cali_info_param, (void*)&cali_gain_param);
+	_isp_Cali_LNC_GainCalc(1024, 10, bayer_pttn, 256, 256, 256, (void*)&cali_info_param, (void*)&cali_gain_param);
 	_isp_Cali_LNCTabMerge(&cali_gain_param, cali_info_param.num, lnc_tab);
 	_isp_Cali_LNCResFree(&cali_info_param, &cali_gain_param);
 

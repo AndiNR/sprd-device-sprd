@@ -419,6 +419,7 @@ static struct sensor_raw_info s_ov8830_mipi_raw_info={
 	&s_ov8830_version_info,
 	&s_ov8830_tune_info,
 	&s_ov8830_fix_info,
+	&s_ov8830_cali_info,
 };
 
 struct sensor_raw_info* s_ov8830_mipi_raw_info_ptr=&s_ov8830_mipi_raw_info;

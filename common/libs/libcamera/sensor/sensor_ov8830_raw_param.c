@@ -898,6 +898,8 @@ static const uint16_t s_ov8830_aeg_11[]=
 
 static struct sensor_raw_tune_info s_ov8830_tune_info;
 
+static struct sensor_raw_cali_info s_ov8830_cali_info;
+
 static struct sensor_raw_fix_info s_ov8830_fix_info={
 	{
 		(uint8_t*)s_ov8830_ae_weight_customer,

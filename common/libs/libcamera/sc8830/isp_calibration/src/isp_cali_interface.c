@@ -125,7 +125,7 @@ int32_t ISP_Cali_GetLensTabs(struct isp_addr_t img_addr,
 		goto LensTabs_Exit;
 	}
 
-	if (0 != type) {//random sample calibration
+	if (0 != type) {/*random sample calibration*/
 		lnc_tmp_buf = (uint8_t*)malloc(length);
 		if (!lnc_tmp_buf) {
 			ISP_CALI_LOG("ISP_Cali_GetLensTabs: malloc failed\n");

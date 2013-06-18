@@ -1428,6 +1428,15 @@ int camera_isp_alg_done(void *data)
 	return 0;
 }
 
+int camera_isp_af_stat(void* data)
+{
+	struct camera_context    *cxt = camera_get_cxt();
+
+	CMR_LOGV("isp get af stat.\n");
+
+	return 0;
+}
+
 int camera_set_flashdevice(uint32_t param)
 {
 	int                      ret = 0;
