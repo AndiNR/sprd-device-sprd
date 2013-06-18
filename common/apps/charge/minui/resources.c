@@ -103,7 +103,6 @@ int res_create_surface(const char* name, gr_surface* pSurface) {
            (channels == 4 && color_type == PNG_COLOR_TYPE_RGBA) ||
            (channels == 1 && color_type == PNG_COLOR_TYPE_PALETTE)))) {
         return -7;
-        goto exit;
     }
 
     surface = malloc(sizeof(GGLSurface) + pixelSize);
