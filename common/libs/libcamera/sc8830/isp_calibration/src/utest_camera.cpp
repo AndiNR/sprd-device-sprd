@@ -329,7 +329,7 @@ static int32_t utest_dcam_save_raw_data(void)
 	}
 
 	fp = fopen(file_name, "wb");
-	if (fp >= 0) {
+	if (fp != NULL) {
 		fwrite((void *)cmr_cxt_ptr->capture_raw_vir_addr , 1, cmr_cxt_ptr->capture_width
 		* cmr_cxt_ptr->capture_height * 2, fp);
 		fclose(fp);
@@ -350,7 +350,9 @@ static int32_t utest_dcam_awb(uint8_t sub_cmd)
 	struct isp_bayer_ptn_stat_t stat_param;
 	struct isp_addr_t dst_addr = {0, 0, 0};
 	struct isp_addr_t tmp_addr = {0, 0, 0};
+#if 0
 	uint32_t *dst_temp_addr = NULL;
+#endif
 	uint32_t *img_tmp_addr = NULL;
 	uint16_t *len_tab_addr = NULL;
 	uint32_t len_tab_size = 0;
@@ -459,9 +461,11 @@ static int32_t utest_dcam_awb(uint8_t sub_cmd)
 			goto awb_exit;
 
 awb_exit:
+#if 0
 	if (dst_temp_addr) {
 		free(dst_temp_addr);
 	}
+#endif
 
 	if (img_tmp_addr) {
 		free(img_tmp_addr);
@@ -484,7 +488,9 @@ static int32_t utest_dcam_flashlight(uint8_t sub_cmd)
 	struct isp_size_t img_size = {0, 0};
 	struct isp_bayer_ptn_stat_t stat_param;
 	struct isp_addr_t dst_addr = {0, 0, 0};
+#if 0
 	uint32_t *dst_temp_addr = NULL;
+#endif
 	char file_name[128] = {0};
 	FILE *fp = NULL;
 	int32_t rtn = 0;
@@ -544,7 +550,7 @@ static int32_t utest_dcam_flashlight(uint8_t sub_cmd)
 	}
 
 	fp = fopen(file_name, "wb");
-	if (fp >= 0) {
+	if (fp != NULL) {
 		fwrite((void *)(&stat_param), 1, sizeof(stat_param), fp);
 		fclose(fp);
 	} else {
@@ -557,10 +563,11 @@ static int32_t utest_dcam_flashlight(uint8_t sub_cmd)
 			goto flashlight_exit;
 
 flashlight_exit:
-
+#if 0
 	if (dst_temp_addr) {
 		free(dst_temp_addr);
 	}
+#endif
 	return rtn;
 }
 
@@ -572,7 +579,9 @@ static int32_t utest_dcam_lsc(uint8_t sub_cmd)
 	struct isp_rect_t rect = {0, 0, 0, 0};
 	struct isp_size_t img_size = {0, 0};
 	struct isp_addr_t dst_addr = {0, 0, 0};
+#if 0
 	uint32_t *dst_temp_addr = NULL;
+#endif
 	uint32_t *len_tab_addr = NULL;
 	uint32_t len_tab_size = 0;
 	int32_t rtn = 0;
@@ -640,7 +649,7 @@ static int32_t utest_dcam_lsc(uint8_t sub_cmd)
 	}
 
 	fp = fopen(file_name, "wb");
-	if (fp >= 0) {
+	if (fp != NULL) {
 		fwrite(len_tab_addr, 1, len_tab_size, fp);
 		fclose(fp);
 	} else {
@@ -655,10 +664,10 @@ static int32_t utest_dcam_lsc(uint8_t sub_cmd)
 lsc_exit:
 	if (len_tab_addr)
 		free(len_tab_addr);
-
+#if 0
 	if (dst_temp_addr)
 		free(dst_temp_addr);
-
+#endif
 	return rtn;
 }
 
