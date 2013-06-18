@@ -442,19 +442,20 @@ int cmr_v4l2_cap_resume(uint32_t channel_id, uint32_t skip_number, uint32_t deci
 	return ret;
 }
 
-int cmr_v4l2_cap_pause(uint32_t channel_id)
+int cmr_v4l2_cap_pause(uint32_t channel_id, uint32_t reconfig_flag)
 {
 	int                      ret = 0;
 	struct v4l2_streamparm   stream_parm;
 	
 	CMR_CHECK_FD;
 
-	CMR_LOGV("channel_id %d", channel_id);
+	CMR_LOGV("channel_id %d,reconfig_flag %d.", channel_id,reconfig_flag);
 
 	stream_parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	stream_parm.parm.capture.capability = PATH_PAUSE;
 
 	stream_parm.parm.capture.reserved[0] = channel_id;
+	stream_parm.parm.capture.reserved[1] = reconfig_flag;
 	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
 	return ret;
 }

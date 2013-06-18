@@ -1402,8 +1402,11 @@ int camera_before_set_internal(enum restart_mode re_mode)
 	case RESTART_LIGHTLY:
 		break;
 	case RESTART_ZOOM:
-		ret = cmr_v4l2_cap_pause(CHN_2);
-		SET_CHN_IDLE(CHN_2);
+		if ((CAMERA_ZSL_MODE == g_cxt->cap_mode)
+			|| (CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode)) {
+			ret = cmr_v4l2_cap_pause(CHN_2, 1);
+			SET_CHN_IDLE(CHN_2);
+		}
 		break;
 	default:
 		break;
@@ -1483,18 +1486,20 @@ int camera_after_set_internal(enum restart_mode re_mode)
 			CMR_LOGE("Failed to init preview when preview");
 			return -CAMERA_FAILED;
 		}
+		if ((CAMERA_ZSL_MODE == g_cxt->cap_mode)
+			|| (CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode)) {
+			ret = camera_capture_init();
+			if (ret) {
+				CMR_LOGE("Failed to init capture when preview");
+				return -CAMERA_FAILED;
+			}
 
-		ret = camera_capture_init();
-		if (ret) {
-			CMR_LOGE("Failed to init capture when preview");
-			return -CAMERA_FAILED;
+			ret = cmr_v4l2_cap_resume(CHN_2,
+					skip_number_l,
+					g_cxt->v4l2_cxt.chn_frm_deci[CHN_2]);
+
+			SET_CHN_BUSY(CHN_2);
 		}
-
-		ret = cmr_v4l2_cap_resume(CHN_2,
-				skip_number_l,
-				g_cxt->v4l2_cxt.chn_frm_deci[CHN_2]);
-
-		SET_CHN_BUSY(CHN_2);
 		break;
 	default:
 		CMR_LOGE("Wrong re-start mode");
@@ -2010,9 +2015,6 @@ int camera_set_take_picture(int set_val)
 {
 	pthread_mutex_lock(&g_cxt->take_mutex);
 	g_cxt->is_take_picture = set_val;
-	if (TAKE_PICTURE_NEEDED != set_val) {
-		g_cxt->cap_mode = CAMERA_NORMAL_MODE;
-	}
 	g_cxt->hdr_cnt = 0;
 	pthread_mutex_unlock(&g_cxt->take_mutex);
 
@@ -3023,6 +3025,15 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 			} else {
 				thumb_exist = 0;
 				CMR_LOGI("dont need thumbnail, %d", ret);
+			}
+		}
+		if ((CAMERA_ZSL_MODE == g_cxt->cap_mode) ||
+			(CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode)) {
+			if (IS_CHN_IDLE(CHN_2)) {
+				ret = cmr_v4l2_cap_resume(CHN_2,
+				0,
+				g_cxt->v4l2_cxt.chn_frm_deci[CHN_2]);
+				SET_CHN_BUSY(CHN_2);
 			}
 		}
 #if 0
@@ -4437,7 +4448,7 @@ int camera_capture_yuv_process(struct frm_info *data)
 
 	if (!NO_SCALING) {
 		if (IS_CHN_BUSY(CHN_2)) {
-			ret = cmr_v4l2_cap_pause(CHN_2);
+			ret = cmr_v4l2_cap_pause(CHN_2,0);
 			SET_CHN_IDLE(CHN_2);
 		}
 	}
@@ -5366,7 +5377,7 @@ static int camera_convert_to_thumb(void)
 	int                      ret = CAMERA_SUCCESS;
 
 	if (IS_CHN_BUSY(CHN_2)) {
-		ret = cmr_v4l2_cap_pause(CHN_2);
+		ret = cmr_v4l2_cap_pause(CHN_2,0);
 		SET_CHN_IDLE(CHN_2);
 	}
 
