@@ -470,8 +470,15 @@ static void create_pts(int i)
     extern char *ptsname();
     int fdm;
     char *tpath = malloc(sizeof(vhb.lpath) + sizeof(vhb.vhc[0].vname) + 2 + sizeof(lprogram_name) + 1);
+    if(tpath == NULL)
+        return;
 
     fdm = open("/dev/ptmx", O_RDWR);
+    if(fdm < 0){
+        free(tpath);
+        return;
+    }
+
     grantpt(fdm);
     unlockpt(fdm);
     slavename = ptsname(fdm);
@@ -630,7 +637,8 @@ int main(int argc, char *argv[])
                 vhb.observer = observer;
             } break;
             case 'Y': {
-                 vhb.observer->opts2 = strtol(optarg, NULL, 0);
+                 if (vhb.observer)
+                     vhb.observer->opts2 = strtol(optarg, NULL, 0);
             } break;
             case 'M': {
                 if (vhb.observer) {
