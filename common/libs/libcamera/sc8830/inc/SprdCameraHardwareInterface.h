@@ -89,6 +89,17 @@ public:
 	virtual status_t             dump(int fd) const;
 	void                            setCaptureRawMode(bool mode);
 
+
+	enum camera_flush_mem_type_e {
+		CAMERA_FLUSH_RAW_HEAP,
+		CAMERA_FLUSH_RAW_HEAP_ALL,
+		CAMERA_FLUSH_PREVIEW_HEAP,
+		CAMERA_FLUSH_MAX
+	};
+
+	int 						 flush_buffer(camera_flush_mem_type_e  type, int index, void *v_addr, void *p_addr, int size);
+	sprd_camera_memory_t* 		 GetCachePmem(int buf_size, int num_bufs);
+
 public:
 	static int                   getPropertyAtv();
 	static int                   getNumberOfCameras();
@@ -199,7 +210,7 @@ private:
 		Sprd_camera_state 	capture_state;
 	} camera_state;
 
-	const char* const getCameraStateStr(Sprd_camera_state s);    
+	const char* getCameraStateStr(Sprd_camera_state s);
 	Sprd_camera_state transitionState(Sprd_camera_state from,
 						Sprd_camera_state to,
 						state_owner owner,
