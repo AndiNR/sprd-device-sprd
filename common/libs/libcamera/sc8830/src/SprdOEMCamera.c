@@ -1907,13 +1907,6 @@ int camera_take_picture_internal(takepicture_mode cap_mode)
 		return -CAMERA_FAILED;
 	}
 
-	CMR_LOGV("Sensor workmode %d", g_cxt->sn_cxt.capture_mode);
-	ret = Sensor_SetMode(g_cxt->sn_cxt.capture_mode);
-	if (ret) {
-		CMR_LOGE("Sensor can't work at this mode %d", g_cxt->sn_cxt.capture_mode);
-		return -CAMERA_FAILED;
-	}
-
 	ret = camera_capture_init();
 	if (ret) {
 		CMR_LOGE("Failed to init raw capture mode.");
@@ -2066,7 +2059,6 @@ camera_ret_code_type camera_take_picture(camera_cb_f_type    callback,
 	int                      ret = CAMERA_SUCCESS;
 
 	CMR_LOGI("start");
-	camera_snapshot_start_set();
 	camera_set_client_data(client_data);
 	camera_set_hal_cb(callback);
 	camera_set_take_picture_cap_mode(cap_mode);
@@ -3480,7 +3472,12 @@ int camera_preview_init(int format_mode)
 	SENSOR_AE_INFO_T         *sensor_aec_info;
 
 	memset(&v4l2_cfg,0,sizeof(v4l2_cfg));
-	sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode];
+	if ((CAMERA_ZSL_MODE == g_cxt->cap_mode)
+		|| (CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode)) {
+		sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode];
+	} else {
+		sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.preview_mode];
+	}
 
 	sensor_cfg.sn_size.width  = sensor_mode->width;
 	sensor_cfg.sn_size.height = sensor_mode->height;
@@ -3589,8 +3586,12 @@ int camera_preview_weak_init(int format_mode)
 	struct isp_video_start   isp_param;
 
 	memset(&v4l2_cfg,0,sizeof(v4l2_cfg));
-	sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode];
-
+	if ((CAMERA_ZSL_MODE == g_cxt->cap_mode)
+		|| (CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode)) {
+		sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode];
+	} else {
+		sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.preview_mode];
+	}
 	g_cxt->prev_rot_index = 0;
 	v4l2_cfg.cfg.need_isp = 0;
 	v4l2_cfg.cfg.need_binning = 0;
@@ -3865,6 +3866,8 @@ int camera_get_sensor_preview_mode(struct img_size* target_size, uint32_t *work_
 	if (i == SENSOR_MODE_MAX) {
 		CMR_LOGV("can't find the right mode, %d, use the last one %d", i, last_one);
 		target_mode = last_one;
+	} else {
+		CMR_LOGV("target_mode %d", target_mode);
 	}
 
 	*work_mode = target_mode;

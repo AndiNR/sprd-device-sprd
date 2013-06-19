@@ -544,11 +544,17 @@ int camera_preview_start_set(void)
 	struct camera_settings   *set = &cxt->cmr_set;
 	uint32_t                 skip, skip_num;
 	int                      ret = CAMERA_SUCCESS;
+	uint32_t                 sn_mode;
 
-	CMR_LOGV("Sensor workmode %d", cxt->sn_cxt.capture_mode);
-	ret = Sensor_SetMode(cxt->sn_cxt.capture_mode);
+	if ((CAMERA_ZSL_MODE != cxt->cap_mode) && (CAMERA_ZSL_CONTINUE_SHOT_MODE != cxt->cap_mode)) {
+		sn_mode = cxt->sn_cxt.preview_mode;
+	} else {
+		sn_mode = cxt->sn_cxt.capture_mode;
+	}
+	CMR_LOGV("Sensor workmode %d", sn_mode);
+	ret = Sensor_SetMode(sn_mode);
 	if (ret) {
-		CMR_LOGE("Sensor can't work at this mode %d", cxt->sn_cxt.capture_mode);
+		CMR_LOGE("Sensor can't work at this mode %d", sn_mode);
 		goto exit;
 	}
 	ret = Sensor_StreamOff();//wait for set mode done
