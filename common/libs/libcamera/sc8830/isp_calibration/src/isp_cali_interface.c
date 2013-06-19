@@ -142,7 +142,7 @@ int32_t ISP_Cali_GetLensTabs(struct isp_addr_t img_addr,
 			goto LensTabs_Exit;
 		}
 		fread(lnc_tmp_buf, 1, length, fp);
-
+                fclose(fp);
 		tg_lnc.y_addr = (uint32_t)lnc_map.map[x][y].param_addr;
 		mg_lnc.y_addr = lnc_tmp_buf;
 		mr_lnc.y_addr = (uint32_t)lnc_tab_buf;
