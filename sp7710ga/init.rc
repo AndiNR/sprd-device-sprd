@@ -158,10 +158,12 @@ on post-fs
     chmod 0660 /backupfixnv/fixnv.bin
     chmod 0660 /productinfo/productinfo.bin
     chmod 0660 /productinfo/productinfobkup.bin
+    chmod 0660 /productinfo/vbc_eq
     chown system system /fixnv/fixnv.bin
     chown system system /backupfixnv/fixnv.bin
     chown system system /productinfo/productinfo.bin
     chown system system /productinfo/productinfobkup.bin
+    chown media  system /productinfo/vbc_eq
 
     # This may have been created by the recovery system with odd permissions
     chown system cache /cache/recovery
