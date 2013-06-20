@@ -10,12 +10,13 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.CheckBox;
+import android.widget.Toast;
 
 /* SlogUI Added by Yuntao.xiao*/
 
 public class LogSettingSlogUIModemPage extends Activity implements SlogUISyncState {
 
-    private CheckBox chkModem, chkBuleTooth, chkTcp, chkMisc;
+    private CheckBox chkModem, chkBlueTooth, chkTcp, chkMisc;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,7 +24,7 @@ public class LogSettingSlogUIModemPage extends Activity implements SlogUISyncSta
         setContentView(R.layout.activity_modem);
 
         chkModem = (CheckBox) findViewById(R.id.chk_modem_branch);
-        chkBuleTooth = (CheckBox) findViewById(R.id.chk_modem_bluetooth);
+        chkBlueTooth = (CheckBox) findViewById(R.id.chk_modem_bluetooth);
         chkTcp = (CheckBox) findViewById(R.id.chk_modem_tcp);
         chkMisc = (CheckBox) findViewById(R.id.chk_modem_misc);
 
@@ -31,10 +32,12 @@ public class LogSettingSlogUIModemPage extends Activity implements SlogUISyncSta
 
         // TODO: Should better using setOnClickListener(this) instead of newing a class.
         ClkListenner clickListen = new ClkListenner();
+        VersionListener verListen = new VersionListener();
         chkModem.setOnClickListener(clickListen);
-        chkBuleTooth.setOnClickListener(clickListen);
+        chkBlueTooth.setOnClickListener(clickListen);
         chkTcp.setOnClickListener(clickListen);
         chkMisc.setOnClickListener(clickListen);
+        chkMisc.setOnLongClickListener(verListen);
 
     }
 
@@ -44,7 +47,21 @@ public class LogSettingSlogUIModemPage extends Activity implements SlogUISyncSta
         syncState();
     }
 
-    protected class ClkListenner implements OnClickListener {
+    protected class VersionListener implements View.OnLongClickListener {
+        @Override
+        public boolean onLongClick(View v) {
+            switch (v.getId()) {
+            case R.id.chk_modem_misc:
+                Toast.makeText(LogSettingSlogUIModemPage.this,
+                        R.string.slog_version_info, Toast.LENGTH_LONG).show();
+            break;
+            default:
+            }
+            return false;
+        }
+    }
+
+    protected class ClkListenner implements View.OnClickListener {
         public void onClick(View onClickView) {
             switch (onClickView.getId()) {
             case R.id.chk_modem_branch:
@@ -53,8 +70,8 @@ public class LogSettingSlogUIModemPage extends Activity implements SlogUISyncSta
                 SlogAction.sendATCommand(engconstents.ENG_AT_SETARMLOG, chkModem.isChecked());
                 break;
             case R.id.chk_modem_bluetooth:
-                SlogAction.SetState(SlogAction.BULETOOTHKEY,
-                        chkBuleTooth.isChecked(), false);
+                SlogAction.SetState(SlogAction.BLUETOOTHKEY,
+                        chkBlueTooth.isChecked(), false);
                 break;
             case R.id.chk_modem_tcp:
                 SlogAction.SetState(SlogAction.TCPKEY, chkTcp.isChecked(),
@@ -79,8 +96,9 @@ public class LogSettingSlogUIModemPage extends Activity implements SlogUISyncSta
         boolean tempHost = tempHostOn || tempHostLowPower;
         SlogAction.SetCheckBoxBranchState(chkModem, tempHost,
                 SlogAction.GetState(SlogAction.MODEMKEY));
-        SlogAction.SetCheckBoxBranchState(chkBuleTooth, tempHost && SlogAction.GetState(SlogAction.STORAGEKEY),
-                SlogAction.GetState(SlogAction.BULETOOTHKEY));
+        SlogAction.SetCheckBoxBranchState(chkBlueTooth,
+                tempHost && SlogAction.GetState(SlogAction.STORAGEKEY),
+                SlogAction.GetState(SlogAction.BLUETOOTHKEY));
         SlogAction.SetCheckBoxBranchState(chkTcp, tempHost,
                 SlogAction.GetState(SlogAction.TCPKEY));
         SlogAction.SetCheckBoxBranchState(chkMisc, tempHost,
