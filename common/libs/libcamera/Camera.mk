@@ -11,8 +11,8 @@ LOCAL_C_INCLUDES := \
         $(LOCAL_PATH)/sc8810 \
 	$(LOCAL_PATH)/vsp/sc8810/inc	\
 	$(LOCAL_PATH)/vsp/sc8810/src \
-	$(LOCAL_PATH)/jpeg_fw_8810/inc \
-	$(LOCAL_PATH)/jpeg_fw_8810/src \
+	$(LOCAL_PATH)/jpeg/jpeg_fw_8810/inc \
+	$(LOCAL_PATH)/jpeg/jpeg_fw_8810/src \
 	external/skia/include/images \
 	external/skia/include/core\
         external/jhead \
@@ -25,29 +25,29 @@ LOCAL_SRC_FILES:= \
 	sc8810/SprdOEMCamera.cpp \
         sc8810/SprdCameraHardwareInterface.cpp \
 	vsp/sc8810/src/vsp_drv_sc8810.c \
-	jpeg_fw_8810/src/jpegcodec_bufmgr.c \
-	jpeg_fw_8810/src/jpegcodec_global.c \
-	jpeg_fw_8810/src/jpegcodec_table.c \
-	jpeg_fw_8810/src/jpegenc_bitstream.c \
-	jpeg_fw_8810/src/jpegenc_frame.c \
-	jpeg_fw_8810/src/jpegenc_header.c \
-	jpeg_fw_8810/src/jpegenc_init.c \
-	jpeg_fw_8810/src/jpegenc_interface.c \
-	jpeg_fw_8810/src/jpegenc_malloc.c \
-	jpeg_fw_8810/src/jpegenc_api.c \
-        jpeg_fw_8810/src/jpegdec_bitstream.c \
-	jpeg_fw_8810/src/jpegdec_frame.c \
-	jpeg_fw_8810/src/jpegdec_init.c \
-	jpeg_fw_8810/src/jpegdec_interface.c \
-	jpeg_fw_8810/src/jpegdec_malloc.c \
-	jpeg_fw_8810/src/jpegdec_dequant.c	\
-	jpeg_fw_8810/src/jpegdec_out.c \
-	jpeg_fw_8810/src/jpegdec_parse.c \
-	jpeg_fw_8810/src/jpegdec_pvld.c \
-	jpeg_fw_8810/src/jpegdec_vld.c \
-	jpeg_fw_8810/src/jpegdec_api.c \
-	jpeg_fw_8810/src/exif_writer.c \
-	jpeg_fw_8810/src/jpeg_stream.c
+	jpeg/jpeg_fw_8810/src/jpegcodec_bufmgr.c \
+	jpeg/jpeg_fw_8810/src/jpegcodec_global.c \
+	jpeg/jpeg_fw_8810/src/jpegcodec_table.c \
+	jpeg/jpeg_fw_8810/src/jpegenc_bitstream.c \
+	jpeg/jpeg_fw_8810/src/jpegenc_frame.c \
+	jpeg/jpeg_fw_8810/src/jpegenc_header.c \
+	jpeg/jpeg_fw_8810/src/jpegenc_init.c \
+	jpeg/jpeg_fw_8810/src/jpegenc_interface.c \
+	jpeg/jpeg_fw_8810/src/jpegenc_malloc.c \
+	jpeg/jpeg_fw_8810/src/jpegenc_api.c \
+        jpeg/jpeg_fw_8810/src/jpegdec_bitstream.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_frame.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_init.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_interface.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_malloc.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_dequant.c	\
+	jpeg/jpeg_fw_8810/src/jpegdec_out.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_parse.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_pvld.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_vld.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_api.c \
+	jpeg/jpeg_fw_8810/src/exif_writer.c \
+	jpeg/jpeg_fw_8810/src/jpeg_stream.c
 
 
 endif
@@ -62,8 +62,8 @@ LOCAL_C_INCLUDES := \
         $(LOCAL_PATH)/sc8810 \
 	$(LOCAL_PATH)/vsp/sc8810/inc	\
 	$(LOCAL_PATH)/vsp/sc8810/src \
-	$(LOCAL_PATH)/jpeg_fw_8810/inc \
-	$(LOCAL_PATH)/jpeg_fw_8810/src \
+	$(LOCAL_PATH)/jpeg/jpeg_fw_8810/inc \
+	$(LOCAL_PATH)/jpeg/jpeg_fw_8810/src \
 	external/skia/include/images \
 	external/skia/include/core\
         external/jhead \
@@ -76,29 +76,29 @@ LOCAL_SRC_FILES:= \
 	sc8810/SprdOEMCamera.cpp \
         sc8810/SprdCameraHardwareInterface.cpp \
 	vsp/sc8810/src/vsp_drv_sc8810.c \
-	jpeg_fw_8810/src/jpegcodec_bufmgr.c \
-	jpeg_fw_8810/src/jpegcodec_global.c \
-	jpeg_fw_8810/src/jpegcodec_table.c \
-	jpeg_fw_8810/src/jpegenc_bitstream.c \
-	jpeg_fw_8810/src/jpegenc_frame.c \
-	jpeg_fw_8810/src/jpegenc_header.c \
-	jpeg_fw_8810/src/jpegenc_init.c \
-	jpeg_fw_8810/src/jpegenc_interface.c \
-	jpeg_fw_8810/src/jpegenc_malloc.c \
-	jpeg_fw_8810/src/jpegenc_api.c \
-        jpeg_fw_8810/src/jpegdec_bitstream.c \
-	jpeg_fw_8810/src/jpegdec_frame.c \
-	jpeg_fw_8810/src/jpegdec_init.c \
-	jpeg_fw_8810/src/jpegdec_interface.c \
-	jpeg_fw_8810/src/jpegdec_malloc.c \
-	jpeg_fw_8810/src/jpegdec_dequant.c	\
-	jpeg_fw_8810/src/jpegdec_out.c \
-	jpeg_fw_8810/src/jpegdec_parse.c \
-	jpeg_fw_8810/src/jpegdec_pvld.c \
-	jpeg_fw_8810/src/jpegdec_vld.c \
-	jpeg_fw_8810/src/jpegdec_api.c \
-	jpeg_fw_8810/src/exif_writer.c \
-	jpeg_fw_8810/src/jpeg_stream.c
+	jpeg/jpeg_fw_8810/src/jpegcodec_bufmgr.c \
+	jpeg/jpeg_fw_8810/src/jpegcodec_global.c \
+	jpeg/jpeg_fw_8810/src/jpegcodec_table.c \
+	jpeg/jpeg_fw_8810/src/jpegenc_bitstream.c \
+	jpeg/jpeg_fw_8810/src/jpegenc_frame.c \
+	jpeg/jpeg_fw_8810/src/jpegenc_header.c \
+	jpeg/jpeg_fw_8810/src/jpegenc_init.c \
+	jpeg/jpeg_fw_8810/src/jpegenc_interface.c \
+	jpeg/jpeg_fw_8810/src/jpegenc_malloc.c \
+	jpeg/jpeg_fw_8810/src/jpegenc_api.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_bitstream.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_frame.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_init.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_interface.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_malloc.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_dequant.c	\
+	jpeg/jpeg_fw_8810/src/jpegdec_out.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_parse.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_pvld.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_vld.c \
+	jpeg/jpeg_fw_8810/src/jpegdec_api.c \
+	jpeg/jpeg_fw_8810/src/exif_writer.c \
+	jpeg/jpeg_fw_8810/src/jpeg_stream.c
 
 
 endif
@@ -107,8 +107,8 @@ ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/vsp/sc8825/inc	\
 	$(LOCAL_PATH)/vsp/sc8825/src \
-	$(LOCAL_PATH)/jpeg_fw_8825/inc \
-	$(LOCAL_PATH)/jpeg_fw_8825/src \
+	$(LOCAL_PATH)/jpeg/jpeg_fw_8825/inc \
+	$(LOCAL_PATH)/jpeg/jpeg_fw_8825/src \
 	$(LOCAL_PATH)/sc8825/inc \
 	$(LOCAL_PATH)/isp/inc \
 	external/skia/include/images \
@@ -151,29 +151,29 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_ov8825_mipi_raw.c \
 	sensor/sensor_hi351_mipi.c \
 	vsp/sc8825/src/vsp_drv_sc8825.c \
-	jpeg_fw_8825/src/jpegcodec_bufmgr.c \
-	jpeg_fw_8825/src/jpegcodec_global.c \
-	jpeg_fw_8825/src/jpegcodec_table.c \
-	jpeg_fw_8825/src/jpegenc_bitstream.c \
-	jpeg_fw_8825/src/jpegenc_frame.c \
-	jpeg_fw_8825/src/jpegenc_header.c \
-	jpeg_fw_8825/src/jpegenc_init.c \
-	jpeg_fw_8825/src/jpegenc_interface.c \
-	jpeg_fw_8825/src/jpegenc_malloc.c \
-	jpeg_fw_8825/src/jpegenc_api.c \
-        jpeg_fw_8825/src/jpegdec_bitstream.c \
-	jpeg_fw_8825/src/jpegdec_frame.c \
-	jpeg_fw_8825/src/jpegdec_init.c \
-	jpeg_fw_8825/src/jpegdec_interface.c \
-	jpeg_fw_8825/src/jpegdec_malloc.c \
-	jpeg_fw_8825/src/jpegdec_dequant.c	\
-	jpeg_fw_8825/src/jpegdec_out.c \
-	jpeg_fw_8825/src/jpegdec_parse.c \
-	jpeg_fw_8825/src/jpegdec_pvld.c \
-	jpeg_fw_8825/src/jpegdec_vld.c \
-	jpeg_fw_8825/src/jpegdec_api.c  \
-	jpeg_fw_8825/src/exif_writer.c  \
-	jpeg_fw_8825/src/jpeg_stream.c \
+	jpeg/jpeg_fw_8825/src/jpegcodec_bufmgr.c \
+	jpeg/jpeg_fw_8825/src/jpegcodec_global.c \
+	jpeg/jpeg_fw_8825/src/jpegcodec_table.c \
+	jpeg/jpeg_fw_8825/src/jpegenc_bitstream.c \
+	jpeg/jpeg_fw_8825/src/jpegenc_frame.c \
+	jpeg/jpeg_fw_8825/src/jpegenc_header.c \
+	jpeg/jpeg_fw_8825/src/jpegenc_init.c \
+	jpeg/jpeg_fw_8825/src/jpegenc_interface.c \
+	jpeg/jpeg_fw_8825/src/jpegenc_malloc.c \
+	jpeg/jpeg_fw_8825/src/jpegenc_api.c \
+	jpeg/jpeg_fw_8825/src/jpegdec_bitstream.c \
+	jpeg/jpeg_fw_8825/src/jpegdec_frame.c \
+	jpeg/jpeg_fw_8825/src/jpegdec_init.c \
+	jpeg/jpeg_fw_8825/src/jpegdec_interface.c \
+	jpeg/jpeg_fw_8825/src/jpegdec_malloc.c \
+	jpeg/jpeg_fw_8825/src/jpegdec_dequant.c	\
+	jpeg/jpeg_fw_8825/src/jpegdec_out.c \
+	jpeg/jpeg_fw_8825/src/jpegdec_parse.c \
+	jpeg/jpeg_fw_8825/src/jpegdec_pvld.c \
+	jpeg/jpeg_fw_8825/src/jpegdec_vld.c \
+	jpeg/jpeg_fw_8825/src/jpegdec_api.c  \
+	jpeg/jpeg_fw_8825/src/exif_writer.c  \
+	jpeg/jpeg_fw_8825/src/jpeg_stream.c \
 	isp/isp_video.c \
 	isp/isp_param_tune_com.c \
 	isp/isp_param_tune_v0000.c \
@@ -185,8 +185,8 @@ ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/vsp/sc8830/inc	\
 	$(LOCAL_PATH)/vsp/sc8830/src \
-	$(LOCAL_PATH)/jpeg_fw_8830/inc \
-	$(LOCAL_PATH)/jpeg_fw_8830/src \
+	$(LOCAL_PATH)/jpeg/jpeg_fw_8830/inc \
+	$(LOCAL_PATH)/jpeg/jpeg_fw_8830/src \
 	$(LOCAL_PATH)/sc8830/inc \
 	$(LOCAL_PATH)/sc8830/isp_calibration/inc \
 	$(LOCAL_PATH)/isp/inc \
@@ -232,29 +232,29 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_hi351_mipi.c \
 	sensor/sensor_gc2035.c \
 	vsp/sc8830/src/jpg_drv_sc8830.c \
-	jpeg_fw_8830/src/jpegcodec_bufmgr.c \
-	jpeg_fw_8830/src/jpegcodec_global.c \
-	jpeg_fw_8830/src/jpegcodec_table.c \
-	jpeg_fw_8830/src/jpegenc_bitstream.c \
-	jpeg_fw_8830/src/jpegenc_frame.c \
-	jpeg_fw_8830/src/jpegenc_header.c \
-	jpeg_fw_8830/src/jpegenc_init.c \
-	jpeg_fw_8830/src/jpegenc_interface.c \
-	jpeg_fw_8830/src/jpegenc_malloc.c \
-	jpeg_fw_8830/src/jpegenc_api.c \
-        jpeg_fw_8830/src/jpegdec_bitstream.c \
-	jpeg_fw_8830/src/jpegdec_frame.c \
-	jpeg_fw_8830/src/jpegdec_init.c \
-	jpeg_fw_8830/src/jpegdec_interface.c \
-	jpeg_fw_8830/src/jpegdec_malloc.c \
-	jpeg_fw_8830/src/jpegdec_dequant.c	\
-	jpeg_fw_8830/src/jpegdec_out.c \
-	jpeg_fw_8830/src/jpegdec_parse.c \
-	jpeg_fw_8830/src/jpegdec_pvld.c \
-	jpeg_fw_8830/src/jpegdec_vld.c \
-	jpeg_fw_8830/src/jpegdec_api.c  \
-	jpeg_fw_8830/src/exif_writer.c  \
-	jpeg_fw_8830/src/jpeg_stream.c \
+	jpeg/jpeg_fw_8830/src/jpegcodec_bufmgr.c \
+	jpeg/jpeg_fw_8830/src/jpegcodec_global.c \
+	jpeg/jpeg_fw_8830/src/jpegcodec_table.c \
+	jpeg/jpeg_fw_8830/src/jpegenc_bitstream.c \
+	jpeg/jpeg_fw_8830/src/jpegenc_frame.c \
+	jpeg/jpeg_fw_8830/src/jpegenc_header.c \
+	jpeg/jpeg_fw_8830/src/jpegenc_init.c \
+	jpeg/jpeg_fw_8830/src/jpegenc_interface.c \
+	jpeg/jpeg_fw_8830/src/jpegenc_malloc.c \
+	jpeg/jpeg_fw_8830/src/jpegenc_api.c \
+	jpeg/jpeg_fw_8830/src/jpegdec_bitstream.c \
+	jpeg/jpeg_fw_8830/src/jpegdec_frame.c \
+	jpeg/jpeg_fw_8830/src/jpegdec_init.c \
+	jpeg/jpeg_fw_8830/src/jpegdec_interface.c \
+	jpeg/jpeg_fw_8830/src/jpegdec_malloc.c \
+	jpeg/jpeg_fw_8830/src/jpegdec_dequant.c	\
+	jpeg/jpeg_fw_8830/src/jpegdec_out.c \
+	jpeg/jpeg_fw_8830/src/jpegdec_parse.c \
+	jpeg/jpeg_fw_8830/src/jpegdec_pvld.c \
+	jpeg/jpeg_fw_8830/src/jpegdec_vld.c \
+	jpeg/jpeg_fw_8830/src/jpegdec_api.c  \
+	jpeg/jpeg_fw_8830/src/exif_writer.c  \
+	jpeg/jpeg_fw_8830/src/jpeg_stream.c \
 	isp/isp_video.c \
 	isp/isp_param_tune_com.c \
 	isp/isp_param_tune_v0000.c \
