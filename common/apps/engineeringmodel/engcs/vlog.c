@@ -128,9 +128,17 @@ void *eng_vlog_thread(void *x)
 		}
 
 //		ENG_LOG("peter:eng_vlog read %d\n", r_cnt);
-		w_cnt = write(ser_fd, log_data, r_cnt);
+		w_cnt = 0;
+		if(((r_cnt % 64 )==0) && r_cnt){
+			if(param->califlag  && param->connect_type == CONNECT_USB){
+				w_cnt = write(ser_fd, log_data, r_cnt-32);
+				if(w_cnt < 0)
+					goto write_fail;
+			}
+		} 
+		w_cnt = write(ser_fd, log_data+w_cnt, r_cnt-w_cnt);
 		if (w_cnt < 0) {
-			ENG_LOG("eng_vlog no log data write:%d ,%s\n", w_cnt, strerror(errno));
+write_fail:		ENG_LOG("eng_vlog no log data write:%d ,%s\n", w_cnt, strerror(errno));
 			close(ser_fd);
 
 			ser_fd = open(s_connect_ser_path[s_connect_type], O_WRONLY);
