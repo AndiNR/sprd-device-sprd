@@ -443,7 +443,7 @@ int get_sub_str(char *buf,char **revdata, char a, char b)
 		if(!current){
 			return 0;
 		}
-		while (*end != '\0')
+		while ((end!=NULL)&&(*end != '\0'))
 		end++;
 		if((start != NULL) & (end !=NULL)){
 			start++;
