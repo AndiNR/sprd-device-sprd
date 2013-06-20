@@ -73,6 +73,7 @@ BOARD_HAVE_BLUETOOTH := true
 BOARD_HAVE_BLUETOOTH_BCM := true
 BOARD_HAVE_FM_BCM := true
 BOARD_USE_SPRD_FMAPP := true
+
 # board specific modules
 BOARD_USES_TINYALSA_AUDIO := true
 BOARD_USE_VETH := true
@@ -80,6 +81,7 @@ BOARD_SPRD_RIL := true
 BOARD_SAMSUNG_RIL := false
 TARGET_RECOVERY_UI_LIB := librecovery_ui_sp8810
 TARGET_RECOVERY_PIXEL_FORMAT := "RGBA_8888"
+USE_SPRD_HWCOMPOSER  := true
 
 # ext4 partition layout
 TARGET_USERIMAGES_USE_EXT4 := true
