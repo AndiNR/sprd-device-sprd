@@ -89,6 +89,11 @@ PRODUCT_PACKAGES += \
 	libsprdstreamrecoder \
 	libvtmanager
 
+ifeq ($(TARGET_PLATFORM),sc8830)
+PRODUCT_PACKAGES += \
+	sprd_gsp.$(TARGET_PLATFORM)
+endif
+
 ifeq ($(filter %sdk, $(TARGET_PRODUCT)),)
 PRODUCT_PACKAGES += \
 	$(MALI) \

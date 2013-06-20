@@ -83,10 +83,14 @@ PRODUCT_PACKAGES += \
 	libsprdstreamrecoder \
 	libvtmanager
 
+ifeq ($(TARGET_PLATFORM),sc8830)
+PRODUCT_PACKAGES += \
+	sprd_gsp.$(TARGET_PLATFORM)
+endif
+
 PRODUCT_PACKAGES += \
             $(BRCM_FM) \
             $(SPRD_FM_APP)
-
 
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/init.rc:root/init.rc \
