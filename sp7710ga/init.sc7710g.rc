@@ -84,6 +84,9 @@ on property:ro.debuggable=1
     write /proc/input_power 1
     mount debugfs debugfs /sys/kernel/debug
     write /proc/sys/kernel/sysrq 1
+    setrlimit 4 -1 -1
+    write /proc/sys/kernel/core_pattern /mnt/sdcard/slog/corefile/core-%e-%p  
+    write /proc/sys/fs/suid_dumpable 1
 
 on property:ro.debuggable=0
     write /proc/input_power 0
