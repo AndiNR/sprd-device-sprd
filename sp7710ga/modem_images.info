@@ -7,7 +7,7 @@
 
 /dev/mtd/mtd3			/dev/mtd/mtd3				0x3000		0x40000000
 /dev/mtd/mtd7			/dev/mtd/mtd7				0x200000	0x20000
-/dev/mtd/mtd19			/dev/mtd/mtd19				0x9f8000	0x400000
+/dev/mtd/mtd4			/dev/mtd/mtd4				0x9f8000	0x400000
 /fixnv/fixnv.bin		/backupfixnv/fixnv.bin			0x20000		0x2100000
 /runtimenv/runtimenv.bin	/runtimenv/runtimenvbkup.bin		0x40000		0x2120000
 /productinfo/productinfo.bin	/productinfo/productinfobkup.bin	0x8000		0x2160000
