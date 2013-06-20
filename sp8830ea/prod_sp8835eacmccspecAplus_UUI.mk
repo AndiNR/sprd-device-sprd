@@ -43,7 +43,8 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.modem.t.assert=/dev/spipe_td2 \
 	ro.modem.t.vbc=/dev/spipe_td6 \
 	ro.modem.t.id=0 \
-	ro.modem.t.count=2
+	ro.modem.t.count=2 \
+	ro.config.hw.cmmb_support=false
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1
