@@ -45,12 +45,8 @@
 #define W_MODEM_STOP	"/proc/cpw/stop"
 
 /* modem/dsp partition */
-#define TD_PARTI_MODEM        "/dev/block/mmcblk0p1"
-#define TD_PARTI_DSP          "/dev/block/mmcblk0p2"
 #define TD_MODEM_SIZE	(10*1024*1024)
 #define TD_DSP_SIZE	(5*1024*1024)
-#define W_PARTI_MODEM        "/dev/block/mmcblk0p7"
-#define W_PARTI_DSP          "/dev/block/mmcblk0p8"
 #define W_MODEM_SIZE	(10*1024*1024)
 #define W_DSP_SIZE	(5*1024*1024)
 

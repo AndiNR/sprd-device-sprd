@@ -9,3 +9,5 @@ debug.hwui.render_dirty_regions=false
 
 # delay for ConnectivityChange broadcast (ms)
 conn.connectivity_change_delay = 0
+
+ro.product.partitionpath=/dev/block/platform/sprd-sdhci.3/by-name/
