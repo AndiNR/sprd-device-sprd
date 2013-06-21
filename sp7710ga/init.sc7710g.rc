@@ -76,7 +76,8 @@ on boot
     setprop wifi.interface wlan0
     chown system system /proc/sys/kernel/printk
 
-    chmod 666 /sys/module/ipc_sdio/parameters/sdio_tx_wait_time
+    chmod 664 /sys/module/ipc_sdio/parameters/sdio_tx_wait_time
+    chown root radio /sys/module/ipc_sdio/parameters/sdio_tx_wait_time
 
     copy /dev/sprd-watchdog /dev/null
 
