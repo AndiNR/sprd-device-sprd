@@ -42,7 +42,9 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.modem.t.vbc=/dev/spipe_td6 \
 	ro.modem.t.id=0 \
 	ro.modem.t.count=1 \
-	ro.config.hw.cmmb_support=false
+	ro.config.hw.cmmb_support=false \
+	ro.config.hw.camera_support=false \
+	ro.config.hw.search_support=false
 
 
 ifeq ($(TARGET_BUILD_VARIANT),user)

@@ -39,7 +39,8 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.modem.t.vbc=/dev/vbpipe6 \
 	ro.modem.t.id=0 \
 	ro.modem.t.count=1 \
-	ro.nativemodem=true
+	ro.nativemodem=true \
+	ro.config.hw.search_support=false
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1

@@ -44,7 +44,9 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.modem.w.vbc=/dev/spipe_w6 \
 	ro.modem.w.id=0 \
 	ro.modem.w.count=2 \
-	ro.config.hw.cmmb_support=false
+	ro.config.hw.cmmb_support=false \
+	ro.config.hw.camera_support=false \
+	ro.config.hw.search_support=false
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1
