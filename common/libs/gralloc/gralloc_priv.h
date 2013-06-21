@@ -95,6 +95,8 @@ struct private_handle_t
 		LOCK_STATE_MAPPED    =   1<<30,
 		LOCK_STATE_READ_MASK =   0x3FFFFFFF
 	};
+	//fds
+	int     fd;
 
 	// ints
 #if GRALLOC_ARM_DMA_BUF_MODULE
@@ -117,8 +119,6 @@ struct private_handle_t
 #else
 #define GRALLOC_ARM_UMP_NUM_INTS 0
 #endif
-	//fds
-	int     fd;
 
 	// Following members is for framebuffer only
 	int     offset;
@@ -152,6 +152,7 @@ struct private_handle_t
 
 #if GRALLOC_ARM_UMP_MODULE
 	private_handle_t(int flags, int size, int base, int lock_state, ump_secure_id secure_id, ump_handle handle, int offset = 0, int file_fd= 0):
+		fd(file_fd),
 		magic(sMagic),
 		flags(flags),
 		size(size),
@@ -161,7 +162,6 @@ struct private_handle_t
 		pid(getpid()),
 		ump_id((int)secure_id),
 		ump_mem_handle((int)handle),
-		fd(file_fd),
 		offset(offset)
 #if GRALLOC_ARM_DMA_BUF_MODULE
 		,ion_client(-1),
@@ -177,6 +177,7 @@ struct private_handle_t
 
 #if GRALLOC_ARM_DMA_BUF_MODULE
 	private_handle_t(int flags, int size, int base, int lock_state):
+		fd(0),
 		magic(sMagic),
 		flags(flags),
 		size(size),
@@ -188,7 +189,6 @@ struct private_handle_t
 		ump_id((int)UMP_INVALID_SECURE_ID),
 		ump_mem_handle((int)UMP_INVALID_MEMORY_HANDLE),
 #endif
-		fd(0),
 		offset(0),
 		ion_client(-1),
 		ion_hnd(NULL)
@@ -202,6 +202,7 @@ struct private_handle_t
 #endif
 
 	private_handle_t(int flags, int size, int base, int lock_state, int fb_file, int fb_offset):
+		fd(fb_file),
 		magic(sMagic),
 		flags(flags),
 		size(size),
@@ -213,7 +214,6 @@ struct private_handle_t
 		ump_id((int)UMP_INVALID_SECURE_ID),
 		ump_mem_handle((int)UMP_INVALID_MEMORY_HANDLE),
 #endif
-		fd(fb_file),
 		offset(fb_offset)
 #if GRALLOC_ARM_DMA_BUF_MODULE
 		,ion_client(-1),
