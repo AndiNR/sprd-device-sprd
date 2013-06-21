@@ -793,6 +793,7 @@ static void* _thread_proc(void* data)
 			break;
 		case  JPEG_EVT_ENC_NEXT:
 			param_ptr = (struct jpeg_enc_next_param*)message.data;
+			if(NULL == param_ptr) break;
 			handle_ptr = (JPEG_HANDLE_T*)param_ptr->handle;
 			handle = handle_ptr->handle;
 			enc_cxt_ptr = (JPEG_ENC_T * )handle;
@@ -872,11 +873,14 @@ static void* _thread_proc(void* data)
 			break;
 
 		case JPEG_EVT_ENC_EXIF:
-			ret = _jpeg_enc_wexif((struct jpeg_enc_exif_param*)message.data,&wexif_out_param);
-			if(JPEG_CODEC_SUCCESS == ret){
-				s_exif_output = wexif_out_param;
-			} else {
-				s_exif_output.output_buf_size = 0;
+			if(NULL != message.data)
+			{
+				ret = _jpeg_enc_wexif((struct jpeg_enc_exif_param*)message.data,&wexif_out_param);
+				if(JPEG_CODEC_SUCCESS == ret){
+					s_exif_output = wexif_out_param;
+				} else {
+					s_exif_output.output_buf_size = 0;
+				}
 			}
 			sem_post(&jcontext.sync_sem);
 /*			CMR_LOGI("write exif done,ret = %d.",ret);*/
