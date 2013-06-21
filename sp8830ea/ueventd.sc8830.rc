@@ -45,14 +45,10 @@
 /dev/spipe_w5          0666     system  system
 /dev/spipe_w6          0660     media   audio
 
-/dev/block/platform/sprd-sdhci.3/by-name/tdmodem    0550     system  system
-/dev/block/platform/sprd-sdhci.3/by-name/tddsp      0550     system  system
-/dev/block/platform/sprd-sdhci.3/by-name/tdfixnv1   0550     system  system
-/dev/block/platform/sprd-sdhci.3/by-name/tdfixnv2   0550     system  system
-/dev/block/platform/sprd-sdhci.3/by-name/wmodem     0550     system  system
-/dev/block/platform/sprd-sdhci.3/by-name/wdsp       0550     system  system
-/dev/block/platform/sprd-sdhci.3/by-name/wfixnv1    0550     system  system
-/dev/block/platform/sprd-sdhci.3/by-name/wfixnv2    0550     system  system
+/dev/block/mmcblk0p1    0660     system  system
+/dev/block/mmcblk0p2    0660     system  system
+/dev/block/mmcblk0p7    0660     system  system
+/dev/block/mmcblk0p8    0660     system  system
 
 /dev/vser              0660     system  system
 /dev/ttyGS0            0660     system  system

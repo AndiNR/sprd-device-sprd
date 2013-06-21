@@ -73,27 +73,35 @@ leave:
 
 int load_sipc_modem_img(int modem, int is_modem_assert)
 {
-	char modem_partition[128] = {0};
-	char dsp_partition[128] = {0};
+	char modem_partition[256] = {0};
+	char dsp_partition[256] = {0};
 	char modem_bank[128] = {0};
 	char dsp_bank[128] = {0};
 	int sipc_modem_size = 0;
 	int sipc_dsp_size = 0;
 	char alive_info[20]={0};
 	int i, ret;
+	char path[256];
+
+	memset(path, 0, sizeof(path));
+	if ( -1 == property_get("ro.product.partitionpath", path, "") )
+	{
+		MODEMD_LOGD("%s: get partitionpath fail",__func__);
+		return -1;
+	}
 
 	if(modem == TD_MODEM) {
 		sipc_modem_size = TD_MODEM_SIZE;
 		sipc_dsp_size = TD_DSP_SIZE;
-		strcpy(modem_partition, TD_PARTI_MODEM);
-		strcpy(dsp_partition, TD_PARTI_DSP);
+		sprintf(modem_partition,"%s%s",path,"tdmodem");
+		sprintf(dsp_partition,"%s%s",path,"tddsp");
 		strcpy(modem_bank, TD_MODEM_BANK);
 		strcpy(dsp_bank, TD_DSP_BANK);
 	} else if(modem == W_MODEM) {
 		sipc_modem_size = W_MODEM_SIZE;
 		sipc_dsp_size = W_DSP_SIZE;
-		strcpy(modem_partition, W_PARTI_MODEM);
-		strcpy(dsp_partition, W_PARTI_DSP);
+		sprintf(modem_partition,"%s%s",path,"wmodem");
+		sprintf(dsp_partition,"%s%s",path,"wdsp");
 		strcpy(modem_bank, W_MODEM_BANK);
 		strcpy(dsp_bank, W_DSP_BANK);
 	}
