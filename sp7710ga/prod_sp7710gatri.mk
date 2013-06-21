@@ -41,7 +41,8 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.modem.w.tty=/dev/ts0710mux \
 	ro.modem.w.eth=veth \
 	ro.modem.w.id=0 \
-	ro.modem.w.count=3 
+	ro.modem.w.count=3 \
+	ro.config.hw.cmmb_support=false
 
 ifeq ($(TARGET_LOWCOST_SUPPORT),true)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.lowcost=true
