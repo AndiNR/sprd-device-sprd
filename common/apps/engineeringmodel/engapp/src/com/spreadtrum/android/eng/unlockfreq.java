@@ -3,6 +3,7 @@ package com.spreadtrum.android.eng;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -109,10 +110,25 @@ public class unlockfreq extends Activity {
 					Log.e(LOG_TAG, "engopen sockid=" + sockid);
  /*Modify 20130205 Spreadst of 125480 change the method of creating cmd start*/
                     //str=String.format("%d,%d,%d,%d,%d", msg.what,3,1,Integer.parseInt(mET.getText().toString()),10088);
-                    str=new StringBuilder().append(msg.what).append(",").append(3).append(",").append(1)
-                        .append(",").append(Integer.parseInt(mET.getText().toString())).append(",")
-                        .append(10088).toString();
- /*Modify 20130205 Spreadst of 125480 change the method of creating cmd end*/
+                    /*Add 20130527 spreadst of 169136 crash when don't input value start */
+                    try {
+                        str = new StringBuilder().append(msg.what).append(",").append(3)
+                                .append(",").append(1).append(",")
+                                .append(Integer.parseInt(mET.getText().toString())).append(",")
+                                .append(10088).toString();
+                    } catch (NumberFormatException e) {
+                        if (mET.getText().toString().length() == 0) {
+                            Toast.makeText(unlockfreq.this, "please input number",
+                                    Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(unlockfreq.this,
+                                    "number is too large or format isn't correct",
+                                    Toast.LENGTH_LONG).show();
+                        }
+                        return;
+                    }
+                    /*Add 20130527 spreadst of 169136 crash when don't input value end  */
+ /*Modify 20130205 Spreadst of 125671 change the method of creating cmd end*/
 					try {
 					outputBufferStream.writeBytes(str);
 					} catch (IOException e) {
@@ -124,7 +140,7 @@ public class unlockfreq extends Activity {
 					int dataSize = 128;
 					byte[] inputBytes = new byte[dataSize];
 					int showlen= mEf.engread(sockid,inputBytes,dataSize);
-					String str =new String(inputBytes,0,showlen); 
+					String str =new String(inputBytes,0,showlen,Charset.defaultCharset());
 
 					if(str.equals("OK"))
 					{
