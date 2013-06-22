@@ -12,6 +12,10 @@
 #include <time.h>
 #include "packet.h"
 
+#define SKIP_MTD_BAND_BLOCK     1
+#ifdef SKIP_MTD_BAND_BLOCK
+#include <mtd/mtd-user.h>
+#endif
 struct image_info {
 	char *image_path;
 	char *image_path_bak;
@@ -459,7 +463,7 @@ static void try_to_connect_modem(int uart_fd)
 
 int download_image(int channel_fd,struct image_info *info,int productinfo_flag)
 {
-	int packet_size;
+	unsigned int packet_size;
 	int image_fd;
 	int read_len;
 	char *buffer;
@@ -467,6 +471,13 @@ int download_image(int channel_fd,struct image_info *info,int productinfo_flag)
 	int count = 0;
 	int ret;
 	
+#ifdef SKIP_MTD_BAND_BLOCK
+        mtd_info_t  meminfo;
+        int need_skip = 0;
+        unsigned long long current_offset = 0;
+        unsigned long long blk_remain = 0;
+        unsigned long long current_read_size = 0;
+#endif
         if(info->image_path == NULL)
                 return DL_SUCCESS;
 
@@ -477,6 +488,20 @@ int download_image(int channel_fd,struct image_info *info,int productinfo_flag)
 		return DL_SUCCESS;
 	}
 
+#ifdef SKIP_MTD_BAND_BLOCK
+        if(!strncmp("/dev/mtd/mtd",info->image_path,12)){
+            need_skip = 1;
+            printf("image = %s :: need skip badblock!\n");
+            if(ioctl(image_fd, MEMGETINFO, &meminfo) != 0){
+                printf("get MEMGETINFO error! error = %d\n",
+                        ioctl(image_fd, MEMGETINFO, &meminfo));
+            }
+            printf("meminfo: erasesize = 0x%x,writesize = 0x%x\n",
+                    meminfo.erasesize,meminfo.writesize);
+        }else{
+            printf("image = %s :: need not skip badblock!\n");
+        }
+#endif
 	printf("Start download image %s image_size 0x%x address 0x%x\n",info->image_path,info->image_size,info->address);
 	image_size = info->image_size;
 	count = (image_size+HS_PACKET_SIZE-1)/HS_PACKET_SIZE;
@@ -489,7 +514,41 @@ int download_image(int channel_fd,struct image_info *info,int productinfo_flag)
 		packet_size = HS_PACKET_SIZE;
 		buffer = (char *)&test_buffer[8];
 		do{
+#ifdef SKIP_MTD_BAND_BLOCK
+                    if(need_skip){
+                        while((current_offset % meminfo.erasesize)==0x0){
+                            printf("Test if current block is bad ....\n");
+                            printf("current_offset = 0x%x\n",current_offset);
+                            printf("MEMGETBADBLOCK ioctl returns  %d(0x%x)\n",
+                                    ioctl(image_fd, MEMGETBADBLOCK, &current_offset),
+                                    ioctl(image_fd, MEMGETBADBLOCK, &current_offset));
+                            if(ioctl(image_fd, MEMGETBADBLOCK, &current_offset) > 0){
+                                printf("Current blcok is bad!!\n");
+                                printf("jump to next block ...\n");
+                                current_offset += meminfo.erasesize;
+                                if(lseek(image_fd, current_offset, SEEK_SET) != current_offset){
+                                    printf("lseek image_fd error!!\n");
+                                    return DL_FAILURE;
+                                }
+                            }else{
+                                printf("Current block is good !!!\n");
+                                break;
+                            }
+                        }
+                        blk_remain = meminfo.erasesize - (current_offset % meminfo.erasesize);
+                        current_read_size = (blk_remain >= packet_size)?packet_size:blk_remain;
+                        printf("blk_remain = 0x%x,packet_size = 0x%x,we try to read 0x%x\n",
+                                blk_remain,packet_size,current_read_size);
+                        read_len = read(image_fd,buffer,current_read_size);
+                        printf("actualy readed length = 0x%x,increase current_offset \n",
+                                read_len);
+                        current_offset += read_len;
+                    }else{
+                        read_len = read(image_fd,buffer,packet_size);
+                    }
+#else
 			read_len = read(image_fd,buffer,packet_size);
+#endif
 			if(read_len > 0){
 				packet_size -= read_len;
 				buffer += read_len;
