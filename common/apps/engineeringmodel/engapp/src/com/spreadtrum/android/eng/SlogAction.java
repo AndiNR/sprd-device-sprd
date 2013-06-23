@@ -222,7 +222,7 @@ public class SlogAction {
      * FIXME: The getState and setState has many problems, may change the
      * function of get and set States.
      **/
-    public static String GetState(String keyName, boolean isLastOption) {
+    public static synchronized String GetState(String keyName, boolean isLastOption) {
         // recieve all text from slog.conf
         StringBuilder conf = null;
         FileInputStream freader = null;
@@ -348,7 +348,7 @@ public class SlogAction {
         }
     }
 
-    public static void SetState(String keyName, String status,
+    public static synchronized void SetState(String keyName, String status,
             boolean isLastOption) {
         final String MethodName = "SetState(String,String,boolean):void";
         if (keyName == null) {
@@ -457,6 +457,9 @@ public class SlogAction {
         SetState(CLEARLOGAUTOKEY, (cursor.getInt(
                 cursor.getColumnIndex(
                         SlogProvider.Contract.COLUMN_CLEAR_AUTO)) == 1), false);
+        SetState(STORAGEKEY, (cursor.getInt(
+                cursor.getColumnIndex(
+                        SlogProvider.Contract.COLUMN_STORAGE)) == 1), false);
 
     }
 
@@ -493,6 +496,7 @@ public class SlogAction {
         cv.put(SlogProvider.Contract.COLUMN_BLUETOOTH, GetState(BLUETOOTHKEY) ? 1:0);
         cv.put(SlogProvider.Contract.COLUMN_CLEAR_AUTO, GetState(CLEARLOGAUTOKEY) ? 1:0);
         cv.put(SlogProvider.Contract.COLUMN_MISC, GetState(MISCKEY) ? 1:0);
+        cv.put(SlogProvider.Contract.COLUMN_STORAGE, GetState(STORAGEKEY) ? 1:0);
 
         return cv;
     }
@@ -960,7 +964,7 @@ public class SlogAction {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos);
         try {
-            dos.writeBytes(String.format("%d,%d,%d", atCommandCode , 1, openLog ? 1 : 0));
+            dos.writeBytes(String.format("%d,%d,%d", atCommandCode , 1, openLog ? 1 : 1));
         } catch (IOException ioException) {
             Log.e(TAG, "IOException has catched, see logs " + ioException);
             return false;

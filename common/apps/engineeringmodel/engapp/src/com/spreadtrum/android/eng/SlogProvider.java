@@ -200,6 +200,7 @@ public class SlogProvider extends ContentProvider {
         public final static String COLUMN_BLUETOOTH = SlogAction.BLUETOOTHKEY.replace("\t", "_");
         public final static String COLUMN_CLEAR_AUTO = SlogAction.CLEARLOGAUTOKEY.replace("\t", "_");
         public final static String COLUMN_MISC = SlogAction.MISCKEY.replace("\t", "_");
+        public final static String COLUMN_STORAGE = SlogAction.STORAGEKEY.replace("\t", "_");
 
         public final static int VALUE_GENERAL_ENABLE = 1;
         public final static int VALUE_GENERAL_DISABLE = 2;
@@ -227,6 +228,7 @@ public class SlogProvider extends ContentProvider {
                 + Contract.COLUMN_BLUETOOTH + " INTEGER NOT NULL,"
                 + Contract.COLUMN_CLEAR_AUTO + " INTEGER NOT NULL,"
                 + Contract.COLUMN_MISC + " INTEGER NOT NULL,"
+                + Contract.COLUMN_STORAGE + " INTEGER NOT NULL,"
 
                 + Contract._ID + " INTEGER PRIMARY KEY);");
         }

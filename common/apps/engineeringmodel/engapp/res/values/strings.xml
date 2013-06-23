@@ -234,7 +234,7 @@
     <string name="slog_clear_ok">Clear done</string>
     <string name="slog_clear_failed">Failed to clear</string>
 
-    <string name="slog_version_info">Updated on 2013-6-19, add MediaScanner, fix prompt when dump and clear log</string>
+    <string name="slog_version_info">Updated on 2013-6-23, fix storage location in SlogProvider, change AT Command sending plan, fix the break of slog.conf and add synchronized to getter and setter</string>
 	<!-- SlogUI Added Done -->
 
 </resources>
