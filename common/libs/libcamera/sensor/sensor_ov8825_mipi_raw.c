@@ -1367,7 +1367,7 @@ SENSOR_INFO_T g_ov8825_mipi_raw_info = {
 	ov8825_I2C_ADDR_W,	// salve i2c write address
 	ov8825_I2C_ADDR_R,	// salve i2c read address
 
-	SENSOR_I2C_REG_16BIT | SENSOR_I2C_REG_8BIT,	// bit0: 0: i2c register value is 8 bit, 1: i2c register value is 16 bit
+	SENSOR_I2C_REG_16BIT | SENSOR_I2C_REG_8BIT | SENSOR_I2C_FREQ_400,	// bit0: 0: i2c register value is 8 bit, 1: i2c register value is 16 bit
 	// bit1: 0: i2c register addr  is 8 bit, 1: i2c register addr  is 16 bit
 	// other bit: reseved
 	SENSOR_HW_SIGNAL_PCLK_N | SENSOR_HW_SIGNAL_VSYNC_N | SENSOR_HW_SIGNAL_HSYNC_P,	// bit0: 0:negative; 1:positive -> polarily of pixel clock
@@ -1394,7 +1394,7 @@ SENSOR_INFO_T g_ov8825_mipi_raw_info = {
 	// bit[8:31] reseved
 
 	SENSOR_LOW_PULSE_RESET,	// reset pulse level
-	50,			// reset pulse width(ms)
+	5,			// reset pulse width(ms)
 
 	SENSOR_LOW_LEVEL_PWDN,	// 1: high level valid; 0: low level valid
 
@@ -1419,7 +1419,7 @@ SENSOR_INFO_T g_ov8825_mipi_raw_info = {
 	NULL,			//&g_ov8825_ext_info,                // extend information about sensor
 	SENSOR_AVDD_1800MV,	// iovdd
 	SENSOR_AVDD_1500MV,	// dvdd
-	3,			// skip frame num before preview
+	1,			// skip frame num before preview
 	3,			// skip frame num before capture
 	0,			// deci frame num during preview
 	0,			// deci frame num during video preview
