@@ -94,18 +94,20 @@ public class Misc extends PreferenceActivity {
     public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
         String key = preference.getKey();
         if ("sms_fill_memory".equals(key)) {
-            CheckBoxPreference checkbox = (CheckBoxPreference) preference;
-            if (checkbox.isChecked()) {
-                writeCmd("SMS MEM START");
-                mmsFillMemoryPref.setEnabled(false);
-                dialog = ProgressDialog.show(this, "", getString(R.string.fill_memory_alert_msg));
-                preference.setSummary("uncheck to delete memory");
-            } else {
-                writeCmd("MEM STOP");
-                showDialog(MEM_STOP);
-                mmsFillMemoryPref.setEnabled(true);
-                preference.setSummary("");
-            }
+	    if(preference instanceof CheckBoxPreference){
+                CheckBoxPreference checkbox = (CheckBoxPreference) preference;
+                if (checkbox.isChecked()) {
+                    writeCmd("SMS MEM START");
+                    mmsFillMemoryPref.setEnabled(false);
+                    dialog = ProgressDialog.show(this, "", getString(R.string.fill_memory_alert_msg));
+                    preference.setSummary("uncheck to delete memory");
+                } else {
+                    writeCmd("MEM STOP");
+                    showDialog(MEM_STOP);
+                    mmsFillMemoryPref.setEnabled(true);
+                    preference.setSummary("");
+                }
+	    }
         }else if("mms_fill_memory".equals(key)){
             CheckBoxPreference checkbox = (CheckBoxPreference) preference;
             if (checkbox.isChecked()) {
