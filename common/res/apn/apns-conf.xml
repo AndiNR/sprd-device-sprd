@@ -20573,7 +20573,8 @@
         authtype="3"
     />
     <!-- UK(Bristol） T-Mobile -->
-    <apn carrier="T-Mobile"
+     <!-- modify for Bug#176404 start -->
+    <!--<apn carrier="T-Mobile"
         mcc="234"
         mnc="30"
         apn="general.t-mobile.uk"
@@ -20586,7 +20587,22 @@
         password="tm"
         type="default,supl,mms"
         authtype="3"
+    />-->
+
+    <apn carrier="T-Mobile"
+        mcc="234"
+        mnc="30"
+        apn="general.t-mobile.uk"
+        mmsproxy="149.254.201.135"
+        mmsport="8080"
+        mmsc="http://mmsc.t-mobile.co.uk:8002"
+        user="T-Mobile"
+        password="tm"
+        type=""
+        authtype="3"
     />
+    <!-- modify for Bug#176404 end -->
+
     <apn carrier="Picture Message"
         mcc="234"
         mnc="30"
