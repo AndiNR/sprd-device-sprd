@@ -325,7 +325,7 @@ public class uplmnsettings extends Activity {
 				}
 
 				for(int i=0; i<uplmn_list_num; i++){
-					originalUPLMN[i] = new String(inputBytes,i*10,LEN_UNIT);
+					originalUPLMN[i] = new String(inputBytes,i*10,LEN_UNIT,Charset.defaultCharset());
 					if(DEBUG) Log.d(LOG_TAG, "strUPLMN["+i+"] "+originalUPLMN[i] );
 				}
 				handleUTRANorGSM(inputBytes);
