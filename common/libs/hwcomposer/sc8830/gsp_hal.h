@@ -192,7 +192,9 @@ enum
     COPYBIT_TRANSFORM       = 4,
     /* blurs the copied bitmap. The amount of blurring cannot be changed
      * at this time. */
-    COPYBIT_BLUR            = 5
+    COPYBIT_BLUR            = 5,
+    /* use Layer1's pallet function to clean the area Layer0 not covered */
+    COPYBIT_PALLET_CLEAN    = 6
 };
 
 /* values for copybit_set_parameter(COPYBIT_TRANSFORM) */

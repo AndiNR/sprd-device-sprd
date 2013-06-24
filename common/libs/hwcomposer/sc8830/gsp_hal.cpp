@@ -569,7 +569,7 @@ int32_t gsp_hal_open(void)
 
     gsp_fd = open("/dev/sprd_gsp", O_RDWR, 0);
     if (-1 == gsp_fd) {
-        ALOGE("gsp thread%d,Camera_rotation fail : open gsp device. Line:%d \n", __LINE__);
+        ALOGE("open gsp device failed! Line:%d \n", __LINE__);
     }
 
     return gsp_fd;
@@ -1441,6 +1441,36 @@ static int set_parameter_gsp(struct gsp_device_t *dev, int name, int value)
         ctx->gsp_cfg_info.misc_info.dithering_en = (value&0x1);
     }
     break;
+
+    case COPYBIT_PALLET_CLEAN: {
+        gsp_image_t const *dst=(gsp_image_t const *)value;
+
+        ctx->gsp_cfg_info.layer1_info.grey.r_val = 0;
+        ctx->gsp_cfg_info.layer1_info.grey.g_val = 0;
+        ctx->gsp_cfg_info.layer1_info.grey.b_val = 0;
+        ctx->gsp_cfg_info.layer1_info.clip_rect.st_x = 0;
+        ctx->gsp_cfg_info.layer1_info.clip_rect.st_y = 0;
+        ctx->gsp_cfg_info.layer1_info.clip_rect.rect_w = dst->w;
+        ctx->gsp_cfg_info.layer1_info.clip_rect.rect_h = dst->h;
+        ctx->gsp_cfg_info.layer1_info.pitch = dst->w;
+
+        //the 3-plane addr should not be used by GSP
+        ctx->gsp_cfg_info.layer1_info.src_addr.addr_y = (uint32_t)dst->base;
+        ctx->gsp_cfg_info.layer1_info.src_addr.addr_uv = (uint32_t)dst->base;
+        ctx->gsp_cfg_info.layer1_info.src_addr.addr_v = (uint32_t)dst->base;
+
+        ctx->gsp_cfg_info.layer1_info.pallet_en = 1;
+        ctx->gsp_cfg_info.layer1_info.alpha = 0x1;
+		ctx->gsp_cfg_info.layer0_info.alpha = 0xff;
+        ctx->gsp_cfg_info.layer1_info.rot_angle = GSP_ROT_ANGLE_0;
+        ctx->gsp_cfg_info.layer1_info.des_pos.pos_pt_x = 0;
+        ctx->gsp_cfg_info.layer1_info.des_pos.pos_pt_y = 0;
+        ctx->gsp_cfg_info.layer1_info.layer_en = 1;
+
+        ALOGE("set_parameter_gsp%d: COPYBIT_PALLET_CLEAN\n", __LINE__);
+    }
+    break;
+
     default: {
         status = GSP_HAL_PARAM_ERR;
         ALOGE("COPYBIT_BLUR and COPYBIT_ROTATION_DEG not support by SPRD-GSP: Line:%d\n", __LINE__);
@@ -1461,25 +1491,43 @@ static int stretch_gsp(
     gsp_region_t const *region)
 {
     int status = GSP_NO_ERR;
+    unsigned int     src_phyaddr = 0;
+    unsigned int     dst_phyaddr = 0;
     gsp_context_t* ctx = NULL;
     struct private_handle_t *private_h_src = NULL;
     struct private_handle_t *private_h_dst = NULL;
 
-    ctx = (gsp_context_t*)dev;
-    private_h_src = (struct private_handle_t *)src->handle;
-    private_h_dst = (struct private_handle_t *)dst->handle;
+    ALOGE("stretch_gsp%d: enter\n", __LINE__);
 
-    if(ctx == NULL
-            ||private_h_src == NULL
-            ||private_h_dst == NULL) {
+    ctx = (gsp_context_t*)dev;
+
+    if(src->handle != NULL) {
+        private_h_src = (struct private_handle_t *)src->handle;
+        private_h_dst = (struct private_handle_t *)dst->handle;
+
+
+        if(ctx == NULL
+                ||private_h_src == NULL
+                ||private_h_dst == NULL) {
+            ALOGE("parameters err! Line:%d \n", __LINE__);
+            return GSP_HAL_PARAM_ERR;
+        }
+
+        if(!(private_h_src->flags & private_handle_t::PRIV_FLAGS_USES_PHY)
+                ||!(private_h_dst->flags & private_handle_t::PRIV_FLAGS_USES_PHY)) {
+            ALOGE("gsp only support physical address now! Line:%d \n", __LINE__);
+            return GSP_HAL_VITUAL_ADDR_NOT_SUPPORT;
+        }
+        ALOGE("handle phy addr! Line:%d \n", __LINE__);
+        src_phyaddr = private_h_src->phyaddr;
+        dst_phyaddr = private_h_dst->phyaddr;
+    } else if(src->base) {
+        ALOGE("base phy addr! Line:%d \n", __LINE__);
+        src_phyaddr = (unsigned int)src->base;
+        dst_phyaddr = (unsigned int)dst->base;
+    } else {
         ALOGE("parameters err! Line:%d \n", __LINE__);
         return GSP_HAL_PARAM_ERR;
-    }
-
-    if(!(private_h_src->flags & private_handle_t::PRIV_FLAGS_USES_PHY)
-            ||!(private_h_dst->flags & private_handle_t::PRIV_FLAGS_USES_PHY)) {
-        ALOGE("gsp only support physical address now! Line:%d \n", __LINE__);
-        return GSP_HAL_VITUAL_ADDR_NOT_SUPPORT;
     }
 
     uint32_t pixel_cnt_in = 0;
@@ -1506,17 +1554,17 @@ static int stretch_gsp(
     case GSP_SRC_FMT_ARGB888:
     case GSP_SRC_FMT_RGB888:
     case GSP_SRC_FMT_RGB565:
-        ctx->gsp_cfg_info.layer0_info.src_addr.addr_y = private_h_src->phyaddr;
+        ctx->gsp_cfg_info.layer0_info.src_addr.addr_y = src_phyaddr;
         break;
     case GSP_SRC_FMT_YUV422_2P:
     case GSP_SRC_FMT_YUV420_2P:
-        ctx->gsp_cfg_info.layer0_info.src_addr.addr_y = private_h_src->phyaddr;
+        ctx->gsp_cfg_info.layer0_info.src_addr.addr_y = src_phyaddr;
         ctx->gsp_cfg_info.layer0_info.src_addr.addr_uv =
-            ctx->gsp_cfg_info.layer0_info.src_addr.addr_v = private_h_src->phyaddr + pixel_cnt_in;
+            ctx->gsp_cfg_info.layer0_info.src_addr.addr_v = src_phyaddr + pixel_cnt_in;
         break;
     case GSP_SRC_FMT_YUV420_3P:
-        ctx->gsp_cfg_info.layer0_info.src_addr.addr_y = private_h_src->phyaddr;
-        ctx->gsp_cfg_info.layer0_info.src_addr.addr_uv = private_h_src->phyaddr + pixel_cnt_in;
+        ctx->gsp_cfg_info.layer0_info.src_addr.addr_y = src_phyaddr;
+        ctx->gsp_cfg_info.layer0_info.src_addr.addr_uv = src_phyaddr + pixel_cnt_in;
         ctx->gsp_cfg_info.layer0_info.src_addr.addr_v = ctx->gsp_cfg_info.layer0_info.src_addr.addr_uv + pixel_cnt_in/4;
         break;
 
@@ -1534,17 +1582,17 @@ static int stretch_gsp(
     case GSP_DST_FMT_ARGB888:
     case GSP_DST_FMT_RGB888:
     case GSP_DST_FMT_RGB565:
-        ctx->gsp_cfg_info.layer_des_info.src_addr.addr_y = private_h_dst->phyaddr;
+        ctx->gsp_cfg_info.layer_des_info.src_addr.addr_y = dst_phyaddr;
         break;
     case GSP_DST_FMT_YUV422_2P:
     case GSP_DST_FMT_YUV420_2P:
-        ctx->gsp_cfg_info.layer_des_info.src_addr.addr_y = private_h_dst->phyaddr;
+        ctx->gsp_cfg_info.layer_des_info.src_addr.addr_y = dst_phyaddr;
         ctx->gsp_cfg_info.layer_des_info.src_addr.addr_uv =
-            ctx->gsp_cfg_info.layer_des_info.src_addr.addr_v = private_h_dst->phyaddr + pixel_cnt_out;
+            ctx->gsp_cfg_info.layer_des_info.src_addr.addr_v = dst_phyaddr + pixel_cnt_out;
         break;
     case GSP_DST_FMT_YUV420_3P:
-        ctx->gsp_cfg_info.layer_des_info.src_addr.addr_y = private_h_dst->phyaddr;
-        ctx->gsp_cfg_info.layer_des_info.src_addr.addr_uv = private_h_dst->phyaddr + pixel_cnt_out;
+        ctx->gsp_cfg_info.layer_des_info.src_addr.addr_y = dst_phyaddr;
+        ctx->gsp_cfg_info.layer_des_info.src_addr.addr_uv = dst_phyaddr + pixel_cnt_out;
         ctx->gsp_cfg_info.layer_des_info.src_addr.addr_v = ctx->gsp_cfg_info.layer_des_info.src_addr.addr_uv + pixel_cnt_out/4;
         break;
     case GSP_DST_FMT_ARGB565:
@@ -1554,9 +1602,26 @@ static int stretch_gsp(
         goto exit;
         break;
     }
-    ctx->gsp_cfg_info.layer_des_info.pitch = ctx->gsp_cfg_info.layer0_info.des_rect.rect_w;
+    //ctx->gsp_cfg_info.layer_des_info.pitch = ctx->gsp_cfg_info.layer0_info.des_rect.rect_w;
+    ctx->gsp_cfg_info.layer_des_info.pitch = dst->w;
     ctx->gsp_cfg_info.layer_des_info.endian_mode = dst->endian_mode;
-
+/*
+    ALOGE("{%dx%d %d}(%d,%d)[%dx%d]=>{%dx%d %d}(%d,%d)[%dx%d]\n",
+          ctx->gsp_cfg_info.layer0_info.pitch,
+          src->h,
+          ctx->gsp_cfg_info.layer0_info.img_format,
+          ctx->gsp_cfg_info.layer0_info.clip_rect.st_x,
+          ctx->gsp_cfg_info.layer0_info.clip_rect.st_y,
+          ctx->gsp_cfg_info.layer0_info.clip_rect.rect_w,
+          ctx->gsp_cfg_info.layer0_info.clip_rect.rect_h,
+          ctx->gsp_cfg_info.layer_des_info.pitch,
+          dst->h,
+          ctx->gsp_cfg_info.layer_des_info.img_format,
+          ctx->gsp_cfg_info.layer0_info.des_rect.st_x,
+          ctx->gsp_cfg_info.layer0_info.des_rect.st_y,
+          ctx->gsp_cfg_info.layer0_info.des_rect.rect_w,
+          ctx->gsp_cfg_info.layer0_info.des_rect.rect_h);
+*/
     status = GSP_Proccess(&ctx->gsp_cfg_info);
     ALOGI_IF(status,"%s:%d,%s\n", __func__, __LINE__,status?"failed":"success");
 
