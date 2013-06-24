@@ -372,6 +372,7 @@ reopen_vbpipe:
 			 * and re-open the pipe.
 			 */
 			close(pipe_fd);
+			release_wake_lock("NvItemdLock");
 			NV_LOGD("goto reopen vbpipe\n");
 			goto reopen_vbpipe;
 		}
