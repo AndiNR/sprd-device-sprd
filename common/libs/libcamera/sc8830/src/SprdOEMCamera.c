@@ -3026,8 +3026,7 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 
 		if (THUM_FROM_CAP != g_cxt->thum_from) {
 			if ((0 != g_cxt->thum_size.width) && (0 != g_cxt->thum_size.height)) {
-				/*ret = camera_convert_to_thumb();*/
-				thumb_exist = 0;
+				ret = camera_convert_to_thumb();
 				if (ret) {
 					thumb_exist = 0;
 					CMR_LOGE("Failed to get thumbnail, %d", ret);
@@ -5444,14 +5443,14 @@ static int camera_convert_to_thumb(void)
 	src_frame.size.height     = g_cxt->picture_size.height;
 	src_frame.fmt             = IMG_DATA_TYPE_YUV420;
 	src_frame.data_end.y_endian = 1;
-	src_frame.data_end.uv_endian = 2;
+	src_frame.data_end.uv_endian = 1;
 	dst_frame.addr_phy.addr_y = g_cxt->cap_mem[frm_id].thum_yuv.addr_phy.addr_y;
 	dst_frame.addr_phy.addr_u = g_cxt->cap_mem[frm_id].thum_yuv.addr_phy.addr_u;
 	dst_frame.size.width      = g_cxt->thum_size.width;
 	dst_frame.size.height     = g_cxt->thum_size.height;
 	dst_frame.fmt             = IMG_DATA_TYPE_YUV420;
 	dst_frame.data_end.y_endian = 1;
-	dst_frame.data_end.uv_endian = 2;
+	dst_frame.data_end.uv_endian = 1;
 	rect.start_x              = 0;
 	rect.start_y              = 0;
 	rect.width                = src_frame.size.width;
