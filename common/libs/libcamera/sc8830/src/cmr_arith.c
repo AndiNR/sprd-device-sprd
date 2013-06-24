@@ -80,6 +80,7 @@ void *arithmetic_fd_thread_proc(void *data)
 	unsigned char       *p_format = (unsigned char*)IMAGE_FORMAT;
 	camera_frame_type   frame_type;
 	int                 fd_exit_flag = 0;
+	struct camera_context  *cxt = camera_get_cxt();
 
 	while (1) {
 		ret = cmr_msg_get(s_arith_cxt->fd_msg_que_handle, &message);
@@ -119,10 +120,12 @@ void *arithmetic_fd_thread_proc(void *data)
 					CMR_LOGI("face num %d,smile_level %d.",k,face_rect_ptr->smile_level);
 					face_rect_ptr++;
 				}
-				camera_call_cb(CAMERA_EVT_CB_FD,
-							camera_get_client_data(),
-							CAMERA_FUNC_START_PREVIEW,
-							(uint32_t)&frame_type);
+				if (cxt->arithmetic_cxt.fd_flag) {
+					camera_call_cb(CAMERA_EVT_CB_FD,
+								camera_get_client_data(),
+								CAMERA_FUNC_START_PREVIEW,
+								(uint32_t)&frame_type);
+				}
 			}
 			s_arith_cxt->fd_busy = 0;
 			pthread_mutex_unlock(&s_arith_cxt->fd_lock);
