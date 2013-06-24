@@ -262,6 +262,7 @@
 	</receiver>
 	<!-- add by wangxiaobin 2011-10-04 for move wifitest to 83780 end -->
 
+	<!--
 	<receiver android:name="EngModeBroadcastReceiver">
 		<intent-filter>
 		<action android:name="android.provider.Telephony.SECRET_CODE" />
@@ -271,6 +272,7 @@
 		<action android:name="android.intent.action.BOOT_COMPLETED" />
 		</intent-filter>
 	</receiver>
+	-->
 
 	<!--
 	<receiver android:name="EngVersionBroadcastReceiver">
