@@ -3013,6 +3013,12 @@ static int adev_config_parse(struct tiny_audio_device *adev)
     return ret;
 }
 
+static void aud_init_vb_to_arm(struct tiny_audio_device *adev)
+{
+    if (adev)
+        mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);
+}
+
 static void aud_vb_effect_start(struct tiny_audio_device *adev)
 {
     if (adev)
@@ -3448,6 +3454,7 @@ static int adev_open(const hw_module_t* module, const char* name,
     adev->voice_volume = 1.0f;
     adev->bluetooth_nrec = false;
 
+    aud_init_vb_to_arm(adev);
     pthread_mutex_unlock(&adev->lock);
 
     *device = &adev->hw_device.common;
