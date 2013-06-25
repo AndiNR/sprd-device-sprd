@@ -1508,7 +1508,7 @@ bool SprdCameraHardware::allocateCaptureMem(bool initJpegHeap)
 	buffer_size = camera_get_size_align_page(mRawHeapSize);
 	LOGV("allocateCaptureMem:mRawHeap align size = %d . count %d ",buffer_size, kRawBufferCount);
 
-	mRawHeap = GetPmem(buffer_size, kRawBufferCount);
+	mRawHeap = GetCachePmem(buffer_size, kRawBufferCount);
 	if(NULL == mRawHeap)
 		goto allocate_capture_mem_failed;
 
@@ -1519,7 +1519,7 @@ bool SprdCameraHardware::allocateCaptureMem(bool initJpegHeap)
 
 	if (mMiscHeapSize > 0) {
 		buffer_size = camera_get_size_align_page(mMiscHeapSize);
-		mMiscHeap = GetPmem(buffer_size, kRawBufferCount);
+		mMiscHeap = GetCachePmem(buffer_size, kRawBufferCount);
 		if(NULL == mMiscHeap) {
 			goto allocate_capture_mem_failed;
 		}
@@ -2481,7 +2481,7 @@ void SprdCameraHardware::receiveJpegPictureFragment( JPEGENC_CBrtnType *encInfo)
     //camera_handle.mem.encBuf[index].used_len = 0;
 	LOGV("receiveJpegPictureFragment : base + mJpegSize: %x, enc->buffer: %x, size: %x", (uint32_t)(base + mJpegSize), (uint32_t)enc->buffer, size) ;
 
-	memcpy(base + mJpegSize, enc->buffer, size);
+//	memcpy(base + mJpegSize, enc->buffer, size);
     mJpegSize += size;
 
 	LOGV("receiveJpegPictureFragment X.");
@@ -2530,6 +2530,7 @@ void SprdCameraHardware::receiveJpegPicture(JPEGENC_CBrtnType *encInfo)
 {
     GET_END_TIME;
     GET_USE_TIME;
+	camera_encode_mem_type *enc = (camera_encode_mem_type *)encInfo->outPtr;
     LOGE("Capture Time:%d(ms).",s_use_time);
 
 	LOGV("receiveJpegPicture: E image (%d bytes out of %d)",
@@ -2552,14 +2553,14 @@ void SprdCameraHardware::receiveJpegPicture(JPEGENC_CBrtnType *encInfo)
 			&& (CAMERA_NORMAL_CONTINUE_SHOT_MODE != mCaptureMode)) {
 			if (mMsgEnabled & CAMERA_MSG_COMPRESSED_IMAGE){
 				camera_memory_t *mem = mGetMemory_cb(-1, mJpegSize, 1, 0);
-				memcpy(mem->data, mJpegHeap->mHeap->base(), mJpegSize);
+				memcpy(mem->data, enc->buffer, mJpegSize);
 				//mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,buffer, mUser );
 				mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,mem, 0, NULL, mUser );
 				mem->release(mem);
 			}
 		} else {
 			camera_memory_t *mem = mGetMemory_cb(-1, mJpegSize, 1, 0);
-			memcpy(mem->data, mJpegHeap->mHeap->base(), mJpegSize);
+			memcpy(mem->data, enc->buffer, mJpegSize);
 			mData_cb(CAMERA_MSG_COMPRESSED_IMAGE,mem, 0, NULL, mUser );
 			mem->release(mem);
 		}
@@ -2575,6 +2576,8 @@ void SprdCameraHardware::receiveJpegPicture(JPEGENC_CBrtnType *encInfo)
 		if (encInfo->need_free) {
 			deinitCapture();
 		}
+	} else {
+		flush_buffer(CAMERA_FLUSH_RAW_HEAP_ALL, 0,(void*)0,(void*)0,0);
 	}
 	print_time();
 	LOGV("receiveJpegPicture: X callback done.");
