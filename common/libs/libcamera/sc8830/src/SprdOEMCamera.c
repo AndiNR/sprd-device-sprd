@@ -1408,8 +1408,7 @@ int camera_before_set_internal(enum restart_mode re_mode)
 		g_cxt->restart_timestamp = sec * 1000000000LL + usec * 1000;
 		break;
 	case RESTART_ZOOM:
-		if ((CAMERA_ZSL_MODE == g_cxt->cap_mode)
-			|| (CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode)) {
+		if (IS_CHN_BUSY(CHN_2)) {
 			ret = cmr_v4l2_cap_pause(CHN_2, 1);
 			SET_CHN_IDLE(CHN_2);
 		}
@@ -1496,6 +1495,7 @@ int camera_after_set_internal(enum restart_mode re_mode)
 			CMR_LOGE("Failed to init preview when preview");
 			return -CAMERA_FAILED;
 		}
+		CMR_LOGV("cap_mode %d", g_cxt->cap_mode);
 		if ((CAMERA_ZSL_MODE == g_cxt->cap_mode)
 			|| (CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode)) {
 			ret = camera_capture_init();
@@ -2997,13 +2997,12 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 	if (g_cxt->jpeg_cxt.proc_status.slice_height_out == g_cxt->picture_size.height) {
 		g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg.addr_vir.addr_u = data->stream_size;
 		CMR_LOGV("Encode done");
-
-	send_capture_data(0x10,/* jpg */
-			g_cxt->picture_size.width,
-			g_cxt->picture_size.height,
-			(char *)g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg.addr_vir.addr_y,
-			data->stream_size,
-			0, 0, 0, 0);
+		send_capture_data(0x10,/* jpg */
+				g_cxt->picture_size.width,
+				g_cxt->picture_size.height,
+				(char *)g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg.addr_vir.addr_y,
+				data->stream_size,
+				0, 0, 0, 0);
 #if 0
 		ret = camera_save_to_file(990,
 			IMG_DATA_TYPE_JPEG,
@@ -3647,6 +3646,7 @@ int camera_capture_init(void)
 	struct isp_video_start   isp_video_param;
 	SENSOR_AE_INFO_T         *sensor_aec_info;
 	struct sn_cfg            sensor_cfg;
+
 	CMR_LOGV("capture size, %d %d, cap_rot %d",
 		g_cxt->capture_size.width,
 		g_cxt->capture_size.height,
@@ -4494,11 +4494,9 @@ int camera_capture_yuv_process(struct frm_info *data)
 		g_cxt->cap_original_fmt,
 		g_cxt->cfg_cap_rot);
 
-	if (!NO_SCALING) {
-		if (IS_CHN_BUSY(CHN_2)) {
-			ret = cmr_v4l2_cap_pause(CHN_2,0);
-			SET_CHN_IDLE(CHN_2);
-		}
+	if (IS_CHN_BUSY(CHN_2)) {
+		ret = cmr_v4l2_cap_pause(CHN_2,0);
+		SET_CHN_IDLE(CHN_2);
 	}
 
 	TAKE_PIC_CANCEL;
