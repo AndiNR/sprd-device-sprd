@@ -710,6 +710,7 @@ connect_socket:
                 } else if(n == 0) {
 			err_log("get 0 bytes, sleep 10s, reconnect socket.");
 			sleep(10);
+			close(soc_fd);
 			goto connect_socket;
 		}
         }

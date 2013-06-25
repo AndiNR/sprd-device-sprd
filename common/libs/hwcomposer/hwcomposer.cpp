@@ -439,18 +439,21 @@ static int init_fb_parameter(struct hwc_context_t *context)
     struct fb_fix_screeninfo finfo;
     if (ioctl(fd, FBIOGET_FSCREENINFO, &finfo) == -1) {
         ALOGE("fail to get fb finfo");
+	close(fd);
         return -errno;
     }
 
     struct fb_var_screeninfo info;
     if (ioctl(fd, FBIOGET_VSCREENINFO, &info) == -1) {
         ALOGE("fail to get fb nfo");
+	close(fd);
         return -errno;
     }
     size_t fbSize = round_up_to_page_size(finfo.line_length * info.yres_virtual);
     void* vaddr = mmap(0, fbSize, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
     if (vaddr == MAP_FAILED) {
         AERR( "Error mapping the framebuffer (%s)", strerror(errno) );
+	close(fd);
         return -errno;
     }
     context->fbfd = fd;
