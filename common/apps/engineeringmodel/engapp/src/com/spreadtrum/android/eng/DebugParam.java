@@ -295,6 +295,13 @@ public class DebugParam extends PreferenceActivity {
     		}
 			case SET_MANUAL_ASSERT:
 	            setManualAssert();
+
+              if(mEf !=  null) {
+                  mEf = null;
+              }
+              mEf = new engfetch();
+              mSocketID = mEf.engopen();
+
 				break;
 			case INIT_BAND_REFERENCE:{
 				final String summary = getBandSelectSummary(getSelectedBand());
