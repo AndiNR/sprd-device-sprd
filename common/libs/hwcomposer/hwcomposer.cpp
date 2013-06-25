@@ -360,56 +360,53 @@ static int verify_video_layer(struct hwc_context_t *context, hwc_layer_t * l)
 //--------------------chip independent
 static int init_fb_parameter(struct hwc_context_t *context)
 {
-	char const * const device_template[] =
-	{
-		"/dev/graphics/fb%u",
-		"/dev/fb%u",
-		NULL
-	};
+    char const * const device_template[] = {
+        "/dev/graphics/fb%u",
+        "/dev/fb%u",
+        NULL
+    };
 
-	int fd = -1;
-	int i = 0;
-	char name[64];
+    int fd = -1;
+    int i = 0;
+    char name[64];
 
-	while ((fd == -1) && device_template[i])
-	{
-		snprintf(name, 64, device_template[i], 0);
-		fd = open(name, O_RDWR, 0);
-		i++;
-	}
+    while ((fd == -1) && device_template[i]) {
+        snprintf(name, 64, device_template[i], 0);
+        fd = open(name, O_RDWR, 0);
+        i++;
+    }
 
-	if (fd < 0)
-	{
-		ALOGE("fail to open fb");
-		return -errno;
-	}
+    if (fd < 0) {
+        ALOGE("fail to open fb");
+        return -errno;
+    }
 
-	struct fb_fix_screeninfo finfo;
-	if (ioctl(fd, FBIOGET_FSCREENINFO, &finfo) == -1)
-	{
-		ALOGE("fail to get fb finfo");
-		return -errno;
-	}
+    struct fb_fix_screeninfo finfo;
+    if (ioctl(fd, FBIOGET_FSCREENINFO, &finfo) == -1) {
+        ALOGE("fail to get fb finfo");
+	close(fd);
+        return -errno;
+    }
 
-	struct fb_var_screeninfo info;
-	if (ioctl(fd, FBIOGET_VSCREENINFO, &info) == -1)
-	{
-		ALOGE("fail to get fb nfo");
-		return -errno;
-	}
-	size_t fbSize = round_up_to_page_size(finfo.line_length * info.yres_virtual);
-	void* vaddr = mmap(0, fbSize, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-	if (vaddr == MAP_FAILED)
-	{
-		AERR( "Error mapping the framebuffer (%s)", strerror(errno) );
-		return -errno;
-	}
-	context->fbfd = fd;
-	context->fb_width = info.xres;
-	context->fb_height = info.yres;
-	context->fb_virt_addr = vaddr;
-	ALOGI("fb_width = %d,fb_height = %d , finfo.line_length:%d ,  info.yres_virtual:%d",context->fb_width,context->fb_height , finfo.line_length,  info.yres_virtual);
-	return 0;
+    struct fb_var_screeninfo info;
+    if (ioctl(fd, FBIOGET_VSCREENINFO, &info) == -1) {
+        ALOGE("fail to get fb nfo");
+	close(fd);
+        return -errno;
+    }
+    size_t fbSize = round_up_to_page_size(finfo.line_length * info.yres_virtual);
+    void* vaddr = mmap(0, fbSize, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+    if (vaddr == MAP_FAILED) {
+        AERR( "Error mapping the framebuffer (%s)", strerror(errno) );
+	close(fd);
+        return -errno;
+    }
+    context->fbfd = fd;
+    context->fb_width = info.xres;
+    context->fb_height = info.yres;
+    context->fb_virt_addr = vaddr;
+    ALOGI("fb_width = %d,fb_height = %d , finfo.line_length:%d ,  info.yres_virtual:%d",context->fb_width,context->fb_height , finfo.line_length,  info.yres_virtual);
+    return 0;
 }
 
 void dump_yuv(uint8_t* pBuffer,uint32_t aInBufSize)
