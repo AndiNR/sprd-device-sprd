@@ -107,6 +107,8 @@ uint32_t camera_flash_mode_to_status(enum cmr_flash_mode f_mode)
 {
 	struct camera_context    *cxt = camera_get_cxt();
 	uint32_t                 status = FLASH_STATUS_MAX;
+	int                      ret = CAMERA_SUCCESS;
+	uint32_t                 autoflash = 0;
 
 	switch (f_mode) {
 	case CAMERA_FLASH_MODE_OFF:
@@ -123,7 +125,18 @@ uint32_t camera_flash_mode_to_status(enum cmr_flash_mode f_mode)
 	#endif
 		break;
 	case CAMERA_FLASH_MODE_AUTO:
-		if(cxt->cmr_set.auto_flash){
+		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
+			ret = isp_capbility(ISP_FALSH_EB, (void *)&autoflash);
+			CMR_LOGV("isp auto flash value is %d", autoflash);
+		} else {
+			ret = Sensor_Ioctl(SENSOR_IOCTL_FLASH, (uint32_t)&autoflash);
+			CMR_LOGV("yuv auto flash value is %d", autoflash);
+		}
+		if(ret){
+			autoflash = 1;
+			CMR_LOGE("Failed to read auto flash mode, %d", ret);
+		}
+		if(autoflash){
 			status = FLASH_OPEN;
 		}else {
 			status = FLASH_CLOSE;
@@ -145,7 +158,7 @@ int camera_set_ae(uint32_t ae_mode, uint32_t *skip_mode, uint32_t *skip_num)
 
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = isp_ioctl(ISP_CTRL_AE_MODE,(void *)&ae_mode);
 	} else {
 		CMR_LOGE ("set ae: sensor not support\n");
@@ -164,7 +177,7 @@ int camera_set_ae_measure_lum(uint32_t meas_lum_mode, uint32_t *skip_mode, uint3
 
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = isp_ioctl(ISP_CTRL_AE_MEASURE_LUM, (void *)&meas_lum_mode);
 	} else {
 		CMR_LOGE ("set ae measure lum: sensor not support\n");
@@ -213,7 +226,7 @@ int camera_set_alg(uint32_t ae_work_mode, uint32_t *skip_mode, uint32_t *skip_nu
 
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = isp_ioctl(ISP_CTRL_AE_MEASURE_LUM, (void *)&ae_work_mode);
 	} else {
 		CMR_LOGE ("set alg:sensor not support\n");
@@ -233,7 +246,7 @@ int camera_set_hdr(uint32_t hdr_mode, uint32_t *skip_mode, uint32_t *skip_num)
 
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = isp_ioctl(ISP_CTRL_HDR, (void *)&hdr_mode);
 	} else {
 		CMR_LOGE ("set hdr:sensor not support\n");
@@ -251,12 +264,12 @@ int camera_set_brightness(uint32_t brightness, uint32_t *skip_mode, uint32_t *sk
 	CMR_LOGI ("brightness %d", brightness);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		camera_param_to_isp(ISP_CTRL_BRIGHTNESS, brightness, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_BRIGHTNESS, (void *)&isp_param);
 	} else {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_BRIGHTNESS, brightness);
 	}
 
@@ -272,12 +285,12 @@ int camera_set_contrast(uint32_t contrast, uint32_t *skip_mode, uint32_t *skip_n
 	CMR_LOGI ("contrast %d", contrast);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		camera_param_to_isp(ISP_CTRL_CONTRAST, contrast, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_CONTRAST, (void *)&isp_param);
 	} else {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_CONTRAST, contrast);
 	}
 
@@ -293,12 +306,12 @@ int camera_set_saturation(uint32_t saturation, uint32_t *skip_mode, uint32_t *sk
 	CMR_LOGI ("saturation %d", saturation);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		camera_param_to_isp(ISP_CTRL_SATURATION, saturation, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_SATURATION, (void *)&isp_param);
 	} else {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_SATURATION, saturation);
 	}
 
@@ -316,12 +329,12 @@ int camera_set_sharpness(uint32_t sharpness, uint32_t *skip_mode, uint32_t *skip
 	CMR_LOGI ("sharpness %d", sharpness);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 /*		camera_param_to_isp(ISP_CTRL_SATURATION, sharpness, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_SATURATION, (void *)&isp_param);*/
 	} else {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_SHARPNESS, sharpness);
 	}
 
@@ -337,12 +350,12 @@ int camera_set_effect(uint32_t effect, uint32_t *skip_mode, uint32_t *skip_num)
 	CMR_LOGI ("effect %d", effect);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		camera_param_to_isp(ISP_CTRL_SPECIAL_EFFECT, effect, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_SPECIAL_EFFECT, (void *)&isp_param);
 	} else {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_IMAGE_EFFECT, effect);
 	}
 
@@ -358,12 +371,12 @@ int camera_set_ev(uint32_t expo_compen, uint32_t *skip_mode, uint32_t *skip_num)
 	CMR_LOGI ("expo_compen %d", expo_compen);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		camera_param_to_isp(ISP_CTRL_EV, expo_compen, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_EV, (void *)&isp_param);
 	} else {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_EXPOSURE_COMPENSATION, expo_compen);
 	}
 
@@ -379,12 +392,12 @@ int camera_set_wb(uint32_t wb_mode, uint32_t *skip_mode, uint32_t *skip_num)
 	CMR_LOGI ("wb_mode %d", wb_mode);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		camera_param_to_isp(ISP_CTRL_AWB_MODE, wb_mode, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_AWB_MODE, (void *)&isp_param);
 	} else {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_SET_WB_MODE, wb_mode);
 	}
 
@@ -402,7 +415,7 @@ int camera_set_scene(uint32_t scene_mode, uint32_t *skip_mode, uint32_t *skip_nu
 		*skip_num  = 0;
 	} else {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_PREVIEWMODE, scene_mode);
 	}
 
@@ -426,12 +439,12 @@ int camera_set_flicker(uint32_t flicker_mode, uint32_t *skip_mode, uint32_t *ski
 	CMR_LOGI("flicker_mode %d", flicker_mode);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		camera_param_to_isp(ISP_CTRL_FLICKER, flicker_mode, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_FLICKER, (void *)&isp_param);
 	} else {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_ANTI_BANDING_FLICKER, flicker_mode);
 	}
 
@@ -452,7 +465,7 @@ int camera_set_iso(uint32_t iso, uint32_t *skip_mode, uint32_t *skip_num)
 		ret = isp_ioctl(ISP_CTRL_ISO, (void *)&isp_param);
 	} else {
 		*skip_mode = IMG_SKIP_SW;
-		*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = Sensor_Ioctl(SENSOR_IOCTL_ISO, iso);
 	}
 
@@ -484,7 +497,7 @@ int camera_set_video_mode(uint32_t mode, uint32_t *skip_mode, uint32_t *skip_num
 
 	CMR_LOGI("preview mode %d", mode);
 	*skip_mode = IMG_SKIP_SW;
-	*skip_num  = cxt->sn_cxt.sensor_info->preview_skip_num;
+	*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 	ret = Sensor_Ioctl(SENSOR_IOCTL_VIDEO_MODE, mode);
 
 	return ret;
@@ -557,6 +570,13 @@ int camera_preview_start_set(void)
 		CMR_LOGE("Sensor can't work at this mode %d", sn_mode);
 		goto exit;
 	}
+
+	ret = camera_ae_enable(1);
+	if (ret) {
+		CMR_LOGE("ae enable fail");
+		goto exit;
+	}
+
 	ret = Sensor_StreamOff();//wait for set mode done
 	if (ret) {
 		CMR_LOGE("Fail to switch off the sensor stream");
@@ -632,7 +652,7 @@ int camera_snapshot_start_set(void)
 
 	camera_preflash();
 
-	if (cxt->cmr_set.flash && (CAMERA_ZSL_MODE == cxt->cap_mode)) {
+	if (cxt->cmr_set.flash) {
 		/*open flash*/
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 			ret = isp_ioctl(ISP_CTRL_FLASH_EG,0);
@@ -1193,6 +1213,7 @@ int camera_preflash(void)
 
 #ifdef CONFIG_CAMERA_FLASH_CTRL
 	CMR_LOGI("start.");
+
 	if ((cxt->cmr_set.flash) &&((CAMERA_ZSL_MODE == cxt->cap_mode)||(CAMERA_NORMAL_MODE == cxt->cap_mode))) {
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 			struct isp_alg flash_param;
@@ -1268,6 +1289,8 @@ int camera_autofocus_start(void)
 			if (CAMERA_SUCCESS != ret) {
 				CMR_LOGE("ISP_CTRL_FLASH_EG error.");
 			}
+		} else {
+			camera_set_flashdevice((uint32_t)FLASH_OPEN);
 		}
 	}
 #endif
@@ -1494,5 +1517,18 @@ int camera_get_video_mode(uint32_t frame_rate, uint32_t *video_mode)
 		CMR_LOGI("use default video mode");
 	}
 	CMR_LOGI("video mode:%d.",*video_mode);
+	return ret;
+}
+
+int camera_ae_enable(uint32_t param)
+{
+	int	ret = CAMERA_SUCCESS;
+
+	CMR_LOGV("ae enable %d.", param);
+	ret = Sensor_Ioctl(SENSOR_IOCTL_AE_ENABLE, param);
+	if (ret) {
+		CMR_LOGE("ae enable err.");
+	}
+
 	return ret;
 }

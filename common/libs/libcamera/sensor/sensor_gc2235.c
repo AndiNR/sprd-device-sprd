@@ -233,12 +233,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_gc2235_ioctl_func_tab = {
 	PNULL,  //meter_mode
 	PNULL, //get_status
 	_gc2235_StreamOn,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
-	_gc2235_StreamOff,
-	PNULL
-#else
 	_gc2235_StreamOff
-#endif
 };
 
 
@@ -310,7 +305,8 @@ SENSOR_INFO_T g_gc2235_raw_info = {
 	0,
 #ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
-	PNULL
+	PNULL,
+	3,			// skip frame num while change setting
 #else
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1}
 #endif

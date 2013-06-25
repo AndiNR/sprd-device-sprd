@@ -298,12 +298,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5647_ioctl_func_tab = {
 	PNULL,  		//meter_mode
 	PNULL, 		//get_status
 	_ov5647_StreamOn,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
-	_ov5647_StreamOff,
-	PNULL
-#else
 	_ov5647_StreamOff
-#endif
 };
 
 
@@ -375,7 +370,8 @@ SENSOR_INFO_T g_ov5647_mipi_raw_info = {
 	0,
 #ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0},
-	PNULL
+	PNULL,
+	3,			// skip frame num while change setting
 #else
 	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0}
 #endif

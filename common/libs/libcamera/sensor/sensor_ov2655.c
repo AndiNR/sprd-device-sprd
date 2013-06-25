@@ -480,12 +480,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV2655_ioctl_func_tab = {
 	PNULL,  //meter_mode
 	PNULL, //get_status
 	PNULL,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
-	PNULL,
 	PNULL
-#else
-	PNULL
-#endif
 };
 
 /**---------------------------------------------------------------------------*
@@ -563,7 +558,8 @@ SENSOR_INFO_T g_OV2655_yuv_info = {
 	0,			// i2c_dev_handler
 #ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	{0, 2, 8, 1},
-	PNULL
+	PNULL,
+	4,			// skip frame num while change setting
 #else
 	{0, 2, 8, 1}
 #endif

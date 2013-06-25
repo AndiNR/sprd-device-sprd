@@ -192,12 +192,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_s5k5ccgx_ioctl_func_tab =
     s5k5ccgx_set_Metering,/*40*/// set mertering
     PNULL, /*41*///get_status
     PNULL, /*42*///stream_on
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
-	PNULL,
 	PNULL
-#else
-	PNULL
-#endif
 /*    s5k5ccgx_set_FPS,*/
 };
 
@@ -280,7 +275,8 @@ SENSOR_INFO_T g_s5k5ccgx_yuv_info =
 	-1,                     // i2c_dev_handler
 #ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1}, // SENSOR_INF_T
-	PNULL
+	PNULL,
+	4,						// skip frame num while change setting
 #else
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1} // SENSOR_INF_T
 #endif

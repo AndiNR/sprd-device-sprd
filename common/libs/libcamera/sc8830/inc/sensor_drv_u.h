@@ -357,7 +357,6 @@ typedef enum {
 	SENSOR_IOCTL_GET_STATUS,
 	SENSOR_IOCTL_STREAM_ON,
 	SENSOR_IOCTL_STREAM_OFF,
-	SENSOR_IOCTL_GET_AE_INFO,
 	SENSOR_IOCTL_MAX
 } SENSOR_IOCTL_CMD_E;
 
@@ -659,6 +658,7 @@ typedef struct sensor_exp_info_tag {
 	SENSOR_INF_T sensor_interface;
 	const char *name;
 	SENSOR_VIDEO_INFO_T sensor_video_info[SENSOR_MODE_MAX];
+	uint32_t change_setting_skip_num;
 } SENSOR_EXP_INFO_T, *SENSOR_EXP_INFO_T_PTR;
 
 typedef struct sensor_info_tag {
@@ -698,6 +698,7 @@ typedef struct sensor_info_tag {
 	int32_t i2c_dev_handler;
 	SENSOR_INF_T sensor_interface;
 	SENSOR_VIDEO_INFO_T_PTR video_tab_info_ptr;
+	uint32_t change_setting_skip_num;
 } SENSOR_INFO_T;
 
 typedef enum {

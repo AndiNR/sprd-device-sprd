@@ -339,12 +339,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_s5k4e1ga_ioctl_func_tab = {
 	PNULL,  //meter_mode
 	PNULL, //get_status
 	_s5k4e1ga_StreamOn,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
-	_s5k4e1ga_StreamOff,
-	PNULL
-#else
 	_s5k4e1ga_StreamOff
-#endif
 };
 
 
@@ -416,7 +411,8 @@ SENSOR_INFO_T g_s5k4e1ga_mipi_raw_info = {
 	0,
 #ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0},
-	PNULL
+	PNULL,
+	3,			// skip frame num while change setting
 #else
 	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0}
 #endif

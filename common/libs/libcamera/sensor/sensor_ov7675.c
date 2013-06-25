@@ -541,12 +541,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
 	PNULL,  //meter_mode
 	PNULL, //get_status
 	PNULL,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
-	PNULL,
 	PNULL
-#else
-	PNULL
-#endif
 };
 /**---------------------------------------------------------------------------*
  ** 						Global Variables								  *
@@ -623,7 +618,8 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
         0,
 #ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
-	PNULL
+	PNULL,
+	3,							// skip frame num while change setting
 #else
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1}
 #endif

@@ -521,12 +521,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV2640_ioctl_func_tab = {
 	PNULL,
 	PNULL,
 	PNULL,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
-	PNULL,
 	PNULL
-#else
-	PNULL
-#endif
 };
 
 LOCAL SENSOR_EXTEND_INFO_T ov2640_ext_info = {
@@ -604,7 +599,8 @@ SENSOR_INFO_T g_OV2640_yuv_info = {
 	0,
 #ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	{0, 2, 8, 1},
-	PNULL
+	PNULL,
+	0,			// skip frame num while change setting
 #else
 	{0, 2, 8, 1}
 #endif

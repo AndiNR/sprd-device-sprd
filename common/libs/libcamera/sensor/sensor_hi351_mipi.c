@@ -7108,12 +7108,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_HI351_ioctl_func_tab =
     PNULL, //meter_mode
     PNULL, //get_status
     _hi351_StreamOn,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
-	_hi351_StreamOff,
-	PNULL
-#else
 	_hi351_StreamOff
-#endif
 };
 
 /**---------------------------------------------------------------------------*
@@ -7198,7 +7193,8 @@ SENSOR_INFO_T g_hi351_mipi_yuv_info =
     0,
 #ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
     {SENSOR_INTERFACE_TYPE_CSI2, 1, 8, 1},
-    PNULL
+    PNULL,
+    0,						// skip frame num while change setting
 #else
     {SENSOR_INTERFACE_TYPE_CSI2, 1, 8, 1}
 #endif

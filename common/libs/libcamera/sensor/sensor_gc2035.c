@@ -832,12 +832,7 @@ static SENSOR_IOCTL_FUNC_TAB_T s_GC2035_ioctl_func_tab =
 	PNULL,
 	PNULL,
 	PNULL,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
-	PNULL,
 	PNULL
-#else
-	PNULL
-#endif
 };
 
 SENSOR_INFO_T g_GC2035_yuv_info =
@@ -913,7 +908,8 @@ SENSOR_INFO_T g_GC2035_yuv_info =
 	0,
 #ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
-	s_GC2035_video_info
+	s_GC2035_video_info,
+	4,						//skip frame num while change setting
 #else
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1}
 #endif

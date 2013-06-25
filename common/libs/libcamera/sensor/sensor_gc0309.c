@@ -442,12 +442,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_GC0309_ioctl_func_tab =
         PNULL,
         PNULL,
         PNULL,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
-	PNULL,
-	PNULL
-#else
-	PNULL
-#endif
+	    PNULL
 };
 
 /**---------------------------------------------------------------------------*
@@ -526,7 +521,8 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_GC0309_ioctl_func_tab =
 		0,
 #ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 		{0, 2, 8, 1},
-		PNULL
+		PNULL,
+		2,			// skip frame num while change setting
 #else
 		{0, 2, 8, 1}
 #endif

@@ -1735,6 +1735,11 @@ int camera_stop_preview_internal(void)
 	}
 	CMR_PRINT_TIME;
 
+	ret = camera_ae_enable(0);
+	if (ret) {
+		CMR_LOGE("ae disable fail %d", ret);
+	}
+
 	ret = Sensor_StreamOff();
 	if (ret) {
 		CMR_LOGE("Failed to switch off the sensor stream, %d", ret);
@@ -3557,7 +3562,6 @@ int camera_preview_init(int format_mode)
 		isp_param.size.h = sensor_mode->height;
 		isp_param.format = ISP_DATA_NORMAL_RAW10;
 		CMR_LOGV("isp w h, %d %d", isp_param.size.w, isp_param.size.h);
-		/*Sensor_Ioctl(SENSOR_IOCTL_GET_AE_INFO,(uint32_t)&sensor_aec_info);*/
 		sensor_aec_info = &g_cxt->sn_cxt.sensor_info->sensor_video_info[g_cxt->sn_cxt.capture_mode].ae_info[video_mode];
 		CMR_LOGE("%d,%d,%d,%d.",sensor_aec_info->min_frate,sensor_aec_info->max_frate,
 			     sensor_aec_info->line_time,sensor_aec_info->gain);
@@ -3701,7 +3705,6 @@ int camera_capture_init(void)
 		isp_video_param.size.w = sensor_mode->width;
 		isp_video_param.size.h = sensor_mode->height;
 		sensor_aec_info = &g_cxt->sn_cxt.sensor_info->sensor_video_info[g_cxt->sn_cxt.capture_mode].ae_info[video_mode];
-		/*Sensor_Ioctl(SENSOR_IOCTL_GET_AE_INFO,(uint32_t)&sensor_aec_info);*/
 		ret = isp_ioctl(ISP_CTRL_AE_INFO,(void*)sensor_aec_info);
 		if (CAMERA_SUCCESS != ret) {
 			CMR_LOGE("set ae information error.");

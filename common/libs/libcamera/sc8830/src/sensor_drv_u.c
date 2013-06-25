@@ -836,6 +836,7 @@ LOCAL void Sensor_SetExportInfo(SENSOR_EXP_INFO_T * exp_info_ptr)
 		}
 	}
 	exp_info_ptr->sensor_interface = sensor_info_ptr->sensor_interface;
+	exp_info_ptr->change_setting_skip_num = sensor_info_ptr->change_setting_skip_num;
 }
 
 int32_t Sensor_WriteReg(uint16_t subaddr, uint16_t data)
