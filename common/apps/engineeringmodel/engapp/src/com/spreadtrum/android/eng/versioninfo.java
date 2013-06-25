@@ -70,7 +70,18 @@ public class versioninfo extends Activity {
 			final String str = new String(inputBytes, 0, showlen,Charset.defaultCharset());
 			mUiThread.post(new Runnable() {
 				public void run() {
-					txtViewlabel01.setText(str);
+					//179956 begin
+					//txtViewlabel01.setText(str);
+					final String ret = System.getProperty("line.separator");
+					String better_str = str.replace("  ", "");
+					better_str = better_str.replace(",", ret + ret);
+					better_str = better_str.replace("Platform Version:", "Platform version:" + ret);
+					better_str = better_str.replace("Project Version:", "Project version:" + ret);
+					better_str = better_str.replace("BASEVersion:", "Base version:" + ret);
+					better_str = better_str.replace("HW Version:", "Hardware version:" + ret);
+					better_str = better_str.replace("Rel Date:", "Release date:" + ret);
+					txtViewlabel01.setText(better_str);
+					//179956 end
 				}
 			});
 			break;
