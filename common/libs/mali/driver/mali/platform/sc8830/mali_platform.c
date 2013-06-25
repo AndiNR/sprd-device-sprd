@@ -70,7 +70,7 @@ _mali_osk_errcode_t mali_platform_deinit(void)
 
 _mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
 {
-	#if 0
+	#if 1
 	switch(power_mode)
 	{
 	case MALI_POWER_MODE_ON:
@@ -91,6 +91,11 @@ _mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
 		{
 			g_gpu_clock_on = 0;
 			clk_disable(g_gpu_clock);
+		}
+		if(g_gpu_power_on)
+		{
+			g_gpu_power_on = 0;
+			sci_glb_set(REG_PMU_APB_PD_GPU_TOP_CFG, BIT_PD_GPU_TOP_FORCE_SHUTDOWN);
 		}
 		break;
 	case MALI_POWER_MODE_DEEP_SLEEP:
