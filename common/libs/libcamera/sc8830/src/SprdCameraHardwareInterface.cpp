@@ -408,7 +408,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
         return INVALID_OPERATION;
     }
 
-    if (w->set_crop(w, 0, 0, preview_width, preview_height)) {
+    if (w->set_crop(w, 0, 0, preview_width-1, preview_height-1)) {
         LOGE("%s: could not set crop to %s",
              __func__, str_preview_format);
         return INVALID_OPERATION;
