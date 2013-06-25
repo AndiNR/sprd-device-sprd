@@ -124,7 +124,6 @@
 	<string name="modem_arm_log_entries_values_default">0</string>
 	<string name="currentvalue">Current Value:</string>
         <string name="modem_dsp_log_entries_values_default">0</string>
-        <string name="no_sim_card_prompt">Please insert USIM card and try again</string>
         <string name="choose_sub">Choose SIM</string>
         <string name="mobile_network_settings_sub_0">SIM1</string>
         <string name="mobile_network_settings_sub_1">SIM2</string>
@@ -236,5 +235,12 @@
 
     <string name="slog_version_info">Updated on 2013-6-23, fix storage location in SlogProvider, change AT Command sending plan, fix the break of slog.conf and add synchronized to getter and setter</string>
 	<!-- SlogUI Added Done -->
-
+    <!-- Add 20130625 Spreadst of 177803 add Traditional Chinese support for uplum start -->
+    <string name="no_sim_card_prompt">Please insert USIM card and try again</string>
+    <string name="index_error_uplmn">Index is empty. try again!</string>
+    <string name="type_is_emplty_error_uplmn">Type is empty. try again!</string>
+    <string name="number_too_short_uplmn">Id number is too short. try again!</string>
+    <string name="type_is_wrong_uplmn">Type should be 1 or 0. try again!</string>
+    <string name="fail_uplmn">Failed and try again.</string>
+    <!-- Add 20130625 Spreadst of 177803 add Traditional Chinese support for uplum end -->
 </resources>

@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <!-- SlogUI add by Yuntao.xiao -->
+
+    <!-- Add 20130625 Spreadst of 177803 add Traditional Chinese support for uplum start -->
+    <string name="no_sim_card_prompt">請插入USim卡，并重試</string>
+    <string name="index_error_uplmn">序列號錯誤，請重新輸入</string>
+    <string name="type_is_emplty_error_uplmn">類型為空，請重新輸入</string>
+    <string name="number_too_short_uplmn">數據太短，請重新輸入</string>
+    <string name="type_is_wrong_uplmn">類型不正確，請重新輸入</string>
+    <string name="fail_uplmn">失敗，請重試</string>
+    <!-- Add 20130625 Spreadst of 177803 add Traditional Chinese support for uplum end -->
+    <!-- SlogUI Added Done -->
+    <!-- SlogUI add by Yuntao.xiao -->
     <string name="rdo_general_on">開</string>
     <string name="rdo_general_off">關</string>
     <string name="rdo_general_lowpower">低功耗</string>
@@ -77,5 +87,6 @@
     <string name="mode_dialog_duplicate_negative">重命名</string>
     <string name="slog_clear_ok">清除成功</string>
     <string name="slog_clear_failed">清除失敗</string>
-  <!-- SlogUI Added Done -->
+    <!-- SlogUI Added Done -->
+
 </resources>

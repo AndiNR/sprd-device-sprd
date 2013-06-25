@@ -142,22 +142,22 @@ public class uplmnsettings extends Activity {
 		boolean IsWrong = false;
 		if(str01.length()==0){
 			IsWrong = true;
-			DisplayToast("Index is empty. try again!");
+			DisplayToast(getString(R.string.index_error_uplmn));
 			return IsWrong;
 		}
 		if(str03.length()==0){
 			IsWrong = true;
-			DisplayToast("Type is empty. try again!");
+			DisplayToast(getString(R.string.type_is_emplty_error_uplmn));
 			return IsWrong;
 		}
 		if(str02.length() < 5){
 			IsWrong = true;
-			DisplayToast("Id number "+str02+" is too short. try again!");
+			DisplayToast(getString(R.string.number_too_short_uplmn));
 			return IsWrong;
 		}
 		if(Integer.parseInt(str03) > 1 ||Integer.parseInt(str03) < 0){
 			IsWrong = true;
-			DisplayToast("Type should be 1 or 0. try again!");
+			DisplayToast(getString(R.string.type_is_wrong_uplmn));
 			return IsWrong;
 		}
 		return IsWrong;
@@ -416,7 +416,7 @@ public class uplmnsettings extends Activity {
 				if(setResult.equals("144")){
 					finish();
 				}else{
-					DisplayToast("Failed and try again.");
+					DisplayToast(getString(R.string.fail_uplmn));
 				}
 
 			}
