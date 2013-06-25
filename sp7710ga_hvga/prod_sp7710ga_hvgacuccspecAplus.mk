@@ -21,7 +21,7 @@ BOARDDIR := device/sprd/$(TARGET_BOARD)
 DEVICE_PACKAGE_OVERLAYS := $(BOARDDIR)/overlay
 PRODUCT_PACKAGE_OVERLAYS := vendor/sprd/operator/cucc/specA/overlay
 
-PRODUCT_AAPT_CONFIG := hdpi
+PRODUCT_AAPT_CONFIG := mdpi
 
 PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
