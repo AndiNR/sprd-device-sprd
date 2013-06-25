@@ -410,7 +410,7 @@ getpmem_end:
 void SprdCameraHardware::FreePmem(sprd_camera_memory_t* memory)
 {
         if(memory){
-                if(memory->camera_memory->release){
+                if(memory->camera_memory && memory->camera_memory->release){
                         memory->camera_memory->release(memory->camera_memory);
                         memory->camera_memory = NULL;
                 } else {
