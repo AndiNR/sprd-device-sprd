@@ -28,7 +28,7 @@ static camera_position_type  s_position;
 const char image_desc[] = "Exif_JPEG_420";
 const char image_make[] = "Spreadtrum";
 const char copyright[] = "Copyright,Spreadtrum,2011";
-const char model[] = "tiger";
+const char model[] = "shark";
 
 uint32_t camera_get_rot_angle(uint32_t degree)
 {

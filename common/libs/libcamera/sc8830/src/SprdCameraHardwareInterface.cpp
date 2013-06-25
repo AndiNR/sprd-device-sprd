@@ -2091,10 +2091,10 @@ bool SprdCameraHardware::getCameraLocation(camera_position_type *pt)
 	PARSE_LOCATION(longitude, double, "%lf", "double float");
 
 	pt->process_method = mParameters.get("gps-processing-method");
-
+/*
 	LOGV("%s: setting image location result %d,  ALT %lf LAT %lf LON %lf",
 			__func__, result, pt->altitude, pt->latitude, pt->longitude);
-
+*/
 	return result;
 }
 

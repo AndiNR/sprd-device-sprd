@@ -28,6 +28,8 @@
 #define JPEG_PRINT_LOW(format,...) ALOGE(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
 #define JPEG_ALIGN_4(_input) ((((_input) + 3) >> 2) << 2)
 
+/*#define EXIF_DEBUG*/
+
 /*
 *@	Name :
 *@	Description:	Get string size in which the terminating null character is not included
@@ -539,13 +541,14 @@ LOCAL JPEG_RET_E Jpeg_WriteExifSpecInfo(JPEG_WRITE_STREAM_CONTEXT_T *context_ptr
 	ifd_value_offset = JPEG_ALIGN_4(ifd_value_offset);
 
     entries = 0;
-
+#ifdef EXIF_DEBUG
     JPEG_PRINT_LOW("pic_taking_cond_ptr = %x, user_ptr=%x \n", (uint32)pic_taking_cond_ptr, (uint32)user_ptr);
+
     if(NULL != pic_taking_cond_ptr)
     {
 		JPEG_PRINT_LOW("%x, %x \n", pic_taking_cond_ptr->FocalLength.numerator, pic_taking_cond_ptr->ExposureProgram);
     }
-
+#endif
     /***********************************************************************/
     //write IFD
     /***********************************************************************/
@@ -1032,7 +1035,9 @@ LOCAL JPEG_RET_E Jpeg_WriteExifSpecInfo(JPEG_WRITE_STREAM_CONTEXT_T *context_ptr
         ifd_info.count = 1;
         ifd_info.value_offset.long_value = ifd_value_offset - ifh_offset;
         ifd_info.value_ptr = (void *)&baisc_ptr->PixelXDimension;
+#ifdef EXIF_DEBUG
 		JPEG_PRINT_LOW("baisc_ptr->PixelXDimension = %d.",baisc_ptr->PixelXDimension);
+#endif
         if (!Jpeg_WriteLongIFD(context_ptr, &ifd_info, &ifd_offset, &ifd_value_offset))
         {
             return JPEG_FAILED;
@@ -2533,9 +2538,9 @@ LOCAL JPEG_RET_E Jpeg_WriteExifIFD(JPEG_WRITE_STREAM_CONTEXT_T *context_ptr,
 
         entries++;
     }
-
+#ifdef EXIF_DEBUG
     JPEG_PRINT_LOW("gps_ptr = %x \n", (uint32)gps_ptr);
-
+#endif
     if (PNULL != gps_ptr)
     {
         offset = 0;
@@ -2562,7 +2567,9 @@ LOCAL JPEG_RET_E Jpeg_WriteExifIFD(JPEG_WRITE_STREAM_CONTEXT_T *context_ptr,
 
         entries++;
     }
+#ifdef EXIF_DEBUG
     JPEG_PRINT_LOW("thumbnail_ptr=0x%x.",(uint32_t)thumbnail_ptr);
+#endif
     /*write thumbnail image*/
     if (PNULL != thumbnail_ptr && PNULL != thumbnail_ptr->stream_buf_ptr
         && thumbnail_ptr->stream_buf_size > 0)
@@ -2592,7 +2599,9 @@ LOCAL JPEG_RET_E Jpeg_WriteExifIFD(JPEG_WRITE_STREAM_CONTEXT_T *context_ptr,
             return JPEG_FAILED;
         }
     }
+#ifdef EXIF_DEBUG
     JPEG_PRINT_LOW("write next IFD pointer.");
+#endif
     /*write next IFD pointer*/
     Jpeg_SetWritePos(context_ptr, ifd_offset);
     if (is_next_ifd_exist)
@@ -2735,10 +2744,10 @@ PUBLIC JPEG_RET_E Jpeg_WriteAPP1(uint8 *target_buf,
     EXIF_THUMBNAIL_INFO_T   *thumbnail_ptr  = PNULL;
     EXIF_THUMBNAIL_INFO_T   thumbnail_info;// = {0};
     EXIF_PRI_DATA_STRUCT_T pri_data_struct;//g = {0};
-
+#ifdef EXIF_DEBUG
     JPEG_PRINT_LOW("[Jpeg_WriteAPP1] start 1, %x, %x, %x, %x, %x \n", (uint32)target_buf,
 		target_buf_size, (uint32)exif_info_ptr, (uint32)thumbnail_buf_ptr, thumbnail_size);
-
+#endif
     if (PNULL == exif_info_ptr)
     {
         JPEG_PRINT_LOW("[Jpeg_WriteAPP1] exif_info_ptr is NULL \n");
@@ -2796,8 +2805,9 @@ PUBLIC JPEG_RET_E Jpeg_WriteAPP1(uint8 *target_buf,
     if (is_ifd1_exist)
     {
         BOOLEAN is_next_ifd_exist = FALSE;
+#ifdef EXIF_DEBUG
 		JPEG_PRINT_LOW("test 1");
-
+#endif
         begin_offset = end_offset;
 
         thumbnail_ptr = &thumbnail_info;
@@ -2837,7 +2847,9 @@ PUBLIC JPEG_RET_E Jpeg_WriteAPP1(uint8 *target_buf,
             return ret;
         }
     }
+#ifdef EXIF_DEBUG
 	JPEG_PRINT_LOW("test 2");
+#endif
     app1_length = (uint16)end_offset - 2;   //without app1 marker
     *app1_size_ptr = app1_length + 2;
 
@@ -2849,7 +2861,9 @@ PUBLIC JPEG_RET_E Jpeg_WriteAPP1(uint8 *target_buf,
         return ret;
     }
 #endif
+#ifdef EXIF_DEBUG
 	JPEG_PRINT_LOW("test 3");
+#endif
     return JPEG_SUCCESS;
 }
 
@@ -2883,9 +2897,9 @@ LOCAL JPEG_RET_E JPEG_AddExifToMemory(JINF_WEXIF_IN_PARAM_T *in_param_ptr,
                          in_param_ptr->thumbnail_buf_ptr,
                          in_param_ptr->thumbnail_buf_size,
                          &app1_size);
-
+#ifdef EXIF_DEBUG
 	JPEG_PRINT_LOW("Jpeg_WriteAPP1 end.ret = %d.",ret);
-	
+#endif
     if (JPEG_SUCCESS != ret)
     {
     	JPEG_PRINT_LOW("[JPEG_AddExifToMemory] Jpeg_WriteAPP1 failed");
@@ -2911,8 +2925,10 @@ LOCAL JPEG_RET_E JPEG_AddExifToMemory(JINF_WEXIF_IN_PARAM_T *in_param_ptr,
     //write SOI marker
     *target_buf_ptr++ = M_MARKER;
     *target_buf_ptr++ = M_SOI;
+#ifdef EXIF_DEBUG
     JPEG_PRINT_LOW("target buf:0x%x,app1_buf_ptr 0x%x ,app1_size %d.",
 		(uint32_t)target_buf_ptr,(uint32_t)app1_buf_ptr,app1_size);
+#endif
     memcpy(target_buf_ptr, app1_buf_ptr, app1_size);
 /*   for(i=0;i<app1_size;i++) {
 		*target_buf_ptr++ = *app1_buf_ptr++;

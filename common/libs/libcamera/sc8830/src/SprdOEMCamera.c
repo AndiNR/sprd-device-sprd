@@ -55,6 +55,8 @@ struct camera_context        *g_cxt = &cmr_cxt;
 #define SET_CHN_BUSY(x)      do {g_cxt->v4l2_cxt.chn_status[x] = CHN_BUSY;} while (0)
 #define IS_CHN_IDLE(x)       (g_cxt->v4l2_cxt.chn_status[x] == CHN_IDLE)
 #define IS_CHN_BUSY(x)       (g_cxt->v4l2_cxt.chn_status[x] == CHN_BUSY)
+#define IS_ZSL_MODE(x)       ((CAMERA_ZSL_MODE == x) || (CAMERA_ZSL_CONTINUE_SHOT_MODE == x))
+#define IS_NON_ZSL_MODE(x)   ((CAMERA_ZSL_MODE != x) && (CAMERA_ZSL_CONTINUE_SHOT_MODE != x))
 
 static void camera_sensor_evt_cb(int evt, void* data);
 static int  camera_isp_evt_cb(int evt, void* data);
@@ -1496,8 +1498,7 @@ int camera_after_set_internal(enum restart_mode re_mode)
 			return -CAMERA_FAILED;
 		}
 		CMR_LOGV("cap_mode %d", g_cxt->cap_mode);
-		if ((CAMERA_ZSL_MODE == g_cxt->cap_mode)
-			|| (CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode)) {
+		if (IS_ZSL_MODE(g_cxt->cap_mode)) {
 			ret = camera_capture_init();
 			if (ret) {
 				CMR_LOGE("Failed to init capture when preview");
@@ -1586,8 +1587,7 @@ int camera_start_preview_internal(void)
 
 	g_cxt->total_cap_num = CAMERA_CAP_FRM_CNT;
 	/*g_cxt->total_capture_num = CAMERA_NORMAL_CAP_FRM_CNT;*/
-	if ((CAMERA_ZSL_MODE == g_cxt->cap_mode)
-		|| (CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode)) {
+	if (IS_ZSL_MODE(g_cxt->cap_mode)) {
 		ret = camera_capture_init();
 	}
 
@@ -2069,7 +2069,7 @@ camera_ret_code_type camera_take_picture(camera_cb_f_type    callback,
 	camera_set_take_picture_cap_mode(cap_mode);
 	ret = camera_set_take_picture(TAKE_PICTURE_NEEDED);
 
-	if ((CAMERA_ZSL_MODE != cap_mode) && (CAMERA_ZSL_CONTINUE_SHOT_MODE != cap_mode)) {
+	if (IS_NON_ZSL_MODE(cap_mode)) {
 		message.msg_type = CMR_EVT_START;
 		message.sub_msg_type = CMR_CAPTURE;
 		message.data = (void*)cap_mode;
@@ -3040,8 +3040,7 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 				CMR_LOGI("dont need thumbnail, %d", ret);
 			}
 		}
-		if ((CAMERA_ZSL_MODE == g_cxt->cap_mode) ||
-			(CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode)) {
+		if (IS_ZSL_MODE(g_cxt->cap_mode)) {
 			if (IS_CHN_IDLE(CHN_2)) {
 				ret = cmr_v4l2_cap_resume(CHN_2,
 				0,
@@ -3475,8 +3474,7 @@ int camera_preview_init(int format_mode)
 	SENSOR_AE_INFO_T         *sensor_aec_info;
 
 	memset(&v4l2_cfg,0,sizeof(v4l2_cfg));
-	if ((CAMERA_ZSL_MODE == g_cxt->cap_mode)
-		|| (CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode)) {
+	if (IS_ZSL_MODE(g_cxt->cap_mode)) {
 		sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode];
 	} else {
 		sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.preview_mode];
@@ -3588,8 +3586,7 @@ int camera_preview_weak_init(int format_mode)
 	struct isp_video_start   isp_param;
 
 	memset(&v4l2_cfg,0,sizeof(v4l2_cfg));
-	if ((CAMERA_ZSL_MODE == g_cxt->cap_mode)
-		|| (CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode)) {
+	if (IS_ZSL_MODE(g_cxt->cap_mode)) {
 		sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode];
 	} else {
 		sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.preview_mode];
@@ -5619,8 +5616,7 @@ int camera_set_change_size(uint32_t cap_width,uint32_t cap_height,uint32_t previ
 			CMR_LOGI("need to change size.");
 			ret = 1;
 		}
-		if ((CAMERA_ZSL_MODE == g_cxt->cap_mode)
-		    || (CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode)) {
+		if (IS_ZSL_MODE(g_cxt->cap_mode)) {
 			if ((g_cxt->picture_size.width != cap_width)
 			   || (g_cxt->picture_size.height != cap_height)) {
 				CMR_LOGI("need to change size.");

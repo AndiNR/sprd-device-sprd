@@ -20,6 +20,7 @@
 #include "jpegdec_api.h"
 #include "jpegenc_api.h"
 
+/*#define JPEG_CODE_DEBUG*/
 
 #define JPEG_MSG_QUEUE_SIZE		  40
 #define JPEG_EXIT_THREAD_FLAG	  1
@@ -229,8 +230,10 @@ void _prc_enc_cbparam(uint32_t handle, JPEG_ENC_CB_PARAM_T *parm_ptr)
 
 	parm_ptr->slice_height = enc_cxt_ptr->slice_height;
 	parm_ptr->total_height = enc_cxt_ptr->cur_line_num;
+#ifdef JPEG_CODE_DEBUG
 	CMR_LOGV("slice_height %d,total_height %d,stream_size 0x%x.",
 		parm_ptr->slice_height,parm_ptr->total_height,parm_ptr->stream_size);
+#endif
 /*	fp = fopen("/data/1.aw", "wb");
 	if(0 != fp) {
 		fwrite((void*)parm_ptr->stream_buf_vir, 1, parm_ptr->stream_size, fp);
@@ -303,13 +306,13 @@ static  int  _enc_start(uint32_t handle)
 	jenc_parm_ptr->yuv_v_virt_buf = (void*)0;//(void *)enc_cxt_ptr->src_addr_vir.addr_v;
 	jenc_parm_ptr->yuv_v_phy_buf = 0;//enc_cxt_ptr->src_addr_phy.addr_v;
 
-
+#ifdef JPEG_CODE_DEBUG
 	CMR_LOGV("jpeg enc yuv phy addr,0x%x 0x%x 0x%x,slice height %d.",
 		jenc_parm_ptr->yuv_phy_buf,
 		jenc_parm_ptr->yuv_u_phy_buf,
 		jenc_parm_ptr->yuv_v_phy_buf,
 		enc_cxt_ptr->slice_height);
-
+#endif
 	jpeg_enc_buf_virt_addr = (void *)enc_cxt_ptr->stream_buf_vir;
 	jpeg_enc_buf_len = enc_cxt_ptr->stream_buf_size;
 	jpeg_enc_buf_phys_addr =  enc_cxt_ptr->stream_buf_phy;
@@ -324,9 +327,10 @@ static  int  _enc_start(uint32_t handle)
 #endif
 	jenc_parm_ptr->stream_virt_buf[0] = jpeg_enc_buf_virt_addr;
 	jenc_parm_ptr->stream_phy_buf[0] = jpeg_enc_buf_phys_addr;
+#ifdef JPEG_CODE_DEBUG
 	CMR_LOGV("encoder: jpegenc_params[%d]: virt: %x, phys: %x,size %d.",
 		i,(uint32_t)jenc_parm_ptr->stream_virt_buf[i],jenc_parm_ptr->stream_phy_buf[i],jpeg_enc_buf_len);
-
+#endif
 	jenc_parm_ptr->stream_buf_len = jpeg_enc_buf_len;
 	jenc_parm_ptr->stream_size = 0;
 
@@ -344,9 +348,9 @@ static  int  _enc_start(uint32_t handle)
 		uint32_t buf_id = 1;
 		uint32_t cur_y_buf_adr = 0;
 		uint32_t cur_u_buf_adr = 0;
-
+#ifdef JPEG_CODE_DEBUG
 		CMR_LOGV("jpeg: slice mode for frame");
-
+#endif
 		if(0 !=  enc_cxt_ptr->size.height%cur_slice_height){
 			slice_num = slice_num+1;
 		}
@@ -384,14 +388,17 @@ static  int  _enc_start(uint32_t handle)
 			enc_cxt_ptr->is_finish = 1;
 			enc_cxt_ptr->stream_real_size = slice_out.stream_size;
 			enc_cxt_ptr->cur_line_num = enc_cxt_ptr->size.height;
-			CMR_LOGE("jpeg: slice num:slice size: %d", slice_out.stream_size);
+#ifdef JPEG_CODE_DEBUG
+			CMR_LOGE("jpeg: stream size: %d", slice_out.stream_size);
+#endif
 		}
 		CMR_LOGV("slice_num %d.",slice_num);
 	}
 
 	enc_cxt_ptr->cur_id = 0;
-
+#ifdef JPEG_CODE_DEBUG
 	CMR_LOGV("jpeg:  buf addr: 0x%x,  size: %d",enc_cxt_ptr->stream_buf_vir, enc_cxt_ptr->stream_real_size);
+#endif
 /*	savedata(enc_cxt_ptr->stream_buf_vir, enc_cxt_ptr->stream_real_size);*/
 enc_start_end:
 	free(jenc_parm_ptr);
@@ -951,6 +958,7 @@ static int _check_enc_start_param(struct jpeg_enc_in_param *in_parm_ptr, struct 
 
 	CMR_LOGE("w h, %d %d, quality level %d", in_parm_ptr->size.width, in_parm_ptr->size.height,
 		in_parm_ptr->quality_level);
+#ifdef JPEG_CODE_DEBUG
 	CMR_LOGE("slice height, %d, slice mode %d", in_parm_ptr->slice_height, in_parm_ptr->slice_mod);
 	CMR_LOGE("phy addr 0x%x 0x%x, vir addr 0x%x 0x%x",
 		in_parm_ptr->src_addr_phy.addr_y, in_parm_ptr->src_addr_phy.addr_u,
@@ -964,7 +972,7 @@ static int _check_enc_start_param(struct jpeg_enc_in_param *in_parm_ptr, struct 
 		in_parm_ptr->temp_buf_phy,
 		in_parm_ptr->temp_buf_vir,
 		in_parm_ptr->temp_buf_size);
-
+#endif
 	return ret;
 
 }
@@ -976,7 +984,7 @@ static int _get_enc_start_param(JPEG_ENC_T *cxt_ptr, struct jpeg_enc_in_param *i
 
 	CMR_LOGV("jpeg_enc_start:all param");
 
-
+#ifdef JPEG_CODE_DEBUG
 	CMR_LOGI("stream_buf_phy: 0x%x",  in_parm_ptr->stream_buf_phy);
 	CMR_LOGI("stream_buf_vir: 0x%x",  in_parm_ptr->stream_buf_vir);
 	CMR_LOGI("stream_buf_size: 0x%x",  in_parm_ptr->stream_buf_size);
@@ -986,6 +994,7 @@ static int _get_enc_start_param(JPEG_ENC_T *cxt_ptr, struct jpeg_enc_in_param *i
 	CMR_LOGI("src_buf_phy: 0x%x",  in_parm_ptr->temp_buf_phy);
 	CMR_LOGI("src_buf_vir: 0x%x",  in_parm_ptr->temp_buf_vir);
 	CMR_LOGI("img_size: w:%d, h:%d",  in_parm_ptr->size.width,  in_parm_ptr->size.height);
+#endif
 	CMR_LOGI("slice_height:%d",  in_parm_ptr->slice_height);
 
 	cxt_ptr->stream_buf_phy = in_parm_ptr->stream_buf_phy;
