@@ -474,7 +474,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov8830_ioctl_func_tab = {
 	PNULL,  //meter_mode
 	PNULL, //get_status
 	_ov8830_StreamOn,
-	_ov8830_StreamOff
+	_ov8830_StreamOff,
 };
 
 

@@ -1508,7 +1508,7 @@ static int _sensor_cali_lnc_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 	char file_name[80] = {0};
 	char* file_name_ptr = 0;
 	uint32_t str_len = 0;
-	int file_size = 0;
+	uint32_t file_size = 0;
 	char *data_ptr;
 	int i,j;
 	uint16_t *temp_buf_16 = PNULL;
@@ -1530,7 +1530,7 @@ static int _sensor_cali_lnc_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 		goto cali_update_error;
 	}
 
-	trim_ptr = s_sensor_info_ptr->ioctl_func_tab_ptr->get_trim(0);
+	trim_ptr = (SENSOR_TRIM_T *)(s_sensor_info_ptr->ioctl_func_tab_ptr->get_trim(0));
 	raw_fix_info_ptr = sensor_info_ptr->raw_info_ptr->fix_ptr;
 	i = 1;
 	while(1) {

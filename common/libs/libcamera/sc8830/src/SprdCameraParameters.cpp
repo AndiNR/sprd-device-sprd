@@ -16,7 +16,7 @@
  * GNU General Public License for more details.
  */
 
-#define LOG_TAG "SprdCameraParams"
+#define LOG_TAG "SprdCameraParameters"
 #include <utils/Log.h>
 
 #include <string.h>
@@ -26,7 +26,7 @@
 
 namespace android {
 
-#define LOG_TAG	   "SprdCameraParameters"
+//#define LOG_TAG	   "SprdCameraParameters"
 
 #define LOGV       ALOGD
 #define LOGE       ALOGE

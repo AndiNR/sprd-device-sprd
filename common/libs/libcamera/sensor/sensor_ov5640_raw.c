@@ -407,97 +407,109 @@ static struct sensor_raw_fix_info s_ov5640_fix_info={
 {
 	(uint8_t*)s_ov5640_ae_weight_customer,
 
-	(uint16_t*)s_ov5640_aes_00,
-	(uint16_t*)s_ov5640_aes_00,
-	128,
-	250,
-	128,
-	250,
-	128,
-	250,
-	128,
-	250,
-	128,
-	250,
+	{
+		{
+			(uint32_t*)s_ov5640_aes_00,
+			(uint16_t*)s_ov5640_aes_00,
+			{
+				{128, 250,},
+				{128, 250,},
+				{128, 250,},
+				{128, 250,},
+				{128, 250,},
+			},
+		},
 
-	(uint16_t*)s_ov5640_aes_01,
-	(uint16_t*)s_ov5640_aes_01,
-	128,
-	250,
-	128,
-	250,
-	128,
-	250,
-	128,
-	250,
-	128,
-	250,
+		{
+			(uint32_t*)s_ov5640_aes_01,
+			(uint16_t*)s_ov5640_aes_01,
+			{
+				{128, 250,},
+				{128, 250,},
+				{128, 250,},
+				{128, 250,},
+				{128, 250,},
+			}
+		},
 
-	(uint16_t*)s_ov5640_aes_10,
-	(uint16_t*)s_ov5640_aes_10,
-	128,
-	250,
-	128,
-	250,
-	128,
-	250,
-	128,
-	250,
-	128,
-	250,
+		{
+			(uint32_t*)s_ov5640_aes_10,
+			(uint16_t*)s_ov5640_aes_10,
+			{
+				{128, 250,},
+				{128, 250,},
+				{128, 250,},
+				{128, 250,},
+				{128, 250,},
+			}
+		},
 
-	(uint16_t*)s_ov5640_aes_11,
-	(uint16_t*)s_ov5640_aeg_11,
-	128,
-	250,
-	128,
-	250,
-	128,
-	250,
-	128,
-	250,
-	128,
-	250,
+		{
+			(uint32_t*)s_ov5640_aes_11,
+			(uint16_t*)s_ov5640_aeg_11,
+			{
+				{128, 250,},
+				{128, 250,},
+				{128, 250,},
+				{128, 250,},
+				{128, 250,},
+			},
+		},
+	},
 },
 
 //lnc
 {
-	0x00,
-	(uint32_t*)s_ov5640_lnc_00,
-	sizeof(s_ov5640_lnc_00),
-
-	0x00,
-	(uint32_t*)s_ov5640_lnc_01,
-	sizeof(s_ov5640_lnc_01),
-
-	0x00,
-	(uint32_t*)s_ov5640_lnc_02,
-	sizeof(s_ov5640_lnc_02),
-
-	0x00,
-	(uint32_t*)s_ov5640_lnc_03,
-	sizeof(s_ov5640_lnc_03),
-
-	0x00,
-	(uint32_t*)s_ov5640_lnc_04,
-	sizeof(s_ov5640_lnc_04),
-
-	0x00,
-	(uint32_t*)s_ov5640_lnc_05,
-	sizeof(s_ov5640_lnc_05),
-
-	0x00,
-	(uint32_t*)s_ov5640_lnc_06,
-	sizeof(s_ov5640_lnc_06),
-
-	0x00,
-	(uint32_t*)s_ov5640_lnc_07,
-	sizeof(s_ov5640_lnc_07),
-
-	0x00,
-	(uint32_t*)s_ov5640_lnc_08,
-	sizeof(s_ov5640_lnc_08)
-}
+	{
+		{
+			{
+				0x00,
+				(uint16_t *)s_ov5640_lnc_00,
+				sizeof(s_ov5640_lnc_00),
+			},
+			{
+				0x00,
+				(uint16_t *)s_ov5640_lnc_01,
+				sizeof(s_ov5640_lnc_01),
+			},
+			{
+				0x00,
+				(uint16_t *)s_ov5640_lnc_02,
+				sizeof(s_ov5640_lnc_02),
+			},
+			{
+				0x00,
+				(uint16_t *)s_ov5640_lnc_03,
+				sizeof(s_ov5640_lnc_03),
+			},
+			{
+				0x00,
+				(uint16_t *)s_ov5640_lnc_04,
+				sizeof(s_ov5640_lnc_04),
+			},
+			{
+				0x00,
+				(uint16_t *)s_ov5640_lnc_05,
+				sizeof(s_ov5640_lnc_05),
+			},
+			{
+				0x00,
+				(uint16_t *)s_ov5640_lnc_06,
+				sizeof(s_ov5640_lnc_06),
+			},
+			{
+				0x00,
+				(uint16_t *)s_ov5640_lnc_07,
+				sizeof(s_ov5640_lnc_07),
+			},
+			{
+				0x00,
+				(uint16_t *)s_ov5640_lnc_08,
+				sizeof(s_ov5640_lnc_08),
+			}
+		},
+	},
+},
 };
 
 static struct sensor_version_info s_ov5640_version_info={
@@ -565,7 +577,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5640_ioctl_func_tab = {
 	PNULL, //meter_mode
 	PNULL, //get_status
 	PNULL,
-	PNULL
+	PNULL,
 };
 
 SENSOR_INFO_T g_ov5640_raw_info = {

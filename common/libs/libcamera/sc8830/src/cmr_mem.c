@@ -154,6 +154,8 @@ static const struct cap_size_to_mem raw_mem_size_tab[IMG_SIZE_NUM] = {
 	{PIXEL_8P0_MEGA, (16 << 20), (8 << 20)},
 };
 
+extern int camera_get_is_noscale(void);
+
 static uint32_t get_jpeg_size(uint32_t width, uint32_t height, uint32_t thum_width, uint32_t thum_height);
 static uint32_t get_thum_yuv_size(uint32_t width, uint32_t height, uint32_t thum_width, uint32_t thum_height);
 static uint32_t get_thum_jpeg_size(uint32_t width, uint32_t height, uint32_t thum_width, uint32_t thum_height);

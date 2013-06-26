@@ -436,6 +436,7 @@ struct isp_chn_gain_packet_param_v0000{
 
 isp_fun ispGetDownParamFunV0000(uint32_t cmd);
 int32_t ispGetParamSizeV0000(uint32_t* param_len);
+int32_t ispGetUpParamV0000(void*param_ptr, void* rtn_param_ptr);
 /**----------------------------------------------------------------------------*
 **                         Compiler Flag                                      **
 **----------------------------------------------------------------------------*/

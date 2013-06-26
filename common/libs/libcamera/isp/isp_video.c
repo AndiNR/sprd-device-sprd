@@ -111,7 +111,7 @@ static int wire_connected = 0;
 static int sockfd = 0;
 static int sock_fd=0;
 int sequence_num = 0;
-struct camera_func s_camera_fun={0x00};
+struct camera_func s_camera_fun={PNULL, PNULL, PNULL, PNULL};
 struct camera_func* s_camera_fun_ptr=&s_camera_fun;
 
 struct camera_func* ispvideo_GetCameraFunc(void)
@@ -146,9 +146,9 @@ int ispvideo_GetIspParamFromSt(unsigned char* dig_ptr, struct isp_parser_buf_rtn
 {
 	int rtn=0x00;
 
-	if((NULL!=dig_ptr)
-		&&(NULL!=isp_ptr->buf_addr)
-		&&(0x00!=isp_ptr->buf_len))
+	if((NULL != dig_ptr)
+		&& (NULL != (void *)(isp_ptr->buf_addr))
+		&& (0x00 != isp_ptr->buf_len))
 	{
 		memcpy((void*)isp_ptr->buf_addr, (void*)dig_ptr, isp_ptr->buf_len);
 	}
@@ -160,9 +160,9 @@ uint32_t ispvideo_SetIspParamToSt(unsigned char* dig_ptr, struct isp_parser_buf_
 {
 	uint32_t buf_len=0x00;
 
-	if((NULL!=dig_ptr)
-		&&(NULL!=isp_ptr->buf_addr)
-		&&(0x00!=isp_ptr->buf_len))
+	if((NULL != dig_ptr)
+		&& (NULL != (void *)(isp_ptr->buf_addr))
+		&& (0x00!=isp_ptr->buf_len))
 	{
 		memcpy((void*)dig_ptr, (void*)isp_ptr->buf_addr, isp_ptr->buf_len);
 
@@ -387,12 +387,13 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 			/* TODO:read isp param operation */
 			// rlen is the size of isp_param
 			// pass eng_rsp_diag+rsp_len
-			struct isp_parser_buf_in in_param={0x00};
-			struct isp_parser_buf_rtn rtn_param={0x00};
-			struct isp_parser_cmd_param rtn_cmd={0x00};
+			struct isp_parser_buf_in in_param = {0x00, 0x00};
+			struct isp_parser_buf_rtn rtn_param = {0x00, 0x00};
+			struct isp_parser_cmd_param rtn_cmd;
 			uint8_t* dig_ptr=buf;
 			uint8_t* isp_ptr=buf+sizeof(MSG_HEAD_T)+1;
 
+			memset(&rtn_cmd, 0, sizeof(rtn_cmd));
 			in_param.buf_len=ispvideo_GetIspParamLenFromSt(dig_ptr);
 			in_param.buf_addr=(uint32_t)ispParserAlloc(in_param.buf_len);
 
@@ -426,7 +427,7 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 			DBG("ISP_TOOL:CMD_WRITE_ISP_PARAM \n");
 			/* TODO:write isp param operation */
 			// pass buf+sizeof(MSG_HEAD_T)+1
-			struct isp_parser_buf_in in_param={0x00};
+			struct isp_parser_buf_in in_param = {0x00, 0x00};
 			uint8_t* dig_ptr=buf;
 			uint8_t* isp_ptr=buf+sizeof(MSG_HEAD_T)+1;
 
@@ -462,14 +463,15 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 			// rlen is the size of isp_param
 			// pass eng_rsp_diag+rsp_len
 
-			struct isp_parser_buf_in in_param={0x00};
-			struct isp_parser_buf_rtn rtn_param={0x00};
-			struct isp_parser_cmd_param rtn_cmd={0x00};
+			struct isp_parser_buf_in in_param = {0x00, 0x00};
+			struct isp_parser_buf_rtn rtn_param = {0x00, 0x00};
+			struct isp_parser_cmd_param rtn_cmd;
 			uint8_t* dig_ptr=buf;
 			uint8_t* isp_ptr=buf+sizeof(MSG_HEAD_T)+1;
 			uint8_t i=0x00;
 			uint32_t* addr=(uint32_t*)isp_ptr;
 
+			memset(&rtn_cmd, 0, sizeof(rtn_cmd));
 			in_param.buf_len=ispvideo_GetIspParamLenFromSt(dig_ptr);
 			in_param.buf_addr=(uint32_t)ispParserAlloc(in_param.buf_len);
 
@@ -501,12 +503,13 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 		case CMD_TAKE_PICTURE:
 		{
 			DBG("ISP_TOOL:CMD_TAKE_PICTURE\n");
-			struct isp_parser_buf_in in_param={0x00};
-			struct isp_parser_buf_rtn rtn_param={0x00};
-			struct isp_parser_cmd_param rtn_cmd={0x00};
+			struct isp_parser_buf_in in_param = {0x00, 0x00};
+			struct isp_parser_buf_rtn rtn_param = {0x00, 0x00};
+			struct isp_parser_cmd_param rtn_cmd;
 			uint8_t* dig_ptr=buf;
 			uint8_t* isp_ptr=buf+sizeof(MSG_HEAD_T)+1;
 
+			memset(&rtn_cmd, 0, sizeof(rtn_cmd));
 			in_param.buf_len=ispvideo_GetIspParamLenFromSt(dig_ptr);
 			in_param.buf_addr=(uint32_t)ispParserAlloc(in_param.buf_len);
 
@@ -553,11 +556,12 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 		case CMD_ISP_LEVEL:
 		{ // ok need test
 			DBG("ISP_TOOL:CMD_ISP_LEVEL \n");
-			struct isp_parser_buf_in in_param={0x00};
-			struct isp_parser_cmd_param rtn_cmd={0x00};
+			struct isp_parser_buf_in in_param = {0x00, 0x00};
+			struct isp_parser_cmd_param rtn_cmd;
 			uint8_t* dig_ptr=buf;
 			uint8_t* isp_ptr=buf+sizeof(MSG_HEAD_T)+1;
 
+			memset(&rtn_cmd, 0, sizeof(rtn_cmd));
 			in_param.buf_len=ispvideo_GetIspParamLenFromSt(dig_ptr);
 			in_param.buf_addr=(uint32_t)ispParserAlloc(in_param.buf_len);
 
@@ -579,12 +583,13 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 		case CMD_READ_SENSOR_REG:
 		{// ok need test
 			DBG("ISP_TOOL:CMD_READ_SENSOR_REG \n");
-			struct isp_parser_buf_in in_param={0x00};
-			struct isp_parser_cmd_param rtn_cmd={0x00};
-			struct isp_parser_buf_rtn rtn_param={0x00};
+			struct isp_parser_buf_in in_param = {0x00, 0x00};
+			struct isp_parser_cmd_param rtn_cmd;
+			struct isp_parser_buf_rtn rtn_param = {0x00, 0x00};
 			uint8_t* dig_ptr=buf;
 			uint8_t* isp_ptr=buf+sizeof(MSG_HEAD_T)+1;
 
+			memset(&rtn_cmd, 0, sizeof(rtn_cmd));
 			in_param.buf_len=ispvideo_GetIspParamLenFromSt(dig_ptr);
 			in_param.buf_addr=(uint32_t)ispParserAlloc(in_param.buf_len);
 
@@ -616,11 +621,12 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 		case CMD_WRITE_SENSOR_REG:
 		{ // ok need test
 			DBG("ISP_TOOL:CMD_WRITE_SENSOR_REG \n");
-			struct isp_parser_buf_in in_param={0x00};
-			struct isp_parser_cmd_param rtn_cmd={0x00};
+			struct isp_parser_buf_in in_param = {0x00, 0x00};
+			struct isp_parser_cmd_param rtn_cmd;
 			uint8_t* dig_ptr=buf;
 			uint8_t* isp_ptr=buf+sizeof(MSG_HEAD_T)+1;
 
+			memset(&rtn_cmd, 0, sizeof(rtn_cmd));
 			in_param.buf_len=ispvideo_GetIspParamLenFromSt(dig_ptr);
 			in_param.buf_addr=(uint32_t)ispParserAlloc(in_param.buf_len);
 
@@ -736,7 +742,7 @@ void send_img_data(uint32_t format, uint32_t width, uint32_t height, char *imgpt
 
 	if (0==preview_img_end_flag)
 	{
-		char *img_ptr=preview_buf_ptr;
+		char *img_ptr = (char *)preview_buf_ptr;
 		int img_len;
 		uint32_t img_w;
 		uint32_t img_h;
@@ -768,7 +774,7 @@ void send_capture_data(uint32_t format, uint32_t width, uint32_t height, char *c
 
 	DBG("ISP_TOOL:%s: format: %d, width: %d, height: %d.\n", __FUNCTION__, format, width, height);
 
-	if ((0 == capture_img_end_flag)&&(format == capture_format))
+	if ((0 == capture_img_end_flag)&&(format == (uint32_t)capture_format))
 	{
 		DBG("ISP_TOOL:%s: capture_flag: %d, capture_img_end_flag: %d,\n", __FUNCTION__, capture_flag, capture_img_end_flag);
 		ret = handle_img_data(format, width, height, ch0_ptr, ch0_len, ch1_ptr, ch1_len, ch2_ptr, ch2_len);

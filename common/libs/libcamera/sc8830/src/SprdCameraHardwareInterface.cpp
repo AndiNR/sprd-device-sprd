@@ -2913,7 +2913,7 @@ void SprdCameraHardware::HandleFocus(camera_cb_type cb,
             mNotify_cb(CAMERA_MSG_FOCUS, 0, 0, mUser);
 	break;
 
-    defaut:
+    default:
         LOGE("camera cb: unknown cb %d for CAMERA_FUNC_START_FOCUS!", cb);
         if (mMsgEnabled & CAMERA_MSG_FOCUS)
             mNotify_cb(CAMERA_MSG_FOCUS, 0, 0, mUser);

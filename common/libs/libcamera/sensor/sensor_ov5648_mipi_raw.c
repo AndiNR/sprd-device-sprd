@@ -300,7 +300,8 @@ LOCAL SENSOR_TRIM_T s_ov5648_Resolution_Trim_Tab[] = {
 static struct sensor_raw_info s_ov5648_mipi_raw_info={
 	&s_ov5648_version_info,
 	&s_ov5648_tune_info,
-	&s_ov5648_fix_info
+	&s_ov5648_fix_info,
+	&s_ov5648_cali_info,
 };
 
 struct sensor_raw_info* s_ov5648_mipi_raw_info_ptr=&s_ov5648_mipi_raw_info;
@@ -355,7 +356,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5648_ioctl_func_tab = {
 	PNULL,  //meter_mode
 	PNULL, //get_status
 	_ov5648_StreamOn,
-	_ov5648_StreamOff
+	_ov5648_StreamOff,
 };
 
 
@@ -411,7 +412,7 @@ SENSOR_INFO_T g_ov5648_mipi_raw_info = {
 
 	s_ov5648_resolution_Tab_RAW,	// point to resolution table information structure
 	&s_ov5648_ioctl_func_tab,	// point to ioctl function table
-	(uint32_t *)&s_ov5648_mipi_raw_info,		// information and table about Rawrgb sensor
+	&s_ov5648_mipi_raw_info,		// information and table about Rawrgb sensor
 	NULL,			//&g_ov5648_ext_info,                // extend information about sensor
 	SENSOR_AVDD_1800MV,	// iovdd
 	SENSOR_AVDD_1500MV,	// dvdd

@@ -442,7 +442,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_GC0309_ioctl_func_tab =
         PNULL,
         PNULL,
         PNULL,
-	    PNULL
+	PNULL,
 };
 
 /**---------------------------------------------------------------------------*

@@ -1230,7 +1230,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5640_ioctl_func_tab = {
 	PNULL,  //meter_mode
 	_ov5640_check_status, //get_status
 	PNULL,
-	PNULL
+	PNULL,
 };
 #if 0
 LOCAL SENSOR_EXTEND_INFO_T g_ov5640_ext_info = {
@@ -2317,6 +2317,19 @@ LOCAL int OV5640_set_AE_target(int target)
 	return 0;
 }
 
+int OV5640_set_VTS_ori(int VTS)
+{
+	// write VTS to registers
+	int temp;
+
+	temp = VTS & 0xff;
+	Sensor_WriteReg(0x380f, temp);
+
+	temp = VTS>>8;
+	Sensor_WriteReg(0x380e, temp);
+
+	return 0;
+}
 
 LOCAL int OV5640_capture(uint32_t param)
 {
@@ -2415,7 +2428,7 @@ LOCAL int OV5640_capture(uint32_t param)
 	// write capture shutter
 	if (capture_shutter > (capture_VTS - 4)) {
 		capture_VTS = capture_shutter + 4;
-		OV5640_set_VTS(capture_VTS);
+		OV5640_set_VTS_ori(capture_VTS);
 	}
 	OV5640_set_shutter(capture_shutter);
 	s_capture_shutter = capture_shutter;
@@ -2939,7 +2952,7 @@ LOCAL void _calculate_hdr_exposure(int capture_gain16,int capture_VTS, int captu
 	// write capture shutter
 	if (capture_shutter > (capture_VTS - 4)) {
 		capture_VTS = capture_shutter + 4;
-		OV5640_set_VTS(capture_VTS);
+		OV5640_set_VTS_ori(capture_VTS);
 	}
 	OV5640_set_shutter(capture_shutter);
 }
@@ -2947,7 +2960,7 @@ LOCAL void _calculate_hdr_exposure(int capture_gain16,int capture_VTS, int captu
 LOCAL uint32_t _ov5640_SetEV(uint32_t param)
 {
 	uint32_t rtn = SENSOR_SUCCESS;
-	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_T_PTR) param;
+	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR) param;
 
 	uint16_t value=0x00;
 	uint32_t gain = s_ov5640_gain;
@@ -7278,7 +7291,7 @@ LOCAL uint32_t _ov5640_flash(uint32_t param)
 		return SENSOR_FAIL;
 	}
 
-	SENSOR_PRINT(" value = %d, autoflash = 0x%x, auto_flash_mode",  value, autoflash);
+	SENSOR_PRINT(" value = %d, autoflash = 0x%x, auto_flash_mode",  value, *autoflash);
 	return SENSOR_SUCCESS;
 }
 

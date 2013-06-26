@@ -279,8 +279,8 @@ static int32_t _ispParserUpMainInfo(void* rtn_param_ptr)
 		}
 
 	} else {
-		rtn_ptr->buf_addr=NULL;
-		rtn_ptr->buf_len=0x00;
+		rtn_ptr->buf_addr = (uint32_t)NULL;
+		rtn_ptr->buf_len = 0x00;
 		rtn = 0x01;
 	}
 
@@ -298,13 +298,13 @@ static int32_t _ispParserUpParam(void* rtn_param_ptr)
 	{
 		case ISP_VERSION_0000_ID:
 		{
-			rtn=ispGetUpParamV0000(NULL, rtn_param_ptr);
+			rtn = ispGetUpParamV0000(NULL, rtn_param_ptr);
 			break;
 		}
 
 		case ISP_VERSION_0001_ID:
 		{
-			rtn=ispGetUpParamV0001(NULL, rtn_param_ptr);
+			rtn = ispGetUpParamV0001(NULL, rtn_param_ptr);
 			break;
 		}			
 
@@ -341,8 +341,8 @@ static int32_t _ispParserUpdata(void* in_param_ptr, void* rtn_param_ptr)
 		memcpy((void*)&data_addr[5], (void*)in_ptr->buf_addr, in_ptr->buf_len);
 
 		// rtn sesult
-		rtn_ptr->buf_addr=data_addr;
-		rtn_ptr->buf_len=data_len;
+		rtn_ptr->buf_addr = (uint32_t)data_addr;
+		rtn_ptr->buf_len = data_len;
 	}
 
 	return rtn;
@@ -365,8 +365,8 @@ static int32_t _ispParserCapturesize(void* in_param_ptr, void* rtn_param_ptr)
 		data_addr[2]=in_ptr->param[0];
 
 		// rtn sesult
-		rtn_ptr->buf_addr=data_addr;
-		rtn_ptr->buf_len=data_len;
+		rtn_ptr->buf_addr = (uint32_t)data_addr;
+		rtn_ptr->buf_len = data_len;
 	}
 
 	return rtn;
@@ -385,8 +385,8 @@ static int32_t _ispParserReadSensorReg(void* in_param_ptr, void* rtn_param_ptr)
 	uint16_t reg_data=0x00;
 	uint32_t i=0x00;
 
-	rtn_ptr->buf_addr=NULL;
-	rtn_ptr->buf_len=0x00;
+	rtn_ptr->buf_addr = (uint32_t)NULL;
+	rtn_ptr->buf_len = 0x00;
 
 	data_len+=reg_num*0x08;
 	data_addr=ispParserAlloc(data_len);
@@ -406,8 +406,8 @@ static int32_t _ispParserReadSensorReg(void* in_param_ptr, void* rtn_param_ptr)
 		}
 
 		// rtn sesult
-		rtn_ptr->buf_addr=data_addr;
-		rtn_ptr->buf_len=data_len;
+		rtn_ptr->buf_addr = (uint32_t)data_addr;
+		rtn_ptr->buf_len = data_len;
 	}
 
 	return rtn;
@@ -630,8 +630,8 @@ static int32_t _ispParserUpHnadle(uint32_t cmd, void* in_param_ptr, void* rtn_pa
 			ispParserFree((void*)rtn_ptr->buf_addr);
 
 			// rtn sesult
-			rtn_ptr->buf_addr=data_addr;
-			rtn_ptr->buf_len=data_len;
+			rtn_ptr->buf_addr = (uint32_t)data_addr;
+			rtn_ptr->buf_len = data_len;
 		}
 	}
 

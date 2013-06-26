@@ -133,6 +133,11 @@ static int camera_preview_weak_init(int format_mode);
 static int camera_cap_thread_init(void);
 static int camera_cap_thread_deinit(void);
 static void *camera_cap_thread_proc(void *data);
+static void camera_capture_hdr_data(struct frm_info *data);
+static int camera_take_picture_hdr(void);
+static int camera_get_take_picture(void);
+static int camera_set_take_picture(int set_val);
+static int camera_capture_init_raw(void);
 
 camera_ret_code_type camera_encode_picture(camera_frame_type *frame,
 					camera_handle_type *handle,
@@ -788,7 +793,7 @@ int camera_cap_post(void *data)
 			}
 		}
 		CMR_PRINT_TIME;
-		camera_capture_hdr_data(data);
+		camera_capture_hdr_data((struct frm_info *)data);
 		if (HDR_CAP_NUM == g_cxt->cap_cnt) {
 			ret = camera_snapshot_stop_set();
 			if (ret) {
@@ -888,7 +893,7 @@ void *camera_cap_thread_proc(void *data)
 				cmr_v4l2_free_frame(data->channel_id, data->frame_id);
 				if ((g_cxt->cap_cnt == g_cxt->total_capture_num)||(CAMERA_HDR_MODE == g_cxt->cap_mode)) {
 					camera_snapshot_stop_set();
-					camera_set_take_picture(TAKE_PICTURE_NO);
+					ret = camera_set_take_picture(TAKE_PICTURE_NO);
 				}
 			}
 			CMR_PRINT_TIME;
@@ -2098,7 +2103,7 @@ camera_ret_code_type camera_take_picture_raw(camera_cb_f_type    callback,
 	g_cxt->err_code = 0;
 	message.msg_type = CMR_EVT_START;
 	message.sub_msg_type = CMR_CAPTURE;
-	message.data = CAMERA_TOOL_RAW_MODE;
+	message.data = (void *)CAMERA_TOOL_RAW_MODE;
 	ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
 
 	if (ret) {

@@ -1185,7 +1185,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5640_ioctl_func_tab = {
 	PNULL, //meter_mode
 	PNULL, //get_status
 	_ov5640_StreamOn,
-	_ov5640_StreamOff
+	_ov5640_StreamOff,
 };
 
 
@@ -7265,7 +7265,7 @@ LOCAL uint32_t _ov5640_flash(uint32_t param)
 		return SENSOR_FAIL;
 	}
 
-	SENSOR_PRINT(" value = %d, autoflash = 0x%x, auto_flash_mode",  value, autoflash);
+	SENSOR_PRINT(" value = %d, autoflash = 0x%x, auto_flash_mode",  value, *autoflash);
 	return SENSOR_SUCCESS;
 }
 

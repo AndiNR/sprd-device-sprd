@@ -77,7 +77,7 @@ LOCAL void JPEGENC_init_fw_param(JPEGENC_PARAMS_T *jpegenc_params,
 
 	enc_fw_info_ptr->width = jpegenc_params->width;
 	enc_fw_info_ptr->height = jpegenc_params->height;
-	enc_fw_info_ptr->quant_level = (JPEG_QUALITY_E)((jpegenc_params->quality >= JPEG_QUALITY_MAX) ? JPEG_QUALITY_HIGH
+	enc_fw_info_ptr->quant_level = (JPEG_QUALITY_E)(((uint32_t)(jpegenc_params->quality) >= (uint32_t)JPEG_QUALITY_MAX) ? JPEG_QUALITY_HIGH
 									: jpegenc_params->quality);
 
 	enc_fw_info_ptr->yuv_0_info.input_mcu_info 	= jpegenc_params->format;

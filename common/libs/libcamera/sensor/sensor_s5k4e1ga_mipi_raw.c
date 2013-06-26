@@ -284,7 +284,8 @@ LOCAL SENSOR_TRIM_T s_s5k4e1ga_Resolution_Trim_Tab[] = {
 static struct sensor_raw_info s_s5k4e1ga_mipi_raw_info={
 	&s_s5k4e1ga_version_info,
 	&s_s5k4e1ga_tune_info,
-	&s_s5k4e1ga_fix_info
+	&s_s5k4e1ga_fix_info,
+	&s_s5k4e1ga_cali_info,
 };
 
 struct sensor_raw_info* s_s5k4e1ga_mipi_raw_info_ptr=&s_s5k4e1ga_mipi_raw_info;
@@ -339,7 +340,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_s5k4e1ga_ioctl_func_tab = {
 	PNULL,  //meter_mode
 	PNULL, //get_status
 	_s5k4e1ga_StreamOn,
-	_s5k4e1ga_StreamOff
+	_s5k4e1ga_StreamOff,
 };
 
 
@@ -395,7 +396,7 @@ SENSOR_INFO_T g_s5k4e1ga_mipi_raw_info = {
 
 	s_s5k4e1ga_resolution_Tab_RAW,	// point to resolution table information structure
 	&s_s5k4e1ga_ioctl_func_tab,	// point to ioctl function table
-	(uint32_t *)&s_s5k4e1ga_mipi_raw_info,		// information and table about Rawrgb sensor
+	&s_s5k4e1ga_mipi_raw_info,		// information and table about Rawrgb sensor
 	NULL,			//&g_s5k4e1ga_ext_info,                // extend information about sensor
 	SENSOR_AVDD_1800MV,	// iovdd
 	SENSOR_AVDD_1800MV,	// dvdd

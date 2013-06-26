@@ -7108,7 +7108,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_HI351_ioctl_func_tab =
     PNULL, //meter_mode
     PNULL, //get_status
     _hi351_StreamOn,
-	_hi351_StreamOff
+	_hi351_StreamOff,
 };
 
 /**---------------------------------------------------------------------------*

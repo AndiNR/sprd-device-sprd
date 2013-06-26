@@ -192,7 +192,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_s5k5ccgx_ioctl_func_tab =
     s5k5ccgx_set_Metering,/*40*/// set mertering
     PNULL, /*41*///get_status
     PNULL, /*42*///stream_on
-	PNULL
+	PNULL,
 /*    s5k5ccgx_set_FPS,*/
 };
 

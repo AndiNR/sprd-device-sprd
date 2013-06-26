@@ -396,6 +396,8 @@ int camera_takepic_done(struct camera_context *p_cxt);
 void camera_sensor_inf(struct sensor_if *cam_inf_ptr, SENSOR_INF_T *inf_ptr);
 int camera_set_sensormark(void);
 int camera_save_sensormark(void);
+int camera_takepic_callback_done(struct camera_context *p_cxt);
+int camera_wait_takepic_callback(struct camera_context *p_cxt);
 
 int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 	uint32_t width, uint32_t height, struct img_addr *addr);

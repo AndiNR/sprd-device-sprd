@@ -1500,7 +1500,7 @@ int camera_get_video_mode(uint32_t frame_rate, uint32_t *video_mode)
 		return CAMERA_FAILED;
 	}
 	*video_mode = 0;
-	ret = Sensor_GetMode(&sensor_mode);
+	ret = Sensor_GetMode((uint32_t *)(&sensor_mode));
 	if (ret) {
 		CMR_LOGE("get sensor mode fail.");
 		return CAMERA_FAILED;

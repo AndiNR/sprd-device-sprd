@@ -45,6 +45,7 @@ LOCAL int _ov8825_get_VTS(void);
 LOCAL int _ov8825_set_VTS(int VTS);
 LOCAL uint32_t _ov8825_ReadGain(uint32_t param);
 LOCAL uint32_t _ov8825_set_video_mode(uint32_t param);
+LOCAL int _ov8825_get_shutter(void);
 
 
 static uint32_t g_flash_mode_en = 0;
@@ -1354,7 +1355,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov8825_ioctl_func_tab = {
 	PNULL,  //meter_mode
 	PNULL, //get_status
 	_ov8825_StreamOn,
-	_ov8825_StreamOff
+	_ov8825_StreamOff,
 };
 
 

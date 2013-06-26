@@ -243,7 +243,8 @@ LOCAL SENSOR_TRIM_T s_ov5647_Resolution_Trim_Tab[] = {
 static struct sensor_raw_info s_ov5647_mipi_raw_info={
 	&s_ov5647_version_info,
 	&s_ov5647_tune_info,
-	&s_ov5647_fix_info
+	&s_ov5647_fix_info,
+	&s_ov5647_cali_info,
 };
 
 struct sensor_raw_info* s_ov5647_mipi_raw_info_ptr=&s_ov5647_mipi_raw_info;
@@ -295,10 +296,10 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5647_ioctl_func_tab = {
 	PNULL, 		//_ov5647_set_anti_flicker,
 	PNULL, 		//_ov5647_set_video_mode,
 	PNULL, 		//pick_jpeg_stream
-	PNULL,  		//meter_mode
+	PNULL, 		//meter_mode
 	PNULL, 		//get_status
 	_ov5647_StreamOn,
-	_ov5647_StreamOff
+	_ov5647_StreamOff,
 };
 
 
@@ -977,7 +978,7 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 
 LOCAL uint32_t _ov5647_GetResolutionTrimTab(uint32_t param)
 {
-	SENSOR_PRINT("0x%x", s_ov5647_Resolution_Trim_Tab);
+	SENSOR_PRINT("0x%x", (uint32_t)s_ov5647_Resolution_Trim_Tab);
 	return (uint32_t) s_ov5647_Resolution_Trim_Tab;
 }
 LOCAL uint32_t _ov5647_PowerOn(uint32_t power_on)

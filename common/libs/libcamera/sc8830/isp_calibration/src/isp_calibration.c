@@ -907,7 +907,7 @@ uint32_t ISP_Cali_LNCCorrection(struct isp_addr_t * src_data, struct isp_addr_t 
 	uint16_t u, v;
 	uint8_t LNC_GRID;
 	uint16_t GridX, GridY;//total grid number
-	uint16_t temp1,temp2,temp3,temp4;
+	int16_t temp1,temp2,temp3,temp4;
 	uint16_t *r0c0_ptr;
 	uint16_t *r0c1_ptr;
 	uint16_t *r1c0_ptr;

@@ -927,122 +927,164 @@ static const uint8_t s_s5k4e1ga_tune_info[]=
 static struct sensor_raw_tune_info s_s5k4e1ga_tune_info;
 #endif
 
+static struct sensor_raw_cali_info s_s5k4e1ga_cali_info;
 
-static struct sensor_raw_fix_info s_s5k4e1ga_fix_info=
+static struct sensor_raw_fix_info s_s5k4e1ga_fix_info = {
+{
+	(uint8_t*)s_s5k4e1ga_ae_weight_customer,
+
+	{
+		{
+			(uint32_t*)s_s5k4e1ga_aes_00,
+			(uint16_t*)s_s5k4e1ga_aeg_00,
+			{
+				{101, 101},
+				{112, 112},
+				{124, 124},
+				{128, 135},
+				{128, 135},
+			}
+		},
+
+		{
+			(uint32_t*)s_s5k4e1ga_aes_10,
+			(uint16_t*)s_s5k4e1ga_aeg_10,
+			{
+				{103, 103},
+				{114, 114},
+				{126, 126},
+				{128, 137},
+				{128, 137},
+			},
+		},
+
+		{
+			(uint32_t*)s_s5k4e1ga_aes_01,
+			(uint16_t*)s_s5k4e1ga_aeg_01,
+			{
+				{121, 121},
+				{128, 132},
+				{128, 144},
+				{128, 155},
+				{128, 155},
+			},
+		},
+
+		{
+			(uint32_t*)s_s5k4e1ga_aes_11,
+			(uint16_t*)s_s5k4e1ga_aeg_11,
+			{
+				{118, 118},
+				{128, 129},
+				{128, 141},
+				{128, 152},
+				{128, 152},
+			},
+		},
+	},
+},
+
 {
 	{
-		(uint8_t*)s_s5k4e1ga_ae_weight_customer,
+		{
+			/***********0*************/
+			{
+				0x20,
+				(uint16_t*)s_s5k4e1ga_lnc_00,
+				sizeof(s_s5k4e1ga_lnc_00),
+			},
+			{
+				0x00,
+				(uint16_t*)s_s5k4e1ga_lnc_01,
+				sizeof(s_s5k4e1ga_lnc_01),
+			},
+			{
+				0x00,
+				(uint16_t*)s_s5k4e1ga_lnc_02,
+				sizeof(s_s5k4e1ga_lnc_02),
+			},
+			{
+				0x00,
+				(uint16_t*)s_s5k4e1ga_lnc_03,
+				sizeof(s_s5k4e1ga_lnc_03),
+			},
+			{
+				0x00,
+				(uint16_t*)s_s5k4e1ga_lnc_04,
+				sizeof(s_s5k4e1ga_lnc_04),
+			},
+			{
+				0x00,
+				(uint16_t*)s_s5k4e1ga_lnc_05,
+				sizeof(s_s5k4e1ga_lnc_05),
+			},
+			{
+				0x00,
+				(uint16_t*)s_s5k4e1ga_lnc_06,
+				sizeof(s_s5k4e1ga_lnc_06),
+			},
+			{
+				0x00,
+				(uint16_t*)s_s5k4e1ga_lnc_07,
+				sizeof(s_s5k4e1ga_lnc_07),
+			},
+			{
+				0x00,
+				(uint16_t*)s_s5k4e1ga_lnc_08,
+				sizeof(s_s5k4e1ga_lnc_08),
+			},
+		},
 
-		(uint16_t*)s_s5k4e1ga_aes_00,
-		(uint16_t*)s_s5k4e1ga_aeg_00,
-		101,
-		101,
-		112,
-		112,
-		124,
-		124,
-		128,
-		135,
-		128,
-		135,
-
-		(uint16_t*)s_s5k4e1ga_aes_10,
-		(uint16_t*)s_s5k4e1ga_aeg_10,
-		103,
-		103,
-		114,
-		114,
-		126,
-		126,
-		128,
-		137,
-		128,
-		137,
-
-		(uint16_t*)s_s5k4e1ga_aes_01,
-		(uint16_t*)s_s5k4e1ga_aeg_01,
-		121,
-		121,
-		128,
-		132,
-		128,
-		144,
-		128,
-		155,
-		128,
-		155,
-
-		(uint16_t*)s_s5k4e1ga_aes_11,
-		(uint16_t*)s_s5k4e1ga_aeg_11,
-		118,
-		118,
-		128,
-		129,
-		128,
-		141,
-		128,
-		152,
-		128,
-		152,
-	},
-	{
-		/***********0*************/
-		0x20,
-		(uint16_t*)s_s5k4e1ga_lnc_00,
-		sizeof(s_s5k4e1ga_lnc_00),
-		0x00,
-		(uint16_t*)s_s5k4e1ga_lnc_01,
-		sizeof(s_s5k4e1ga_lnc_01),
-		0x00,
-		(uint16_t*)s_s5k4e1ga_lnc_02,
-		sizeof(s_s5k4e1ga_lnc_02),
-		0x00,
-		(uint16_t*)s_s5k4e1ga_lnc_03,
-		sizeof(s_s5k4e1ga_lnc_03),
-		0x00,
-		(uint16_t*)s_s5k4e1ga_lnc_04,
-		sizeof(s_s5k4e1ga_lnc_04),
-		0x00,
-		(uint16_t*)s_s5k4e1ga_lnc_05,
-		sizeof(s_s5k4e1ga_lnc_05),
-		0x00,
-		(uint16_t*)s_s5k4e1ga_lnc_06,
-		sizeof(s_s5k4e1ga_lnc_06),
-		0x00,
-		(uint16_t*)s_s5k4e1ga_lnc_07,
-		sizeof(s_s5k4e1ga_lnc_07),
-		0x00,
-		(uint16_t*)s_s5k4e1ga_lnc_08,
-		sizeof(s_s5k4e1ga_lnc_08),
+		{
 		/***********1*************/
-		0x20,
-		(uint16_t*)s_s5k4e1ga_lnc_10,
-		sizeof(s_s5k4e1ga_lnc_10),
-		0x00,
-		(uint16_t*)s_s5k4e1ga_lnc_11,
-		sizeof(s_s5k4e1ga_lnc_11),
-		0x00,
-		(uint16_t*)s_s5k4e1ga_lnc_12,
-		sizeof(s_s5k4e1ga_lnc_12),
-		0x00,
-		(uint16_t*)s_s5k4e1ga_lnc_13,
-		sizeof(s_s5k4e1ga_lnc_13),
-		0x00,
-		(uint16_t*)s_s5k4e1ga_lnc_14,
-		sizeof(s_s5k4e1ga_lnc_14),
-		0x00,
-		(uint16_t*)s_s5k4e1ga_lnc_15,
-		sizeof(s_s5k4e1ga_lnc_15),
-		0x00,
-		(uint16_t*)s_s5k4e1ga_lnc_16,
-		sizeof(s_s5k4e1ga_lnc_16),
-		0x00,
-		(uint16_t*)s_s5k4e1ga_lnc_17,
-		sizeof(s_s5k4e1ga_lnc_17),
-		0x00,
-		(uint16_t*)s_s5k4e1ga_lnc_18,
-		sizeof(s_s5k4e1ga_lnc_18)
-	}
+			{
+				0x20,
+				(uint16_t*)s_s5k4e1ga_lnc_10,
+				sizeof(s_s5k4e1ga_lnc_10),
+			},
+			{
+				0x00,
+				(uint16_t*)s_s5k4e1ga_lnc_11,
+				sizeof(s_s5k4e1ga_lnc_11),
+			},
+			{
+				0x00,
+				(uint16_t*)s_s5k4e1ga_lnc_12,
+				sizeof(s_s5k4e1ga_lnc_12),
+			},
+			{
+				0x00,
+				(uint16_t*)s_s5k4e1ga_lnc_13,
+				sizeof(s_s5k4e1ga_lnc_13),
+			},
+			{
+				0x00,
+				(uint16_t*)s_s5k4e1ga_lnc_14,
+				sizeof(s_s5k4e1ga_lnc_14),
+			},
+			{
+				0x00,
+				(uint16_t*)s_s5k4e1ga_lnc_15,
+				sizeof(s_s5k4e1ga_lnc_15),
+			},
+			{
+				0x00,
+				(uint16_t*)s_s5k4e1ga_lnc_16,
+				sizeof(s_s5k4e1ga_lnc_16),
+			},
+			{
+				0x00,
+				(uint16_t*)s_s5k4e1ga_lnc_17,
+				sizeof(s_s5k4e1ga_lnc_17),
+			},
+			{
+				0x00,
+				(uint16_t*)s_s5k4e1ga_lnc_18,
+				sizeof(s_s5k4e1ga_lnc_18)
+			},
+		},
+	},
+},
 };
 
 static struct sensor_version_info s_s5k4e1ga_version_info={

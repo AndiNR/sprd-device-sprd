@@ -541,7 +541,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
 	PNULL,  //meter_mode
 	PNULL, //get_status
 	PNULL,
-	PNULL
+	PNULL,
 };
 /**---------------------------------------------------------------------------*
  ** 						Global Variables								  *
