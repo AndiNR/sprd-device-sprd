@@ -85,6 +85,7 @@ PRODUCT_PACKAGES += \
 	zram.sh \
 	libsprdstreamrecoder \
 	libvtmanager\
+        libstagefright_sprd_aacdec\
    fm.$(TARGET_PLATFORM)
 
 PRODUCT_PACKAGES += \
