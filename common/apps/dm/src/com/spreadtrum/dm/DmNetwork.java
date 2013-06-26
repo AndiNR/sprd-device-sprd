@@ -208,8 +208,6 @@ public class DmNetwork {
                     NetworkInfo ni = (NetworkInfo) intent
                             .getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
 
-                    Log.v(TAG, "[ppp link] network state receiver ni.getType: " + ni.getType());
-                    Log.v(TAG, "[ppp link] network state receiver ni.getState: " + ni.getState());
                     if (ni != null && (ni.getType() == ConnectivityManager.TYPE_MOBILE_DM  ||
 		    (ni.getType() ==
                   ConnectivityManager.getNetworkTypeByPhoneId(DmService.getInstance().getCurrentPhoneID(), ConnectivityManager.TYPE_MOBILE_DM))

@@ -77,6 +77,7 @@ int main(int argc, char **argv)
 	pipe_fd = open("/dev/vbpipe4",O_RDONLY);
 	if(pipe_fd < 0) {
 		printf("cannot open vpipe4\n");
+		close(dst_fd);
 		exit(1);
 	}
 
@@ -105,6 +106,5 @@ int main(int argc, char **argv)
 	}
 out:
 	close(pipe_fd);
-	close(dst_fd);
 	return 0;
 }

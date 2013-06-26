@@ -4592,32 +4592,32 @@ LOCAL void MMIDM_releaseItemContent(DMXML_TAG_ITEM_T* item_tag)
     if(PNULL != item_tag->data.tagContent)
     {
         SCI_FREEAA(item_tag->data.tagContent);
-        item_tag->data.tagContent == PNULL;
+        item_tag->data.tagContent = PNULL;
     }
      if(PNULL != s_resultTag_head->item_ptr->meta.format.tagContent)
     {
         SCI_FREEAA(item_tag->meta.format.tagContent);
-        item_tag->meta.format.tagContent == PNULL;
+        item_tag->meta.format.tagContent = PNULL;
     }
      if(PNULL != item_tag->meta.nextnonce.tagContent)
     {
         SCI_FREEAA(item_tag->meta.nextnonce.tagContent);
-        item_tag->meta.nextnonce.tagContent == PNULL;
+        item_tag->meta.nextnonce.tagContent = PNULL;
     }
      if(PNULL != item_tag->meta.type.tagContent)
     {
         SCI_FREEAA(item_tag->meta.type.tagContent);
-        item_tag->meta.type.tagContent == PNULL;
+        item_tag->meta.type.tagContent = PNULL;
     }
      if(PNULL != item_tag->source.locname.tagContent)
     {
         SCI_FREEAA(item_tag->source.locname.tagContent);
-        item_tag->source.locname.tagContent == PNULL;
+        item_tag->source.locname.tagContent = PNULL;
     }
      if(PNULL != item_tag->source.locuri.tagContent)
     {
         SCI_FREEAA(item_tag->source.locuri.tagContent);
-        item_tag->source.locuri.tagContent == PNULL;
+        item_tag->source.locuri.tagContent = PNULL;
     }
 }
 

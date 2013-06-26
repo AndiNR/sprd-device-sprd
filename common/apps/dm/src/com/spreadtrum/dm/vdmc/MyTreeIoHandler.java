@@ -1626,7 +1626,7 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
 	        }
 		else
 	            Settings.System.putString(resolver, "CREDNONCE", str);
-				
+		break;
         case PIM_CONNPROFILE_URI_IO_HANDLER:
 	        if (null == str)
 	        {
