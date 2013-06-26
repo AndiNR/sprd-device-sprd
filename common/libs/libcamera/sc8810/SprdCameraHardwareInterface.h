@@ -327,7 +327,7 @@ sp<RawPmemPool> mJpegencSwapHeap; //for capture zoom scale.
     };
 
     volatile Sprd_camera_state mCameraState;
-    static const char* const getCameraStateStr(Sprd_camera_state s);    
+    const char* getCameraStateStr(Sprd_camera_state s);
     //static const char* getCameraStateStr(Sprd_camera_state s);
     Sprd_camera_state change_state(Sprd_camera_state new_state, 
                                        bool lock = true);
