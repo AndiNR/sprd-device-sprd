@@ -49,8 +49,8 @@ int ev_init(void)
 			if(ev_count == MAX_DEVICES) break;
 		}
 	}
-
-	return 0;
+       closedir(dir) ;
+       return 0;
 }
 
 void ev_exit(void)
