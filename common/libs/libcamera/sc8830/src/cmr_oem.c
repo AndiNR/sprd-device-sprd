@@ -302,8 +302,10 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 	focal_length_numerator = p_cxt->cmr_set.focal_len;
 	focal_length_denominator = 1000;
 	/* Some info is not get from the kernel */
-	p_exif_info->spec_ptr->basic.PixelXDimension = p_cxt->picture_size.width;
-	p_exif_info->spec_ptr->basic.PixelYDimension = p_cxt->picture_size.height;
+	if(NULL != p_exif_info->spec_ptr){
+	    p_exif_info->spec_ptr->basic.PixelXDimension = p_cxt->picture_size.width;
+	    p_exif_info->spec_ptr->basic.PixelYDimension = p_cxt->picture_size.height;
+	}
 	p_exif_info->primary.basic.ImageWidth  = p_cxt->picture_size.width;
 	p_exif_info->primary.basic.ImageLength = p_cxt->picture_size.height;
 	CMR_LOGI("EXIF width=%d, height=%d \n",

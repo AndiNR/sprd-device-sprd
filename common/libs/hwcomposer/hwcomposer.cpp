@@ -1133,6 +1133,8 @@ static int hwc_set(hwc_composer_device_t *dev,
     }
     if (list == NULL) {
         ALOGW("hwc_set list == NULL");
+	if(NULL == sur)
+	    return HWC_EGL_ERROR;
         EGLBoolean sucess = eglSwapBuffers((EGLDisplay)dpy, (EGLSurface)sur);
         if (!sucess) {
             return HWC_EGL_ERROR;
@@ -1327,6 +1329,8 @@ static int hwc_set(hwc_composer_device_t *dev,
             /*************************dump end**************************************/
         }
         ALOGI_IF(debugenable , "eglSwapBuffers");
+	if(NULL == sur)
+	    return HWC_EGL_ERROR;
         EGLBoolean sucess = eglSwapBuffers((EGLDisplay)dpy, (EGLSurface)sur);
         /*************************dump framebuffer if need******************************/
         if(0 != property_get("dump.hwcomposer.flag" , value , "0")) {

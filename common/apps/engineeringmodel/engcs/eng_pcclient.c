@@ -532,8 +532,10 @@ static void *eng_pcclient_hdlr(void *_param)
                             if (i==0){
                                 prev_len = resp_len;
                                 prev_resp_buf = (char*)malloc(prev_len+1);
-                                memset(prev_resp_buf,0,prev_len+1);
-                                memcpy(prev_resp_buf,databuf,prev_len);
+				if(NULL != prev_resp_buf){
+                                    memset(prev_resp_buf,0,prev_len+1);
+                                    memcpy(prev_resp_buf,databuf,prev_len);
+				}
                             }
                             else{
                                 eng_multicmds_modem2pc(pc_client_fd,

@@ -376,8 +376,10 @@ int arithmetic_hdr(struct img_addr *dst_addr,uint32_t width,uint32_t height)
 			CMR_LOGE("can't handle hdr.");
 			ret = ARITH_FAIL;
 	}
-	memcpy((void *)dst_addr->addr_y,(void *)temp_addr0,size);
-	memcpy((void *)dst_addr->addr_u,(void *)(temp_addr0+size),size/2);
+	if(NULL != temp_addr0){
+	    memcpy((void *)dst_addr->addr_y,(void *)temp_addr0,size);
+	    memcpy((void *)dst_addr->addr_u,(void *)(temp_addr0+size),size/2);
+	}
 /*	save_hdrdata(dst_addr,width,height);*/
 	pthread_mutex_unlock(&s_arith_cxt->hdr_lock);
 	if (ARITH_SUCCESS == ret) {

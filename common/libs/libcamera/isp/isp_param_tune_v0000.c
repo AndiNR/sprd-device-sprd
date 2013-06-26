@@ -47,9 +47,12 @@ static int32_t _ispSetAllParamV0000(void* in_param_ptr)
 	void* raw_tune_ptr=(void*)sensor_info_ptr->raw_info_ptr->tune_ptr;
 
 	struct sensor_raw_tune_info* raw_ptr=sensor_info_ptr->raw_info_ptr->tune_ptr;
-	struct sensor_raw_tune_info* tune_ptr=(struct sensor_raw_tune_info*)data_addr;
+	struct sensor_raw_tune_info* tune_ptr = NULL;
+	if(NULL != data_addr)
+	    tune_ptr=(struct sensor_raw_tune_info*)data_addr;
 
 	CMR_LOGE("ISP_TOOL:--raw_ptr-- detail_thr:0x%x,smooth_thr: 0x%x, strength:0x%x",raw_ptr->edge.info[0].detail_thr,raw_ptr->edge.info[0].smooth_thr,raw_ptr->edge.info[0].strength);
+	if(NULL != tune_ptr)
 	CMR_LOGE("ISP_TOOL:--tune_ptr-- detail_thr:0x%x,smooth_thr: 0x%x, strength:0x%x",tune_ptr->edge.info[0].detail_thr,tune_ptr->edge.info[0].smooth_thr,tune_ptr->edge.info[0].strength);
 
 	if((NULL!=raw_tune_ptr)&&(NULL!=data_addr)&&(0x00!=data_len))

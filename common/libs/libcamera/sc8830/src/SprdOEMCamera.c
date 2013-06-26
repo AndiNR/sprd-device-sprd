@@ -2982,9 +2982,10 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 	int                      thumb_exist = 1;
 	int                      ret = CAMERA_SUCCESS;
 
-	CMR_LOGV("stream buf 0x%x size 0x%x",
-		g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg.addr_vir.addr_y,
-		data->stream_size);
+	if(NULL != data)
+	    CMR_LOGV("stream buf 0x%x size 0x%x",
+		    g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg.addr_vir.addr_y,
+		    data->stream_size);
 
 	CMR_PRINT_TIME;
 	if (NULL == data || 0 == data->slice_height) {

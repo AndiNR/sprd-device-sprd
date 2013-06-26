@@ -195,8 +195,10 @@ BOOLEAN		ramDisk_Read(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 // 1 read first image
 	memset(buf,0xFF,size);
 	fileHandle = open(firstName, O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
-	ret = read(fileHandle, buf, size);
-	close(fileHandle);
+	if(fileHandle >= 0){
+	    ret = read(fileHandle, buf, size);
+	    close(fileHandle);
+	}
 	//check crc
 	if(ret == size){
 		if(_chkEcc(buf, size)){
@@ -209,8 +211,10 @@ BOOLEAN		ramDisk_Read(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 // 2 read second image
 	memset(buf,0xFF,size);
 	fileHandle = open(secondName, O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
-	ret = read(fileHandle, buf, size);
-	close(fileHandle);
+	if(fileHandle >= 0){
+	    ret = read(fileHandle, buf, size);
+	    close(fileHandle);
+	}
 
 	if(ret != size){
 		NVITEM_PRINT("NVITEM partId%x:%s read error!\n",_ramdiskCfg[idx].partId,secondName);
@@ -222,9 +226,11 @@ BOOLEAN		ramDisk_Read(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 	}
 
 	fileHandle  = open(firstName, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
-	write(fileHandle, buf, size);
-	fsync(fileHandle);
-	close(fileHandle);
+	if(fileHandle >= 0){
+	    write(fileHandle, buf, size);
+	    fsync(fileHandle);
+	    close(fileHandle);
+	}
 
 	NVITEM_PRINT("NVITEM  partId%x:%s read success!\n",_ramdiskCfg[idx].partId,secondName);
 	return 1;
@@ -255,21 +261,25 @@ BOOLEAN		ramDisk_Write(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 // 2 write bakup image
 	ret = 1;
 	fileHandle = open(_ramdiskCfg[idx].imageBak_path, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
-	if(size != write(fileHandle, buf, size)){
-		ret =0;
-		NVITEM_PRINT("NVITEM partId%x:bakup image write fail!\n",_ramdiskCfg[idx].partId);
+	if(fileHandle >= 0){
+	    if(size != write(fileHandle, buf, size)){
+		    ret =0;
+		    NVITEM_PRINT("NVITEM partId%x:bakup image write fail!\n",_ramdiskCfg[idx].partId);
+	    }
+	    fsync(fileHandle);
+	    close(fileHandle);
 	}
-	fsync(fileHandle);
-	close(fileHandle);
 // 3 write origin image
 	fileHandle = open(_ramdiskCfg[idx].image_path, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
-	if(size != write(fileHandle, buf, size)){
-		NVITEM_PRINT("NVITEM partId%x:origin image write fail!\n",_ramdiskCfg[idx].partId);
-		ret = 0;
+	if(fileHandle >= 0){
+	    if(size != write(fileHandle, buf, size)){
+		    NVITEM_PRINT("NVITEM partId%x:origin image write fail!\n",_ramdiskCfg[idx].partId);
+		    ret = 0;
+	    }
+	    fsync(fileHandle);
+	    close(fileHandle);
+	    NVITEM_PRINT("NVITEM partId%x:image write finished %d!\n",_ramdiskCfg[idx].partId,ret);
 	}
-	fsync(fileHandle);
-	close(fileHandle);
-	NVITEM_PRINT("NVITEM partId%x:image write finished %d!\n",_ramdiskCfg[idx].partId,ret);
 	return ret;
 
 }
