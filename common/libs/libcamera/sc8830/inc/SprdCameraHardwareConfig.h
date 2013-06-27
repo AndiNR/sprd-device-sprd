@@ -463,7 +463,10 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"slow-motion-supported","false"},
 	{"max-slow-motion","3"},
 	{"slow-motion-values", "1"},
-	{"slow-motion", "1"}
+	{"slow-motion", "1"},
+	{"max-num-metering-areas", "0"},
+	{"auto-exposure","0"},
+	{"auto-exposure-supported", "0"}
 };
 struct config_element sprd_back_camera_hardware_config[] = {
 	{"whitebalance-values", "auto,incandescent,fluorescent,daylight,cloudy-daylight"},
@@ -558,7 +561,9 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"max-slow-motion","3"},
 	{"slow-motion-values", "1,2,3"},
 	{"slow-motion", "1"},
-	{"max-num-metering-areas", "1"}
+	{"max-num-metering-areas", "1"},
+    {"auto-exposure","frame-average"},
+    {"auto-exposure-values", "frame-average,center-weighted,spot-metering"}
 };
 
 #endif //_SPRD_CAMERA_HARDWARE_CONFIG_H_
