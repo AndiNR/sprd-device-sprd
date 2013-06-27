@@ -1055,15 +1055,18 @@ status_t SprdCameraHardware::takePicture()
 
         mCameraState = QCS_INTERNAL_RAW_REQUESTED;
 
+		 ALOGV("INTERPOLATION::takePicture:interpoation_flag=%d,g_sprd_zoom_levle=%d",interpoation_flag,g_sprd_zoom_levle);
+
         if((1 == interpoation_flag)||(0 < g_sprd_zoom_levle))
         {
                 if(false == allocSwapBufferForCap(camera_get_swap_buf_size(mRawWidth)))
                 {
                     FreePmem(mRawHeap);
                     mRawHeap = NULL;
+						  return UNKNOWN_ERROR;
                 }
         }
-        ALOGV("INTERPOLATION::takePicture:mRawWidth=%d,g_sprd_zoom_levle=%d",mRawWidth,g_sprd_zoom_levle);
+       ALOGV("INTERPOLATION::takePicture:mRawWidth=%d,g_sprd_zoom_levle=%d",mRawWidth,g_sprd_zoom_levle);
 
         if(CAMERA_SUCCESS != camera_take_picture(camera_cb, this))
         {
@@ -1292,9 +1295,15 @@ void* SprdCameraHardware::get_raw_mem(uint32_t size,
                                            uint32_t index,
                                            uint32_t *return_size)
 {
+	if (mRawHeap != NULL ) {
         *phy_addr = mRawHeap->phys_addr + size*index;
         *return_size = mRawHeap->phys_size;
         return (void *)((uint8_t *)mRawHeap->data + size*index);
+	}
+
+	ALOGV("get_raw_mem: X NULL");
+   return NULL;
+
 }
 
 void SprdCameraHardware::free_raw_mem(uint32_t *phy_addr,
