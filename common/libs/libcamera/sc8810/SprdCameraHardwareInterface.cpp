@@ -271,8 +271,8 @@ void SprdCameraHardware::enableMsgType(int32_t msgType)
 
 void SprdCameraHardware::disableMsgType(int32_t msgType)
 {
-        ALOGV("'mLock:disableMsgType S.\n");
-        Mutex::Autolock lock(mLock);
+        ALOGV("'mLock:disableMsgType S: msgType=%x \n", msgType);
+        //Mutex::Autolock lock(mLock);
         mMsgEnabled &= ~msgType;
         ALOGV("'mLock:disableMsgType E.\n");
 }
