@@ -15,7 +15,7 @@
 #
 
 
-PRODUCT_MAKEFILES := $(LOCAL_DIR)/prod_sp8830padbase.mk
+PRODUCT_MAKEFILES := $(LOCAL_DIR)/prod_sp5735padbase.mk
 
 				      
 

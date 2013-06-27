@@ -12,7 +12,6 @@ PRODUCT_PROPERTY_OVERRIDES :=
 
 PRODUCT_PACKAGES := \
 	DeskClock \
-	Bluetooth \
 	Calculator \
 	Calendar \
 	CertInstaller \
@@ -28,35 +27,42 @@ PRODUCT_PACKAGES := \
 	QuickSearchBox \
 	SystemUI \
 	CalendarProvider \
+
+ifeq ($(ENABLE_BLUETOOTH), true)
+PRODUCT_PACKAGES += \
+	Bluetooth \
 	bluetooth-health \
 	hciconfig \
 	hcitool \
 	hcidump \
 	bttest\
+	audio.a2dp.default
+endif
+
+PRODUCT_PACKAGES += \
 	hostapd \
 	wpa_supplicant.conf \
 	calibration_init \
 	rawdatad \
 	nvm_daemon \
-	modemd\
-	audio.a2dp.default
+	modemd
 
 # own copyright packages files
 PRODUCT_PACKAGES += \
-    FileExplorer \
-    AppBackup \
     AudioProfile \
     SprdNote \
-    CallFireWall \
     ValidationTools \
     libsprddm \
     libvalidationtoolsjni \
     vtserver	\
-    libstagefright_mix_mpeg4dec_sprd \
-    libstagefright_m4vh263dec_hw_sprd \
-    libstagefright_m4vh263dec_sprd \
-    libstagefright_hard_mpeg4enc_sprd \
-    libstagefright_sprd_aacdec
+    \
+    libstagefright_sprd_mpeg4enc	\
+    libstagefright_sprd_mpeg4dec \
+    libstagefright_sprd_h264dec	\
+    libstagefright_sprd_h264enc	\
+    libstagefright_sprd_vpxdec \
+    libstagefright_soft_mjpgdec \
+    ibstagefright_splrd_aacdec
 
 # prebuild files
 # PRODUCT_PACKAGES += \
@@ -106,7 +112,8 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/ueventd.sc8830.rc:root/ueventd.sc8830.rc \
 	$(BOARDDIR)/fstab.sc8830:root/fstab.sc8830 \
 	$(BOARDDIR)/vold.fstab:system/etc/vold.fstab \
-	$(BOARDDIR)/nvitem.cfg:root/nvitem.cfg \
+	$(BOARDDIR)/nvitem_td.cfg:root/nvitem_td.cfg \
+	$(BOARDDIR)/nvitem_w.cfg:root/nvitem_w.cfg \
 	device/sprd/common/res/CDROM/adb.iso:system/etc/adb.iso \
 	device/sprd/common/libs/audio/apm/devicevolume.xml:system/etc/devicevolume.xml \
 	device/sprd/common/libs/audio/apm/formatvolume.xml:system/etc/formatvolume.xml \
@@ -121,9 +128,8 @@ PRODUCT_COPY_FILES := \
 	device/sprd/common/libs/mali/egl.cfg:system/lib/egl/egl.cfg \
 	device/sprd/common/libs/audio/audio_policy.conf:system/etc/audio_policy.conf \
 	device/sprd/common/res/media/media_codecs.xml:system/etc/media_codecs.xml \
-	device/sprd/common/res/media/media_profiles.xml:system/etc/media_profiles.xml \
+	device/sprd/sp5735pad/media_profiles.xml:system/etc/media_profiles.xml \
 	frameworks/native/data/etc/handheld_core_hardware.xml:system/etc/permissions/handheld_core_hardware.xml \
-	frameworks/native/data/etc/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml \
 	frameworks/native/data/etc/android.hardware.camera.front.xml:system/etc/permissions/android.hardware.camera.front.xml \
 	frameworks/native/data/etc/android.hardware.camera.autofocus.xml:system/etc/permissions/android.hardware.camera.autofocus.xml \
 	frameworks/native/data/etc/android.hardware.camera.flash-autofocus.xml:system/etc/permissions/android.hardware.camera.flash-autofocus.xml \
@@ -132,6 +138,7 @@ PRODUCT_COPY_FILES := \
         frameworks/native/data/etc/android.hardware.sensor.proximity.xml:system/etc/permissions/android.hardware.sensor.proximity.xml \
         frameworks/native/data/etc/android.hardware.sensor.accelerometer.xml:system/etc/permissions/android.hardware.sensor.accelerometer.xml \
         frameworks/native/data/etc/android.hardware.sensor.compass.xml:system/etc/permissions/android.hardware.sensor.compass.xml \
+		frameworks/native/data/etc/android.hardware.sensor.gyroscope.xml:system/etc/permissions/android.hardware.sensor.gyroscope.xml \
     frameworks/native/data/etc/android.hardware.touchscreen.multitouch.xml:system/etc/permissions/android.hardware.touchscreen.multitouch.xml \
     frameworks/native/data/etc/android.hardware.touchscreen.xml:system/etc/permissions/android.hardware.touchscreen.xml \
 	frameworks/native/data/etc/android.hardware.telephony.gsm.xml:system/etc/permissions/android.hardware.telephony.gsm.xml \
@@ -142,6 +149,11 @@ PRODUCT_COPY_FILES := \
 	device/sprd/partner/brcm/gps/glgps:/system/bin/glgps \
 	device/sprd/partner/brcm/gps/gpsconfig_uart.xml:/system/etc/gpsconfig.xml \
 	device/sprd/partner/brcm/gps/gps.default.so:/system/lib/hw/gps.default.so
+
+ifeq ($(ENABLE_BLUETOOTH), true)
+PRODUCT_COPY_FILES += \
+	frameworks/native/data/etc/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml
+endif
 
 BOARD_WLAN_DEVICE_REV       := bcm4330_b2
 $(call inherit-product, hardware/broadcom/wlan/bcmdhd/firmware/bcm4330/device-bcm.mk)
