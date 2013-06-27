@@ -15,10 +15,11 @@
 #
 
 TARGET_PLATFORM := sc8830
-TARGET_BOARD := sp8830pad
+TARGET_BOARD := sp5735pad
 BOARDDIR := device/sprd/$(TARGET_BOARD)
 
 DEVICE_PACKAGE_OVERLAYS := $(BOARDDIR)/overlay
+PRODUCT_PACKAGE_OVERLAYS := vendor/sprd/operator/cucc/specA/overlay
 
 PRODUCT_AAPT_CONFIG := hdpi
 
@@ -34,19 +35,27 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 	persist.sys.usb.config=mass_storage
 
 PRODUCT_PACKAGES := \
-	framework2 \
-	Launcher2 \
-	SprdDM \
-	Settings
-  
+    MsmsPhone \
+    Settings \
+    MsmsStk \
+    Stk1 \
+    framework2
+
+
 # prebuild files
 PRODUCT_PACKAGES += \
 
 # packages files
 PRODUCT_PACKAGES += \
 
-
-
+ENABLE_BLUETOOTH := true
+	
+PRODUCT_COPY_FILES := \
+	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \
+	$(BOARDDIR)/sci-keypad.kl:system/usr/keylayout/sci-keypad.kl \
+	$(BOARDDIR)/pixcir_ts.kl:system/usr/keylayout/pixcir_ts.kl \
+	$(BOARDDIR)/pixcir_ts.idc:system/usr/idc/pixcir_ts.idc \
+	$(BOARDDIR)/ft5x0x_ts.idc:system/usr/idc/ft5x0x_ts.idc
 
 $(call inherit-product, frameworks/native/build/tablet-dalvik-heap.mk)
 
@@ -61,11 +70,12 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/telephony.mk)
 
 # Overrides
-PRODUCT_NAME := sp8830padbase
+PRODUCT_NAME := sp5735padbase
 PRODUCT_DEVICE := $(TARGET_BOARD)
-PRODUCT_MODEL := sp8830pad
+PRODUCT_MODEL := sp5735pad
 PRODUCT_BRAND := Spreadtrum
 PRODUCT_MANUFACTURER := Spreadtrum
+PRODUCT_CHARACTERISTICS := tablet
 
 PRODUCT_LOCALES := zh_CN zh_TW en_US
 

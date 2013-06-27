@@ -15,6 +15,6 @@
 #
 
 
-add_lunch_combo sp8830padbase-userdebug
+add_lunch_combo sp5735padbase-userdebug
 
 

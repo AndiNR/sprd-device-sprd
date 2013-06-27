@@ -2,8 +2,8 @@
 <audio device="sc8830-audio">
 <!-- the profile -->
 <modem num="2">
-	<cp name="w" pipe="/dev/spipe_td6" vbchannel="0" />
-	<cp name="t" pipe="/dev/spipe_w6" vbchannel="1" />
+	<cp name="t" pipe="/dev/spipe_td6" vbchannel="1" />
+	<cp name="w" pipe="/dev/spipe_w6" vbchannel="0" />
 </modem>
 
 </audio>
