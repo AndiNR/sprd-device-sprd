@@ -15,7 +15,7 @@ extern "C" {
 #include <utils/Log.h>
 #define ENG_AT_LOG  ALOGD
 
-#define ENG_TRACING
+//#define ENG_TRACING
 
 #ifdef ENG_TRACING
 #define ENG_LOG  ALOGD
