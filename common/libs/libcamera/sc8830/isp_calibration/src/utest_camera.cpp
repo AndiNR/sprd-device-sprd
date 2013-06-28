@@ -42,6 +42,7 @@ using namespace android;
 #define UTEST_PREVIEW_BUF_NUM 12
 #define UTEST_PREVIEW_WIDTH 640
 #define UTEST_PREVIEW_HEIGHT 480
+#define MAX_MISCHEAP_NUM 1024
 
 enum utest_sensor_id {
 	UTEST_SENSOR_MAIN = 0,
@@ -80,6 +81,9 @@ struct utest_cmr_context {
 	int misc_physical_addr;
 	unsigned char* misc_virtual_addr;
 
+	sp<MemoryHeapIon> misc_heap_array[MAX_MISCHEAP_NUM];
+	uint32_t misc_heap_num;
+
 	sp<MemoryHeapIon> preview_pmem_hp[UTEST_PREVIEW_BUF_NUM];
 	uint32_t preview_pmemory_size[UTEST_PREVIEW_BUF_NUM];
 	int preview_physical_addr[UTEST_PREVIEW_BUF_NUM];
@@ -104,7 +108,6 @@ static void utest_dcam_usage()
 	INFO("-id	: select sensor id(0: main sensor / 1: sub sensor)\n");
 	INFO("-w	: captured picture size width\n");
 	INFO("-h	: captured picture size width\n");
-	INFO("-d	: directory for saving the captured picture\n");
 	INFO("-help	: show this help message\n");
 }
 
@@ -165,6 +168,15 @@ static int utest_dcam_param_set(int argc, char **argv)
 	return 0;
 }
 
+static void utest_dcam_wait_isp_ae_stab(void)
+{
+	struct camera_context *cxt = camera_get_cxt();
+
+	camera_isp_ae_stab_set(1);
+
+	sem_wait(&cxt->cmr_set.isp_ae_stab_sem);
+}
+
 static void utest_dcam_preview_mem_release(void)
 {
 	uint32_t i =0;
@@ -174,6 +186,52 @@ static void utest_dcam_preview_mem_release(void)
 		if (cmr_cxt_ptr->preview_physical_addr[i])
 			cmr_cxt_ptr->preview_pmem_hp[i].clear();
 	}
+}
+
+static int utest_callback_cap_mem_alloc(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir)
+{
+	utest_cmr_context* camera = g_utest_cmr_cxt_ptr;
+	if (camera == NULL) {
+		return -1;
+	}
+
+	if (camera->misc_heap_num >= MAX_MISCHEAP_NUM) {
+		return -1;
+	}
+
+	sp<MemoryHeapIon> pHeapIon = new MemoryHeapIon("/dev/ion", size, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+	if (pHeapIon == NULL) {
+		return -1;
+	}
+	if (pHeapIon->getHeapID() < 0) {
+		return -1;
+	}
+
+	pHeapIon->get_phy_addr_from_ion((int*)addr_phy, (int*)&size);
+	*addr_vir = (int)(pHeapIon->base());
+	camera->misc_heap_array[camera->misc_heap_num++] = pHeapIon;
+
+	return 0;
+}
+
+static int utest_callback_cap_mem_release(void* handle)
+{
+	utest_cmr_context* camera = g_utest_cmr_cxt_ptr;
+	if (camera == NULL) {
+		return -1;
+	}
+
+	uint32_t i;
+	for (i=0; i<camera->misc_heap_num; i++) {
+		sp<MemoryHeapIon> pHeapIon = camera->misc_heap_array[i];
+		if (pHeapIon != NULL) {
+			pHeapIon.clear();
+		}
+		camera->misc_heap_array[i] = NULL;
+	}
+	camera->misc_heap_num = 0;
+
+	return 0;
 }
 
 static int utest_dcam_preview_mem_alloc(void)
@@ -281,12 +339,12 @@ static int utest_dcam_cap_memory_alloc(void)
 				return -1;
 		}
 	} else {
-		if (camera_set_capture_mem(0,
+		if (camera_set_capture_mem2(0,
 			(uint32_t)cmr_cxt_ptr->cap_physical_addr,
 			(uint32_t)cmr_cxt_ptr->cap_virtual_addr,
 			(uint32_t)cmr_cxt_ptr->cap_pmemory_size,
-			0,
-			0,
+			(uint32_t)utest_callback_cap_mem_alloc,
+			(uint32_t)utest_callback_cap_mem_release,
 			0)) {
 				utest_dcam_cap_memory_release();
 				return -1;
@@ -698,6 +756,8 @@ static int32_t utest_dcam_preview_flash_eb(void)
 		flash_param.flash_ratio=flash_level.high_light*256/flash_level.low_light;
 		if (isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param))
 			return -1;
+
+		utest_dcam_wait_isp_ae_stab();
 	}
 	return 0;
 }
@@ -803,15 +863,13 @@ static int32_t utest_dcam_preview(void)
 	if (camera_start_preview(utest_dcam_preview_cb, NULL,CAMERA_NORMAL_MODE))
 		return -1;
 
-	usleep(1000000);
+	utest_dcam_wait_isp_ae_stab();
 
 	if (utest_dcam_preview_flash_eb())
 		return -1;
 
 	if (utest_dcam_preview_flash_dis())
 		return -1;
-
-	usleep(500000);
 
 	if (camera_stop_preview())
 		return -1;

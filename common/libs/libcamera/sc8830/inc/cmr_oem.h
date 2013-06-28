@@ -246,6 +246,7 @@ struct camera_settings {
 	uint8_t                  bflash;
 	uint32_t                 slow_motion_mode;
 	sem_t                    isp_alg_sem;
+	sem_t                    isp_ae_stab_sem;
 };
 
 struct camera_context {
@@ -371,6 +372,8 @@ struct camera_context {
 
 	uint32_t                 is_cfg_rot_cap;/*0:normal capture,1:rotation capture*/
 	uint32_t                 cfg_cap_rot;
+
+	uint32_t                 is_isp_ae_stab_eb;
 };
 
 uint32_t camera_get_rot_angle(uint32_t degree);

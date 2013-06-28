@@ -535,6 +535,7 @@ int camera_setting_init(void)
 	pthread_mutex_init (&cxt->cmr_set.set_mutex, NULL);
 	sem_init(&cxt->cmr_set.isp_af_sem, 0, 0);
 	sem_init(&cxt->cmr_set.isp_alg_sem, 0, 0);
+	sem_init(&cxt->cmr_set.isp_ae_stab_sem, 0, 0);
 
 	return ret;
 }
@@ -546,6 +547,7 @@ int camera_setting_deinit(void)
 
 	sem_destroy(&cxt->cmr_set.isp_af_sem);
 	sem_destroy(&cxt->cmr_set.isp_alg_sem);
+	sem_destroy(&cxt->cmr_set.isp_ae_stab_sem);
 	pthread_mutex_destroy(&cxt->cmr_set.set_mutex);
 
 	return ret;
@@ -1465,6 +1467,17 @@ int camera_isp_af_stat(void* data)
 
 	CMR_LOGV("isp get af stat.\n");
 
+	return 0;
+}
+
+int camera_isp_ae_stab(void* data)
+{
+	struct camera_context    *cxt = camera_get_cxt();
+
+	if (cxt-> is_isp_ae_stab_eb) {
+		cxt-> is_isp_ae_stab_eb = 0;
+		sem_post(&cxt->cmr_set.isp_ae_stab_sem);
+	}
 	return 0;
 }
 

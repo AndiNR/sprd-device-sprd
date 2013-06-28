@@ -498,6 +498,7 @@ camera_ret_code_type camera_take_picture_raw(camera_cb_f_type    callback,
 					void                 *client_data,takepicture_mode cap_mode);
 int camera_is_need_stop_preview(void);
 int camera_get_is_scale(void);
+void camera_isp_ae_stab_set (uint32_t is_ae_stab_eb);
 
 #ifdef __cplusplus
 }

@@ -2972,6 +2972,9 @@ int camera_isp_handle(uint32_t evt_type, uint32_t sub_type, void *data)
 	case ISP_AF_STAT_CALLBACK:
 		ret = camera_isp_af_stat(data);
 		break;
+	case ISP_AE_STAB_CALLBACK:
+		ret = camera_isp_ae_stab(data);
+		break;
 	default:
 		break;
 	}
@@ -5708,4 +5711,11 @@ int camera_is_need_stop_preview(void)
 int camera_get_is_noscale(void)
 {
 	return NO_SCALING;
+}
+
+void camera_isp_ae_stab_set (uint32_t is_ae_stab_eb)
+{
+
+	g_cxt-> is_isp_ae_stab_eb = is_ae_stab_eb;
+
 }
