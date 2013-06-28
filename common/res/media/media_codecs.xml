@@ -89,25 +89,7 @@ Only the three quirks included above are recognized at this point:
             <Quirk name="needs-flush-before-disable" />
         </MediaCodec>
 
-        <MediaCodec name="OMX.PV.mpeg4dec" type="video/mp4v-es">
-            <Quirk name="requires-allocate-on-output-ports" />
-        </MediaCodec>
-
-        <MediaCodec name="OMX.PV.h263dec" type="video/3gpp">
-            <Quirk name="requires-allocate-on-output-ports" />
-        </MediaCodec>
-
         <MediaCodec name="OMX.sprd.h264.decoder" type="video/avc">
-            <Quirk name="requires-allocate-on-output-ports" />
-            <Quirk name="defers-output-buffer-allocation" />
-            <Quirk name="needs-flush-before-disable" />
-        </MediaCodec>
-
-        <MediaCodec name="OMX.PV.avcdec" type="video/avc">
-            <Quirk name="requires-allocate-on-output-ports" />
-        </MediaCodec>
-
-        <MediaCodec name="OMX.sprd.vpx.decoder" type="video/x-vnd.on2.vp8">
             <Quirk name="requires-allocate-on-output-ports" />
             <Quirk name="defers-output-buffer-allocation" />
             <Quirk name="needs-flush-before-disable" />
@@ -138,10 +120,6 @@ Only the three quirks included above are recognized at this point:
     <Encoders>
         <MediaCodec name="OMX.sprd.mpeg4.encoder" type="video/mp4v-es" />
         <MediaCodec name="OMX.sprd.h263.encoder" type="video/3gpp" />
-        <MediaCodec name="OMX.sprd.h264.encoder" type="video/avc"/>
-
-        <MediaCodec name="OMX.PV.mpeg4enc" type="video/mp4v-es" />
-        <MediaCodec name="OMX.PV.h263enc" type="video/3gpp" />
 
         <MediaCodec name="OMX.google.aac.encoder" type="audio/mp4a-latm" />
         <MediaCodec name="OMX.google.amrnb.encoder" type="audio/3gpp" />
