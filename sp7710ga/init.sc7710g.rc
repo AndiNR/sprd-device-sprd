@@ -81,7 +81,6 @@ on boot
 
     copy /dev/sprd-watchdog /dev/null
 
-    chmod 664 /dev/nmi
 
 on property:ro.debuggable=1
     write /proc/input_power 1

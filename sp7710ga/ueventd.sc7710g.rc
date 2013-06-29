@@ -24,4 +24,4 @@
 /dev/ttyGS1             0660     system  system
 /dev/vser               0660     system  system
 /dev/ttyS1              0660     system  system
-
+/dev/nmi                0660     system  system
