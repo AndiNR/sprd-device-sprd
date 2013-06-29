@@ -365,7 +365,7 @@ static int   cmr_rot_create_thread(void)
 static int cmr_rot_kill_thread(void)
 {
 	int                      ret = 0;
-	char                     write_ch;
+	char                     write_ch = 0;
 	void                     *dummy;
 
 	if (-1 == rot_fd) {
@@ -951,7 +951,7 @@ static int   cmr_scale_create_thread(void)
 static int cmr_scale_kill_thread(void)
 {
 	int                      ret = 0;
-	char                     write_ch;
+	char                     write_ch = 0;
 	void                     *dummy;
 
 	if (-1 == scaler_fd) {

@@ -1508,6 +1508,7 @@ static int _sensor_cali_lnc_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 	char file_name[80] = {0};
 	char* file_name_ptr = 0;
 	uint32_t str_len = 0;
+	int file_pos = 0;
 	uint32_t file_size = 0;
 	char *data_ptr;
 	int i,j;
@@ -1527,7 +1528,7 @@ static int _sensor_cali_lnc_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 	/*LNC DATA Table*/
 	temp_buf_16 = (uint16_t*)malloc(128*1024*2);
 	if(!temp_buf_16){
-		goto cali_update_error;
+		return SENSOR_FAIL;
 	}
 
 	trim_ptr = (SENSOR_TRIM_T *)(s_sensor_info_ptr->ioctl_func_tab_ptr->get_trim(0));
@@ -1552,7 +1553,14 @@ static int _sensor_cali_lnc_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 		}
 
 		fseek(fp, 0L, SEEK_END);
-		file_size = ftell(fp);
+		file_pos = ftell(fp);
+		if (file_pos >= 0) {
+			file_size = (uint32_t)file_pos;
+		} else {
+			fclose(fp);
+			SENSOR_PRINT("file pointers error!");
+			return SENSOR_FAIL;
+		}
 		fseek(fp, 0L, SEEK_SET);
 
 		fread(temp_buf_16,1,file_size,fp);
@@ -1578,15 +1586,6 @@ static int _sensor_cali_lnc_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 	}
 
 	return SENSOR_SUCCESS;
-cali_update_error:
-
-	if (temp_buf_16) {
-
-		free(temp_buf_16);
-		temp_buf_16 = 0;
-
-	}
-	return SENSOR_FAIL;
 }
 
 
@@ -1599,7 +1598,8 @@ static int _sensor_cali_awb_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 	char buf[256] = {0x00};
 	char* file_name_ptr = 0;
 	uint32_t str_len = 0;
-	int file_size = 0;
+	int file_pos = 0;
+	uint32_t file_size = 0;
 	struct isp_bayer_ptn_stat_t *stat_ptr = PNULL;
 	struct sensor_cali_info *cali_info_ptr = PNULL;
 	struct sensor_raw_tune_info *raw_tune_info_ptr = PNULL;
@@ -1630,7 +1630,14 @@ static int _sensor_cali_awb_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 
 	} else {
 		fseek(fp, 0L, SEEK_END);
-		file_size = ftell(fp);
+		file_pos = ftell(fp);
+		if (file_pos >= 0) {
+			file_size = (uint32_t)file_pos;
+		} else {
+			fclose(fp);
+			SENSOR_PRINT("file pointers error!");
+			return SENSOR_FAIL;
+		}
 		fseek(fp, 0L, SEEK_SET);
 
 		fread(buf,1,file_size,fp);
@@ -1670,7 +1677,14 @@ static int _sensor_cali_awb_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 
 	} else {
 		fseek(fp, 0L, SEEK_END);
-		file_size = ftell(fp);
+		file_pos = ftell(fp);
+		if (file_pos >= 0) {
+			file_size = (uint32_t)file_pos;
+		} else {
+			fclose(fp);
+			SENSOR_PRINT("file pointers error!");
+			return SENSOR_FAIL;
+		}
 		fseek(fp, 0L, SEEK_SET);
 
 		fread(buf,1,file_size,fp);
@@ -1700,7 +1714,8 @@ static int _sensor_cali_flashlight_param_update(char *cfg_file_dir,SENSOR_INFO_T
 	char buf[256] = {0x00};
 	char* file_name_ptr = 0;
 	uint32_t str_len = 0;
-	int file_size = 0;
+	int file_pos = 0;
+	uint32_t file_size = 0;
 	struct isp_bayer_ptn_stat_t *stat_ptr = PNULL;
 	struct sensor_cali_info *cali_info_ptr = PNULL;
 	struct sensor_raw_tune_info *raw_tune_info_ptr = PNULL;
@@ -1731,7 +1746,14 @@ static int _sensor_cali_flashlight_param_update(char *cfg_file_dir,SENSOR_INFO_T
 
 	} else {
 		fseek(fp, 0L, SEEK_END);
-		file_size = ftell(fp);
+		file_pos = ftell(fp);
+		if (file_pos >= 0) {
+			file_size = (uint32_t)file_pos;
+		} else {
+			fclose(fp);
+			SENSOR_PRINT("file pointers error!");
+			return SENSOR_FAIL;
+		}
 		fseek(fp, 0L, SEEK_SET);
 
 		fread(buf,1,file_size,fp);
@@ -1771,7 +1793,15 @@ static int _sensor_cali_flashlight_param_update(char *cfg_file_dir,SENSOR_INFO_T
 
 	} else {
 		fseek(fp, 0L, SEEK_END);
-		file_size = ftell(fp);
+
+		file_pos = ftell(fp);
+		if (file_pos >= 0) {
+			file_size = (uint32_t)file_pos;
+		} else {
+			fclose(fp);
+			SENSOR_PRINT("file pointers error!");
+			return SENSOR_FAIL;
+		}
 		fseek(fp, 0L, SEEK_SET);
 
 		fread(buf,1,file_size,fp);

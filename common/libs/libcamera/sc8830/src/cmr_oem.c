@@ -383,7 +383,7 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 		}
 	}
 
-	if(NULL != p_exif_info->spec_ptr->pic_taking_cond_ptr) {
+	if ((NULL != p_exif_info->spec_ptr) && (NULL != p_exif_info->spec_ptr->pic_taking_cond_ptr)) {
 		p_exif_info->spec_ptr->pic_taking_cond_ptr->valid.FocalLength 		= 1;
 		p_exif_info->spec_ptr->pic_taking_cond_ptr->FocalLength.numerator	= focal_length_numerator;
 		p_exif_info->spec_ptr->pic_taking_cond_ptr->FocalLength.denominator	= focal_length_denominator;
@@ -397,7 +397,7 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 
 	}
 
-	if( NULL != p_exif_info->spec_ptr) {
+	if (NULL != p_exif_info->spec_ptr) {
 		if(NULL != p_exif_info->spec_ptr->other_ptr) {
 			CMR_LOGI("set ImageUniqueID.");
 			memset(p_exif_info->spec_ptr->other_ptr->ImageUniqueID, 0, sizeof(p_exif_info->spec_ptr->other_ptr->ImageUniqueID));

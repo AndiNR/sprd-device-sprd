@@ -1780,7 +1780,7 @@ takepicture_mode SprdCameraHardware::getCaptureMode()
     } else if (1 != mParameters.getInt("zsl")) {
 		mCaptureMode = CAMERA_NORMAL_MODE;
     } else {
-		mCaptureMode = mCaptureMode;
+		mCaptureMode = CAMERA_NORMAL_MODE;
     }
 	if (1 == mCaptureRawMode) {
 		mCaptureMode = CAMERA_RAW_MODE;

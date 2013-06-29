@@ -569,7 +569,7 @@ static int   cmr_v4l2_create_thread(void)
 static int cmr_v4l2_kill_thread(void)
 {
 	int                      ret = 0;
-	char                     write_ch;
+	char                     write_ch = 0;
 	void                     *dummy;
 
 	CMR_CHECK_FD;
