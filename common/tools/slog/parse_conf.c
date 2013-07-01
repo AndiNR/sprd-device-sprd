@@ -55,6 +55,15 @@ notify  tombstones      1       /data/tombstones
 notify  hprofs          1       /data/misc/hprofs/
 */
 
+static void handle_watchdog( int state )
+{
+	char buffer[MAX_NAME_LEN];
+
+	sprintf(buffer, "echo %d > /sys/module/sprd_wdt_sys/parameters/enabled", state);
+	system(buffer);
+	return NULL;
+}
+
 char *parse_string(char *src, char c, char *token)
 {
 	char *results;
@@ -97,9 +106,11 @@ int parse_3_entries(char *type)
 			screenshot_enable = 0;
 	} else if(!strncmp(name, "slogsaveall", 11)) {
 		if(!strncmp(pos3, "on", 2))
-			slog_save_all = 1;
+			handle_watchdog(1);
+		//	slog_save_all = 1;
 		else
-			slog_save_all = 0;
+		//	slog_save_all = 0;
+			handle_watchdog(0);
 	}
 	return 0;
 }

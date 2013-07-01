@@ -146,7 +146,7 @@
     <string name="btn_general_dump">Dump log in SD</string>
     <string name="chk_general_snapsvc">Start screenshot service</string>
     <string name="chk_general_alwaysrun">Always showing the notification in status bar</string>
-    <string name="chk_general_autoclear">Save more logs in last_log</string>
+    <string name="chk_general_autoclear">HW watchdog</string>
     <string name="alert_request_dump_title">Request dumping log in SDCard</string>
     <string name="alert_request_dump_prompt">Need to dump logs in T-Card? Please ensure that you have chosen the SDCard in logpath.</string>
     <string name="toast_dump_filename_error">Please check your input, you can input latin-characters and numbers only.</string>

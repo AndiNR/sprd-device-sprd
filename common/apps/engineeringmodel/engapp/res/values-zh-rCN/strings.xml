@@ -24,7 +24,7 @@
     <string name="btn_general_dump">导出SD卡Log</string>
     <string name="chk_general_snapsvc">截屏服务</string>
     <string name="chk_general_alwaysrun">始终显示Slog提示</string>
-    <string name="chk_general_autoclear">last_log中是否保留多条log</string>
+    <string name="chk_general_autoclear">HW watchdog</string>
     <string name="alert_request_dump_title">导出T卡Log</string>
     <string name="alert_request_dump_prompt">是否需要将T卡中导出？请注意将存储路径选择为SD卡，且只能导出T卡中的Log</string>
     <string name="toast_dump_filename_error">请确认是否已经输入内容，且输入内容为字母或数字</string>
