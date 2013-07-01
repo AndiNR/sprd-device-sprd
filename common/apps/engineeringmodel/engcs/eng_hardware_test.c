@@ -77,7 +77,7 @@ static void hardware_broadcom_wifi_test(char* buf)
 			memcpy(socket_write_buf,TEST_ERROR,strlen(TEST_ERROR)+1);
 		}
 	} else {
-		memcpy(socket_write_buf,TEST_ERROR,SOCKET_BUF_LEN);
+		memcpy(socket_write_buf,TEST_ERROR,strlen(TEST_ERROR)+1);
 	}
 }
 
