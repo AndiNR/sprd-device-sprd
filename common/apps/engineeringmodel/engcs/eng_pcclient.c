@@ -538,9 +538,9 @@ static void *eng_pcclient_hdlr(void *_param)
 				}
                             }
                             else{
-                                eng_multicmds_modem2pc(pc_client_fd,
-                                        prev_resp_buf, prev_len, databuf, resp_len);
                                 if (prev_resp_buf){
+                                    eng_multicmds_modem2pc(pc_client_fd,
+                                            prev_resp_buf, prev_len, databuf, resp_len);
                                     free(prev_resp_buf);
                                     prev_resp_buf=NULL;
                                 }
