@@ -115,8 +115,8 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/headset-keyboard.kl:system/usr/keylayout/headset-keyboard.kl \
 	device/sprd/common/libs/mali/egl.cfg:system/lib/egl/egl.cfg \
 	device/sprd/common/libs/audio/audio_policy.conf:system/etc/audio_policy.conf \
-	device/sprd/common/res/media/media_codecs.xml:system/etc/media_codecs.xml \
-	device/sprd/common/res/media/media_profiles.xml:system/etc/media_profiles.xml \
+	device/sprd/sp8825ea/media_codecs.xml:system/etc/media_codecs.xml \
+	device/sprd/sp8825ea/media_profiles.xml:system/etc/media_profiles.xml \
 	frameworks/native/data/etc/handheld_core_hardware.xml:system/etc/permissions/handheld_core_hardware.xml \
 	frameworks/native/data/etc/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml \
 	frameworks/native/data/etc/android.hardware.camera.front.xml:system/etc/permissions/android.hardware.camera.front.xml \

@@ -56,6 +56,7 @@ PRODUCT_PACKAGES += \
     libstagefright_sprd_h264dec	\
     libstagefright_sprd_h264enc	\
     libstagefright_sprd_vpxdec \
+    libstagefright_soft_mjpgdec \
     libstagefright_sprd_aacdec
 
 # prebuild files
@@ -115,7 +116,7 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/scripts/ext_chown.sh:system/bin/ext_chown.sh \
 	device/sprd/common/libs/mali/egl.cfg:system/lib/egl/egl.cfg \
 	device/sprd/common/libs/audio/audio_policy.conf:system/etc/audio_policy.conf \
-	device/sprd/common/res/media/media_codecs.xml:system/etc/media_codecs.xml \
+	device/sprd/sp7735ec/media_codecs.xml:system/etc/media_codecs.xml \
 	device/sprd/sp7735ec/media_profiles.xml:system/etc/media_profiles.xml \
 	frameworks/native/data/etc/handheld_core_hardware.xml:system/etc/permissions/handheld_core_hardware.xml \
 	frameworks/native/data/etc/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml \
