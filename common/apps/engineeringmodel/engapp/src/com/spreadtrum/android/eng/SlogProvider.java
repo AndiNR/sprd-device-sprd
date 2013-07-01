@@ -133,6 +133,7 @@ public class SlogProvider extends ContentProvider {
         switch(sUriMatcher.match(uri)) {
             case N_modes:
                 qb.setTables(Contract.TABLE_modes);
+	    break;
             case N_ID_modes:
                 if (uri.getPathSegments().size() > 1) {
                     String tid = uri.getPathSegments().get(1);
