@@ -840,7 +840,7 @@ SENSOR_INFO_T g_GC2035_yuv_info =
 	GC2035_I2C_ADDR_W,				//salve i2c write address
 	GC2035_I2C_ADDR_R,				//salve i2c read address
 
-	0,						//bit0: 0: i2c register value is 8 bit, 1: i2c register value is 16 bit
+	SENSOR_I2C_FREQ_400,						//bit0: 0: i2c register value is 8 bit, 1: i2c register value is 16 bit
 							//bit2: 0: i2c register addr  is 8 bit, 1: i2c register addr  is 16 bit
 							//other bit: reseved
 	SENSOR_HW_SIGNAL_PCLK_N|\
@@ -872,7 +872,7 @@ SENSOR_INFO_T g_GC2035_yuv_info =
 							//bit[8:31] reseved
 
 	SENSOR_LOW_PULSE_RESET,				//reset pulse level
-	100,						//reset pulse width(ms)
+	20,						//reset pulse width(ms)
 
 	SENSOR_HIGH_LEVEL_PWDN,				//power donw pulse level
 
@@ -897,8 +897,8 @@ SENSOR_INFO_T g_GC2035_yuv_info =
 	PNULL,						//extend information about sensor	
 	SENSOR_AVDD_1800MV,				//iovdd
 	SENSOR_AVDD_1800MV,				//dvdd
-	4,						//skip frame num before preview 
-	3,						//skip frame num before capture
+	1,						//skip frame num before preview 
+	1,						//skip frame num before capture
 	0,						//deci frame num during preview	
 	0,						//deci frame num during video preview
 	0,						//threshold enable(only analog TV)

@@ -2860,7 +2860,7 @@ LOCAL void* _Sensor_ThreadProc(void* data)
 			CMR_LOGV("SENSOR_EVT_AF_INIT");
 			ret = _Sensor_AutoFocusInit();
 			sem_post(&st_af_sem);
-			CMR_LOGV("SENSOR_EVT_AF_INIT, Done");
+			/*CMR_LOGV("SENSOR_EVT_AF_INIT, Done");*/
 			break;
 		default:
 			CMR_LOGE("Unsupported MSG");
@@ -2902,7 +2902,7 @@ LOCAL int _Sensor_SyncDone(void)
 	ret = pthread_cond_signal(&sensor_sync_cond);
 	pthread_mutex_unlock(&sensor_sync_mutex);*/
 	sem_post(&sensor_sync_sem);
-	CMR_LOGI("post done.");
+/*	CMR_LOGI("post done.");*/
 	return ret;
 }
 
