@@ -406,6 +406,12 @@ static int verify_video_layer(struct hwc_context_t *context, hwc_layer_t * l)
         ALOGI_IF(debugenable,"verify_video(),dcam support 1/4-4 scaling! L%d",__LINE__);
         return 0;
     }
+	//added for Bug 181381
+    if(((src_width < dest_width) && (src_height > dest_height))
+            || ((src_width > dest_width) && (src_height < dest_height))) { //gsp support [1/16-4] scaling
+        ALOGI_IF(debugenable,"verify_video(),gsp not support one direction scaling down while the other scaling up! L%d",__LINE__);
+        return 0;
+    }
 #endif
     return SPRD_LAYERS_IMG;
 }
@@ -737,13 +743,13 @@ static int set_GSP_layers(struct hwc_context_t *context, hwc_layer_t * l0,hwc_la
     } else {
         ALOGI_IF(debugenable,"set_GSP_layers L%d,L1 == NULL, use pallet to clean the area L0 not covered. ",__LINE__);
         osd_check_result = 1;
-        /*
+
         gsp_cfg_info.layer1_info.grey.r_val = 0;
         gsp_cfg_info.layer1_info.grey.g_val = 0;
         gsp_cfg_info.layer1_info.grey.b_val = 0;
         gsp_cfg_info.layer1_info.clip_rect.st_x = 0;
         gsp_cfg_info.layer1_info.clip_rect.st_y = 0;
-        */
+
         gsp_cfg_info.layer1_info.clip_rect.rect_w = context->fb_width;
         gsp_cfg_info.layer1_info.clip_rect.rect_h = context->fb_height;
         gsp_cfg_info.layer1_info.pitch = context->fb_width;
