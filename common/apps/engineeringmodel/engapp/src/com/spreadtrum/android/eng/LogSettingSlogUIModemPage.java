@@ -67,7 +67,12 @@ public class LogSettingSlogUIModemPage extends Activity implements SlogUISyncSta
             case R.id.chk_modem_branch:
                 SlogAction.SetState(SlogAction.MODEMKEY, chkModem.isChecked(),
                         false);
-                SlogAction.sendATCommand(engconstents.ENG_AT_SETARMLOG, chkModem.isChecked());
+                new Thread() {
+                    @Override
+                    public void run() {
+                        SlogAction.sendATCommand(engconstents.ENG_AT_SETARMLOG, chkModem.isChecked());
+                    }
+                } .start();
                 break;
             case R.id.chk_modem_bluetooth:
                 SlogAction.SetState(SlogAction.BLUETOOTHKEY,
@@ -76,7 +81,12 @@ public class LogSettingSlogUIModemPage extends Activity implements SlogUISyncSta
             case R.id.chk_modem_tcp:
                 SlogAction.SetState(SlogAction.TCPKEY, chkTcp.isChecked(),
                         false);
-                SlogAction.sendATCommand(engconstents.ENG_AT_SETCAPLOG, chkTcp.isChecked());
+                new Thread() {
+                    @Override
+                    public void run() {
+                        SlogAction.sendATCommand(engconstents.ENG_AT_SETCAPLOG, chkTcp.isChecked());
+                    }
+                }.start();
                 break;
             case R.id.chk_modem_misc:
                 SlogAction.SetState(SlogAction.MISCKEY, chkMisc.isChecked(),

@@ -331,24 +331,10 @@ public class LogSettingSlogUICommonControl extends Activity implements SlogUISyn
                 SlogAction.GetState(SlogAction.MODEMKEY));
 
         // Set Radio buttons
-        if (SlogAction.GetState(SlogAction.STORAGEKEY)) {
-            if (SlogAction.IsHaveSDCard()) {
-                rdoSDCard.setChecked(true);
-                btnDump.setEnabled(true);
-            } else {
-                rdoNAND.setChecked(true);
-                
-                // The UI should not control the config automatically
-                // This may effect the logic of the slog design
-                // SlogAction.SetState(SlogAction.STORAGEKEY,
-                //         SlogAction.STORAGENAND, true);
-                btnDump.setEnabled(false);
-            }
-        } else {
-            rdoNAND.setChecked(true);
-            btnDump.setEnabled(false);
-        }
+        boolean isSDCard = SlogAction.GetState(SlogAction.STORAGEKEY);
         rdoSDCard.setEnabled(SlogAction.IsHaveSDCard() ? true : false);
+        rdoSDCard.setChecked(isSDCard);
+        rdoNAND.setChecked(!isSDCard);
 
         // set clear all logs
         if (tempHost) {
