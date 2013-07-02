@@ -56,7 +56,8 @@ PRODUCT_PACKAGES += \
     libstagefright_sprd_mpeg4enc \
     libstagefright_sprd_mpeg4dec \
     libstagefright_sprd_h264dec \
-    libstagefright_sprd_aacdec
+    libstagefright_sprd_aacdec \
+    libstagefright_sprd_mp3dec
 
 
 # prebuild files
