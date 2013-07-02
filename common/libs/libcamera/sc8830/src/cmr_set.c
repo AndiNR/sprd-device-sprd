@@ -1226,7 +1226,8 @@ int camera_preflash(void)
 		ret = camera_set_flash(cxt->cmr_set.flash_mode, &skip_mode, &skip_number);
     }
 
-	if ((cxt->cmr_set.flash) &&((CAMERA_ZSL_MODE == cxt->cap_mode)||(CAMERA_NORMAL_MODE == cxt->cap_mode))) {
+	if ((cxt->cmr_set.flash) &&((CAMERA_ZSL_MODE == cxt->cap_mode)||(CAMERA_NORMAL_MODE == cxt->cap_mode)
+		|| (CAMERA_TOOL_RAW_MODE == cxt->cap_mode))) {
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 			struct isp_alg flash_param;
 			SENSOR_FLASH_LEVEL_T flash_level;
