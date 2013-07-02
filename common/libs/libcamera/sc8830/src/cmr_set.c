@@ -1090,7 +1090,12 @@ int camera_set_ctrl(camera_parm_type id,
 		break;
 
 	case CAMERA_PARM_FLASH:         /* Flash control, see camera_flash_type */
-		ret = camera_set_flash(parm, &skip_mode, &skip_number);
+		if (CAMERA_FLASH_MODE_AUTO == parm) {
+			cxt->cmr_set.flash_mode = parm;
+		} else {
+			cxt->cmr_set.flash_mode = CAMERA_FLASH_MODE_MAX;
+			ret = camera_set_flash(parm, &skip_mode, &skip_number);
+		}
 		break;
 
 	case CAMERA_PARM_NIGHTSHOT_MODE:  /* Night shot mode, snapshot at reduced FPS */
@@ -1215,6 +1220,11 @@ int camera_preflash(void)
 
 #ifdef CONFIG_CAMERA_FLASH_CTRL
 	CMR_LOGI("start.");
+    if (CAMERA_FLASH_MODE_AUTO == cxt->cmr_set.flash_mode) {
+		uint32_t skip_mode = 0;;
+		uint32_t skip_number = 0;
+		ret = camera_set_flash(cxt->cmr_set.flash_mode, &skip_mode, &skip_number);
+    }
 
 	if ((cxt->cmr_set.flash) &&((CAMERA_ZSL_MODE == cxt->cap_mode)||(CAMERA_NORMAL_MODE == cxt->cap_mode))) {
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
@@ -1269,6 +1279,11 @@ int camera_autofocus_start(void)
 		CMR_RTN_IF_ERR(ret);
 	}
 #ifndef CONFIG_CAMERA_FLASH_CTRL
+    if (CAMERA_FLASH_MODE_AUTO == cxt->cmr_set.flash_mode) {
+		uint32_t skip_mode = 0;;
+		uint32_t skip_number = 0;
+		ret = camera_set_flash(cxt->cmr_set.flash_mode, &skip_mode, &skip_number);
+    }
 	if ((cxt->cmr_set.flash) &&((CAMERA_ZSL_MODE == cxt->cap_mode)||(CAMERA_NORMAL_MODE == cxt->cap_mode))) {
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 			struct isp_alg flash_param;
