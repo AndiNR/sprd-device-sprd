@@ -198,11 +198,6 @@ service charge /bin/charge
     user root
     oneshot
 
-#mcom monitor
-service mcom_monitor /system/bin/mcom_monitor
-    class main
-    user root
-    oneshot
 
 #wcdma rild service
 service wril-daemon /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -m w -n 0
