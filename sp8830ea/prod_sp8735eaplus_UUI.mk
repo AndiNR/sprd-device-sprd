@@ -20,7 +20,7 @@ BOARDDIR := device/sprd/$(TARGET_BOARD)
 
 DEVICE_PACKAGE_OVERLAYS := $(BOARDDIR)/overlay
 
-PRODUCT_AAPT_CONFIG := hdpi
+PRODUCT_AAPT_CONFIG := hdpi xhdpi
 
 PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
