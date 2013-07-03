@@ -86,6 +86,7 @@ PRODUCT_PACKAGES += \
 	libsprdstreamrecoder \
 	libvtmanager\
         libstagefright_sprd_aacdec\
+        libstagefright_sprd_mp3dec\
    fm.$(TARGET_PLATFORM)
 
 PRODUCT_PACKAGES += \

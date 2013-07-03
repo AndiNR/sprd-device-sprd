@@ -102,9 +102,9 @@ Only the three quirks included above are recognized at this point:
         </MediaCodec>
 
 
-        <MediaCodec name="MP3Decoder" type="audio/mpeg" />
-        <MediaCodec name="MP3Decoder" type="audio/mpeg-L1" />
-        <MediaCodec name="MP3Decoder" type="audio/mpeg-L2" />
+        <MediaCodec name="OMX.sprd.mp3.decoder" type="audio/mpeg" />
+        <MediaCodec name="OMX.sprd.mp3.decoder" type="audio/mpeg-L1" />
+        <MediaCodec name="OMX.sprd.mp3.decoder" type="audio/mpeg-L2" />
 	<MediaCodec name="OMX.google.mp3.decoder" type="audio/mpeg" />
         <MediaCodec name="OMX.google.amrnb.decoder" type="audio/3gpp" />
         <MediaCodec name="OMX.google.amrwb.decoder" type="audio/amr-wb" />
