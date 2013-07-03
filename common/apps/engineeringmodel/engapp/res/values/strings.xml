@@ -235,4 +235,11 @@
     <string name="slog_version_info">Updated on 2013-6-13, add SlogProvider, fix slogstart</string>
 	<!-- SlogUI Added Done -->
 
+<!-- add IMEI start -->
+    <string name="read_btn">Read IMEI</string>
+    <string name="set_btn">Set IMEI</string>
+    <string name="sim1">SIM1 IMEI</string>
+    <string name="sim2">SIM2 IMEI</string>
+<!-- add IMEI end -->
+
 </resources>
