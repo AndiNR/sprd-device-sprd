@@ -45,6 +45,15 @@ public class adcCalibrateInfo extends Activity {
 
 	private class EventHandler extends Handler
     {
+
+		private static final String ADC_FILE = "/productinfo/adc_data";
+
+		public boolean isADCFileExists(){
+		    String sFile=ADC_FILE;
+		    java.io.File file = new java.io.File(sFile);
+		    return file.exists();
+		}
+
     	public EventHandler(Looper looper) {
     	    super(looper);
     	}
@@ -74,9 +83,19 @@ public class adcCalibrateInfo extends Activity {
 
 			int dataSize = 512;
 			byte[] inputBytes = new byte[dataSize];
+			final String ret = System.getProperty("line.separator");
 			int showlen= mEf.engread(sockid,inputBytes,dataSize);
 			String str =  new String(inputBytes, 0, showlen);
-			txtViewlabel01.setText(str);
+
+			if(isADCFileExists()) {
+	            String str_adc =  "ADC Calbration: Pass";
+	            str = str_adc + ret + ret + str;
+			} else {
+                String str_adc =  "ADC Calbration: Fail";
+                str = str_adc + ret + ret + str;
+			}
+            txtViewlabel01.setText(str);
+
 			break;
     		 }
     	}
