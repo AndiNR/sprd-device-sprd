@@ -9,11 +9,5 @@ debug.hwui.render_dirty_regions=false
 # delay for ConnectivityChange broadcast (ms)
 conn.connectivity_change_delay = 0
 
-#added cphs operatorNameDisplay Rule; which will show cphs first
-ro.operatorname.cphsfirst=false
-
-#added oplpnn operator NameDisplay surport;
-ro.operatorname.oplpnnsurport=true
-
 #if our product support single link version
 ro.system.property.singleconn=true

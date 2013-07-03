@@ -41,7 +41,9 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.modem.t.vbc=/dev/vbpipe6 \
 	ro.modem.t.id=0 \
 	ro.modem.t.count=2 \
-	universe_ui_support=true
+	universe_ui_support=true \
+    persist.surpport.oplpnn=true \
+    persist.surpport.cphsfirst=false
 
 # Set default USB interface
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \

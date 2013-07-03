@@ -27,7 +27,8 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
 	ro.com.android.dataroaming=false \
 	persist.msms.phone_count=1 \
-
+    persist.surpport.oplpnn=true \
+    persist.surpport.cphsfirst=false
 
 
 # Set default USB interface

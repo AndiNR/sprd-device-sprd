@@ -43,7 +43,9 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.modem.w.id=0 \
 	ro.modem.w.count=3 \
 	ro.config.hw.cmmb_support=false \
-	ro.config.hw.search_support=false
+	ro.config.hw.search_support=false \
+    persist.surpport.oplpnn=true \
+    persist.surpport.cphsfirst=false
 
 ifeq ($(TARGET_LOWCOST_SUPPORT),true)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.lowcost=true

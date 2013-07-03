@@ -27,7 +27,9 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
 	ro.com.android.dataroaming=false \
 	persist.msms.phone_count=1 \
-	ro.nativemodem=true
+	ro.nativemodem=true \
+    persist.surpport.oplpnn=true \
+    persist.surpport.cphsfirst=false
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1
