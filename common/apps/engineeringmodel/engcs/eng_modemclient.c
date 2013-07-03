@@ -2206,6 +2206,7 @@ static int eng_servermodem_comm(eng_fdtype_t *fdtype)
 	words = tmp;
 
 	do {
+		int n=0;
 		get_send_fd(words,&words_len, data.buf, fdtype);
 
 		/* Client -> Modem*/
@@ -2228,6 +2229,8 @@ static int eng_servermodem_comm(eng_fdtype_t *fdtype)
 		}
 		ENG_AT_LOG("AT > %s",cmd);
 		cmd_len = strlen(cmd);
+		for(n=0;n<cmd_len;n++)
+			ENG_AT_LOG("%x\n",cmd[n]);
 		if(cmd_len>0){
 			n=write(modemfd, cmd, cmd_len);
 			n=write(modemfd, "\r", 1);
