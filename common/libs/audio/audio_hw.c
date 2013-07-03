@@ -2759,7 +2759,7 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
 }
 
 /* parse the private field of xml config file. */
-static void adev_config_parse_private(struct config_parse_state *s, const XML_Char *name)
+static void adev_config_parse_private(struct config_parse_state *s, const XML_Char *name, const XML_Char *val)
 {
     if (s && name) {
         if (strcmp(s->private_name, PRIVATE_VBC_CONTROL) == 0) {
@@ -2783,8 +2783,10 @@ static void adev_config_parse_private(struct config_parse_state *s, const XML_Ch
                  mixer_get_ctl_by_name(s->adev->mixer, name);
             CTL_TRACE(s->adev->private_ctl.mic_bias_switch);
         } else if (strcmp(s->private_name, PRIVATE_INTERNAL_PA) == 0) {
+            int value = atoi(val);
             s->adev->private_ctl.internal_pa =
                  mixer_get_ctl_by_name(s->adev->mixer, name);
+            mixer_ctl_set_value(s->adev->private_ctl.internal_pa, 0, value);
             CTL_TRACE(s->adev->private_ctl.internal_pa);
         }
     }
@@ -2801,7 +2803,7 @@ static void adev_config_start(void *data, const XML_Char *elem,
 	char value[5];
 	unsigned int dev_num = 0;
 
-	if (property_get(FM_DIGITAL_SUPPORT_PROPERTY, value, "0") && strcmp(value, "1") == 0)
+        if (property_get(FM_DIGITAL_SUPPORT_PROPERTY, value, "0") && strcmp(value, "1") == 0)
 	{
 		dev_names = dev_names_digitalfm;
 		dev_num = sizeof(dev_names_digitalfm) / sizeof(dev_names_digitalfm[0]);
@@ -2901,7 +2903,7 @@ static void adev_config_start(void *data, const XML_Char *elem,
         memcpy(s->private_name, name, strlen(name));
     }
     else if (strcmp(elem, "func") == 0) {
-        adev_config_parse_private(s, name);
+        adev_config_parse_private(s, name, val);
     }
 }
 
