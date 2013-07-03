@@ -1488,6 +1488,7 @@ int camera_after_set_internal(enum restart_mode re_mode)
 			g_cxt->v4l2_cxt.v4l2_state = V4L2_PREVIEW;
 			g_cxt->preview_status = CMR_PREVIEW;
 		}*/
+		ret  = camera_start_preview_internal();
 		break;
 	case RESTART_LIGHTLY:
 		pthread_mutex_lock(&g_cxt->main_prev_mutex);
