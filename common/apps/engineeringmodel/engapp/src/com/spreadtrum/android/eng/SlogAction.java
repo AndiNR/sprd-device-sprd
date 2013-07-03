@@ -235,6 +235,18 @@ public class SlogAction {
             // Dim a byte[] to get file we read.
             byte[] buffer = new byte[freader.available()];
             result = new char[freader.available()];
+            if (freader.available() < 10) {
+                new Thread() {
+                    @Override
+                    public void run() {
+                        runSlogCommand("rm " + SLOG_CONF_LOCATION);
+                        runSlogCommand(SLOG_COMMAND_RESTART);
+                    }
+
+                }.start();
+                return DECODE_ERROR;
+            }
+
             // Begin reading
             try {
                 freader.read(buffer);
@@ -255,12 +267,19 @@ public class SlogAction {
             return DECODE_ERROR;
         }
 
-        conf.getChars(
-                conf.indexOf(keyName) + keyName.length(), // start cursor
-                conf.indexOf(isLastOption ? "\n" : "\t", conf.indexOf(keyName)
-                        + keyName.length() + 1), // ending cursor
-                result, 0);//
-
+        if (conf.length() < 1) {
+            return DECODE_ERROR;
+        }
+        
+        try {
+            conf.getChars(
+                    conf.indexOf(keyName) + keyName.length(), // start cursor
+                    conf.indexOf(isLastOption ? "\n" : "\t", conf.indexOf(keyName)
+                            + keyName.length() + 1), // ending cursor
+                    result, 0);//
+        } catch(Exception e) {
+            return DECODE_ERROR;
+        }
         return String.valueOf(result).trim();
     }
 
@@ -950,7 +969,10 @@ public class SlogAction {
         }
     }
 
-    public static boolean sendATCommand(int atCommandCode, boolean openLog) {
+    /**
+     * XXX: A time casting method, should not use in main thread.
+     */
+    public static synchronized boolean sendATCommand(int atCommandCode, boolean openLog) {
         /* require set AT Control to modem and this may be FIXME
         * 1. Why write byte can catch IOException?
         * 2. Whether Setting AT Command in main thread can cause ANR or not?
