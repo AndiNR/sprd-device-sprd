@@ -183,6 +183,7 @@ service engpcclientw /system/bin/engpcclient -t 0
 service engsetmacaddr /system/bin/engsetmacaddr
     class main
     user system
+    disabled
     oneshot
 
 service phoneserver_w /system/bin/phoneserver -m w

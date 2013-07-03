@@ -309,6 +309,10 @@ static void process_modem_state_message(char *message,int size)
 					modem_state = MODEM_STA_ALIVE;
 					printf("modem_state5 = MODEM_STA_ALIVE\n"); 
 					broadcast_modem_state("Modem Alive",strlen("Modem Alive"));
+                                        /*start bt&wifi set mac app*/
+                                        if(first_alive)
+                                            property_set("ctl.start", "engsetmacaddr");
+
 					pid = get_task_pid(MONITOR_APP);
 					if((pid > 0)&&(!first_alive)){
 						kill(pid, SIGUSR2);
