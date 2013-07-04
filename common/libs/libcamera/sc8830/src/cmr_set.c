@@ -19,6 +19,10 @@
 
 #define DV_FLASH_ON_DV_WITH_PREVIEW 1
 
+#define IS_NEED_FLASH(x,y)  ((x)&&((CAMERA_ZSL_MODE == (y))|| \
+	                          (CAMERA_NORMAL_MODE == (y))|| \
+	                          (CAMERA_TOOL_RAW_MODE == (y))))
+
 static int camera_autofocus_need_exit(void);
 static uint32_t camera_flash_mode_to_status(enum cmr_flash_mode f_mode);
 static int camera_set_brightness(uint32_t brightness, uint32_t *skip_mode, uint32_t *skip_num);
@@ -654,7 +658,7 @@ int camera_snapshot_start_set(void)
 
 	camera_preflash();
 
-	if (cxt->cmr_set.flash) {
+	if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
 		/*open flash*/
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 			ret = isp_ioctl(ISP_CTRL_FLASH_EG,0);
@@ -683,7 +687,7 @@ int camera_snapshot_stop_set(void)
 	int                      ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
 
-	if (cxt->cmr_set.flash && (CAMERA_HDR_MODE != cxt->cap_mode)) {
+	if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
 		/*open flash*/
 		camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN);
 	}
@@ -1226,8 +1230,7 @@ int camera_preflash(void)
 		ret = camera_set_flash(cxt->cmr_set.flash_mode, &skip_mode, &skip_number);
     }
 
-	if ((cxt->cmr_set.flash) &&((CAMERA_ZSL_MODE == cxt->cap_mode)||(CAMERA_NORMAL_MODE == cxt->cap_mode)
-		|| (CAMERA_TOOL_RAW_MODE == cxt->cap_mode))) {
+	if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 			struct isp_alg flash_param;
 			SENSOR_FLASH_LEVEL_T flash_level;
@@ -1251,7 +1254,7 @@ int camera_preflash(void)
 			}
 		}
 	}
-	if ((cxt->cmr_set.flash) && ((CAMERA_ZSL_MODE == cxt->cap_mode)||(CAMERA_NORMAL_MODE == cxt->cap_mode))) {
+	if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 			sem_wait(&cxt->cmr_set.isp_alg_sem);
 		}
@@ -1285,7 +1288,8 @@ int camera_autofocus_start(void)
 		uint32_t skip_number = 0;
 		ret = camera_set_flash(cxt->cmr_set.flash_mode, &skip_mode, &skip_number);
     }
-	if ((cxt->cmr_set.flash) &&((CAMERA_ZSL_MODE == cxt->cap_mode)||(CAMERA_NORMAL_MODE == cxt->cap_mode))) {
+
+	if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 			struct isp_alg flash_param;
 			SENSOR_FLASH_LEVEL_T flash_level;
@@ -1377,7 +1381,7 @@ int camera_autofocus_start(void)
 		}
 	}
 #ifndef CONFIG_CAMERA_FLASH_CTRL
-	if ((cxt->cmr_set.flash) && ((CAMERA_ZSL_MODE == cxt->cap_mode)||(CAMERA_NORMAL_MODE == cxt->cap_mode))) {
+	if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 			sem_wait(&cxt->cmr_set.isp_alg_sem);
 		}
