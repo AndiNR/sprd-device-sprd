@@ -2753,7 +2753,7 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
             AUDIO_DEVICE_IN_AUX_DIGITAL |
             AUDIO_DEVICE_IN_BACK_MIC |
             AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET |
-            AUDIO_DEVICE_IN_ALL_SCO||
+            AUDIO_DEVICE_IN_ALL_SCO |
             AUDIO_DEVICE_IN_VOICE_CALL |
             AUDIO_DEVICE_IN_DEFAULT);
 }
