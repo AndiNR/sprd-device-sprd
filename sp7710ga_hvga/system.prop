@@ -17,3 +17,6 @@ ro.operatorname.oplpnnsurport=true
 
 #if our product support single link version
 ro.system.property.singleconn=true
+
+# Can not install packages if the data space has used more than the following ratio value
+ro.installer.limitpercent=85
