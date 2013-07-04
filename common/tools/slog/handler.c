@@ -680,7 +680,7 @@ static void handle_dump_shark_modem_memory()
 	char modem_property[8];
 	int ret_t, ret_w;
 
-	err_log("Start to dump CP memory");
+	err_log("Start to dump CP memory for shark.");
 
 	property_get(MODEM_TD_DEVICE_PROPERTY, modem_property, "");
 	ret_t = atoi(modem_property);
@@ -700,7 +700,7 @@ static void handle_dump_shark_modem_memory()
 		err_log("Modem device is not TD and W!");
 	}
 	system(buffer);
-	err_log("Dump CP memory completed");
+	err_log("Dump CP memory completed for shark.");
 }
 
 #define MODEMRESET_PROPERTY "persist.sys.sprd.modemreset"
@@ -739,11 +739,9 @@ connect_socket:
 			err_log("get %d bytes %s", n, buffer);
 			if(strstr(buffer, "Modem Assert") != NULL) {
 				if(ret == 0) {
-					if(dev_shark_flag == 1) {
-						handle_dump_shark_modem_memory();
+					dump_modem_memory_flag = 1;
+					if(dev_shark_flag == 1)
 						handle_dump_shark_sipc_info();
-					} else
-						dump_modem_memory_flag = 1;
 				} else {
 					modem_reset_flag =1;
 					err = pthread_kill(modem_tid, SIGUSR1);
@@ -774,9 +772,9 @@ connect_socket:
 
 static void handle_dump_modem_file(struct slog_info *info)
 {
-	int save_fd;
+	int fd;
 	int ret,n;
-	int finish = 0;
+	int finish = 0, receive_from_cp = 0;
 	char buffer[SINGLE_BUFFER_SIZE];
 	char path[MAX_NAME_LEN];
 	time_t t;
@@ -785,6 +783,8 @@ static void handle_dump_modem_file(struct slog_info *info)
 	int result;
 	struct timeval timeout;
 	char cmddumpmemory[2]={'3',0x0a};
+
+	err_log("Start to dump CP memory.");
 
 write_cmd:
 	n = write(info->fd_device, cmddumpmemory, 2);
@@ -800,9 +800,9 @@ write_cmd:
 	localtime_r(&t, &tm);
 	sprintf(path, "%s/%s/modem/modem_memory_%d%02d%02d%02d%02d%02d.log", current_log_path, top_logdir,
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-	save_fd = open(path, O_WRONLY | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
-	if (save_fd < 0) {
-		err_log("open modem log file failed!");
+	fd = open(path, O_WRONLY | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
+	if (fd < 0) {
+		err_log("open modem memory file failed!");
 		return;
 	}
 
@@ -810,11 +810,13 @@ write_cmd:
 		memset(buffer,0,SINGLE_BUFFER_SIZE);
                 FD_ZERO(&readset);
                 FD_SET(info->fd_device, &readset);
-                timeout.tv_sec = 1;
+                timeout.tv_sec = 3;
                 timeout.tv_usec = 0;
 		ret = select(info->fd_device + 1, &readset, NULL, NULL, &timeout);
 
 		if( 0 == ret ){
+			if( (receive_from_cp < 10 ) && (dev_shark_flag == 1) )
+				handle_dump_shark_modem_memory();
 			err_log("select timeout ->save finsh");
 			finish = 1;
 		} else if( ret > 0 ) {
@@ -830,13 +832,15 @@ read_again:
 				sleep(1);
 				goto read_again;
 			} else {
-				if(save_fd > 0)
-					write_from_buffer(save_fd, buffer, n);
+				receive_from_cp ++;
+				write_from_buffer(fd, buffer, n);
 			}
 		} else {
 			err_log("select error");
 		}
 	} while( finish == 0 );
+
+	err_log("Dump CP memory completed.");
 
 	return;
 }
