@@ -158,11 +158,6 @@ exit:
     if (fp != NULL) {
         fclose(fp);
     }
-    if (result < 0) {
-        if (surface) {
-            free(surface);
-        }
-    }
     return result;
 }
 
