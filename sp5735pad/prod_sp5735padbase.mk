@@ -27,8 +27,30 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
 	ro.com.android.dataroaming=false \
 	persist.msms.phone_count=1 \
-    persist.surpport.oplpnn=true \
-    persist.surpport.cphsfirst=false
+       persist.surpport.oplpnn=true \
+       persist.surpport.cphsfirst=false \
+       ro.msms.phone_count=1 \
+	ro.digital.fm.support=0 \
+       persist.msms.phone_default=0 \
+	ro.modem.count=1 \
+	ro.modem.w.enable=1 \
+	ro.modem.w.dev=/dev/cpw \
+	ro.modem.w.tty=/dev/stty_w \
+	ro.modem.w.eth=seth_w \
+	ro.modem.w.snd=2 \
+	ro.modem.w.diag=/dev/slog_w \
+	ro.modem.w.loop=/dev/spipe_w0 \
+	ro.modem.w.nv=/dev/spipe_w1 \
+	ro.modem.w.assert=/dev/spipe_w2 \
+	ro.modem.w.vbc=/dev/spipe_w6 \
+	ro.modem.w.id=0 \
+	ro.modem.w.count=1 \
+
+ifeq ($(TARGET_BUILD_VARIANT),user)
+  PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1
+else
+  PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=0
+endif
 
 
 # Set default USB interface
@@ -39,7 +61,7 @@ PRODUCT_PACKAGES := \
     MsmsPhone \
     Settings \
     MsmsStk \
-    Stk1 \
+    Stk \
     framework2
 
 

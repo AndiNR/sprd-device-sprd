@@ -37,10 +37,18 @@ on post-fs-data
 on boot
     chown system system /sys/class/backlight/sprd_backlight/brightness
 
-    chmod 660 /proc/cpt/wdtirq
+
     chmod 660 /proc/cpw/wdtirq
-    chown system root /proc/cpt/wdtirq
+    chmod 660 /proc/cpw/stop
+    chmod 660 /proc/cpwt/start
+    chmod 660 /proc/cpw/modem
+    chmod 660 /proc/cpw/dsp
+
     chown system root /proc/cpw/wdtirq
+    chown system root /proc/cpw/stop
+    chown system root /proc/cpw/start
+    chown system root /proc/cpw/modem
+    chown system root /proc/cpw/dsp
 
     insmod /system/lib/modules/ft5306_ts.ko
     insmod /system/lib/modules/bcmdhd.ko
@@ -81,11 +89,16 @@ service glgps /system/bin/glgps -c /system/etc/gpsconfig.xml
 on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
 
-#start rawdata daemon.
-service rawdatad /bin/rawdatad
+on property:ro.modem.w.count=1
+    write /proc/sim/0 w
+
+service modemd /system/bin/modemd
     class core
     user system
+    group system radio shell
     oneshot
+
+
 
 #start nvitem daemon.
 #service nvm_daemon /system/bin/nvm_daemon
@@ -94,43 +107,35 @@ service rawdatad /bin/rawdatad
 #    group system radio shell
 #    oneshot
 
-#service modemd /system/bin/modemd
-#    class core
-#    user system
-#    group system radio shell
-#    oneshot
 
-service engpcclient /system/bin/engpcclient -t 1
-    class core
-    user system
-    group system radio shell
-    disabled
-    oneshot
 
-service engservice /system/bin/engservice
+
+
+service engservicew /system/bin/engservice -t 0
+    socket engw stream 660 system system
     class core
     user system
     group system
     disabled
     oneshot
 
-#service engmodemclient /system/bin/engmodemclient
-#    class core
-#    user system
-#    group system radio
- #   disabled
-#    oneshot
-
-#service engsetmacaddr /system/bin/engsetmacaddr
-#    class main
-#    user system
-#    oneshot
-
-service phoneserver_vlx /system/bin/phoneserver -m vlx
+service engmodemclientw /system/bin/engmodemclient -t 0
     class core
-    user root
-    group radio system shell
+    user system
+    group system radio
     disabled
+    oneshot
+
+service engpcclientw /system/bin/engpcclient -t 0
+    class core
+    user system
+    group system radio shell
+    disabled
+    oneshot
+    
+service engsetmacaddr /system/bin/engsetmacaddr
+    class main
+    user system
     oneshot
 
 service phoneserver_t /system/bin/phoneserver -m t
@@ -161,23 +166,6 @@ service charge /bin/charge
     class charger
     user root
     oneshot
-
-#vlx rild service
-service ril-daemon /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -m vlx -n 0
-    class core
-    socket rild stream 660 root radio
-    socket rild-debug stream 660 radio system
-    disabled
-    user root
-    group radio cache inet misc audio sdcard_rw log
-
-service ril-daemon1 /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -m vlx -n 1
-    class core
-    socket rild1 stream 660 root radio
-    socket rild-debug1 stream 660 radio system
-    disabled
-    user root
-    group radio cache inet misc audio sdcard_rw log
 
 #td rild service
 service tril-daemon /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -m t -n 0
@@ -214,11 +202,10 @@ service wril-daemon1 /system/bin/rild_sp -l /system/lib/libreference-ril_sp.so -
     group radio cache inet misc audio sdcard_rw log
 
 #nvitemd
-service nvitemd /system/bin/nvitemd
+service nvitemd_w /system/bin/nvitemd /dev/spipe_w1 ./nvitem_w.cfg        FALSE
     class core
     user root
     group system radio shell
-    disabled
     oneshot
 
 #service bootsound /system/bin/mplayer /system/media/bootsound
@@ -338,7 +325,7 @@ service iprenew_bnep0 /system/bin/dhcpcd -n
     disabled
     oneshot
 
-service slog /system/bin/slog
+service slog /system/bin/slog -t
     class main
     user root
 
@@ -460,6 +447,45 @@ on boot
     insmod /system/lib/modules/ltr_558als.ko
     chown system system /dev/ltr_558als
     chmod 0664 /dev/ltr_558als
+
+on property:ro.modem.w.enable=1
+    symlink /dev/slog_w /dev/vbpipe0
+    symlink /dev/spipe_w1 /dev/vbpipe1
+    symlink /dev/spipe_w2 /dev/vbpipe2
+    symlink /dev/spipe_w3 /dev/vbpipe3
+    symlink /dev/spipe_w6 /dev/vbpipe6
+    symlink /dev/stty_w0 /dev/ts0710mux0
+    symlink /dev/stty_w1 /dev/ts0710mux1
+    symlink /dev/stty_w2 /dev/ts0710mux2
+    symlink /dev/stty_w3 /dev/ts0710mux3
+    symlink /dev/stty_w4 /dev/ts0710mux4
+    symlink /dev/stty_w5 /dev/ts0710mux5
+    symlink /dev/stty_w6 /dev/ts0710mux6
+    symlink /dev/stty_w7 /dev/ts0710mux7
+    symlink /dev/stty_w8 /dev/ts0710mux8
+    symlink /dev/stty_w9 /dev/ts0710mux9
+    symlink /dev/stty_w10 /dev/ts0710mux10
+    symlink /dev/stty_w11 /dev/ts0710mux11
+    symlink /dev/stty_w12 /dev/ts0710mux12
+    symlink /dev/stty_w13 /dev/ts0710mux13
+    symlink /dev/stty_w14 /dev/ts0710mux14
+    symlink /dev/stty_w15 /dev/ts0710mux15
+    symlink /dev/stty_w16 /dev/ts0710mux16
+    symlink /dev/stty_w17 /dev/ts0710mux17
+    symlink /dev/stty_w18 /dev/ts0710mux18
+    symlink /dev/stty_w19 /dev/ts0710mux19
+    symlink /dev/stty_w20 /dev/ts0710mux20
+    symlink /dev/stty_w21 /dev/ts0710mux21
+    symlink /dev/stty_w22 /dev/ts0710mux22
+    symlink /dev/stty_w23 /dev/ts0710mux23
+    symlink /dev/stty_w24 /dev/ts0710mux24
+    symlink /dev/stty_w25 /dev/ts0710mux25
+    symlink /dev/stty_w26 /dev/ts0710mux26
+    symlink /dev/stty_w27 /dev/ts0710mux27
+    symlink /dev/stty_w28 /dev/ts0710mux28
+    symlink /dev/stty_w29 /dev/ts0710mux29
+    symlink /dev/stty_w30 /dev/ts0710mux30
+    symlink /dev/stty_w31 /dev/ts0710mux31
 
 
 #create symlink

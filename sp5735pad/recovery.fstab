@@ -2,7 +2,7 @@
 
 /sdcard		vfat		/dev/block/platform/sprd-sdhci.0/mmcblk1p1
 /system		ext4		/dev/block/platform/sprd-sdhci.3/by-name/system
-/data		ext4		/dev/block/platform/sprd-sdhci.3/by-name/prodinfo4
+/data		ext4		/dev/block/platform/sprd-sdhci.3/by-name/userdata
 /cache		ext4		/dev/block/platform/sprd-sdhci.3/by-name/cache
 /misc 		emmc 		/dev/block/platform/sprd-sdhci.3/by-name/misc
 /boot		emmc		/dev/block/platform/sprd-sdhci.3/by-name/kenel
