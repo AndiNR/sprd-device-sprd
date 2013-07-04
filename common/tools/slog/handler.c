@@ -163,12 +163,12 @@ void cp_file(char *path, char *new_path)
 
 	fp_src = fopen(path, "r");
 	if(fp_src == NULL) {
-		err_log("open notify src file failed!");
+		err_log("open src file failed!");
 		return;
 	}
 	fp_dest = fopen(new_path, "w");
 	if(fp_dest == NULL) {
-		err_log("open notify dest file failed!");
+		err_log("open dest file failed!");
 		fclose(fp_src);
 		return;
 	}
@@ -388,6 +388,31 @@ void *notify_log_handler(void *arg)
 }
 
 /*
+ * write form buffer.
+ *
+ */
+static int write_from_buffer(int fd, char *buf, int len)
+{
+	int result = 0, err = 0;
+
+	if(buf == NULL || fd < 0)
+		return -1;
+
+	if(len <= 0)
+		return 0;
+
+	while(result < len) {
+		err = write(fd, buf + result, len - result);
+		if(err < 0 && errno == EINTR)
+			continue;
+		if(err < 0)
+			return err;
+		result += err;
+	}
+	return result;
+}
+
+/*
  * open log devices
  *
  */
@@ -589,32 +614,60 @@ static void add_timestamp(struct slog_info *info)
 				tm.tm_hour,
 				tm.tm_min,
 				tm.tm_sec);
-	do {
-		ret = write(info->fd_out, buffer, strlen(buffer));
-	} while (ret < 0 && errno == EINTR);
+	write_from_buffer(info->fd_out, buffer, strlen(buffer));
 
 	return;
 }
-static int write_from_buffer(int fd, char *buf, int len)
+
+#define SMSG "/d/sipc/smsg"
+#define SBUF "/d/sipc/sbuf"
+#define SBLOCK "/d/sipc/sblock"
+
+static void handle_dump_shark_sipc_info()
 {
-	int result = 0, err = 0;
+	char buffer[MAX_NAME_LEN];
+	time_t t;
+	struct tm tm;
+	int ret;
 
-	if(buf == NULL || fd < 0)
-		return -1;
+	err_log("Start to dump SIPC info.");
+	t = time(NULL);
+	localtime_r(&t, &tm);
 
-	if(len <= 0)
-		return 0;
-
-	while(result < len) {
-		err = write(fd, buf + result, len - result);
-		if(err < 0 && errno == EINTR)
-			continue;
-		if(err < 0)
-			return err;
-		result += err;
+	sprintf(buffer, "%s/%s/misc/sipc",
+			current_log_path,
+			top_logdir);
+	ret = mkdir(buffer, S_IRWXU | S_IRWXG | S_IRWXO);
+	if (-1 == ret && (errno != EEXIST)){
+		err_log("mkdir %s failed.", buffer);
+		exit(0);
 	}
-	return result;
+
+	sprintf(buffer, "%s/%s/misc/sipc/%02d%02d%02d_smsg.log",
+			current_log_path,
+			top_logdir,
+			tm.tm_hour,
+			tm.tm_min,
+			tm.tm_sec);
+	cp_file(SMSG, buffer);
+
+	sprintf(buffer, "%s/%s/misc/sipc/%02d%02d%02d_sbuf.log",
+			current_log_path,
+			top_logdir,
+			tm.tm_hour,
+			tm.tm_min,
+			tm.tm_sec);
+	cp_file(SBUF, buffer);
+
+	sprintf(buffer, "%s/%s/misc/sipc/%02d%02d%02d_sblock.log",
+			current_log_path,
+			top_logdir,
+			tm.tm_hour,
+			tm.tm_min,
+			tm.tm_sec);
+	cp_file(SBLOCK, buffer);
 }
+
 
 #define MODEM_TD_DEVICE_PROPERTY "ro.modem.t.enable"
 #define MODEM_W_DEVICE_PROPERTY "ro.modem.w.enable"
@@ -686,9 +739,10 @@ connect_socket:
 			err_log("get %d bytes %s", n, buffer);
 			if(strstr(buffer, "Modem Assert") != NULL) {
 				if(ret == 0) {
-					if(dev_shark_flag == 1)
+					if(dev_shark_flag == 1) {
 						handle_dump_shark_modem_memory();
-					else
+						handle_dump_shark_sipc_info();
+					} else
 						dump_modem_memory_flag = 1;
 				} else {
 					modem_reset_flag =1;
@@ -1050,19 +1104,19 @@ void *stream_log_handler(void *arg)
 				if(ret <= 0) {
 					err_log("read %s log failed!", info->name);
 					close(info->fd_device);
+					sleep(1);
 					open_device(info, KERNEL_LOG_SOURCE);
 					info = info->next;
 					continue;
 				}
 				strinst(wbuf_kmsg, buf_kmsg);
 
-				do {
-					ret = write(info->fd_out, wbuf_kmsg, strlen(wbuf_kmsg));
-				} while (ret < 0 && errno == EINTR);
+				ret = write_from_buffer(info->fd_out, wbuf_kmsg, strlen(wbuf_kmsg));
 
 				if((size_t)ret < strlen(wbuf_kmsg)) {
 					err_log("write %s log partial (%d of %d)", info->name, ret, strlen(wbuf_kmsg));
 					close(info->fd_out);
+					sleep(1);
 					info->fd_out = gen_outfd(info);
 					add_timestamp(info);
 					info = info->next;
@@ -1091,6 +1145,7 @@ void *stream_log_handler(void *arg)
 				ret = android_log_printLogLine(g_logformat, info->fd_out, &entry_write);
 				if(ret == 0 ){
 					close(info->fd_out);
+					sleep(1);
 					info->fd_out = gen_outfd(info);
 					add_timestamp(info);
 					info = info->next;

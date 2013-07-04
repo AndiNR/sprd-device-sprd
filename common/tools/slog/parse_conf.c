@@ -61,7 +61,6 @@ static void handle_watchdog( int state )
 
 	sprintf(buffer, "echo %d > /sys/module/sprd_wdt_sys/parameters/enabled", state);
 	system(buffer);
-	return NULL;
 }
 
 char *parse_string(char *src, char c, char *token)
