@@ -215,7 +215,7 @@ PUBLIC JPEG_RET_E JPEG_HWWriteHead(APP1_T *app1_t)
 
 PUBLIC JPEG_RET_E JPEG_HWWriteTail(void)
 {
-	if (VSP_READ_REG_POLL(VSP_VLC_REG_BASE+VLC_ST_OFF, 0x4, 0x4, TIME_OUT_CLK, "VLC_CTRL_OFF: polling the vlc is done!")) {
+	if (VSP_READ_REG_POLL(VSP_VLC_REG_BASE+VLC_ST_OFF, (1<<31), 0x0, TIME_OUT_CLK, "VLC_CTRL_OFF: polling the vlc is done!")) {
 		return JPEG_FAILED;
 	}
 	
