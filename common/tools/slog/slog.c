@@ -634,7 +634,7 @@ static void handle_dropbox()
 	char cmd[MAX_NAME_LEN];
 	sprintf(cmd, "tar czf %s/%s/dropbox.tgz /data/system/dropbox", current_log_path, top_logdir);
 	err_log("%s", cmd);
-	return system(cmd);
+	system(cmd);
 }
 
 /*
