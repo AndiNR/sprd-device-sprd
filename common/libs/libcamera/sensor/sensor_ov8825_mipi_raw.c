@@ -1177,7 +1177,7 @@ LOCAL SENSOR_TRIM_T s_ov8825_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0},
 
 //	{0, 0, 1632, 1224, 264, 90},
-	{0, 0, 1920, 1080, 178, 90},
+	{0, 4, 1920, 1072, 178, 90},
 	{0, 0, 3264, 2448, 268, 82},
 
 	{0, 0, 0, 0, 0, 0},
@@ -1426,9 +1426,9 @@ SENSOR_INFO_T g_ov8825_mipi_raw_info = {
 	0,
 	0,
 #if defined(OV8825_2_LANES)
-	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0},
+	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 1},
 #elif defined(OV8825_4_LANES)
-	{SENSOR_INTERFACE_TYPE_CSI2, 4, 10, 0},
+	{SENSOR_INTERFACE_TYPE_CSI2, 4, 10, 1},
 #endif
 
 #ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
