@@ -244,7 +244,8 @@ public class SlogAction {
                     }
 
                 }.start();
-                return DECODE_ERROR;
+		freader.close();
+		return DECODE_ERROR;
             }
 
             // Begin reading
