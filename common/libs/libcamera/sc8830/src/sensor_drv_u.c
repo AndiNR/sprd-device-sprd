@@ -1558,6 +1558,8 @@ static int _sensor_cali_lnc_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 			file_size = (uint32_t)file_pos;
 		} else {
 			fclose(fp);
+			free(temp_buf_16);
+			temp_buf_16 = NULL;
 			SENSOR_PRINT("file pointers error!");
 			return SENSOR_FAIL;
 		}
