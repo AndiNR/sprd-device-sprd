@@ -151,9 +151,7 @@ JNIEXPORT jint JNICALL Java_com_spreadtrum_android_eng_EngWifieut_ptestInit
 
 	if(!res)
 	{
-		PTEST_RES_T ress ;
-		res = &ress;	
-		res->result=1;
+		return 1;
 	}
 	//LOGE("ptest init......re=%i",res->result);
 	return res->result;
@@ -170,9 +168,7 @@ JNIEXPORT jint JNICALL Java_com_spreadtrum_android_eng_EngWifieut_ptestDeinit
 
 	if(!res)
 	{
-		PTEST_RES_T ress ;
-		res = &ress;	
-		res->result=1;
+		return 1;
 	}
 	//LOGE("ptest Deinit......re=%i",res->result);
 	return res->result;
