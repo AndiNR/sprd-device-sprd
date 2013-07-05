@@ -21,7 +21,7 @@ BOARDDIR := device/sprd/$(TARGET_BOARD)
 DEVICE_PACKAGE_OVERLAYS := $(BOARDDIR)/overlay
 PRODUCT_PACKAGE_OVERLAYS := vendor/sprd/operator/cucc/specA/overlay
 
-PRODUCT_AAPT_CONFIG := hdpi
+PRODUCT_AAPT_CONFIG := hdpi xhdpi
 
 PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
@@ -45,6 +45,9 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.modem.w.vbc=/dev/spipe_w6 \
 	ro.modem.w.id=0 \
 	ro.modem.w.count=1 \
+	ro.config.hw.cmmb_support=false \
+	ro.config.hw.camera_support=false \
+	ro.config.hw.search_support=false \
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1

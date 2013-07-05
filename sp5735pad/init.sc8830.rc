@@ -8,9 +8,11 @@ on early-init
     mkdir /storage 0777 system sdcard_rw
     mkdir /storage/sdcard0 0000 system system
     mkdir /storage/sdcard1 0000 system system
+    mkdir /storage/usbdisk 0000 system system
     # for backwards compatibility
     symlink /storage/sdcard0 /sdcard
     symlink /storage/sdcard0 /mnt/sdcard
+    symlink /storage/usbdisk /mnt/usbdisk
 # radio pipe
     mkdir /dev/rpipe 0550 radio radio
     pipe 666 /dev/rpipe/ril.vt.0
@@ -71,14 +73,14 @@ on boot
     write /sys/class/gpio/export 167
     write /sys/class/gpio/gpio167/direction out
     write /sys/class/gpio/gpio167/value 1
-    write /sys/class/gpio/export 174
-    write /sys/class/gpio/gpio174/direction out
+    write /sys/class/gpio/export 168
+    write /sys/class/gpio/gpio168/direction out
     chmod 777 /system/bin/glgps
     chown root system /sys/class/gpio/gpio167/value
     chmod 0664 /sys/class/gpio/gpio167/value
 
-    chown root system /sys/class/gpio/gpio174/value
-    chmod 0664 /sys/class/gpio/gpio174/value
+    chown root system /sys/class/gpio/gpio168/value
+    chmod 0664 /sys/class/gpio/gpio168/value
 
 service glgps /system/bin/glgps -c /system/etc/gpsconfig.xml
     class main
@@ -88,6 +90,12 @@ service glgps /system/bin/glgps -c /system/etc/gpsconfig.xml
 
 on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
+    write /sys/kernel/debug/fatal_dump/enable 1
+    setrlimit 4 -1 -1
+    mkdir /data/corefile
+    chmod 777 /data/corefile
+    write /proc/sys/kernel/core_pattern /data/corefile/core-%e-%p
+    write /proc/sys/fs/suid_dumpable 1
 
 on property:ro.modem.w.count=1
     write /proc/sim/0 w
