@@ -18,14 +18,39 @@ TARGET_PLATFORM := spavd
 TARGET_BOARD := spavd
 BOARDDIR := device/sprd/$(TARGET_BOARD)
 
+DEVICE_PACKAGE_OVERLAYS := $(BOARDDIR)/overlay
+
+PRODUCT_AAPT_CONFIG := hdpi
+
+PRODUCT_PROPERTY_OVERRIDES := \
+	keyguard.no_require_sim=true \
+	ro.com.android.dataroaming=false \
+	persist.msms.phone_count=1 \
+
+
+
+# Set default USB interface
+PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
+	persist.sys.usb.config=mass_storage
 
 PRODUCT_PACKAGES := \
-	VoiceDialer \
-	Phone \
-	framework2 \
-	Stk \
-	Settings \
-	Launcher2
+    MsmsPhone \
+    Settings \
+    MsmsStk \
+    Stk1 \
+    framework2
+
+
+PRODUCT_PACKAGES += \
+
+# audio libraries.
+PRODUCT_PACKAGES += \
+	audio.primary.goldfish \
+	audio_policy.default \
+	local_time.default
+
+ENABLE_BLUETOOTH := true
+PRODUCT_PACKAGE_OVERLAYS := $(BOARDDIR)/sdk_overlay
 
 #PRODUCT_CHARACTERISTICS := tablet
 #include frameworks/native/build/tablet-dalvik-heap.mk
@@ -43,6 +68,7 @@ $(call inherit-product, $(BOARDDIR)/proprietories.mk)
 
 # include standard configs
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base.mk)
+$(call inherit-product, $(SRC_TARGET_DIR)/product/sdk.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/telephony.mk)
 
 # Overrides
@@ -51,6 +77,7 @@ PRODUCT_DEVICE := $(TARGET_BOARD)
 PRODUCT_MODEL := sprd-avd
 PRODUCT_BRAND := Spreadtrum
 PRODUCT_MANUFACTURER := Spreadtrum
+PRODUCT_CHARACTERISTICS := tablet
 
 PRODUCT_LOCALES := zh_CN zh_TW en_US
 ifeq ($(MULTILANGUAGE_SUPPORT),true)

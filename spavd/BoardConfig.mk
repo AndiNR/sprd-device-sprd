@@ -48,6 +48,7 @@ TARGET_BOARD_PLATFORM:=spavd
 
 # board specific modules
 BOARD_USE_VETH := true
+BOARD_SPRD_RIL := true
 
 # use simulator
 TARGET_SIMULATOR := true
