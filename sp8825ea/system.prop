@@ -13,5 +13,5 @@ persist.ttydev=ttyVUART0
 conn.connectivity_change_delay = 0
 
 # Can not install packages if the data space has used more than the following ratio value
-ro.internalstorage.threshold.packageinstaller=85
+pi.internalstorage.threshold=85
 
