@@ -41,7 +41,11 @@ on post-fs-data
     # we will remap this as /mnt/internal with the sdcard fuse tool
     mkdir /data/media 0775 media_rw media_rw
     chown media_rw media_rw /data/media
-
+    
+on init
+    mkdir /dev/pipe 0755 system system
+    pipe 666 /dev/pipe/mmi.audio.ctrl
+    
 on boot
     chown system system /sys/class/backlight/sprd_backlight/brightness
 
