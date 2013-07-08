@@ -838,7 +838,6 @@ int main(int argc, char **argv)
             {
                 if (framenum_yuv >= frames)
                 {
-                    break;
                     goto  early_terminate;
                 }
             }
