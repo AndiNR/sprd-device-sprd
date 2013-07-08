@@ -15,6 +15,10 @@
 #define TD_MODEM 0x3434
 #define W_MODEM  0x5656
 
+#define MODEM_READY 0
+#define MODEM_ASSERT 1
+#define MODEM_RESET 2
+
 /* indicate which modem is enable */
 #define TD_MODEM_ENABLE	"ro.modem.t.enable"
 #define W_MODEM_ENABLE	"ro.modem.w.enable"
@@ -53,11 +57,15 @@
 /* detect assert/hangup interface */
 #define TD_ASSERT_PRO	"ro.modem.t.assert"
 #define W_ASSERT_PRO	"ro.modem.w.assert"
+#define TD_LOOP_PRO		"ro.modem.t.loop"
+#define W_LOOP_PRO		"ro.modem.w.loop"
 /* default value for detect assert/hangup interface */
 #define TD_ASSERT_DEV	"/dev/spipe_td2"
 #define W_ASSERT_DEV	"/dev/spipe_w2"
 #define TD_WATCHDOG_DEV	"/proc/cpt/wdtirq"
 #define W_WATCHDOG_DEV	"/proc/cpw/wdtirq"
+#define TD_LOOP_DEV		"/dev/spipe_td0"
+#define W_LOOP_DEV		"/dev/spipe_w0"
 
 #define PHONE_APP		"com.android.phone"
 #define PROP_TTYDEV		"persist.ttydev"
@@ -67,6 +75,8 @@
 #define min(A,B)       (((A) < (B)) ? (A) : (B))
 
 #define MODEM_SOCKET_NAME	"modemd"
+#define PHSTD_SOCKET_NAME	"phstd"
+#define PHSW_SOCKET_NAME	"phsw"
 #define MAX_CLIENT_NUM	10
 extern int  client_fd[MAX_CLIENT_NUM];
 
@@ -75,10 +85,9 @@ int start_service(int modem, int is_vlx, int restart);
 
 int write_proc_file(char *file, int offset, char *string);
 int vlx_reboot_init(void);
-int load_vlx_modem_img(int modem, int is_modem_assert);
 int detect_vlx_modem(int modem);
 
-int load_sipc_modem_img(int modem, int is_modem_assert);
 void* detect_sipc_modem(void *param);
+void *detect_modem_blocked(void *par);
 
 #endif

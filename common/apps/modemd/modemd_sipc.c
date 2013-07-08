@@ -8,14 +8,45 @@
 #include <sys/ioctl.h>
 #include <cutils/properties.h>
 #include <utils/Log.h>
+#include <cutils/sockets.h>
 #include "modemd.h"
+
+static int td_modem_state = MODEM_READY;
+static int w_modem_state = MODEM_READY;
+static pthread_mutex_t td_state_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t w_state_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t td_cond = PTHREAD_COND_INITIALIZER;
+static pthread_cond_t w_cond = PTHREAD_COND_INITIALIZER;
 
 /******************************************************
  *
  ** sipc interface begin
  *
  *****************************************************/
-int load_sipc_image(char *fin, int offsetin, char *fout, int offsetout, int size)
+
+static int loop_info_sockclients(const char* buf, const int len)
+{
+	int i, ret;
+
+	/* info socket clients that modem is assert/hangup/blocked */
+	for(i = 0; i < MAX_CLIENT_NUM; i++) {
+		MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
+		if(client_fd[i] >= 0) {
+			ret = write(client_fd[i], buf, len);
+			MODEMD_LOGE("write %d bytes to client_fd[%d]:%d",
+					len, i, client_fd[i]);
+			if(ret < 0) {
+				MODEMD_LOGE("reset client_fd[%d]=-1",i);
+				close(client_fd[i]);
+				client_fd[i] = -1;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int load_sipc_image(char *fin, int offsetin, char *fout, int offsetout, int size)
 {
 	int res = -1, fdin, fdout, bufsize, i, rsize, rrsize, wsize;
 	char buf[8192];
@@ -71,7 +102,7 @@ leave:
 	return res;
 }
 
-int load_sipc_modem_img(int modem, int is_modem_assert)
+static int load_sipc_modem_img(int modem, int is_modem_assert)
 {
 	char modem_partition[256] = {0};
 	char dsp_partition[256] = {0};
@@ -145,24 +176,161 @@ int load_sipc_modem_img(int modem, int is_modem_assert)
 
 	if(is_modem_assert) {
 		/* info socket clients that modem is reset */
-		for(i = 0; i < MAX_CLIENT_NUM; i++) {
-			MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
-			if(client_fd[i] >= 0) {
-				ret = write(client_fd[i], alive_info,strlen(alive_info));
-				MODEMD_LOGE("write %d bytes to client_fd[%d]:%d to info modem is alive",
-						ret, i, client_fd[i]);
-				if(ret < 0) {
-					MODEMD_LOGE("reset client_fd[%d]=-1",i);
-					close(client_fd[i]);
-					client_fd[i] = -1;
-				}
-			}
-		}
+		MODEMD_LOGD("Info all the sock clients that modem is alive");
+		loop_info_sockclients(alive_info, strlen(alive_info)+1);
 	}
 
 	start_service(modem, 0, 1);
 
+	if(modem == TD_MODEM) {
+			pthread_mutex_lock(&td_state_mutex);
+			td_modem_state = MODEM_READY;
+			pthread_cond_signal(&td_cond);
+			pthread_mutex_unlock(&td_state_mutex);
+	} else if(modem == W_MODEM) {
+			pthread_mutex_lock(&w_state_mutex);
+			w_modem_state = MODEM_READY;
+			pthread_cond_signal(&w_cond);
+			pthread_mutex_unlock(&w_state_mutex);
+	}
+
 	return 0;
+}
+
+void *detect_modem_blocked(void *par)
+{
+	int soc_fd, i, ret;
+	int modem, numRead, loop_fd;
+	char socket_name[10] = {0}, loop_dev[20] = {0};
+	char prop[5], buf[128], buffer[10];
+	int is_reset, is_assert = 0;
+
+	if(par == NULL)
+		exit(-1);
+
+	modem = *((int *)par);
+	if(modem == TD_MODEM) {
+		strcpy(socket_name, PHSTD_SOCKET_NAME);
+	} else if(modem == W_MODEM) {
+		strcpy(socket_name, PHSW_SOCKET_NAME);
+	} else {
+		MODEMD_LOGE("%s: input wrong modem type!", __func__);
+		exit(-1);
+	}
+
+reconnect:
+	MODEMD_LOGD("%s: try to connect socket %s...", __func__, socket_name);
+	soc_fd = socket_local_client(socket_name,
+		ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+
+	while(soc_fd < 0) {
+		usleep(10*1000);
+		soc_fd = socket_local_client(socket_name,
+			ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+	}
+	MODEMD_LOGD("%s: connect socket %s success", __func__, socket_name);
+
+	for(;;) {
+		memset(buf, 0, sizeof(buf));
+		MODEMD_LOGD("%s: begin detect blocked event on socket %s...", __func__, socket_name);
+		do {
+			numRead = read(soc_fd, buf, sizeof(buf));
+		} while(numRead < 0 && errno == EINTR);
+		if(numRead <= 0) {
+			MODEMD_LOGE("%s: read numRead=%d, error: %s", __func__, numRead, strerror(errno));
+			if(modem == TD_MODEM) {
+				pthread_mutex_lock(&td_state_mutex);
+				if(td_modem_state != MODEM_READY) {
+					MODEMD_LOGD("%s: wait for modem ready ...", __func__);
+					pthread_cond_wait(&td_cond, &td_state_mutex);
+					MODEMD_LOGD("%s: modem ready, wake up", __func__);
+				}
+				pthread_mutex_unlock(&td_state_mutex);
+			} else if(modem == W_MODEM) {
+				pthread_mutex_lock(&w_state_mutex);
+				if(w_modem_state != MODEM_READY) {
+					MODEMD_LOGD("%s: wait for modem ready ...", __func__);
+					pthread_cond_wait(&w_cond, &w_state_mutex);
+					MODEMD_LOGD("%s: modem ready, wake up", __func__);
+				}
+				pthread_mutex_unlock(&w_state_mutex);
+			}
+			goto reconnect;
+		}
+		MODEMD_LOGD("%s: read numRead=%d, buf=%s", __func__, numRead, buf);
+		if(numRead > 0) {
+			if(strstr(buf, "TD Modem Blocked") != NULL) {
+				pthread_mutex_lock(&td_state_mutex);
+				if(td_modem_state != MODEM_READY) {
+					pthread_mutex_unlock(&td_state_mutex);
+					continue;
+				}
+				td_modem_state = MODEM_ASSERT;
+				pthread_mutex_unlock(&td_state_mutex);
+			} else if(strstr(buf, "W Modem Blocked") != NULL) {
+				pthread_mutex_lock(&w_state_mutex);
+				if(w_modem_state != MODEM_READY) {
+					pthread_mutex_unlock(&w_state_mutex);
+					continue;
+				}
+				w_modem_state = MODEM_ASSERT;
+				pthread_mutex_unlock(&w_state_mutex);
+			} else {
+				MODEMD_LOGD("%s: read invalid string from socket %s", __func__, socket_name);
+				continue;
+			}
+
+			is_assert = 1;
+
+			if(modem == TD_MODEM) {
+				property_get(TD_LOOP_PRO, loop_dev, TD_LOOP_DEV);
+			} else if(modem == W_MODEM) {
+				property_get(W_LOOP_PRO, loop_dev, W_LOOP_DEV);
+			} else {
+				MODEMD_LOGE("%s: invalid modem type, exit", __func__);
+				exit(-1);
+			}
+
+			loop_fd = open(loop_dev, O_RDWR | O_NONBLOCK);
+			MODEMD_LOGD("%s: open loop dev: %s, fd = %d", __func__, loop_dev, loop_fd);
+			if (loop_fd < 0) {
+				MODEMD_LOGE("%s: open %s failed, error: %s", __func__, loop_dev, strerror(errno));
+			}
+			ret = write(loop_fd, "AT", 3);
+			if(ret < 0) {
+				MODEMD_LOGE("%s: write %s failed, error:%s", __func__, loop_dev, strerror(errno));
+				close(loop_fd);
+			}
+			usleep(100*1000);
+			ret = read(loop_fd, buffer, sizeof(buffer));
+			if (ret <= 0) {
+				MODEMD_LOGE("%s: read %d return %d, errno = %s", __func__, loop_fd , ret, strerror(errno));
+				close(loop_fd);
+			}
+			if(!strcmp(buffer, "AT")) {
+				MODEMD_LOGD("%s: loop spipe %s is OK", __func__, loop_dev);
+			}
+			close(loop_fd);
+
+			/* info socket clients that modem is blocked */
+			MODEMD_LOGE("Info all the sock clients that modem is blocked");
+			loop_info_sockclients(buf, numRead);
+
+			/* reset or not according to property */
+			memset(prop, 0, sizeof(prop));
+			property_get(MODEMRESET_PROPERTY, prop, "0");
+			is_reset = atoi(prop);
+			if(is_reset) {
+				MODEMD_LOGD("%s: reset is enabled, reload modem...", __func__);
+				load_sipc_modem_img(modem, is_assert);
+				is_assert = 0;
+			} else {
+				MODEMD_LOGD("%s: reset is not enabled , not reset", __func__);
+				return NULL;
+			}
+		}
+	}
+	close(soc_fd);
 }
 
 /* loop detect sipc modem state */
@@ -236,9 +404,27 @@ void* detect_sipc_modem(void *param)
 			MODEMD_LOGD("buf=%s", buf);
 			if(strstr(buf, "Modem Reset")) {
 				MODEMD_LOGD("modem reset happen, reload modem...");
+				if(modem == TD_MODEM) {
+					pthread_mutex_lock(&td_state_mutex);
+					td_modem_state = MODEM_RESET;
+					pthread_mutex_unlock(&td_state_mutex);
+				} else if(modem == W_MODEM) {
+					pthread_mutex_lock(&w_state_mutex);
+					w_modem_state = MODEM_RESET;
+					pthread_mutex_unlock(&w_state_mutex);
+				}
 				load_sipc_modem_img(modem, is_assert);
 				is_assert = 0;
 			} else if(strstr(buf, "Modem Assert") || strstr(buf, "wdtirq")) {
+				if(modem == TD_MODEM) {
+					pthread_mutex_lock(&td_state_mutex);
+					td_modem_state = MODEM_ASSERT;
+					pthread_mutex_unlock(&td_state_mutex);
+				} else if(modem == W_MODEM) {
+					pthread_mutex_lock(&w_state_mutex);
+					w_modem_state = MODEM_ASSERT;
+					pthread_mutex_unlock(&w_state_mutex);
+				}
 				if(strstr(buf, "wdtirq")) {
 					if(modem == TD_MODEM) {
 						MODEMD_LOGD("td modem hangup");
@@ -255,19 +441,8 @@ void* detect_sipc_modem(void *param)
 				is_assert = 1;
 
 				/* info socket clients that modem is assert or hangup */
-				for(i = 0; i < MAX_CLIENT_NUM; i++) {
-					MODEMD_LOGE("client_fd[%d]=%d\n",i, client_fd[i]);
-					if(client_fd[i] >= 0) {
-						ret = write(client_fd[i], buf, numRead);
-						MODEMD_LOGE("write %d bytes to client_fd[%d]:%d to info modem is assert",
-							numRead, i, client_fd[i]);
-						if(ret < 0) {
-							MODEMD_LOGE("reset client_fd[%d]=-1",i);
-							close(client_fd[i]);
-							client_fd[i] = -1;
-						}
-					}
-				}
+				MODEMD_LOGE("Info all the sock clients that modem is assert/hangup");
+				loop_info_sockclients(buf, numRead);
 
 				/* reset or not according to property */
 				memset(prop, 0, sizeof(prop));
