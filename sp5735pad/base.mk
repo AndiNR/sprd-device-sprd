@@ -99,12 +99,7 @@ endif
 PRODUCT_PACKAGES += \
             $(BRCM_FM) \
             $(SPRD_FM_APP)
-#We confirm(2012-12-26):we will only use maxscend
-#ifeq ($(BOARD_CMMB_HW), mxd)
-#PRODUCT_PACKAGES += $(MXD_CMMB_PLAYER)
-#else
-#PRODUCT_PACKAGES += $(SIANOMTV)
-#endif
+
 
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/init.rc:root/init.rc \
@@ -126,6 +121,7 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/scripts/ext_data.sh:system/bin/ext_data.sh \
 	$(BOARDDIR)/scripts/ext_kill.sh:system/bin/ext_kill.sh \
 	$(BOARDDIR)/scripts/ext_chown.sh:system/bin/ext_chown.sh \
+	$(BOARDDIR)/headset-keyboard.kl:system/usr/keylayout/headset-keyboard.kl \
 	device/sprd/common/libs/mali/egl.cfg:system/lib/egl/egl.cfg \
 	device/sprd/common/libs/audio/audio_policy.conf:system/etc/audio_policy.conf \
 	device/sprd/sp5735pad/media_codecs.xml:system/etc/media_codecs.xml \
@@ -148,7 +144,7 @@ PRODUCT_COPY_FILES := \
 	frameworks/native/data/etc/android.software.live_wallpaper.xml:system/etc/permissions/android.software.live_wallpaper.xml \
 	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml \
 	device/sprd/partner/brcm/gps/glgps:/system/bin/glgps \
-	device/sprd/partner/brcm/gps/gpsconfig_uart.xml:/system/etc/gpsconfig.xml \
+	device/sprd/partner/brcm/gps/gpsconfig_shark.xml:/system/etc/gpsconfig.xml \
 	device/sprd/partner/brcm/gps/gps.default.so:/system/lib/hw/gps.default.so
 
 ifeq ($(ENABLE_BLUETOOTH), true)
