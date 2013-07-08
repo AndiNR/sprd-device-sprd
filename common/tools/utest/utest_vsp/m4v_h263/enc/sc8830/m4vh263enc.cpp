@@ -333,7 +333,7 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
     float psnr_v = .0f;
 #endif
 
-    MP4Handle *mHandle;
+    MP4Handle *mHandle = NULL;
 
     // VSP buffer
 //	unsigned char* pbuf_inter = NULL;
@@ -630,7 +630,10 @@ err:
         dlclose(mLibHandle);
         mLibHandle = NULL;
     }
-
+    if (mHandle != NULL)
+    {
+        free (mHandle);
+    }
     if (pbuf_extra != NULL)
     {
         pmem_extra.clear();
