@@ -80,6 +80,7 @@ static pthread_mutex_t    cb_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t    status_mutex = PTHREAD_MUTEX_INITIALIZER;
 static uint32_t           is_on = 0;
 static pthread_t          v4l2_thread;
+static uint32_t           chn_status[CHN_MAX];
 
 static int      cmr_v4l2_create_thread(void);
 static int      cmr_v4l2_kill_thread(void);
@@ -114,7 +115,7 @@ int cmr_v4l2_init(void)
 
 	ret = cmr_v4l2_create_thread();
 	v4l2_evt_cb = NULL;
-
+	memset(chn_status, 0, sizeof(chn_status));
 	return ret;
 }
 
@@ -264,14 +265,14 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *config)
 		return -1;
 
 	CMR_LOGV("channel_id %d", config->channel_id);
-        cfg_id = config->channel_id;
+	cfg_id = config->channel_id;
 	stream_parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	stream_parm.parm.capture.capability = PATH_FRM_DECI;
 
 	stream_parm.parm.capture.reserved[0] = config->channel_id;
 	stream_parm.parm.capture.reserved[1] = config->chn_deci_factor;
 	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
-	CMR_LOGV("channel_id=%d, deci_factor=%d, ret = %d \n", config->channel_id, config->chn_deci_factor, ret);
+	CMR_LOGV("channel_id  %d, deci_factor %d, ret %d \n", config->channel_id, config->chn_deci_factor, ret);
 
 	if (CHN_1 == cfg_id) {
 		buf_type  = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -317,7 +318,9 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *config)
 		if (format.fmt.pix.sizeimage) {
 			config->cfg.need_binning = 1;
 		}
-		CMR_RTN_IF_ERR(ret);
+		if (0 == ret) {
+			chn_status[cfg_id] = CHN_BUSY;
+		}
 	} else {
 		CMR_LOGV("fourcc not founded dst_img_fmt=0x%x \n", config->cfg.dst_img_fmt);
 	}
@@ -378,7 +381,7 @@ exit:
 
 int cmr_v4l2_cap_start(uint32_t skip_num)
 {
-	int                      ret = 0;
+	int                      i, ret = 0;
 	struct v4l2_streamparm   stream_parm;
 	enum v4l2_buf_type       buf_type;
 
@@ -396,7 +399,6 @@ int cmr_v4l2_cap_start(uint32_t skip_num)
 		is_on = 1;
 		pthread_mutex_unlock(&status_mutex);
 	}
-
 exit:
 	CMR_LOGV("ret = %d.",ret);
 	return ret;
@@ -404,7 +406,7 @@ exit:
 
 int cmr_v4l2_cap_stop(void)
 {
-	int                      ret = 0;
+	int                      i, ret = 0;
 	enum v4l2_buf_type       buf_type;
 
 	CMR_CHECK_FD;
@@ -414,8 +416,11 @@ int cmr_v4l2_cap_stop(void)
 
 	ret = ioctl(fd, VIDIOC_STREAMOFF, &buf_type);
 	CMR_LOGV("streamoff done.");
-exit:
+	for (i = 0; i < CHN_MAX; i ++) {
+		chn_status[i] = CHN_IDLE;
+	}
 
+exit:
 	return ret;
 }
 
@@ -443,6 +448,7 @@ int cmr_v4l2_cap_resume(uint32_t channel_id, uint32_t skip_number, uint32_t deci
 
 	stream_parm.parm.capture.reserved[0] = channel_id;
 	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
+	chn_status[channel_id] = CHN_BUSY;
 	return ret;
 }
 
@@ -460,6 +466,7 @@ int cmr_v4l2_cap_pause(uint32_t channel_id, uint32_t reconfig_flag)
 
 	stream_parm.parm.capture.reserved[0] = channel_id;
 	stream_parm.parm.capture.reserved[1] = reconfig_flag;
+	chn_status[channel_id] = CHN_IDLE;
 	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
 	return ret;
 }
@@ -497,6 +504,10 @@ int cmr_v4l2_free_frame(uint32_t channel_id, uint32_t index)
 		return ret;
 	}
 	pthread_mutex_unlock(&status_mutex);
+	if (CHN_BUSY != chn_status[channel_id]) {
+		CMR_LOGV("channel %d not on, no need to free current frame", channel_id);
+		return ret;
+	}
 	v4l2_buf.index = index;
 	if (CHN_0 == channel_id) {
 
@@ -506,7 +517,9 @@ int cmr_v4l2_free_frame(uint32_t channel_id, uint32_t index)
 		v4l2_buf.type  = V4L2_BUF_TYPE_PRIVATE;
 	}
 	ret = ioctl(fd, VIDIOC_QBUF, &v4l2_buf);
-
+	if (ret) {
+		CMR_LOGE("Failed to free frame, %d", ret);
+	}
 	return ret;
 }
 
