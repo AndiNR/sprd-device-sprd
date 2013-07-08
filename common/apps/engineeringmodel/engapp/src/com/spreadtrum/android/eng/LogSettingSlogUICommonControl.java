@@ -233,7 +233,7 @@ public class LogSettingSlogUICommonControl extends Activity implements SlogUISyn
                         LogSettingSlogUICommonControl.this.syncState();
                     }
                 };
-                setThread.run();
+                setThread.start();
             }
         };
         
