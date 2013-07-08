@@ -234,7 +234,7 @@ int mali_attach_dma_buf(struct mali_session_data *session, _mali_uk_attach_dma_b
 		if (NULL == mem)
 		{
 			MALI_PRINT_ERROR(("Failed to allocate dma-buf tracing struct\n"));
-			dma_buf_put(mem->buf);
+			dma_buf_put(buf);
 			return -ENOMEM;
 		}
 		_mali_osk_atomic_init(&mem->ref, 1);
