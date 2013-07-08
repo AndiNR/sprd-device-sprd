@@ -20,3 +20,6 @@ ro.system.property.singleconn=true
 
 # Can not install packages if the data space has used more than the following ratio value
 ro.installer.limitpercent=85
+
+# Add Porperty for orange
+ro.support.orange=false
