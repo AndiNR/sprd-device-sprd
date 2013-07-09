@@ -440,7 +440,7 @@ OBJECT_IDENTIFIER_set_single_arc(uint8_t *arcbuf, const void *arcval, unsigned i
 	unsigned int cache;
 	uint8_t *bp = arcbuf;
 	int bits;
-	uint8_t buffer[16];
+	uint8_t buffer[18];
 
 	if(isLittleEndian && !prepared_order) {
 		const uint8_t *a = (const unsigned char *)arcval + arcval_size - 1;

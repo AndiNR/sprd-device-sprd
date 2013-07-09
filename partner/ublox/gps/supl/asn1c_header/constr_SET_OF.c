@@ -395,7 +395,7 @@ SET_OF_encode_der(asn_TYPE_descriptor_t *td, void *ptr,
 			encoded_el->length = 0;
 			encoded_el->size = max_encoded_len;
 		} else {
-			for(edx--; edx >= 0; edx--)
+			for(edx--; (edx >= 0)&&(encoded_els[edx].buf!=NULL); edx--)
 				FREEMEM(encoded_els[edx].buf);
 			FREEMEM(encoded_els);
 			erval.encoded = -1;
