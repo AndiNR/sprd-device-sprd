@@ -1554,9 +1554,9 @@ int camera_after_set(enum restart_mode re_mode,
 		return ret;
 	}
 
-	/*ret = camera_wait_start(g_cxt);*/
+	ret = camera_wait_start(g_cxt);
 	g_cxt->set_flag ++;
-	ret = camera_wait_set(g_cxt);
+	//ret = camera_wait_set(g_cxt);
 
 	return ret;
 }
@@ -2870,7 +2870,7 @@ int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info
 	case CMR_EVT_AFTER_SET:
 		ret = camera_after_set_internal(sub_type);
 		g_cxt->err_code = ret;
-		/*camera_start_done(g_cxt);*/
+		camera_start_done(g_cxt);
 
 		break;
 
