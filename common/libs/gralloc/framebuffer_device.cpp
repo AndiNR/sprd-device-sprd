@@ -243,7 +243,7 @@ int init_frame_buffer_locked(struct private_module_t* module)
 	info.reserved[2] = 0;
 	info.xoffset = 0;
 	info.yoffset = 0;
-	info.activate = FB_ACTIVATE_NOW;
+	info.activate = FB_ACTIVATE_NOW_NO_DISP;
 
 	char value[PROPERTY_VALUE_MAX];
 	property_get("ro.sf.lcd_width", value, "1");
