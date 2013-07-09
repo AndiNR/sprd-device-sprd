@@ -416,7 +416,7 @@ static void *modemd_listenaccept_thread(void *par)
 
 static void start_modem(int *para)
 {
-	pthread_t tid1, tid2;
+	pthread_t tid1, tid2, tid3, tid4;
 	int modem = -1;
 	char prop[30];
 	char modem_enable[5];
@@ -449,11 +449,13 @@ static void start_modem(int *para)
 			MODEMD_LOGD("It's td native version");
 			start_service(modem, 0, 0);
 			pthread_create(&tid1, NULL, (void*)detect_sipc_modem, (void *)para);
+			pthread_create(&tid3, NULL, (void*)detect_modem_blocked, (void *)para);
 		} else if(!strcmp(modem_dev, W_PROC_DEV)) {
 			/*  sipc w modem */
 			MODEMD_LOGD("It's w native version");
 			start_service(modem, 0, 0);
 			pthread_create(&tid2, NULL, (void*)detect_sipc_modem, (void *)para);
+			pthread_create(&tid4, NULL, (void*)detect_modem_blocked, (void *)para);
 		} else {
 			/*  vlx version, only one modem */
 			MODEMD_LOGD("It's vlx version");
