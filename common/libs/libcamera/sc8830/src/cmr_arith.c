@@ -100,6 +100,11 @@ void *arithmetic_fd_thread_proc(void *data)
 			s_arith_cxt->fd_busy = 1;
 			sem_post(&s_arith_cxt->fd_sync_sem);
 			pthread_mutex_lock(&s_arith_cxt->fd_lock);
+			if (CMR_IDLE == cxt->preview_status) {
+				s_arith_cxt->fd_busy = 0;
+				pthread_mutex_unlock(&s_arith_cxt->fd_lock);
+				break;
+			}
 			addr = message.data;
 			if (NULL == s_arith_cxt->addr) {
 				s_arith_cxt->fd_busy = 0;
@@ -116,6 +121,11 @@ void *arithmetic_fd_thread_proc(void *data)
 			} else {
 				frame_type.face_ptr = face_rect_ptr;
 				frame_type.face_num = face_num;
+				if (CMR_IDLE == cxt->preview_status) {
+					s_arith_cxt->fd_busy = 0;
+					pthread_mutex_unlock(&s_arith_cxt->fd_lock);
+					break;
+				}
 				for (k=0 ; k<face_num ; k++) {
 					CMR_LOGI("face num %d,smile_level %d.",k,face_rect_ptr->smile_level);
 					face_rect_ptr++;
