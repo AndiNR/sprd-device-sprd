@@ -131,7 +131,28 @@ typedef struct
 }parameters_head_t;
 
 static unsigned short s_vbc_pipe_count = 0;
-	
+enum VBC_CALL_FLOW
+{
+    VBC_CALL_CLOSE_DEVICE = 0,
+    VBC_CALL_OPEN_DEVICE  = 1,
+    VBC_CALL_SET_MODE     = 2,
+    VBC_CALL_SET_GAIN     = 3,
+    VBC_CALL_SET_MUTE     = 4,
+    VBC_CALL_DEVICE_CTRL  = 5,
+    VBC_CALL_SWITCH_CTRL  = 6,
+    VBC_CALL_END          = 7
+};
+
+static char *call_control_flag[VBC_CALL_END] = {
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+};
+
 typedef struct
 {
 	char vbpipe[VBC_PIPE_NAME_MAX_LEN];//vbpipe5/vbpipe6
@@ -164,6 +185,14 @@ static vbc_ctrl_pipe_para_t s_default_vbc_ctrl_pipe_info =
 /*
  * local functions declaration.
  */
+static int  vbc_call_set_flag(unsigned int flag);
+
+static int  vbc_call_get_flag(void);
+
+static int  vbc_call_open_device(struct tiny_audio_device *adev);
+
+static int  vbc_call_init_call_process(struct tiny_audio_device *adev) ;
+
 static int  ReadParas_Head(int fd_pipe,  parameters_head_t *head_ptr);
 
 static int  WriteParas_Head(int fd_pipe,  parameters_head_t *head_ptr);
@@ -181,6 +210,84 @@ void *vbc_ctrl_thread_routine(void *args);
 /*
  * local functions definition.
  */
+static int vbc_call_set_flag(unsigned int flag)
+{
+    property_set("alsa.audio.vbc.call.flag", call_control_flag[flag]);
+#if 0
+    char propBuf[10] = {0};
+
+    property_get("alsa.audio.vbc.call.flag", propBuf, "0");
+#endif
+
+    return 0;
+}
+
+static int vbc_call_get_flag(void)
+{
+    char propBuf[10] = {0};
+
+    property_get("alsa.audio.vbc.call.flag", propBuf, "0");
+
+    ALOGW("vbc_call_get_flag call_control_flow = %s\n", propBuf);
+
+    return atoi(propBuf);
+}
+
+static int vbc_call_init_call_process(struct tiny_audio_device *adev)
+{
+    char propBuf[15] = {0};
+
+    if (property_get("alsa.audio.vbc.modem.reset", propBuf, "0") &&
+        (0 == strcmp(propBuf, "modemreset")))
+    {
+        ALOGW("modem crash");
+        vbc_call_set_flag(VBC_CALL_CLOSE_DEVICE);
+        property_set("alsa.audio.vbc.modem.reset", "0");
+
+        return 0;
+    }
+
+    switch (vbc_call_get_flag())
+    {
+        case VBC_CALL_SWITCH_CTRL:
+            ALOGW("vbc_call_init_call_process set vbc control to dsp\n");
+            mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 0);
+            //break;
+            //comment break
+        case VBC_CALL_OPEN_DEVICE:
+            vbc_call_open_device(adev);
+            break;
+        default:
+            ALOGW("vbc_call_init_call_process default");
+            break;
+    }
+
+    return 0;
+}
+
+static int vbc_call_open_device(struct tiny_audio_device *adev)
+{
+    int ret = 0;
+
+    adev->pcm_modem_dl= pcm_open(s_tinycard, PORT_MODEM, PCM_OUT | PCM_MMAP, &pcm_config_vx);
+    if (!pcm_is_ready(adev->pcm_modem_dl)) {
+        ALOGE("cannot open pcm_modem_dl : %s", pcm_get_error(adev->pcm_modem_dl));
+        pcm_close(adev->pcm_modem_dl);
+        ret = -1;
+    }
+    adev->pcm_modem_ul= pcm_open(s_tinycard, PORT_MODEM, PCM_IN, &pcm_config_vrec_vx);
+    if (!pcm_is_ready(adev->pcm_modem_ul)) {
+        ALOGE("cannot open pcm_modem_ul : %s", pcm_get_error(adev->pcm_modem_ul));
+        pcm_close(adev->pcm_modem_ul);
+        pcm_close(adev->pcm_modem_dl);
+        ret = -1;
+    }
+    adev->call_start = 1;
+    ALOGW("START CALL,open pcm device..call_start = %d.\n", adev->call_start);
+
+    return ret;
+}
+
 static int  ReadParas_Head(int fd_pipe,  parameters_head_t *head_ptr)
 {
     int ret = 0;
@@ -967,6 +1074,9 @@ RESTART:
             goto RESTART;
         } else {
             para->vbpipe_pre_fd = para->vbpipe_fd;
+
+            vbc_call_init_call_process(adev);
+
             ALOGW("vbpipe_name(%s) vbpipe_fd(%d) open successfully.", para->vbpipe, para->vbpipe_fd);
         }
     } else {
@@ -1042,24 +1152,14 @@ RESTART:
                 pthread_mutex_lock(&adev->lock);
                 ALOGW("VBC_CMD_HAL_OPEN, got lock");
                 force_all_standby(adev);    /*should standby because MODE_IN_CALL is later than call_start*/
-                adev->pcm_modem_dl= pcm_open(s_tinycard, PORT_MODEM, PCM_OUT | PCM_MMAP, &pcm_config_vx);
-                if (!pcm_is_ready(adev->pcm_modem_dl)) {
-                    ALOGE("cannot open pcm_modem_dl : %s", pcm_get_error(adev->pcm_modem_dl));
-                    pcm_close(adev->pcm_modem_dl);
+                if (vbc_call_open_device(adev) != 0)
+                {
                     para->is_exit = 1;
                 }
-                adev->pcm_modem_ul= pcm_open(s_tinycard, PORT_MODEM, PCM_IN, &pcm_config_vrec_vx);
-                if (!pcm_is_ready(adev->pcm_modem_ul)) {
-                    ALOGE("cannot open pcm_modem_ul : %s", pcm_get_error(adev->pcm_modem_ul));
-                    pcm_close(adev->pcm_modem_ul);
-                    pcm_close(adev->pcm_modem_dl);
-                    para->is_exit = 1;
-                }
-                ALOGW("START CALL,open pcm device...");
-                adev->call_start = 1;
                 SetParas_OpenHal_Incall(para->vbpipe_fd);   //get sim card number
                 adev->cur_vbpipe_fd = para->vbpipe_fd;
 		adev->cp_type = para->cp_type;
+                vbc_call_set_flag(VBC_CALL_OPEN_DEVICE);
                 pthread_mutex_unlock(&adev->lock);
                 MY_TRACE("VBC_CMD_HAL_OPEN OUT, cur_vbpipe_id:%d, vbpipe_name:%s.", adev->cur_vbpipe_fd, para->vbpipe);
             }
@@ -1089,6 +1189,7 @@ RESTART:
                 ReadParas_Head(para->vbpipe_fd,&write_common_head);
                 Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_HAL_CLOSE);
                 adev->call_prestop = 0;
+                vbc_call_set_flag(VBC_CALL_CLOSE_DEVICE);
                 MY_TRACE("VBC_CMD_HAL_CLOSE OUT.");
             }
             break;
@@ -1143,6 +1244,7 @@ RESTART:
                 pthread_mutex_lock(&adev->lock);
                 adev->call_connected = 1;
                 pthread_mutex_unlock(&adev->lock);
+                vbc_call_set_flag(VBC_CALL_SWITCH_CTRL);
                 MY_TRACE("VBC_CMD_SWITCH_CTRL OUT.");
             }
             break;
