@@ -1719,6 +1719,10 @@ int camera_stop_preview_internal(void)
 	CMR_PRINT_TIME;
 
 	g_cxt->preview_status = CMR_IDLE;
+	if (ISP_COWORK == g_cxt->isp_cxt.isp_state) {
+		pthread_mutex_lock(&g_cxt->af_cb_mutex);
+		pthread_mutex_unlock(&g_cxt->af_cb_mutex);
+	}
 	g_cxt->chn_1_status   = CHN_IDLE;
 
 	camera_scaler_deinit();
@@ -2668,6 +2672,7 @@ int32_t camera_isp_evt_cb(int32_t evt, void* data)
 		memcpy(message.data, data, sizeof(struct frm_info));
 	}
 	message.msg_type = evt;
+    if (CMR_IDLE != g_cxt->preview_status) {
 	ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
 
 	if (ret) {
@@ -2676,7 +2681,15 @@ int32_t camera_isp_evt_cb(int32_t evt, void* data)
 		}
 		CMR_LOGE("Faile to send one msg to camera main thread");
 	}
-
+    } else {
+		ret = camera_isp_handle(message.msg_type,
+					message.sub_msg_type,
+					(void *)message.data);
+		if (message.data) {
+			free(message.data);
+		}
+		CMR_LOGE("camera_isp_handle handle error.");
+	}
 	return 0;
 }
 
@@ -3388,7 +3401,17 @@ void *camera_af_thread_proc(void *data)
 			break;
 		case CMR_EVT_AF_START:
 			CMR_PRINT_TIME;
+			if (CMR_IDLE == g_cxt->preview_status) {
+				CMR_LOGI("preview already stoped.");
+				break;
+			}
+			pthread_mutex_lock(&g_cxt->af_cb_mutex);
 			ret = camera_autofocus_start();
+			pthread_mutex_unlock(&g_cxt->af_cb_mutex);
+			if (CMR_IDLE == g_cxt->preview_status) {
+				CMR_LOGI("preview already stoped.");
+				break;
+			}
 			if (CAMERA_INVALID_STATE == ret) {
 				camera_call_af_cb(CAMERA_EXIT_CB_ABORT,
 					message.data,
