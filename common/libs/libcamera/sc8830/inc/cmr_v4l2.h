@@ -53,6 +53,11 @@ enum cmr_v4l2_evt {
 	CMR_V4L2_MAX,
 };
 
+enum cmr_v4l2_rtn {
+	CMR_V4L2_RET_OK = 0,
+	CMR_V4L2_RET_RESTART,
+	CMR_V4L2_RET_MAX,
+};
 	
 struct img_frm_cap {
 	struct img_rect                     src_img_rect;

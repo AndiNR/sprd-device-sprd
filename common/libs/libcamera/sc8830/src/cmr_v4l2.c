@@ -320,6 +320,9 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *config)
 		}
 		if (0 == ret) {
 			chn_status[cfg_id] = CHN_BUSY;
+		} else if (ret > 0) {
+			CMR_LOGV("need restart");
+			ret = CMR_V4L2_RET_RESTART;
 		}
 	} else {
 		CMR_LOGV("fourcc not founded dst_img_fmt=0x%x \n", config->cfg.dst_img_fmt);

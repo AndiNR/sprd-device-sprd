@@ -1507,8 +1507,22 @@ int camera_after_set_internal(enum restart_mode re_mode)
 
 		ret = camera_preview_weak_init(g_cxt->preview_fmt);
 		if (ret) {
-			CMR_LOGE("Failed to init preview when preview");
-			return -CAMERA_FAILED;
+			if (CMR_V4L2_RET_RESTART == ret) {
+				ret = camera_stop_preview_internal();
+				if (ret) {
+					CMR_LOGE("Failed to stop preview");
+					return -CAMERA_FAILED;
+				}
+				ret  = camera_start_preview_internal();
+				if (ret) {
+					CMR_LOGE("Failed to restart preview");
+					return -CAMERA_FAILED;
+				}
+				return 0;
+			} else {
+				CMR_LOGE("Failed to init preview when preview");
+				return -CAMERA_FAILED;
+			}
 		}
 		CMR_LOGV("cap_mode %d", g_cxt->cap_mode);
 		if (IS_ZSL_MODE(g_cxt->cap_mode)) {
@@ -3654,7 +3668,7 @@ int camera_preview_weak_init(int format_mode)
 	}
 
 	CMR_LOGI("sensor output, width, hegiht %d %d", sensor_mode->width, sensor_mode->height);
-	v4l2_cfg.channel_id = 1;
+	v4l2_cfg.channel_id = CHN_1;
 	v4l2_cfg.cfg.dst_img_size.width   = g_cxt->preview_size.width;
 	v4l2_cfg.cfg.dst_img_size.height  = g_cxt->preview_size.height;
 	v4l2_cfg.cfg.notice_slice_height  = v4l2_cfg.cfg.dst_img_size.height;
