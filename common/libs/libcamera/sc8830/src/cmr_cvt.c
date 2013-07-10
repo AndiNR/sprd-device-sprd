@@ -24,6 +24,7 @@
 #include "img_scale_u.h"
 #include "cmr_cvt.h"
 #include "sprd_rot_k.h"
+#include "sprd_dma_copy_k.h"
 
 #define CVT_EXIT_IF_ERR(n)                                             \
 		do {                                                   \
@@ -78,6 +79,9 @@ static pthread_t          scaler_thread;
 static struct scale_cxt   *sc_cxt;
 static sem_t              scaler_sem;
 static sem_t              scaler_init_sem;
+static sem_t              dma_copy_sem;
+static char               dma_copy_dev_name[50] = "/dev/sprd_dma_copy";
+static int                dma_copy_fd = -1;
 
 static int   cmr_rot_create_thread(void);
 static int   cmr_rot_kill_thread(void);
@@ -1067,3 +1071,80 @@ static enum scale_fmt cmr_scale_fmt_cvt(uint32_t cmt_fmt)
 	return sc_fmt;
 }
 
+int cmr_dma_copy_init(void)
+{
+	int                      ret = 0;
+
+	dma_copy_fd = open(dma_copy_dev_name, O_RDWR, 0);
+
+	if (-1 == dma_copy_fd) {
+		CMR_LOGE("Fail to open dma copy device.");
+		return -ENODEV;
+	} else {
+		CMR_LOGV("OK to open dma copy device.");
+	}
+
+	sem_init(&dma_copy_sem, 0, 1);
+
+	return ret;
+}
+
+int cmr_dma_copy_deinit(void)
+{
+	int                      ret = 0;
+
+	CMR_LOGV("Start to close dma copy device.");
+
+	if (-1 == dma_copy_fd) {
+		CMR_LOGE("Invalid dam copyfd");
+		return -ENODEV;
+	}
+
+	sem_wait(&dma_copy_sem);
+	sem_post(&dma_copy_sem);
+
+	sem_destroy(&dma_copy_sem);
+
+	if (-1 == close(dma_copy_fd)) {
+		exit(EXIT_FAILURE);
+	}
+
+	dma_copy_fd = -1;
+
+	CMR_LOGV("close device.");
+
+	return 0;
+}
+
+int cmr_dma_cpy(uint32_t dst_addr, uint32_t src_addr,
+			uint32_t len)
+{
+	struct _dma_copy_cfg_tag      dma_copy_cfg;
+	int                      ret = 0;
+
+	CMR_LOGV("dma copy start");
+
+	if (-1 == dma_copy_fd) {
+		CMR_LOGE("invalid dma copy fd");
+		return -ENODEV;
+	}
+
+	if (0 == src_addr || 0 == dst_addr || 0 == len) {
+		CMR_LOGE("dma copy wrong parameter.");
+		return -EINVAL;
+	}
+
+	dma_copy_cfg.src_addr = src_addr;
+	dma_copy_cfg.dst_addr = dst_addr;
+	dma_copy_cfg.len = len;
+
+	sem_wait(&dma_copy_sem);
+
+	ret = ioctl(dma_copy_fd, 0, &dma_copy_cfg);
+
+	sem_post(&dma_copy_sem);
+
+	CMR_LOGV("dma copy done");
+
+	return ret;
+}

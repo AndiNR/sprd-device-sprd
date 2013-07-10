@@ -72,6 +72,9 @@ int  cmr_scale_next(uint32_t     slice_height,
 
 int cmr_scale_deinit(void);
 int cmr_scale_capability(uint32_t *width, uint32_t *sc_factor);
+int cmr_dma_copy_init(void);
+int cmr_dma_copy_deinit(void);
+int cmr_dma_cpy(uint32_t dst_addr, uint32_t src_addr, uint32_t len);
 
 #ifdef __cplusplus
 }

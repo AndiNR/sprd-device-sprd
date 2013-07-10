@@ -28,7 +28,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <cutils/properties.h>
-
+#include "sprd_dma_copy_k.h"
 #include "../../../gralloc/gralloc_priv.h"
 #include "ion_sprd.h"
 
@@ -384,7 +384,11 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 
     LOGV("%s: preview format %s", __func__, str_preview_format);
 
-	usage = GRALLOC_USAGE_SW_WRITE_OFTEN;
+#if DCAM_DMA_COPY_SUPPORT
+    usage = GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_PRIVATE_0;
+#else
+    usage = GRALLOC_USAGE_SW_WRITE_OFTEN;
+#endif
 
     if (preview_width > 640) {
 
@@ -2127,8 +2131,18 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 		return false;
 	}
 
-	//ret = camera_copy_data_virtual(width, height, phy_addr, (uint32_t)vaddr);
+#if DCAM_DMA_COPY_SUPPORT
+	{
+		struct private_handle_t *private_h = NULL;
+		uint32_t dst_phy_addr = 0;
+
+		private_h = (struct private_handle_t *)(*buf_handle);
+		dst_phy_addr =  (uint32_t)(private_h->phyaddr);
+		ret = camera_dma_copy_data(dst_phy_addr, phy_addr, ((width+15)&(~15))*((height+15)&(~15))*3/2);
+	}
+#else
 	memcpy(vaddr, virtual_addr, ((width+15)&(~15))*((height+15)&(~15))*3/2);
+#endif
 	mGrallocHal->unlock(mGrallocHal, *buf_handle);
 
 	if(0 != ret) {

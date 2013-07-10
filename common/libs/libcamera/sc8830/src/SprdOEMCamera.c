@@ -424,6 +424,64 @@ exit:
 	return ret;
 }
 
+int camera_dma_copy_init(void)
+{
+	struct camera_ctrl       *ctrl = &g_cxt->control;
+	int                      ret   = CAMERA_SUCCESS;
+
+	if (1 == ctrl->dma_copy_inited) {
+		CMR_LOGI("dma copy has been intialized");
+		goto exit;
+	}
+
+	ret = cmr_dma_copy_init();
+	if (ret) {
+		CMR_LOGE("Failed to init dma copy %d", ret);
+		ret = -CAMERA_NOT_SUPPORTED;
+	} else {
+		ctrl->dma_copy_inited = 1;
+	}
+
+exit:
+	return ret;
+}
+
+int camera_dma_copy_deinit(void)
+{
+	struct camera_ctrl       *ctrl = &g_cxt->control;
+	int                      ret   = CAMERA_SUCCESS;
+
+	if (0 == ctrl->dma_copy_inited) {
+		CMR_LOGI("dma copy has been de-intialized");
+		goto exit;
+	}
+
+	ret = cmr_dma_copy_deinit();
+	if (ret) {
+		CMR_LOGE("Failed to de-init dma copy %d", ret);
+		ret = -CAMERA_NOT_SUPPORTED;
+		goto exit;
+	}
+
+	ctrl->dma_copy_inited = 0;
+
+exit:
+	return ret;
+}
+
+int camera_dma_copy_data(uint32_t dst_addr, uint32_t src_addr, uint32_t len)
+{
+
+	int                      ret = CAMERA_SUCCESS;
+
+	if (!IS_PREVIEW) {
+		CMR_LOGE("Preview Stoped");
+		return ret;
+	}
+
+	return cmr_dma_cpy(dst_addr, src_addr, len);
+}
+
 int camera_rotation_init(void)
 {
 	struct camera_ctrl       *ctrl = &g_cxt->control;
@@ -1065,6 +1123,12 @@ int camera_init_internal(uint32_t camera_id)
 		goto jpeg_deinit;
 	}
 
+	ret = camera_dma_copy_init();
+	if (ret) {
+		CMR_LOGE("Fail to init dma copy device %d", ret);
+		goto rot_deinit;
+	}
+
 	ret = camera_setting_init();
 	if (ret) {
 		CMR_LOGE("Fail to init Setting sub-module");
@@ -1073,6 +1137,8 @@ int camera_init_internal(uint32_t camera_id)
 		goto exit;
 	}
 
+dma_copy_deinit:
+	camera_dma_copy_deinit();
 rot_deinit:
 	camera_rotation_deinit();
 jpeg_deinit:
@@ -1132,6 +1198,8 @@ int camera_stop_internal(void)
 	arithmetic_fd_deinit();
 
 	camera_setting_deinit();
+
+	camera_dma_copy_deinit();
 
 	camera_rotation_deinit();
 

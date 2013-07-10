@@ -1,3 +1,4 @@
+/dev/sprd_dma_copy         0660     system      audio
 /dev/sprd_scale         0660     system      audio
 /dev/sprd_rotation      0660     system      audio
 /dev/sprd_dcam          0660     system      audio

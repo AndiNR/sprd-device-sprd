@@ -28,6 +28,7 @@ extern "C"
 #define FACE_DETECT_NUM		5
 #define FACE_SMILE_LIMIT	10
 #define HDR_CAP_NUM         3
+#define DCAM_DMA_COPY_SUPPORT 0
 
 typedef enum {
 	CAMERA_NORMAL_MODE = 0,
@@ -499,6 +500,7 @@ camera_ret_code_type camera_take_picture_raw(camera_cb_f_type    callback,
 int camera_is_need_stop_preview(void);
 int camera_get_is_scale(void);
 void camera_isp_ae_stab_set (uint32_t is_ae_stab_eb);
+int camera_dma_copy_data(uint32_t dst_addr, uint32_t src_addr, uint32_t len);
 
 #ifdef __cplusplus
 }

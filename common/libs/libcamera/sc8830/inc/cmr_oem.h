@@ -154,6 +154,7 @@ struct camera_ctrl {
 	uint32_t                 scaler_inited;
 	uint32_t                 rot_inited;
 	uint32_t                 arithmetic_inited;
+	uint32_t                 dma_copy_inited;
 };
 
 
