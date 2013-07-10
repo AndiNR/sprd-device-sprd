@@ -1256,10 +1256,6 @@ static CameraInfo sCameraInfo[] = {
         270,  /* orientation */
     },
 #endif
-    {
-        2,
-        0,  /* orientation */
-    } 
 };
 
 static CameraInfo sCameraInfo3[] = {
