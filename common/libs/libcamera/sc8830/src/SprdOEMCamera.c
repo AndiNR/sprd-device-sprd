@@ -767,6 +767,13 @@ int camera_cap_post(void *data)
 		if (ret) {
 			CMR_LOGE("Failed to switch off the sensor stream, %d", ret);
 		}
+		if (ISP_COWORK == g_cxt->isp_cxt.isp_state) {
+			ret = isp_video_stop();
+			g_cxt->isp_cxt.isp_state = ISP_IDLE;
+			if (ret) {
+				CMR_LOGE("Failed to stop ISP video mode, %d", ret);
+			}
+		}
 		CMR_PRINT_TIME;
 		ret = camera_snapshot_stop_set();
 		if (ret) {
@@ -2743,7 +2750,11 @@ void camera_rot_evt_cb(int evt, void* data)
 		memcpy(message.data, data, sizeof(struct img_frm));
 		ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
 	}
-	message.data = malloc(sizeof(struct img_frm));
+	if (ret) {
+		free(message.data);
+		CMR_LOGE("Faile to send one msg to camera main thread");
+	}
+/*	message.data = malloc(sizeof(struct img_frm));
 	if (NULL == message.data) {
 		CMR_LOGE("NO mem, Faile to alloc memory for one msg");
 		return;
@@ -2755,7 +2766,7 @@ void camera_rot_evt_cb(int evt, void* data)
 	if (ret) {
 		free(message.data);
 		CMR_LOGE("Faile to send one msg to camera main thread");
-	}
+	}*/
 
 	return;
 }
