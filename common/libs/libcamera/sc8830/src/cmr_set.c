@@ -334,8 +334,8 @@ int camera_set_sharpness(uint32_t sharpness, uint32_t *skip_mode, uint32_t *skip
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
 		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
-/*		camera_param_to_isp(ISP_CTRL_SATURATION, sharpness, &isp_param);
-		ret = isp_ioctl(ISP_CTRL_SATURATION, (void *)&isp_param);*/
+		/*camera_param_to_isp(ISP_CTRL_SHARPNESS, sharpness, &isp_param);*/
+		ret = isp_ioctl(ISP_CTRL_SHARPNESS, (void *)&sharpness);
 	} else {
 		*skip_mode = IMG_SKIP_SW;
 		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
@@ -840,7 +840,7 @@ int camera_set_ctrl(camera_parm_type id,
 					ret = (*before_set)(RESTART_LIGHTLY);
 					CMR_RTN_IF_ERR(ret);
 				}
-				ret = camera_set_saturation(parm, &skip_mode, &skip_number);
+				ret = camera_set_sharpness(parm, &skip_mode, &skip_number);
 				CMR_RTN_IF_ERR(ret);
 				if (after_set) {
 					ret = (*after_set)(RESTART_LIGHTLY, skip_mode, skip_number);
