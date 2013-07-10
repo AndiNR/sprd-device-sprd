@@ -280,6 +280,10 @@ int update_ring_file(void)
 		return 0;
 	ts.tv_nsec = 0;
 	fd =open("/dev/alarm", O_RDWR);
+	if(fd<0){
+		LOGE("%s:  can't open file /dev/alarm.\n",__func__);
+		return 0;
+	}
 	int result = ioctl(fd, ANDROID_ALARM_SET(4), &ts);
 	if (result < 0)
 	{
