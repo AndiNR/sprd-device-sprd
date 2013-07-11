@@ -15,9 +15,11 @@
 #include "private/android_filesystem_config.h"
 #include <termios.h>
 
-#define DATA_BUF_SIZE (4096*2)
-#define MAX_OPEN_TIMES  10
-#define DATA_EXT_DIAG_SIZE (4096*2)
+int g_ass_start = 0;
+
+#define DATA_BUF_SIZE  (4096*2)
+#define MAX_OPEN_TIMES   10
+#define DATA_EXT_DIAG_SIZE  (4096*2)
 
 static char log_data[DATA_BUF_SIZE];
 static char ext_data_buf[DATA_EXT_DIAG_SIZE];
@@ -300,6 +302,11 @@ void *eng_vdiag_thread(void *x)
 		if(ret == 1)
 			continue;
 		
+               if(2 == r_cnt && log_data[1] == 0xa){
+                       ENG_LOG("eng_vdiag: start to dump memory");
+                       g_ass_start = 1;
+               }
+
 		ENG_LOG("eng_vdiag DIAGLOG:: read length =%d\n", r_cnt);
 		//print_log_data(r_cnt);
 		do{
