@@ -31,6 +31,7 @@
 #define LOG_TAG "isp-video"
 #include <cutils/log.h>
 #include "isp_param_tune_com.h"
+#include "isp_log.h"
 
 enum {
 	CMD_START_PREVIEW = 1,
@@ -82,7 +83,7 @@ struct camera_func{
 #define PREVIEW_MAX_WIDTH 640
 #define PREVIEW_MAX_HEIGHT 480
 
-#define CMD_BUF_SIZE  4096 // 1k
+#define CMD_BUF_SIZE  65536 // 64k
 #define SEND_IMAGE_SIZE 64512 // 63k
 #define DATA_BUF_SIZE 65536 //64k
 #define PORT_NUM 16666        /* Port number for server */
@@ -94,9 +95,10 @@ struct camera_func{
 
 #define CLIENT_DEBUG
 #ifdef CLIENT_DEBUG
-#define DBG ALOGD
+#define DBG ISP_LOG
 #endif
 static uint8_t* preview_buf_ptr = 0;
+static unsigned char diag_rx_buf[CMD_BUF_SIZE];
 static unsigned char diag_cmd_buf[CMD_BUF_SIZE];
 static unsigned char eng_rsp_diag[DATA_BUF_SIZE];
 static int preview_flag = 0; // 1: start preview
@@ -110,6 +112,8 @@ static sem_t capture_sem_lock;
 static int wire_connected = 0;
 static int sockfd = 0;
 static int sock_fd=0;
+static int rx_packet_len=0;
+static int rx_packet_total_len=0;
 int sequence_num = 0;
 struct camera_func s_camera_fun={PNULL, PNULL, PNULL, PNULL};
 struct camera_func* s_camera_fun_ptr=&s_camera_fun;
@@ -193,11 +197,6 @@ static int handle_img_data(uint32_t format, uint32_t width,uint32_t height, char
 
 	msg_ret = (MSG_HEAD_T *)(eng_rsp_diag+1);
 
-	if(8==format)
-	{
-		DBG("%s:ISP_TOOL: imagelen[%d] number[%d]\n",__FUNCTION__, ch0_len, total_number);
-	}
-
 	for (i=0; i<chn0_number; i++, send_number++)
 	{// chn0
 		if (i < chn0_number-1)
@@ -212,10 +211,6 @@ static int handle_img_data(uint32_t format, uint32_t width,uint32_t height, char
 		isp_msg.img_size = size_id;
 		isp_msg.totalpacket = total_number;
 		isp_msg.packetsn = send_number+1;
-		if(8==format)
-		{
-			DBG("%s:ISP_TOOL: request rsp_len[%d] index[%d] len[%d]\n",__FUNCTION__, rsp_len, i, len);
-		}
 
 		memcpy(eng_rsp_diag+rsp_len, (char *)&isp_msg, sizeof(ISP_IMAGE_HEADER_T));
 		rsp_len += sizeof(ISP_IMAGE_HEADER_T);
@@ -229,10 +224,7 @@ static int handle_img_data(uint32_t format, uint32_t width,uint32_t height, char
 		msg_ret->seq_num = sequence_num++;
 		//DBG("%s:ISP_TOOL: request rsp_len[%d]\n",__FUNCTION__, rsp_len);
 		res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
-		if(8==format)
-		{
-			DBG("%s:ISP_TOOL: send success. res: %d, rsp_len: %d.\n",__FUNCTION__, res, rsp_len + 1);
-		}
+
 	}
 
 	for (i=0; i<chn1_number; i++, send_number++)
@@ -249,10 +241,6 @@ static int handle_img_data(uint32_t format, uint32_t width,uint32_t height, char
 		isp_msg.img_size = size_id;
 		isp_msg.totalpacket = total_number;
 		isp_msg.packetsn = send_number+1;
-		if(8==format)
-		{
-			DBG("%s:ISP_TOOL: request rsp_len[%d] index[%d] len[%d]\n",__FUNCTION__, rsp_len, i, len);
-		}
 
 		memcpy(eng_rsp_diag+rsp_len, (char *)&isp_msg, sizeof(ISP_IMAGE_HEADER_T));
 		rsp_len += sizeof(ISP_IMAGE_HEADER_T);
@@ -266,10 +254,7 @@ static int handle_img_data(uint32_t format, uint32_t width,uint32_t height, char
 		msg_ret->seq_num = sequence_num++;
 		//DBG("%s:ISP_TOOL: request rsp_len[%d]\n",__FUNCTION__, rsp_len);
 		res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
-		if(8==format)
-		{
-			DBG("%s:ISP_TOOL: send success. res: %d, rsp_len: %d.\n",__FUNCTION__, res, rsp_len + 1);
-		}
+
 	}
 
 	for (i=0; i<chn2_number; i++, send_number++)
@@ -286,10 +271,6 @@ static int handle_img_data(uint32_t format, uint32_t width,uint32_t height, char
 		isp_msg.img_size = size_id;
 		isp_msg.totalpacket = total_number;
 		isp_msg.packetsn = send_number+1;
-		if(8==format)
-		{
-			DBG("%s:ISP_TOOL: request rsp_len[%d] index[%d] len[%d]\n",__FUNCTION__, rsp_len, i, len);
-		}
 
 		memcpy(eng_rsp_diag+rsp_len, (char *)&isp_msg, sizeof(ISP_IMAGE_HEADER_T));
 		rsp_len += sizeof(ISP_IMAGE_HEADER_T);
@@ -303,17 +284,9 @@ static int handle_img_data(uint32_t format, uint32_t width,uint32_t height, char
 		msg_ret->seq_num = sequence_num++;
 		//DBG("%s:ISP_TOOL: request rsp_len[%d]\n",__FUNCTION__, rsp_len);
 		res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
-		if(8==format)
-		{
-			DBG("%s:ISP_TOOL: send success. res: %d, rsp_len: %d.\n",__FUNCTION__, res, rsp_len + 1);
-		}
+
 	}
 
-
-	if(8==format)
-	{
-		DBG("%s:ISP_TOOL:send data to sk end\n",__FUNCTION__);
-	}
 	return 0;
 }
 
@@ -366,7 +339,7 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 		}
 		case CMD_GET_PREVIEW_PICTURE:
 		{ // ok
-			//DBG("ISP_TOOL:CMD_GET_PREVIEW_PICTURE, preview_flag = %d\n", preview_flag);
+			//DBG("ISP_TOOL:CMD_GET_PREVIEW_PICTURE \n");
 			if(1==preview_flag)
 			{
 				preview_img_end_flag = 0;
@@ -378,7 +351,6 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 				msg_ret->len = rsp_len-1;
 				res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
 			}
-			//DBG("ISP_TOOL:CMD_GET_PREVIEW_PICTURE, done");
 			break;
 		}
 		case CMD_READ_ISP_PARAM:
@@ -738,8 +710,6 @@ void send_img_data(uint32_t format, uint32_t width, uint32_t height, char *imgpt
 {
 	int ret;
 
-	//DBG("ISP_TOOL: send_img_data, preview_img_end_flag = %d, %d, %d", preview_img_end_flag, width, height);
-
 	if (0==preview_img_end_flag)
 	{
 		char *img_ptr = (char *)preview_buf_ptr;
@@ -753,7 +723,7 @@ void send_img_data(uint32_t format, uint32_t width, uint32_t height, char *imgpt
 		//ret = handle_img_data(format, width, height, imgptr, imagelen, 0, 0, 0, 0);
 		sem_post(&preview_sem_lock);
 		if (ret != 0) {
-			DBG("ISP_TOOL:%s: Fail to handle_img_data(). ret = %d.", __FUNCTION__, ret);
+			DBG("ISP_TOOL:Fail to handle_img_data(). ret = %d.", ret);
 		}
 	}
 }
@@ -762,7 +732,7 @@ void send_capture_data_end(uint32_t format)
 {
 	if ((capture_flag == 1) && (1 == capture_img_end_flag) && (ISP_VIDEO_JPG == format))
 	{
-		DBG("ISP_TOOL:%s:----------end-------- format: %d \n", __FUNCTION__, format);
+		DBG("ISP_TOOL: format: %d \n", format);
 		sem_post(&capture_sem_lock);
 		capture_flag = 0;
 	}
@@ -772,24 +742,68 @@ void send_capture_data(uint32_t format, uint32_t width, uint32_t height, char *c
 {
 	int ret;
 
-	DBG("ISP_TOOL:%s: format: %d, width: %d, height: %d.\n", __FUNCTION__, format, width, height);
-
-	if ((0 == capture_img_end_flag)&&(format == (uint32_t)capture_format))
+	if ((0 == capture_img_end_flag)&&(format == capture_format))
 	{
-		DBG("ISP_TOOL:%s: capture_flag: %d, capture_img_end_flag: %d,\n", __FUNCTION__, capture_flag, capture_img_end_flag);
+		DBG("ISP_TOOL: format: %d, width: %d, height: %d.\n", format, width, height);
 		ret = handle_img_data(format, width, height, ch0_ptr, ch0_len, ch1_ptr, ch1_len, ch2_ptr, ch2_len);
 		capture_img_end_flag=1;
 		if (ret != 0) {
-			DBG("ISP_TOOL:%s: Fail to handle_img_data(). ret = %d.", __FUNCTION__, ret);
+			DBG("ISP_TOOL: Fail to handle_img_data(). ret = %d.", ret);
 		}
 	}
 
 	send_capture_data_end(format);
 }
 
+int isp_RecDataCheck(uint8_t* rx_buf_ptr, int rx_bug_len, uint8_t* cmd_buf_ptr,  int* cmd_len)
+{
+	int rtn;
+	uint8_t* rx_ptr=rx_buf_ptr;
+	uint8_t* cmd_ptr=cmd_buf_ptr;
+	uint8_t packet_header=rx_buf_ptr[0];
+	uint16_t packet_len=(rx_buf_ptr[6]<<0x08)|(rx_buf_ptr[5]);
+	uint8_t packet_end=rx_buf_ptr[rx_bug_len-1];
+	int rx_len=rx_bug_len;
+	int cmd_buf_offset=rx_packet_len;
+
+	rtn=0;
+	*cmd_len=rx_bug_len;
+
+	if ((0x7e == packet_header)
+		&&(0x00 == rx_packet_total_len)
+		&&(0x00 == rx_packet_len)) {
+		rx_packet_total_len=packet_len+2;
+	}
+
+	if ((0x7e == packet_header)
+		&&(0x7e == packet_end)) {
+	/* one packet */
+
+	} else { /* mul packet */
+		rx_packet_len+=rx_bug_len;
+
+		if ((0x7e == packet_end)
+			&&(rx_packet_len == rx_packet_total_len)) {
+			*cmd_len=rx_packet_len;
+		} else {
+			rtn=1;
+		}
+	}
+
+	memcpy((void*)&cmd_buf_ptr[cmd_buf_offset], rx_buf_ptr, rx_bug_len);
+
+	if (0 == rtn) {
+		rx_packet_len=0x00;
+		rx_packet_total_len=0x00;
+	}
+
+	return rtn;
+}
+
 static void * isp_diag_handler(void *args)
 {
 	int from = *((int *)args);
+	int i, cnt, res, cmd_len, rtn;
 	static char *code = "diag channel exit";
 	fd_set rfds;
 	struct timeval tv;
@@ -798,9 +812,12 @@ static void * isp_diag_handler(void *args)
 	FD_SET(from, &rfds);
 
 	sockfd = from;
+	rx_packet_len=0x00;
+	rx_packet_total_len=0x00;
+
 	/* Read client request, send sequence number back */
 	while (wire_connected) {
-		int i, cnt, res;
+
 		/* Wait up to  two seconds. */
 		tv.tv_sec = 2;
 		tv.tv_usec = 0;
@@ -810,21 +827,22 @@ static void * isp_diag_handler(void *args)
 			DBG("ISP_TOOL:No data within five seconds. res:%d\n", res);
 			continue;
 		}
-		//cnt = read(diag->from, diag_cmd_buf, DATA_BUF_SIZE);
-		cnt = recv(from, diag_cmd_buf, CMD_BUF_SIZE,
-				MSG_DONTWAIT);
-		//DBG("read from socket %d\n", cnt);
+
+		cnt = recv(from, diag_rx_buf, CMD_BUF_SIZE,MSG_DONTWAIT);
+
 		if (cnt <= 0) {
 			DBG("ISP_TOOL:read socket error %s\n", strerror(errno));
 			break;
 		}
-#if 0
-		DBG("ISP_TOOL:%s: request buffer[%d]\n",__FUNCTION__, cnt);
-		for(i=0; i<cnt; i++)
-			DBG("%x,",diag_cmd_buf[i]);
-		DBG("\n");
-#endif
-		handle_isp_data(diag_cmd_buf, cnt);
+
+		rtn = isp_RecDataCheck(diag_rx_buf, cnt, diag_cmd_buf, &cmd_len);
+
+		if (0 == rtn) {
+			handle_isp_data(diag_cmd_buf, cmd_len);
+		} else {
+			DBG("ISP_TOOL: rx packet comboine \n");
+		}
+
 	}
 	return code;
 }
@@ -981,7 +999,7 @@ void stopispserver()
 	preview_img_end_flag=1;
 	capture_img_end_flag=1;
 	preview_buf_ptr=0;
-	
+
 }
 
 void startispserver()

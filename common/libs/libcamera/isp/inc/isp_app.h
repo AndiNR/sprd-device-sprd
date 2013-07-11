@@ -34,6 +34,12 @@ typedef int32_t ( *isp_ctrl_fun)(uint32_t param);
 **				Data Prototype					*
 **----------------------------------------------------------------------------*/
 //enum
+enum isp_id{
+	ISP_ID_SC8825=0x00000000,
+	ISP_ID_SC8830=0x00010000,
+	ISP_ID_MAX
+};
+
 enum isp_callback_evt{
 	ISP_CALLBACK_EVT=0x00040000,
 	ISP_CALLBACK_MAX
@@ -46,15 +52,11 @@ enum isp_callback_cmd{
 	ISP_SKIP_FRAME_CALLBACK=0x00000300,
 	ISP_FLASH_AE_CALLBACK=0x00000400,
 	ISP_AE_BAPASS_CALLBACK=0x00000500,
-	ISP_AF_STAT_CALLBACK = 0x00000600,
-	ISP_AE_STAB_CALLBACK = 0x00000700,
+	ISP_AE_STAB_CALLBACK = 0x00000600,
+	ISP_AF_STAT_CALLBACK = 0x00000700,
+	ISP_AF_STAT_END_CALLBACK = 0x00000800,
+	ISP_AWB_STAT_CALLBACK = 0x00000900,
 	ISP_CALLBACK_CMD_MAX=0xffffffff
-};
-
-enum {
-	ISP_3ASTAT_AEAWB = (1<<0),
-	ISP_3ASTAT_AF = (1<<1),
-	ISP_STAT_MAX
 };
 
 enum isp_focus_mode{
@@ -63,6 +65,7 @@ enum isp_focus_mode{
 	ISP_FOCUS_ZONE,
 	ISP_FOCUS_MULTI_ZONE,
 	ISP_FOCUS_MACRO,
+	ISP_FOCUS_WIN,
 	ISP_FOCUS_MAX
 };
 
@@ -211,9 +214,9 @@ enum isp_ctrl_cmd{
 	ISP_CTRL_AE_TOUCH,
 	ISP_CTRL_AE_INFO,
 	ISP_CTRL_SHARPNESS,
-	ISP_CTRL_GETAFSTAT,
-	ISP_CTRL_UNGETAFSTAT,
-	ISP_CTRL_AF_STEP,
+	ISP_CTRL_GET_AE_STAB,
+	ISP_CTRL_GET_AWB_STAT,
+	ISP_CTRL_GET_AF_STAT,
 	ISP_CTRL_MAX
 };
 
@@ -229,11 +232,6 @@ struct isp_ae_info {
 	uint32_t max_fps;  //max frame rate
 	uint32_t line_time;  //time of line
 	uint32_t gain;
-};
-
-struct isp_af_step_info {
-	uint16_t buf;
-	uint16_t cnts;
 };
 
 struct isp_addr{

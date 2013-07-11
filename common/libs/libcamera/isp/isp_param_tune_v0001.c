@@ -49,12 +49,8 @@ static int32_t _ispSetAllParamV0001(void* in_param_ptr)
 	struct sensor_raw_tune_info* raw_ptr=sensor_info_ptr->raw_info_ptr->tune_ptr;
 	struct sensor_raw_tune_info* tune_ptr=(struct sensor_raw_tune_info*)data_addr;
 
-	CMR_LOGE("ISP_TOOL:--raw_ptr-- detail_thr:0x%x,smooth_thr: 0x%x, strength:0x%x",raw_ptr->edge.info[0].detail_thr,raw_ptr->edge.info[0].smooth_thr,raw_ptr->edge.info[0].strength);
-	CMR_LOGE("ISP_TOOL:--tune_ptr-- detail_thr:0x%x,smooth_thr: 0x%x, strength:0x%x",tune_ptr->edge.info[0].detail_thr,tune_ptr->edge.info[0].smooth_thr,tune_ptr->edge.info[0].strength);
-
 	if((NULL!=raw_tune_ptr)&&(NULL!=data_addr)&&(0x00!=data_len))
 	{
-		CMR_LOGE("ISP_TOOL:_ispSetAllParamV0001:raw_tune_ptr:0x%x, data_addr:0x%x, data_len:0x%x tune_len:0x%x\n", (uint32_t)raw_tune_ptr, (uint32_t)data_addr, data_len, sizeof(struct sensor_raw_tune_info));
 		memcpy(raw_tune_ptr, data_addr, data_len);
 
 		isp_ioctl(ISP_CTRL_PARAM_UPDATE|ISP_TOOL_CMD_ID, NULL);
@@ -76,27 +72,20 @@ static int32_t _ispSetLncParamV0001(void* in_param_ptr)
 	uint32_t module_info=param_ptr[3];
 	void* data_addr=(void*)&param_ptr[4];
 	uint32_t data_len =packet_len-0x10;
-	uint32_t size_id=(module_info>>0x00)&0x0f;
+	uint32_t size_id=(module_info>>0x04)&0x0f;
 	uint32_t awb_id=module_info&0x0f;
-
 	SENSOR_EXP_INFO_T* sensor_info_ptr=Sensor_GetInfo();
 	void* lnc_ptr=(void*)sensor_info_ptr->raw_info_ptr->fix_ptr->lnc.map[size_id][awb_id].param_addr;
 	uint32_t lnc_param_len=sensor_info_ptr->raw_info_ptr->fix_ptr->lnc.map[size_id][awb_id].len;
-
 	uint16_t* lnc_param_ptr=data_addr;
+	uint16_t* lnc_src_ptr=(uint16_t*)lnc_ptr;
 
-	CMR_LOGE("ISP_TOOL:--_ispSetLncParamV0001-- size_id:0x%x,awb_id: 0x%x",size_id, awb_id);
-	CMR_LOGE("ISP_TOOL:--_ispSetLncParamV0001-- lnc_ptr:0x%x,lnc_param_len: 0x%x", (uint32_t)lnc_ptr, lnc_param_len);
-	CMR_LOGE("ISP_TOOL:--_ispSetLncParamV0001-- lnc_ptr:0x%04x, 0x%04x, 0x%04x, 0x%04x,",lnc_param_ptr[0], lnc_param_ptr[1],lnc_param_ptr[2],lnc_param_ptr[3]);
-
-#if 0
-	if((NULL!=lnc_ptr)&&(NULL!=data_addr)&&(0x00!=data_len)&&(lnc_param_len==data_len))
-	{
+	if((NULL!=lnc_ptr)&&(NULL!=data_addr)&&(0x00!=data_len)&&(lnc_param_len==data_len)){
 		memcpy(lnc_ptr, data_addr, data_len);
 	} else {
 		rtn = 0x01;
 	}
-#endif
+
 	return rtn;
 }
 

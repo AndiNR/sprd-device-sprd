@@ -160,7 +160,7 @@ static int32_t _ispParserDownParam(void* in_param_ptr)
 		{
 			fun_ptr=ispGetDownParamFunV0001(module_id);
 			break;
-		}		
+		}
 		default :
 		{
 			break;
@@ -290,7 +290,7 @@ static int32_t _ispParserUpMainInfo(void* rtn_param_ptr)
 
 static int32_t _ispParserUpParam(void* rtn_param_ptr)
 {
-	uint32_t rtn=0x00;
+	int32_t rtn=0x00;
 	SENSOR_EXP_INFO_T_PTR sensor_info_ptr=Sensor_GetInfo();
 	uint32_t version_id=sensor_info_ptr->raw_info_ptr->version_info->version_id;
 
@@ -306,9 +306,8 @@ static int32_t _ispParserUpParam(void* rtn_param_ptr)
 		{
 			rtn = ispGetUpParamV0001(NULL, rtn_param_ptr);
 			break;
-		}			
+		}
 
-		
 		default :
 		{
 			CMR_LOGE("ISP_TOOL:_ispParserUpParam version_id:0x%08x error \n", version_id);
@@ -377,6 +376,7 @@ static int32_t _ispParserReadSensorReg(void* in_param_ptr, void* rtn_param_ptr)
 	int32_t rtn=0x00;
 	struct isp_parser_cmd_param* in_ptr=(struct isp_parser_cmd_param*)in_param_ptr;
 	struct isp_parser_buf_rtn* rtn_ptr=(struct isp_parser_buf_rtn*)rtn_param_ptr;
+	SENSOR_EXP_INFO_T_PTR sensor_info_ptr=Sensor_GetInfo();
 	uint32_t* data_addr=NULL;
 	uint32_t data_len=0x0c;
 	uint32_t reg_num=in_ptr->param[0];

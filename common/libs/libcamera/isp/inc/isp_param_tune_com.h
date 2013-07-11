@@ -26,8 +26,8 @@ typedef int32_t (*isp_fun)(void* param_ptr);
 #define ISP_MAP_NUM 0x08
 
 #define ISP_END_ID 0xffff
-#define ISP_VERSION_0000_ID 0x0000
-#define ISP_VERSION_0001_ID 0x0001
+#define ISP_VERSION_0000_ID 0x00000000
+#define ISP_VERSION_0001_ID 0x00010000
 
 #define ISP_PACKET_VERIFY_ID 0x71717567
 #define ISP_PACKET_END_ID 0x69656e64
@@ -80,6 +80,7 @@ typedef int32_t (*isp_fun)(void* param_ptr);
 #define ISP_PACKET_GLOBAL 0x0018
 #define ISP_PACKET_CHN 0x0019
 #define ISP_PACKET_LNC_PARAM 0x001a
+#define ISP_PACKET_AWB_MAP 0x001b
 #define ISP_PACKET_MAX 0xFFFF
 
 #define ISP_VIDEO_YUV422_2FRAME (1<<0)
@@ -87,17 +88,6 @@ typedef int32_t (*isp_fun)(void* param_ptr);
 #define ISP_VIDEO_NORMAL_RAW10 (1<<2)
 #define ISP_VIDEO_MIPI_RAW10 (1<<3)
 #define ISP_VIDEO_JPG (1<<4)
-
-#if 0
-#define ISP_SIZE_640x480   (1<<0)
-#define ISP_SIZE_800x600   (1<<1)
-#define ISP_SIZE_1280x960  (1<<2)
-#define ISP_SIZE_1280x1024 (1<<3)
-#define ISP_SIZE_1600x1200 (1<<4)
-#define ISP_SIZE_2048x1536 (1<<5)
-#define ISP_SIZE_2592x1944 (1<<6)
-#define ISP_SIZE_3264x2448 (1<<7)
-#endif
 
 #define ISP_UINT8 0x01
 #define ISP_UINT16 0x02
