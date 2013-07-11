@@ -207,7 +207,8 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 #else
 	mIsRotCapture(0),
 #endif
-	mTimeCoeff(1)
+	mTimeCoeff(1),
+	mRecordingFirstFrameTime(0)
 
 {
 	LOGV("openCameraHardware: E cameraId: %d.", cameraId);
@@ -500,6 +501,7 @@ status_t SprdCameraHardware::startRecording()
 {
 	LOGV("mLock:startRecording S.\n");
 	Mutex::Autolock l(&mLock);
+	mRecordingFirstFrameTime = 0;
 
 #if 1
 	if (isPreviewing()) {
@@ -529,6 +531,7 @@ void SprdCameraHardware::stopRecording()
 	LOGV("stopRecording: E");
 	Mutex::Autolock l(&mLock);
 	stopPreviewInternal();
+	mRecordingFirstFrameTime = 0;
 	LOGV("stopRecording: X");
 }
 
@@ -765,6 +768,9 @@ void SprdCameraHardware::disableMsgType(int32_t msgType)
 {
 	LOGV("'mLock:disableMsgType S.\n");
 	//Mutex::Autolock lock(mLock);
+	if (msgType & CAMERA_MSG_VIDEO_FRAME) {
+		mRecordingFirstFrameTime = 0;
+	}
 	mMsgEnabled &= ~msgType;
 	LOGV("'mLock:disableMsgType E.\n");
 }
@@ -2253,7 +2259,12 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 			nsecs_t timestamp = systemTime();/*frame->timestamp;*/
 			LOGV("test timestamp = %lld, mIsStoreMetaData: %d.",timestamp, mIsStoreMetaData);
 			if (mTimeCoeff > 1) {
-				timestamp *= mTimeCoeff;
+				if (0 != mRecordingFirstFrameTime) {
+					timestamp = mRecordingFirstFrameTime + (timestamp - mRecordingFirstFrameTime)*mTimeCoeff;
+				} else {
+					mRecordingFirstFrameTime = timestamp;
+					LOGV("first frame.");
+				}
 			}
 			/*LOGV("test slowmotion:%lld.",timestamp);*/
 			if(mIsStoreMetaData) {
