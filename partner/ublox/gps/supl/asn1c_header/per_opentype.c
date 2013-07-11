@@ -355,8 +355,8 @@ uper_ugot_refill(asn_per_data_t *pd) {
 static int
 per_skip_bits(asn_per_data_t *pd, int skip_nbits) {
 	int hasNonZeroBits = 0;
+	int skip=0;  /* Modified coverity warning without affecting the code's logic */
 	while(skip_nbits > 0) {
-		int skip = 0;
 		if(skip_nbits < skip)
 			skip = skip_nbits;
 		else
