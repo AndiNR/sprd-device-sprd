@@ -23,6 +23,7 @@
 #include "cmr_common.h"
 #include <sys/types.h>
 #include "sensor_raw.h"
+#include "sensor_drv_k.h"
 
 #ifdef	 __cplusplus
 extern	 "C"
@@ -524,34 +525,6 @@ typedef struct sensor_ioctl_func_tab_tag {
 	uint32_t(*stream_off) (uint32_t param);
 } SENSOR_IOCTL_FUNC_TAB_T, *SENSOR_IOCTL_FUNC_TAB_T_PTR;
 
-typedef struct sensor_i2c_tag {
-	uint8_t  *i2c_data;
-	uint16_t i2c_count;
-	uint16_t slave_addr;
-} SENSOR_I2C_T, *SENSOR_I2C_T_PTR;
-
-typedef struct sensor_reg_tag {
-	uint16_t reg_addr;
-	uint16_t reg_value;
-} SENSOR_REG_T, *SENSOR_REG_T_PTR;
-
-typedef struct sensor_reg_tab_tag {
-	SENSOR_REG_T_PTR sensor_reg_tab_ptr;
-	uint32_t reg_count;
-	uint32_t reg_bits;
-	uint32_t burst_mode;
-} SENSOR_REG_TAB_T, *SENSOR_REG_TAB_PTR;
-
-typedef struct sensor_flash_level	 {
-	uint32_t low_light;
-	uint32_t high_light;
-} SENSOR_FLASH_LEVEL_T;
-
-typedef struct sensor_reg_bits_tag {
-	uint16_t reg_addr;
-	uint16_t reg_value;
-	uint32_t reg_bits;
-} SENSOR_REG_BITS_T, *SENSOR_REG_BITS_T_PTR;
 typedef struct sensor_trim_tag {
 	uint16_t trim_start_x;
 	uint16_t trim_start_y;
@@ -753,6 +726,10 @@ uint16_t Sensor_ReadReg(uint16_t subaddr);
 int Sensor_SetMCLK(uint32_t mclk);
 int Sensor_SetVoltage(SENSOR_AVDD_VAL_E dvdd_val,
 		       SENSOR_AVDD_VAL_E avdd_val, SENSOR_AVDD_VAL_E iodd_val);  // todo splite 3 fun
+
+int Sensor_SetAvddVoltage(SENSOR_AVDD_VAL_E vdd_val);
+int Sensor_SetDvddVoltage(SENSOR_AVDD_VAL_E vdd_val);
+int Sensor_SetIovddVoltage(SENSOR_AVDD_VAL_E vdd_val);
 
 BOOLEAN Sensor_PowerDown(BOOLEAN power_down);
 BOOLEAN Sensor_SetResetLevel(BOOLEAN plus_level);

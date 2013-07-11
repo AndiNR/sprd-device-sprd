@@ -106,6 +106,7 @@ LOCAL pthread_t                   s_sensor_monitor_thread = 0;
 LOCAL volatile uint32_t           s_exit_monitor_flag = 0;
 #endif
 /* Sensor Device IO Control  */
+#if 0
 #define SENSOR_IOC_MAGIC		'R'
 
 #define SENSOR_IO_PD                _IOW(SENSOR_IOC_MAGIC, 0,  BOOLEAN)
@@ -127,7 +128,7 @@ LOCAL volatile uint32_t           s_exit_monitor_flag = 0;
 #define SENSOR_IO_SET_I2CCLOCK      _IOW(SENSOR_IOC_MAGIC, 16,  uint32_t)
 #define SENSOR_IO_I2C_WRITE_EXT     _IOW(SENSOR_IOC_MAGIC, 17,  SENSOR_I2C_T)
 #define SENSOR_IO_GET_FLASH_LEVEL   _IOWR(SENSOR_IOC_MAGIC, 18,  SENSOR_FLASH_LEVEL_T)
-
+#endif
 #define SENSOR_MSG_QUEUE_SIZE           10
 
 enum {
@@ -582,7 +583,7 @@ int Sensor_SetMCLK(uint32_t mclk)
 }
 
 int Sensor_SetVoltage(SENSOR_AVDD_VAL_E dvdd_val, SENSOR_AVDD_VAL_E avdd_val,
-		       SENSOR_AVDD_VAL_E iodd_val)
+			SENSOR_AVDD_VAL_E iodd_val)
 {
 
 	int err = 0;
@@ -602,6 +603,31 @@ int Sensor_SetVoltage(SENSOR_AVDD_VAL_E dvdd_val, SENSOR_AVDD_VAL_E avdd_val,
 	SENSOR_PRINT_HIGH("Sensor_SetVoltage avdd_val = %d,  dvdd_val=%d, iodd_val=%d \n", avdd_val, dvdd_val, iodd_val);
 
 	return err;
+}
+
+int Sensor_SetAvddVoltage(SENSOR_AVDD_VAL_E vdd_val)
+{
+	int rtn  = SENSOR_SUCCESS;
+	rtn = _Sensor_Device_SetVoltageAVDD((uint32_t)vdd_val);
+	SENSOR_PRINT_HIGH("Sensor_SetAvddVoltage vdd_val is %d, set result is =%d \n", vdd_val, rtn);
+	return rtn;
+}
+
+int Sensor_SetDvddVoltage(SENSOR_AVDD_VAL_E vdd_val)
+{
+	int rtn  = SENSOR_SUCCESS;
+	rtn = _Sensor_Device_SetVoltageDVDD((uint32_t)vdd_val);
+	SENSOR_PRINT_HIGH("Sensor_SetDvddVoltage vdd_val is %d, set result is =%d \n", vdd_val, rtn);
+	return rtn;
+}
+
+
+int Sensor_SetIovddVoltage(SENSOR_AVDD_VAL_E vdd_val)
+{
+	int rtn  = SENSOR_SUCCESS;
+	rtn = _Sensor_Device_SetVoltageIOVDD((uint32_t)vdd_val);
+	SENSOR_PRINT_HIGH("Sensor_SetIovddVoltage vdd_val is %d, set result is =%d \n", vdd_val, rtn);
+	return rtn;
 }
 
 int Sensor_SetMonitorVoltage(SENSOR_AVDD_VAL_E vdd_val)
