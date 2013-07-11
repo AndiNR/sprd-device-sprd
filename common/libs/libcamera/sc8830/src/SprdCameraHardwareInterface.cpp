@@ -184,6 +184,7 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mPictureFormat(1),
 	mPreviewStartFlag(0),
 	mRecordingMode(0),
+	mRecordingFirstFrameTime(0),
 	mZoomLevel(0),
 
 	mJpegSize(0),
@@ -207,8 +208,7 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 #else
 	mIsRotCapture(0),
 #endif
-	mTimeCoeff(1),
-	mRecordingFirstFrameTime(0)
+	mTimeCoeff(1)
 
 {
 	LOGV("openCameraHardware: E cameraId: %d.", cameraId);

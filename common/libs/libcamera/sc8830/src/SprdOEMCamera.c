@@ -44,10 +44,19 @@ struct camera_context        *g_cxt = &cmr_cxt;
 #define TAKE_PIC_CANCEL      do {                                                  \
 									if (camera_capture_need_exit()) {               \
 										camera_takepic_done(g_cxt);                 \
+										g_cxt->jpeg_cxt.jpeg_state = JPEG_IDLE;     \
 										CMR_LOGE("exit.");                          \
 										return CAMERA_SUCCESS;                      \
 									}                                               \
 								} while (0)
+#define TAKE_PIC_CANCEL_NORETURNVALUE      do {                                                     \
+													if (camera_capture_need_exit()) {               \
+														camera_takepic_done(g_cxt);                 \
+														g_cxt->jpeg_cxt.jpeg_state = JPEG_IDLE;     \
+														CMR_LOGE("exit.");                          \
+														return;                      \
+													}                                               \
+												} while (0)
 
 #define NO_SCALING           (YUV_NO_SCALING || RAW_NO_SCALING)
 #define IMAGE_FORMAT         "YVU420_SEMIPLANAR"
@@ -410,6 +419,11 @@ int camera_jpeg_deinit(void)
 		CMR_LOGI("JPEG Codec has been de-intialized");
 		goto exit;
 	}
+
+	do
+	{
+		usleep(200000);
+	}while((JPEG_IDLE != g_cxt->jpeg_cxt.jpeg_state)&&(JPEG_ERR != g_cxt->jpeg_cxt.jpeg_state));
 	jpeg_evt_reg(NULL);
 	ret = jpeg_deinit();
 	if (ret) {
@@ -956,6 +970,11 @@ void *camera_cap_thread_proc(void *data)
 				}
 				camera_wait_takepicdone(g_cxt);
 				cmr_v4l2_free_frame(data->channel_id, data->frame_id);
+				if (camera_capture_need_exit()) {
+					g_cxt->jpeg_cxt.jpeg_state = JPEG_IDLE;
+					CMR_LOGV("done.");
+					break;
+				}
 				if ((g_cxt->cap_cnt == g_cxt->total_capture_num)||(CAMERA_HDR_MODE == g_cxt->cap_mode)) {
 					camera_snapshot_stop_set();
 					ret = camera_set_take_picture(TAKE_PICTURE_NO);
@@ -2129,6 +2148,15 @@ int camera_set_take_picture(int set_val)
 	g_cxt->is_take_picture = set_val;
 	g_cxt->hdr_cnt = 0;
 	pthread_mutex_unlock(&g_cxt->take_mutex);
+	if (TAKE_PICTURE_NEEDED == set_val) {
+		pthread_mutex_lock(&g_cxt->cancel_mutex);
+		g_cxt->cap_canceled = 0;
+		pthread_mutex_unlock(&g_cxt->cancel_mutex);
+	} else {
+		pthread_mutex_lock(&g_cxt->cancel_mutex);
+		g_cxt->cap_canceled = 1;
+		pthread_mutex_unlock(&g_cxt->cancel_mutex);
+	}
 
 	return CAMERA_SUCCESS;
 }
@@ -2313,6 +2341,10 @@ camera_ret_code_type camera_stop_capture(void)
 	int                      ret = CAMERA_SUCCESS;
 
 	ret = camera_set_take_picture(TAKE_PICTURE_NO);
+	camera_call_cb(CAMERA_RSP_CB_SUCCESS,
+				    camera_get_client_data(),
+				    CAMERA_FUNC_RELEASE_PICTURE,
+				    0);
 	return ret;
 }
 
@@ -2784,6 +2816,7 @@ void camera_jpeg_evt_cb(int evt, void* data)
 		CMR_LOGE("Error param, 0x%x 0x%x", (uint32_t)data, evt);
 		message.data = 0;
 	} else {
+	    TAKE_PIC_CANCEL_NORETURNVALUE;
 		if(CMR_JPEG_DEC_DONE == evt) {
 			message.data = malloc(sizeof(JPEG_DEC_CB_PARAM_T));
 		} else {
