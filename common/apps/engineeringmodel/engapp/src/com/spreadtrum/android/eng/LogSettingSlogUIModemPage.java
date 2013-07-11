@@ -28,7 +28,9 @@ public class LogSettingSlogUIModemPage extends Activity implements SlogUISyncSta
         chkTcp = (CheckBox) findViewById(R.id.chk_modem_tcp);
         chkMisc = (CheckBox) findViewById(R.id.chk_modem_misc);
 
-        syncState();
+        // TRIM CODE
+        // no need to run syncState in onCreate
+        // syncState();
 
         // TODO: Should better using setOnClickListener(this) instead of newing a class.
         ClkListenner clickListen = new ClkListenner();

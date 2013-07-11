@@ -33,7 +33,8 @@ public class LogSettingSlogUIAndroidPage extends Activity implements SlogUISyncS
         chkMain = (CheckBox) findViewById(R.id.chk_android_main);
 
         // Make sure that, views match to slog.conf
-        syncState();
+        // No need to run syncState in onCreate.
+        // syncState();
 
         // Set onclick listenner
         ClkListenner chklisten = new ClkListenner();
