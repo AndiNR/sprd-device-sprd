@@ -97,7 +97,7 @@ on property:ro.debuggable=0
 #modem_control
 #service modem_control /system/bin/logwrapper /modem_control
 service modem_control /modem_control
-    class core
+    class main
     user root
     oneshot
     
