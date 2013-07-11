@@ -540,6 +540,11 @@ static void mali_gp_bottom_half(void *data)
 			MALI_DEBUG_PRINT(2, ("Mali GP: Job %d timed out\n", mali_gp_job_get_id(core->running_job)));
 			mali_group_bottom_half(core->group, GROUP_EVENT_GP_JOB_TIMED_OUT);
 		}
+		else
+		{
+			MALI_DEBUG_PRINT(2, ("Mali GP: Job %d timed out but current job is %d\n", core->timeout_job_id, mali_gp_job_get_id(core->running_job)));
+			mali_group_unlock(core->group); /* Nothing to do on the HW side, so just release group lock right away */
+		}
 		core->core_timed_out = MALI_FALSE;
 		return;
 	}

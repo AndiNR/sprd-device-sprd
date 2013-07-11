@@ -55,6 +55,10 @@ static void irq_handler_bottom_half ( void *  input );
 #define IRQF_SHARED SA_SHIRQ
 #endif /* IRQF_SHARED */
 
+#ifndef ACEDEBUG
+#define ACEDEBUG
+#endif
+
 _mali_osk_irq_t *_mali_osk_irq_init( u32 irqnum, _mali_osk_irq_uhandler_t uhandler,	_mali_osk_irq_bhandler_t bhandler, _mali_osk_irq_trigger_t trigger_func, _mali_osk_irq_ack_t ack_func, void *data, const char *description )
 {
 	mali_osk_irq_object_t *irq_object;
@@ -79,6 +83,9 @@ _mali_osk_irq_t *_mali_osk_irq_init( u32 irqnum, _mali_osk_irq_uhandler_t uhandl
 	}
 #endif
 
+#ifdef ACEDEBUG
+	(irq_object->work_queue_irq_handle).callback = (work_func_t)bhandler;
+#endif
 	/* workqueue API changed in 2.6.20, support both versions: */
 #if defined(INIT_DELAYED_WORK)
 	/* New syntax: INIT_WORK( struct work_struct *work, void (*function)(struct work_struct *)) */

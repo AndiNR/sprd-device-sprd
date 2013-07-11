@@ -453,6 +453,8 @@ void mali_group_bottom_half(struct mali_group *group, enum mali_group_event_t ev
 			/* group lock is released by mali_group_complete_jobs() call above */
 			break;
 		default:
+			mali_group_unlock(group); /* Nothing to do on the HW side, so just release group lock right away */
+			MALI_DEBUG_PRINT(2, ("Mali group: Impossible to be here: tid=%d, event=%d, group=0x%08x\n", _mali_osk_get_tid(), event, group));
 			break;
 	}
 }
