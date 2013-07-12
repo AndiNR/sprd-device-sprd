@@ -70,6 +70,22 @@ void	disable_calibration(void)
 	write(fd,&cali_info,8);
 	close(fd);
 }
+
+//add by kenyliu on 2013 07 12 for get ADCV  bug 188809
+void adc_get_result(char* chan)
+{
+      int fd = open(ADC_CHAN_FILE_PATH,O_RDWR);
+      if(fd < 0){
+		ALOGE("%s open %s failed\n",__func__,ADC_CHAN_FILE_PATH);
+		return 0;
+	}
+	write(fd, chan, strlen(chan));
+	lseek(fd,SEEK_SET,0);
+	memset(chan, 0, 8);
+	read(fd, chan , 8);
+	close(fd);
+}
+//end kenyliu added
 static int AccessADCDataFile(unsigned char flag, char *lpBuff, int size)
 {
 	int fd = -1;

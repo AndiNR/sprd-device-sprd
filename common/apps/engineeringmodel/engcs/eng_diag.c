@@ -31,6 +31,7 @@ extern void eng_check_factorymode_formmc(void);
 extern int parse_vb_effect_params(void *audio_params_ptr, unsigned int params_size);
 extern int SetAudio_pga_parameter_eng(AUDIO_TOTAL_T *aud_params_ptr, unsigned int params_size, uint32_t vol_level);
 extern int eng_battery_calibration(char *data,unsigned int count,char *out_msg,int out_len);
+extern void adc_get_result(char* chan); //add by kenyliu on 2013 07 12 for get ADCV  bug 188809
 extern  struct eng_bt_eutops bt_eutops;
 extern  struct eng_wifi_eutops wifi_eutops;
 extern	struct eng_gps_eutops gps_eutops;
@@ -57,6 +58,7 @@ int eng_diag_factorymode(char *buf,int len, char *rsp);
 int get_sub_str(char *buf,char **revdata, char a, char b);
 int get_cmd_index(char *buf);
 int eng_diag_decode7d7e(char *buf,int len);
+int eng_diag_adc(char *buf, int * Irsp); //add by kenyliu on 2013 07 12 for get ADCV  bug 188809
 
 static const char *at_sadm="AT+SADM4AP";
 static const char *at_spenha="AT+SPENHA";
@@ -137,7 +139,11 @@ int eng_diag_parse(char *buf,int len)
 				ret=CMD_COMMON;
 			}
 			break;
-
+//add by kenyliu on 2013 07 12 for get ADCV  bug 188809
+		case DIAG_CMD_ADC_F:
+			ret =CMD_USER_ADC;
+			break;
+//end kenyliu added			
 		case DIAG_CMD_AUDIO:	
 			if(is_audio_at_cmd_need_to_handle(buf,len)){
 				ENG_LOG("%s: Handle DIAG_CMD_AUDIO\n",__FUNCTION__);
@@ -167,11 +173,13 @@ int eng_diag_user_handle(int type, char *buf,int len)
 	int extra_len=0;
 	MSG_HEAD_T head,*head_ptr=NULL;
 	char rsp[512];
+	int adc_rsp[8]; //add by kenyliu on 2013 07 12 for get ADCV  bug 188809
 	int ret;
 	int reset = 0;
 
 	memset(rsp, 0, sizeof(rsp));
-
+	memset(adc_rsp, 0, sizeof(adc_rsp)); //add by kenyliu on 2013 07 12 for get ADCV  bug 188809
+	
 	ENG_LOG("%s: type=%d\n",__FUNCTION__, type);
 		
 	switch(type){
@@ -188,6 +196,11 @@ int eng_diag_user_handle(int type, char *buf,int len)
 		case CMD_USER_FACTORYMODE:
 			rlen=eng_diag_factorymode(buf, len, rsp);
 			break;
+//add by kenyliu on 2013 07 12 for get ADCV  bug 188809
+		case CMD_USER_ADC:
+			rlen=eng_diag_adc(buf, adc_rsp);
+			break;
+//end kenyliu added
 		case CMD_USER_AUDIO:
 			memset(eng_audio_diag_buf,0,sizeof(eng_audio_diag_buf));
 			rlen=eng_diag_audio(buf, len, eng_audio_diag_buf);
@@ -212,10 +225,18 @@ int eng_diag_user_handle(int type, char *buf,int len)
 		head.type = 0x9c;
 		head.subtype = 0x00;
 	}
+//add by kenyliu on 2013 07 12 for get ADCV  bug 188809
+	if( type == CMD_USER_ADC )
+	{
+		head.subtype = 0x00;
+	}
+//end kenyliu added
 	memcpy(eng_diag_buf+1,&head,sizeof(MSG_HEAD_T));
 
 	if ( type == CMD_USER_AUDIO ) {
 		memcpy(eng_diag_buf+sizeof(MSG_HEAD_T)+1,eng_audio_diag_buf,strlen(eng_audio_diag_buf));
+	}else if(type == CMD_USER_ADC ){
+		memcpy(eng_diag_buf+sizeof(MSG_HEAD_T)+1,adc_rsp,sizeof(adc_rsp)); //add by kenyliu on 2013 07 12 for get ADCV  bug 188809
 	}else{
 		memcpy(eng_diag_buf+sizeof(MSG_HEAD_T)+1,rsp,sizeof(rsp));
 	}
@@ -993,7 +1014,25 @@ int is_audio_at_cmd_need_to_handle(char *buf,int len){
 	return 0;
 }
 
-
+//add by kenyliu on 2013 07 12 for get ADCV  bug 188809
+int eng_diag_adc(char *buf, int *Irsp)
+{
+	MSG_HEAD_T *head_ptr=NULL;
+	unsigned char buf1[8];
+	int result;
+	if(Irsp != NULL){
+		sprintf(Irsp,"\r\nERROR\r\n");
+	}
+	
+      head_ptr = (MSG_HEAD_T *)(buf+1);
+      memset(buf1, 0, 8);
+      sprintf(buf1,"%d", head_ptr->subtype);
+      adc_get_result(buf1);
+      result = atoi(buf1);
+      Irsp[0] = result;
+      return Irsp != NULL ? strlen(Irsp):0;
+}
+//end kenyliu add
 
 int eng_diag_audio(char *buf,int len, char *rsp)
 {
