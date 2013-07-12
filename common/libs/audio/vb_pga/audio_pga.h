@@ -17,6 +17,9 @@
 #ifndef AUDIO_PGA_H
 #define AUDIO_PGA_H
 
+struct audio_pga;
+struct mixer;
+
 /* Initialises and frees the audio PGA */
 struct audio_pga *audio_pga_init(struct mixer *mixer);
 void audio_pga_free(struct audio_pga *pga);

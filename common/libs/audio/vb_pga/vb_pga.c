@@ -10,6 +10,8 @@
 #include <sys/wait.h>
 #include <sys/mman.h>
 #include "audio_pga.h"
+#include <tinyalsa/asoundlib.h>
+
 //#ifdef __cplusplus
 //extern "c"
 //{
