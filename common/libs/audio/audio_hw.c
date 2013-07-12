@@ -233,6 +233,7 @@ struct tiny_audio_device {
     volatile int call_start;
     volatile int call_connected;
     volatile int call_prestop;
+    volatile int vbc_2arm;
     pthread_mutex_t vbc_lock;/*for multiple vb pipe.*/
     float voice_volume;
     struct tiny_stream_in *active_input;
@@ -1271,15 +1272,11 @@ static bool out_bypass_data(struct tiny_stream_out *out, uint32_t frame_size, ui
         3. If mediaserver crash, we should throw away some pcm data after restarting mediaserver.
         4. After call thread gets stop_call cmd, but hasn't get lock.
     */
-    int vbc_2arm =  1;
     struct tiny_audio_device *adev = out->dev;
 
-    if(adev->mode == AUDIO_MODE_IN_CALL){
-        vbc_2arm = mixer_ctl_get_value(adev->private_ctl.vbc_switch,0);
-    }
     if (( (!adev->call_start) && (adev->mode == AUDIO_MODE_IN_CALL) && (adev->devices & AUDIO_DEVICE_OUT_ALL_SCO) )
-        || (adev->call_start && (!adev->call_connected)) || ((!vbc_2arm) && (!adev->call_start)) || adev->call_prestop) {
-        MY_TRACE("out_write throw away data call_start(%d) mode(%d) devices(0x%x) call_connected(%d) vbc_2arm(%d) call_prestop(%d)...",adev->call_start,adev->mode,adev->devices,adev->call_connected,vbc_2arm,adev->call_prestop);
+        || (adev->call_start && (!adev->call_connected)) || ((!adev->vbc_2arm) && (!adev->call_start) && (adev->mode == AUDIO_MODE_IN_CALL)) || adev->call_prestop) {
+        MY_TRACE("out_write throw away data call_start(%d) mode(%d) devices(0x%x) call_connected(%d) vbc_2arm(%d) call_prestop(%d)...",adev->call_start,adev->mode,adev->devices,adev->call_connected,adev->vbc_2arm,adev->call_prestop);
         pthread_mutex_unlock(&adev->lock);
         pthread_mutex_unlock(&out->lock);
         usleep(bytes * 1000000 / frame_size / sample_rate);
@@ -2228,7 +2225,7 @@ static bool in_bypass_data(struct tiny_stream_in *in,uint32_t frame_size, uint32
         1. If cp stopped calling and in-devices is AUDIO_DEVICE_IN_VOICE_CALL, it means that cp already stopped vt call, we should write
             0 data, otherwise, AudioRecord will obtainbuffer timeout.
     */
-   if ((!adev->call_start) && (adev->mode == AUDIO_MODE_IN_CALL) && ((in->device == AUDIO_DEVICE_IN_VOICE_CALL))){
+   if ((!adev->call_start) && ((in->device == AUDIO_DEVICE_IN_VOICE_CALL))){
        ALOGW("in_bypass_data write 0 data call_start(%d) mode(%d) devices(0x%x) in_device(0x%x) call_connected(%d) call_prestop(%d) ",adev->call_start,adev->mode,adev->devices,in->device,adev->call_connected,adev->call_prestop);
        memset(buffer,0,bytes);
         pthread_mutex_unlock(&adev->lock);
@@ -3516,6 +3513,7 @@ static int adev_open(const hw_module_t* module, const char* name,
     adev->bluetooth_nrec = false;
 
     mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch to arm
+    adev->vbc_2arm = mixer_ctl_get_value(adev->private_ctl.vbc_switch,0);
     pthread_mutex_unlock(&adev->lock);
 
     *device = &adev->hw_device.common;

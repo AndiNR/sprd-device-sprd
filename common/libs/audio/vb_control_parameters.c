@@ -8,6 +8,8 @@
 #include <dlfcn.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
+#include <tinyalsa/asoundlib.h>
+
 #include "aud_enha.h"
 
 //#ifdef __cplusplus
@@ -58,6 +60,11 @@ typedef struct Switch_ctrl
 {
     unsigned int  is_switch; /* switch vbc contrl to dsp.*/
 }switch_ctrl_t;
+
+typedef struct Samplerate_ctrl
+{
+    unsigned short samplerate; /* change samplerate.*/
+}set_samplerate_t;
 
 typedef struct Set_Mute
 {
@@ -114,6 +121,9 @@ enum VBC_CMD_E
 
 	VBC_CMD_HAL_CLOSE = 13,
 	VBC_CMD_RSP_CLOSE = 14,
+
+    VBC_CMD_SET_SAMPLERATE = 15,
+    VBC_CMD_RSP_SAMPLERATE = 16,
 
     VBC_CMD_MAX
 };
@@ -179,6 +189,7 @@ static int  ReadParas_Mute(int fd_pipe,  set_mute_t *paras_ptr);
 void *vbc_ctrl_thread_routine(void *args);
 
 extern int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type);
+
 /*
  * local functions definition.
  */
@@ -187,6 +198,8 @@ static int  ReadParas_Head(int fd_pipe,  parameters_head_t *head_ptr)
     int ret = 0;
     if (fd_pipe > 0 && head_ptr != NULL) {
         ret = read(fd_pipe, head_ptr, sizeof(parameters_head_t));
+        if(ret != sizeof(parameters_head_t))
+            ret = -1;
     }
     return ret;
 }
@@ -196,6 +209,8 @@ static int  WriteParas_Head(int fd_pipe,  parameters_head_t *head_ptr)
     int ret = 0;
     if (fd_pipe > 0 && head_ptr != NULL) {
         ret = write(fd_pipe, head_ptr, sizeof(parameters_head_t));
+        if(ret != sizeof(parameters_head_t))
+            ret = -1;
     }
     return ret;
 }
@@ -205,6 +220,8 @@ static int  ReadParas_OpenHal(int fd_pipe, open_hal_t *hal_open_param)
     int ret = 0;
     if (fd_pipe > 0 && hal_open_param != NULL) {
         ret = read(fd_pipe, hal_open_param, sizeof(open_hal_t));
+        if(ret != sizeof(sizeof(open_hal_t)))
+            ret = -1;
     }
     return ret;
 }
@@ -215,6 +232,8 @@ static int  ReadParas_DeviceCtrl(int fd_pipe, device_ctrl_t *paras_ptr)
     int ret = 0;
     if (fd_pipe > 0 && paras_ptr != NULL) {
         ret = read(fd_pipe, paras_ptr, sizeof(device_ctrl_t));
+        if(ret != sizeof(device_ctrl_t))
+            ret = -1;
     }
     return ret;
 }
@@ -224,6 +243,8 @@ static int  ReadParas_ModeGain(int fd_pipe,  paras_mode_gain_t *paras_ptr)
     int ret = 0;
     if (fd_pipe > 0 && paras_ptr != NULL) {
         ret = read(fd_pipe, paras_ptr, sizeof(paras_mode_gain_t));
+        if(ret != sizeof(paras_mode_gain_t))
+            ret = -1;
     }
     return ret;
 }
@@ -233,6 +254,19 @@ static int  ReadParas_SwitchCtrl(int fd_pipe,  switch_ctrl_t *paras_ptr)
     int ret = 0;
     if (fd_pipe > 0 && paras_ptr != NULL) {
         ret = read(fd_pipe, paras_ptr, sizeof(switch_ctrl_t));
+        if(ret != sizeof(switch_ctrl_t))
+            ret = -1;
+    }
+    return ret;
+}
+
+static int  ReadParas_SetSamplerate(int fd_pipe,  set_samplerate_t *paras_ptr)
+{
+    int ret = 0;
+    if (fd_pipe > 0 && paras_ptr != NULL) {
+        ret = read(fd_pipe, paras_ptr, sizeof(set_samplerate_t));
+        if(ret != sizeof(set_samplerate_t))
+            ret = -1;
     }
     return ret;
 }
@@ -242,6 +276,8 @@ static int  ReadParas_Mute(int fd_pipe,  set_mute_t *paras_ptr)
     int ret = 0;
     if (fd_pipe > 0 && paras_ptr != NULL) {
         ret = read(fd_pipe, paras_ptr, sizeof(set_mute_t));
+        if(ret != sizeof(set_mute_t))
+            ret = -1;
     }
     return ret;
 }
@@ -259,9 +295,13 @@ int Write_Rsp2cp(int fd_pipe, unsigned int cmd)
 		ALOGE("%s vbpipe has not open...",__func__);
 		return -1;
 	}
-	WriteParas_Head(fd_pipe, &write_common_head);
-	MY_TRACE("%s: send  cmd(%d) to cp .",__func__,write_common_head.cmd_type);
-	return 0;
+	ret = WriteParas_Head(fd_pipe, &write_common_head);
+    if(ret < 0){
+        ALOGE("%s:send cmd(%d) to cp ret(%d) error(%s)",__func__,write_common_head.cmd_type,ret,strerror(errno));
+    }else{
+	    MY_TRACE("%s: send  cmd(%d) to cp ret(%d)",__func__,write_common_head.cmd_type,ret);
+    }
+	return ret;
 }
 
 unsigned short GetCall_Cur_Device()
@@ -310,7 +350,7 @@ static int GetAudio_fd_from_nv()
     //check the size of /data/local/tmp/audio_para
         offset = lseek(fd,-1,SEEK_END);
         if((offset+1) != 4*sizeof(AUDIO_TOTAL_T)){
-            ALOGE("%s, file %s size (%d) error \n",__func__,ENG_AUDIO_PARA_DEBUG,offset+1);
+            ALOGE("%s, file %s size (%ld) error \n",__func__,ENG_AUDIO_PARA_DEBUG,offset+1);
             close(fd);
             fd = open(ENG_AUDIO_PARA,O_RDONLY);
             if(-1 == fd){
@@ -460,7 +500,7 @@ static void SetAudio_gain_route(struct tiny_audio_device *adev, uint32_t vol_lev
 
 static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *mode_gain_paras)
 {
-    int i = 0;
+    unsigned short i = 0;
 	unsigned short switch_earpice = 0;
 	unsigned short switch_headset = 0;
 	unsigned short switch_speaker = 0;
@@ -569,15 +609,15 @@ int SetParas_OpenHal_Incall(int fd_pipe)	//Get open hal cmd and sim card
 
     ret = Write_Rsp2cp(fd_pipe,VBC_CMD_HAL_OPEN);
     if(ret < 0){
-        ALOGE("Error, %s Write_Rsp2cp failed(%d).",__func__,ret);
+        ALOGE("Error, %s Write_Rsp2cp1 failed(%d).",__func__,ret);
     }
     ret = ReadParas_OpenHal(fd_pipe,&hal_open_param);
     if (ret <= 0) {
-        ALOGE("Error, read %s failed(%d).",__func__,ret);
+        ALOGE("Error, read %s ret(%d) failed(%s).",__func__,ret,strerror(errno));
     }
     ret = Write_Rsp2cp(fd_pipe,VBC_CMD_HAL_OPEN);
     if(ret < 0){
-        ALOGE("Error, %s Write_Rsp2cp failed(%d).",__func__,ret);
+        ALOGE("Error, %s Write_Rsp2cp2 failed(%d).",__func__,ret);
     }
     android_sim_num = hal_open_param.sim_card;
     MY_TRACE("%s successfully,sim card number(%d)",__func__,android_sim_num);
@@ -594,7 +634,7 @@ int GetParas_DeviceCtrl_Incall(int fd_pipe,device_ctrl_t *device_ctrl_param)	//o
 	}
 	ret = ReadParas_DeviceCtrl(fd_pipe,device_ctrl_param);
 	if (ret <= 0) {
-		ALOGE("Error, read %s failed(%d).",__func__,ret);
+		ALOGE("Error, read %s ret(%d) failed(%s).",__func__,ret,strerror(errno));
 	}
 	if((!device_ctrl_param->paras_mode.is_mode) || (!device_ctrl_param->paras_mode.is_volume)){	//check whether is setDevMode
 		ret =-1;
@@ -619,7 +659,7 @@ int GetParas_Route_Incall(int fd_pipe,paras_mode_gain_t *mode_gain_paras)	//set_
 	}
     ret = ReadParas_ModeGain(fd_pipe,mode_gain_paras);
     if (ret <= 0) {
-        ALOGE("Error, read %s failed(%d).",__func__,ret);
+        ALOGE("Error, read %s ret(%d) failed(%s).",__func__,ret,strerror(errno));
         return ret;
     }
 	if((!mode_gain_paras->is_mode)){	//check whether is setDevMode
@@ -645,7 +685,7 @@ int GetParas_Volume_Incall(int fd_pipe,paras_mode_gain_t *mode_gain_paras)	//set
 	}
     ret = ReadParas_ModeGain(fd_pipe,mode_gain_paras);
     if (ret <= 0) {
-        ALOGE("Error, read %s failed(%d).",__func__,ret);
+        ALOGE("Error, read %s ret(%d) failed(%s).",__func__,ret,strerror(errno));
     }
 	if((!mode_gain_paras->is_volume)){	//check whether is setDevMode
 		ret =-1;
@@ -670,11 +710,35 @@ int GetParas_Switch_Incall(int fd_pipe,switch_ctrl_t *swtich_ctrl_paras)	/* swit
 	}
 	ret = ReadParas_SwitchCtrl(fd_pipe,swtich_ctrl_paras);
 	if (ret <= 0) {
-	    ALOGE("Error, read ReadParas_SwitchCtrl failed(%d)",ret);
+	    ALOGE("Error, read ReadParas_SwitchCtrl ret(%d) failed(%s)",ret,strerror(errno));
 	}
 	MY_TRACE("%s successfully ,is_switch(%d) ",__func__,swtich_ctrl_paras->is_switch);
 	return ret;
 }
+
+int GetParas_Samplerate_Incall(int fd_pipe,set_samplerate_t *set_samplerate_paras)	/* set samplerate*/
+{
+	int ret = 0;
+	parameters_head_t read_common_head;
+	memset(&read_common_head, 0, sizeof(parameters_head_t));
+	MY_TRACE("%s in...",__func__);
+
+	ret = Write_Rsp2cp(fd_pipe,VBC_CMD_SET_SAMPLERATE);
+	if(ret < 0){
+		ALOGE("Error, %s Write_Rsp2cp failed(%d)",__func__,ret);
+	}
+	ret = ReadParas_SetSamplerate(fd_pipe,set_samplerate_paras);
+	if (ret <= 0) {
+	    ALOGE("Error, read ReadParas_SetSamplerate ret(%d) failed(%s)",ret,strerror(errno));
+	}
+    if(set_samplerate_paras->samplerate <= 0){
+        ALOGW("Error, get wrong samplerate(%d),set default ",set_samplerate_paras->samplerate);
+        set_samplerate_paras->samplerate = VX_NB_SAMPLING_RATE; //8k
+    }
+	MY_TRACE("%s successfully ,samplerate(%d) ",__func__,set_samplerate_paras->samplerate);
+	return ret;
+}
+
 
 int SetParas_Route_Incall(int fd_pipe,struct tiny_audio_device *adev)
 {
@@ -694,7 +758,10 @@ int SetParas_Route_Incall(int fd_pipe,struct tiny_audio_device *adev)
 	}
 	SetCall_ModePara(adev,&mode_gain_paras);
 	SetCall_VolumePara(adev,&mode_gain_paras);
-	Write_Rsp2cp(fd_pipe,VBC_CMD_SET_MODE);
+	ret = Write_Rsp2cp(fd_pipe,VBC_CMD_SET_MODE);
+    if(ret < 0){
+        ALOGE("Error, %s Write_Rsp2cp1 failed(%d).",__func__,ret);
+    }
 	MY_TRACE("%s send rsp to cp...",__func__);
 	return ret;
 }
@@ -710,7 +777,10 @@ int SetParas_Volume_Incall(int fd_pipe,struct tiny_audio_device *adev)
 		return ret;
 	}
 	SetCall_VolumePara(adev,&mode_gain_paras);
-	Write_Rsp2cp(fd_pipe,VBC_CMD_SET_GAIN);
+	ret = Write_Rsp2cp(fd_pipe,VBC_CMD_SET_GAIN);
+    if(ret < 0){
+        ALOGE("Error, %s Write_Rsp2cp1 failed(%d).",__func__,ret);
+    }
 	MY_TRACE("%s send rsp to cp...",__func__);
 	return ret;
 }
@@ -730,7 +800,10 @@ int SetParas_Switch_Incall(int fd_pipe,int vbchannel_id,struct tiny_audio_device
 	mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, vbchannel_id);
 	ALOGW("%s, vbchannel_id : %d , VBC %s dsp...",__func__,vbchannel_id,(swtich_ctrl_paras.is_switch)?"Switch control to":"Get control back from");
 
-	Write_Rsp2cp(fd_pipe,VBC_CMD_SWITCH_CTRL);
+	ret = Write_Rsp2cp(fd_pipe,VBC_CMD_SWITCH_CTRL);
+    if(ret < 0){
+        ALOGE("Error, %s Write_Rsp2cp1 failed(%d).",__func__,ret);
+    }
 	MY_TRACE("%s send rsp to cp...",__func__);
 	return ret;
 }
@@ -760,11 +833,42 @@ int SetParas_DeviceCtrl_Incall(int fd_pipe,struct tiny_audio_device *adev)
 	}else{
 		ALOGW("%s close device...",__func__);
 	}
-	Write_Rsp2cp(fd_pipe,VBC_CMD_DEVICE_CTRL);
+	ret = Write_Rsp2cp(fd_pipe,VBC_CMD_DEVICE_CTRL);
+    if(ret < 0){
+        ALOGE("Error, %s Write_Rsp2cp1 failed(%d).",__func__,ret);
+    }
 	MY_TRACE("%s send rsp to cp...",__func__);
 	return ret;
 }
 
+int SetParas_Samplerate_Incall(int fd_pipe,struct tiny_audio_device *adev)
+{
+	int ret = 0;
+	set_samplerate_t device_set_samplerate;
+	memset(&device_set_samplerate,0,sizeof(set_samplerate_t));
+	MY_TRACE("%s in.....",__func__);
+
+	ret = GetParas_Samplerate_Incall(fd_pipe,&device_set_samplerate);
+	if(ret < 0){
+		return ret;
+    }
+    if(adev->pcm_modem_dl){
+        ret = set_snd_card_samplerate(adev->pcm_modem_dl->fd, PCM_OUT, &pcm_config_vx, device_set_samplerate.samplerate);
+        if(ret < 0){
+            return ret;
+        }
+        ret = set_snd_card_samplerate(adev->pcm_modem_ul->fd, PCM_IN, &pcm_config_vrec_vx, device_set_samplerate.samplerate);
+        if(ret < 0){
+            return ret;
+        }
+    }
+    ret = Write_Rsp2cp(fd_pipe,VBC_CMD_SET_SAMPLERATE);
+    if(ret < 0){
+        ALOGE("Error, %s Write_Rsp2cp1 failed(%d).",__func__,ret);
+    }
+	MY_TRACE("%s send rsp to cp...",__func__);
+	return ret;
+}
 
 void vbc_ctrl_init(struct tiny_audio_device *adev)
 {
@@ -1043,7 +1147,7 @@ RESTART:
                 pthread_mutex_lock(&adev->lock);
                 ALOGW("VBC_CMD_HAL_OPEN, got lock");
                 force_all_standby(adev);    /*should standby because MODE_IN_CALL is later than call_start*/
-                adev->pcm_modem_dl= pcm_open(s_tinycard, PORT_MODEM, PCM_OUT | PCM_MMAP, &pcm_config_vx);
+                adev->pcm_modem_dl= pcm_open(s_tinycard, PORT_MODEM, PCM_OUT, &pcm_config_vx);
                 if (!pcm_is_ready(adev->pcm_modem_dl)) {
                     ALOGE("cannot open pcm_modem_dl : %s", pcm_get_error(adev->pcm_modem_dl));
                     pcm_close(adev->pcm_modem_dl);
@@ -1077,7 +1181,10 @@ RESTART:
                 MY_TRACE("VBC_CMD_HAL_CLOSE IN.");
                 adev->call_prestop = 1;
                 write_common_head.cmd_type = VBC_CMD_RSP_CLOSE;     //ask cp to read vaudio data, "call_prestop" will stop to write pcm data again.
-                WriteParas_Head(para->vbpipe_fd, &write_common_head);
+                ret = WriteParas_Head(para->vbpipe_fd, &write_common_head);
+                if(ret < 0){
+                    ALOGE("VBC_CMD_HAL_CLOSE: write1 cmd VBC_CMD_RSP_CLOSE ret(%d) error(%s).",ret,strerror(errno));
+                }
                 mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch vbc to arm
                 if(adev->call_start){  //if mediaserver crashed, audio will reopen, "call_start" value is 0, should bypass all the settings.
                     ALOGW("VBC_CMD_HAL_CLOSE, try lock");
@@ -1094,8 +1201,14 @@ RESTART:
                 }else{
                     ALOGW("VBC_CMD_HAL_CLOSE, call thread restart, we should stop call!!!");
                 }
-                ReadParas_Head(para->vbpipe_fd,&write_common_head);
-                Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_HAL_CLOSE);
+                ret = ReadParas_Head(para->vbpipe_fd,&write_common_head);
+                if(ret < 0){
+                    ALOGE("VBC_CMD_HAL_CLOSE: read ret(%d) error(%s).",ret,strerror(errno));
+                }
+                ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_HAL_CLOSE);
+                if(ret < 0){
+                    ALOGE("VBC_CMD_HAL_CLOSE: write2 cmd VBC_CMD_RSP_CLOSE error(%d).",ret);
+                }
                 adev->call_prestop = 0;
                 MY_TRACE("VBC_CMD_HAL_CLOSE OUT.");
             }
@@ -1164,6 +1277,17 @@ RESTART:
                     para->is_exit = 1;
                 }
                 MY_TRACE("VBC_CMD_DEVICE_CTRL OUT.");
+            }
+            break;
+            case VBC_CMD_SET_SAMPLERATE:
+            {
+                MY_TRACE("VBC_CMD_SET_SAMPLERATE IN.");
+                ret = SetParas_Samplerate_Incall(para->vbpipe_fd,adev);
+                if(ret < 0){
+                    MY_TRACE("VBC_CMD_SET_SAMPLERATE SetParas_Samplerate_Incall error.s_is_exit:%d ",para->is_exit);
+                    para->is_exit = 1;
+                }
+                MY_TRACE("VBC_CMD_SET_SAMPLERATE OUT.");
             }
             break;
             default:
