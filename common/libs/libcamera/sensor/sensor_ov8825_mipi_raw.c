@@ -1449,11 +1449,11 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	struct sensor_raw_tune_info* sensor_ptr=raw_sensor_ptr->tune_ptr;
 	struct sensor_raw_cali_info* cali_ptr=raw_sensor_ptr->cali_ptr;
 
-	raw_sensor_ptr->version_info->version_id=0x00000000;
+	raw_sensor_ptr->version_info->version_id=0x00010000;
 	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);
 
 	//bypass
-	//sensor_ptr->version_id=0x00000000;
+	sensor_ptr->version_id=0x00010000;
 	sensor_ptr->blc_bypass=0x00;
 	sensor_ptr->nlc_bypass=0x01;
 	sensor_ptr->lnc_bypass=0x01;
@@ -1611,7 +1611,7 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->ae.normal_fix_fps=0;
 	sensor_ptr->ae.night_fix_fps=0;
 	sensor_ptr->ae.video_fps=0x1e;
-	sensor_ptr->ae.target_lum=60;
+	sensor_ptr->ae.target_lum=120;
 	sensor_ptr->ae.target_zone=8;
 	sensor_ptr->ae.quick_mode=1;
 	sensor_ptr->ae.smart=0;

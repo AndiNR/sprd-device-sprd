@@ -37,7 +37,7 @@
 //yellow: color conversion;
 */
 /* Incandescent/U30/CWF/Fluorescent/Sun/Cloudy*/
-#define SENSOR_ISO_NUM 0x05 //isp_ae.h's ISP_ISP_NUM alse need to modify
+#define SENSOR_ISO_NUM 0x06
 #define SENSOR_AE_NUM 0x500
 #define SENSOR_AE_TAB_NUM 0x04
 #define SENSOR_AWB_CALI_NUM 0x09
@@ -47,6 +47,7 @@
 #define RAW_INFO_END_ID 0x71717567
 
 #define SENSOR_RAW_VERSION_ID 0x00000000 /* tiger-0000xxxx, soft-xxxx0000*/
+#define SENSOR_RAW_V0001_VERSION_ID 0x00010000 /* tiger-0000xxxx, soft-xxxx0000*/
 
 struct sensor_pos{
 	uint16_t x;
@@ -108,6 +109,11 @@ struct sensor_lnc_map_addr{
 
 struct sensor_lnc_map{
 	struct sensor_lnc_map_addr map[SENSOR_MAP_NUM][SENSOR_AWB_CALI_NUM];
+};
+
+struct sensor_awb_map{
+	uint16_t *addr;
+	uint32_t len;		//by bytes
 };
 
 struct sensor_ae_index{
@@ -184,7 +190,8 @@ struct sensor_awb_param{
 	uint16_t r_gain[SENSOR_AWB_NUM];
 	uint16_t g_gain[SENSOR_AWB_NUM];
 	uint16_t b_gain[SENSOR_AWB_NUM];
-	uint16_t reserved0;
+	uint8_t gain_index;
+	uint8_t alg_id;
 	uint32_t target_zone;
 	uint32_t smart;
 	uint32_t quick_mode;
@@ -243,8 +250,9 @@ struct sensor_gamma_param{
 
 struct sensor_cce_uvdiv{
 	uint8_t thrd[7];
-	uint8_t reserved;
-	uint32_t reserved1[20];
+	uint8_t t[2];
+	uint8_t m[3];
+	uint32_t reserved1[19];
 };
 
 struct sensor_pref_param{
@@ -288,7 +296,10 @@ struct sensor_af_param{
 	uint32_t total_step;
 	uint32_t max_step;
 	uint32_t stab_period;
-	uint32_t reserved[40];
+	uint16_t af_step_info[32];
+	uint16_t af_step_count;
+	uint16_t alg_id;
+	uint32_t reserved[23];
 };
 
 struct sensor_emboss_param{
@@ -325,6 +336,14 @@ struct sensor_chn_gain_param{
 	uint16_t b_offset;
 	uint16_t reserved1;
 	uint32_t reserved2[50];
+};
+
+struct sensor_flash_cali_param{
+	uint16_t lum_ratio;
+	uint16_t r_ratio;
+	uint16_t g_ratio;
+	uint16_t b_ratio;
+	uint32_t reserved[50];
 };
 
 struct sensor_css_param{
@@ -402,11 +421,13 @@ struct sensor_raw_tune_info{
 	struct sensor_emboss_param emboss;
 	struct sensor_global_gain_param global;
 	struct sensor_chn_gain_param chn;
+	struct sensor_flash_cali_param flash;
  };
 
 struct sensor_raw_fix_info{
 	struct sensor_ae_tab ae;
 	struct sensor_lnc_map lnc;
+	struct sensor_awb_map awb;
 };
 
 struct sensor_raw_awb_cali{
@@ -446,6 +467,7 @@ struct sensor_raw_info{
 struct raw_param_info_tab{
 	uint32_t param_id;
 	struct sensor_raw_info* info_ptr;
+	uint32_t(*cfg) (void* param_ptr);
 };
 
 #endif
