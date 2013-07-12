@@ -666,16 +666,7 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
                 return;
 
             case FROMFILE_IO_HANDLER:
-                try {
-                    FileOutputStream f = _context.openFileOutput("TreeExternalNode",
-                            offset == 0 ? Context.MODE_PRIVATE : Context.MODE_APPEND);
-                    f.write(data);
-                    f.close();
-                } catch (IOException e) {
-                    Log.e("DMC", "TreeHandler: Failed to write to external file");
-                    // throw new VdmException(VdmError.STORAGE_WRITE);
-                    return;
-                }
+
                 break;
 
             // DM Setting
