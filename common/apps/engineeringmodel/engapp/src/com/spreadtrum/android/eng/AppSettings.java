@@ -43,7 +43,9 @@ public class AppSettings extends PreferenceActivity {
     private CheckBoxPreference mAcceRotation;
     private CheckBoxPreference mEnableUsbFactoryMode;
     private CheckBoxPreference mModemReset;
+    private CheckBoxPreference mCallForwardQuery;
     private EngSqlite mEngSqlite;
+    public static final boolean ORANGE_SUPPORT = SystemProperties.get("ro.support").equals("orange");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +57,12 @@ public class AppSettings extends PreferenceActivity {
         mAcceRotation = (CheckBoxPreference)findPreference(ACCELEROMETER);
         mEnableUsbFactoryMode = (CheckBoxPreference)findPreference(ENABLE_USB_FACTORY_MODE);
         mModemReset = (CheckBoxPreference)findPreference(MODEM_RESET);
+
+        // Disable call forward query with Orange feature
+		if(ORANGE_SUPPORT == false) {
+	        mCallForwardQuery = (CheckBoxPreference)findPreference(CALL_FORWARD_QUERY);
+            getPreferenceScreen().removePreference(mCallForwardQuery);
+        }
 
         String result = SystemProperties.get("persist.sys.sprd.modemreset");
         if(DEBUG) Log.d(LOG_TAG, "result: "+ result + ", result.equals(): " + (result.equals("1")));
