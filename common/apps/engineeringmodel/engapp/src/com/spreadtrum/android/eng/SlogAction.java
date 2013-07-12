@@ -148,6 +148,7 @@ public class SlogAction {
     private static boolean MMC_SUPPORT = "1".equals(android.os.SystemProperties.get("ro.device.support.mmc"));
 
     private static Object mLock = new Object();
+    private static Object mResetLock = new Object();
 
     // ========================================================================================================
 
@@ -167,23 +168,28 @@ public class SlogAction {
         }
 
         try {
-            if (GetState(keyName, false).equals(ON))
-                return true;
-            if (GetState(keyName, true).equals(ON))
-                return true;
             if (keyName.equals(GENERALKEY)
-                    && GetState(keyName, true).equals(GENERALON))
+                    && GetState(keyName, true).equals(GENERALON)) {
                 return true;
+            }
             if (keyName.equals(STORAGEKEY)
-                    && GetState(keyName, true).equals(STORAGESDCARD))
+                    && GetState(keyName, true).equals(STORAGESDCARD)) {
                 return true;
+            }
+            if (keyName.equals(CLEARLOGAUTOKEY)
+                    && GetState(keyName, true).equals(ON)) {
+                return true;
+            } else if (GetState(keyName, false).equals(ON)) {
+                return true;
+            } else {
+                return false;
+            }
         } catch (NullPointerException nullPointer) {
             Log.e("GetState",
                     "Maybe you change GetState(),but don't return null.Log:\n"
                     + nullPointer);
             return false;
         }
-        return false;
     }
 
     /** Reload GetState function, for other condition **/
@@ -236,16 +242,10 @@ public class SlogAction {
             byte[] buffer = new byte[freader.available()];
             result = new char[freader.available()];
             if (freader.available() < 10) {
-                new Thread() {
-                    @Override
-                    public void run() {
-                        runSlogCommand("rm " + SLOG_CONF_LOCATION);
-                        runSlogCommand(SLOG_COMMAND_RESTART);
-                    }
+                freader.close();
+                resetSlogConf();
 
-                }.start();
-		freader.close();
-		return DECODE_ERROR;
+                return DECODE_ERROR;
             }
 
             // Begin reading
@@ -258,20 +258,26 @@ public class SlogAction {
             } catch (Exception e) {
                 // Although I'm dead, I close it!
                 freader.close();
-                Log.e("GetStates->Readfile", e.toString());
+                Log.e(TAG, "Read buffer failed, because " + e.getMessage() + "Now print stack");
+                e.printStackTrace();
                 return DECODE_ERROR;
             }
             freader.close();
-
+        } catch (java.io.FileNotFoundException fileNotFound) {
+            Log.e(TAG ,"File not found, reset slog.conf");
+            resetSlogConf();
+            return DECODE_ERROR;
         } catch (Exception e) {
-            Log.e("GetState(String,boolean):String", e.toString());
+            Log.e(TAG, "Failed reading file. Now dump stack");
+            e.printStackTrace();
             return DECODE_ERROR;
         }
 
-        if (conf.length() < 1) {
+        if (conf == null || conf.length() < 1) {
+            Log.d(TAG, "conf.lenght < 1, return decode_error");
             return DECODE_ERROR;
         }
-        
+
         try {
             conf.getChars(
                     conf.indexOf(keyName) + keyName.length(), // start cursor
@@ -279,11 +285,30 @@ public class SlogAction {
                             + keyName.length() + 1), // ending cursor
                     result, 0);//
         } catch(Exception e) {
+            // TODO REMOVE LOG AFTER DEBUG.
+            Log.d(TAG, "Catch exception");
+            e.printStackTrace();
             return DECODE_ERROR;
         }
+        Log.d(TAG, "return value is " + String.valueOf(result).trim() + "and keyName=" + keyName);
+        Thread.dumpStack();
         return String.valueOf(result).trim();
     }
 
+    private static synchronized void resetSlogConf() {
+        // TODO REMOVE LOG AFTER DEBUG.
+        Log.d(TAG, "found slog.conf has something wrong, reset theme");
+        new Thread() {
+            @Override
+            public void run() {
+                synchronized (mResetLock) {
+                    runSlogCommand("rm " + SLOG_CONF_LOCATION);
+                    runCommand();
+                }
+            }
+
+        }.start();
+    }
     /* <----------------------Old Feature */
 
     /*
@@ -402,6 +427,11 @@ public class SlogAction {
             }
             conf = new StringBuilder(EncodingUtils.getString(buffer, "UTF-8"));
             int searchCursor = conf.indexOf(keyName);
+            if (searchCursor < 0) {
+                Log.e(TAG, "start index <0, reset slog.conf");
+                resetSlogConf();
+                return;
+            }
             int keyNameLength = keyName.length();
             // ==================Judge Complete
             conf.replace(
@@ -421,6 +451,9 @@ public class SlogAction {
                 Log.e(MethodName, "Writing file failed,now close,log:\n" + e);
                 return;
             }
+        } catch (java.io.FileNotFoundException fileNotFound){
+            Log.e(TAG, "Init FileInputStream failed, reset slog.conf");
+            resetSlogConf();
         } catch (Exception e) {
 
             e.printStackTrace();
@@ -476,10 +509,10 @@ public class SlogAction {
                         SlogProvider.Contract.COLUMN_MISC)) == 1), false);
         SetState(CLEARLOGAUTOKEY, (cursor.getInt(
                 cursor.getColumnIndex(
-                        SlogProvider.Contract.COLUMN_CLEAR_AUTO)) == 1), false);
+                        SlogProvider.Contract.COLUMN_CLEAR_AUTO)) == 1), true);
         SetState(STORAGEKEY, (cursor.getInt(
                 cursor.getColumnIndex(
-                        SlogProvider.Contract.COLUMN_STORAGE)) == 1), false);
+                        SlogProvider.Contract.COLUMN_STORAGE)) == 1), true);
 
     }
 
@@ -497,7 +530,7 @@ public class SlogAction {
                         getAllStatesInContentValues(),
                         null, null);
     }
-    
+
     public static void deleteMode(Context context, int id) {
         context.getContentResolver().delete(
                 ContentUris.withAppendedId(SlogProvider.URI_ID_MODES, id), null, null);
@@ -893,7 +926,7 @@ public class SlogAction {
             } catch (NameNotFoundException e) {
                 Log.e(TAG, "NameNotFoundException " + e);
                 return ;
-            }          
+            } 
         } else {
             Log.e(TAG, "Failed registBroadcast, unknown command " + command);
         }
@@ -978,12 +1011,12 @@ public class SlogAction {
         * 1. Why write byte can catch IOException?
         * 2. Whether Setting AT Command in main thread can cause ANR or not?
         */
-        
+
         // Feature changed, remove close action of openLog now.
         if (!openLog) {
             return false;
         }
-        
+
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos);
         try {

@@ -233,7 +233,7 @@
     <string name="slog_clear_ok">Clear done</string>
     <string name="slog_clear_failed">Failed to clear</string>
 
-    <string name="slog_version_info">Updated on 2013-7-1, fix radio button display, add protection when slog.conf is empty.</string>
+    <string name="slog_version_info">Updated on 2013-7-11, Correct some reading functions, remove duplicate query, remove effect of child thread.</string>
 	<!-- SlogUI Added Done -->
     <!-- Add 20130625 Spreadst of 177803 add Traditional Chinese support for uplum start -->
     <string name="no_sim_card_prompt">Please insert USIM card and try again</string>
