@@ -537,8 +537,8 @@ void SprdCameraHardware::stopRecording()
 
 void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
 {
-	//LOGV("releaseRecordingFrame E. ");
-	Mutex::Autolock l(&mLock);
+	LOGV("releaseRecordingFrame E. ");
+	//Mutex::Autolock l(&mLock);
 	uint8_t *addr = (uint8_t *)opaque;
 	int32_t index;
 

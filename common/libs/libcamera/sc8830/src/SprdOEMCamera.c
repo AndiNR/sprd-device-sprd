@@ -1055,6 +1055,8 @@ int camera_local_init(void)
 	g_cxt->capture_status  = CMR_IDLE;
 	g_cxt->capture_raw_status  = CMR_IDLE;
 	g_cxt->is_take_picture = TAKE_PICTURE_NO;
+	g_cxt->prev_buf_id = 0;
+	g_cxt->prev_self_restart = 0;
 
 	g_cxt->set_flag = 0x0;
 
@@ -1601,11 +1603,13 @@ int camera_after_set_internal(enum restart_mode re_mode)
 					CMR_LOGE("Failed to stop preview");
 					return -CAMERA_FAILED;
 				}
+				g_cxt->prev_self_restart = 1;
 				ret  = camera_start_preview_internal();
 				if (ret) {
 					CMR_LOGE("Failed to restart preview");
 					return -CAMERA_FAILED;
 				}
+				g_cxt->prev_self_restart = 0;
 				return 0;
 			} else {
 				CMR_LOGE("Failed to init preview when preview");
@@ -2960,6 +2964,7 @@ int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info
 
 	case CMR_EVT_START:
 		if (CMR_PREVIEW == sub_type) {
+			g_cxt->prev_buf_id = 0;
 			ret = camera_start_preview_internal();
 			if (CAMERA_SUCCESS == ret) {
 				camera_call_cb(CAMERA_RSP_CB_SUCCESS,
@@ -4038,7 +4043,7 @@ int camera_get_sensor_preview_mode(struct img_size* target_size, uint32_t *work_
 
 int camera_alloc_preview_buf(struct buffer_cfg *buffer, uint32_t format)
 {
-	uint32_t                 buffer_size, frame_size, frame_num, i;
+	uint32_t                 buffer_size, frame_size, frame_num, i, j;
 	int                      ret = CAMERA_SUCCESS;
 
 	if (NULL == buffer)
@@ -4091,17 +4096,61 @@ int camera_alloc_preview_buf(struct buffer_cfg *buffer, uint32_t format)
 	buffer->count      = CAMERA_PREV_FRM_CNT;
 	buffer->length     = frame_size;
 	bzero((void*)&buffer->addr[0], (uint32_t)(V4L2_BUF_MAX*sizeof(struct img_addr)));
-	for (i = 0; i < CAMERA_PREV_FRM_CNT; i++) {
-		g_cxt->prev_frm[i].addr_vir.addr_y = (uint32_t)g_cxt->prev_virt_addr_array[i];
-		g_cxt->prev_frm[i].addr_vir.addr_u = g_cxt->prev_frm[i].addr_vir.addr_y + buffer_size;
+	CMR_LOGV("self restart %d, prev_id %d", g_cxt->prev_self_restart, g_cxt->prev_buf_id);
+	if (g_cxt->prev_self_restart) {
+		if (g_cxt->prev_buf_id == CAMERA_PREV_FRM_CNT - 1) {
+			buffer->start_buf_id = 0;
+		} else {
+			buffer->start_buf_id = g_cxt->prev_buf_id + 1;
+		}
+	} else {
+		buffer->start_buf_id = 0;
+	}
 
-		g_cxt->prev_frm[i].addr_phy.addr_y = (uint32_t)g_cxt->prev_phys_addr_array[i];
-		g_cxt->prev_frm[i].addr_phy.addr_u = g_cxt->prev_frm[i].addr_phy.addr_y + buffer_size;
-		g_cxt->prev_frm[i].fmt             = format;
-		g_cxt->prev_frm[i].size.width      = g_cxt->preview_size.width;
-		g_cxt->prev_frm[i].size.height     = g_cxt->preview_size.height;
-		buffer->addr[i].addr_y = g_cxt->prev_frm[i].addr_phy.addr_y;
-		buffer->addr[i].addr_u = g_cxt->prev_frm[i].addr_phy.addr_u;
+	if (buffer->start_buf_id) {
+		frame_num = 0;
+		for (i = 0; i < buffer->start_buf_id; i++) {
+			frame_num = (uint32_t)((buffer->start_buf_id + i) % CAMERA_PREV_FRM_CNT);
+			g_cxt->prev_frm[i].addr_vir.addr_y = (uint32_t)g_cxt->prev_virt_addr_array[frame_num];
+			g_cxt->prev_frm[i].addr_vir.addr_u = g_cxt->prev_frm[i].addr_vir.addr_y + buffer_size;
+
+			g_cxt->prev_frm[i].addr_phy.addr_y = (uint32_t)g_cxt->prev_phys_addr_array[frame_num];
+			g_cxt->prev_frm[i].addr_phy.addr_u = g_cxt->prev_frm[i].addr_phy.addr_y + buffer_size;
+			g_cxt->prev_frm[i].fmt             = format;
+			g_cxt->prev_frm[i].size.width      = g_cxt->preview_size.width;
+			g_cxt->prev_frm[i].size.height     = g_cxt->preview_size.height;
+			buffer->addr[i].addr_y = g_cxt->prev_frm[i].addr_phy.addr_y;
+			buffer->addr[i].addr_u = g_cxt->prev_frm[i].addr_phy.addr_u;
+		}
+		CMR_LOGV("frame_num %d", frame_num);
+
+		for (i = buffer->start_buf_id; i < CAMERA_PREV_FRM_CNT; i++) {
+			frame_num ++;
+			j = (uint32_t)(frame_num % CAMERA_PREV_FRM_CNT);
+			g_cxt->prev_frm[i].addr_vir.addr_y = (uint32_t)g_cxt->prev_virt_addr_array[j];
+			g_cxt->prev_frm[i].addr_vir.addr_u = g_cxt->prev_frm[i].addr_vir.addr_y + buffer_size;
+
+			g_cxt->prev_frm[i].addr_phy.addr_y = (uint32_t)g_cxt->prev_phys_addr_array[j];
+			g_cxt->prev_frm[i].addr_phy.addr_u = g_cxt->prev_frm[i].addr_phy.addr_y + buffer_size;
+			g_cxt->prev_frm[i].fmt             = format;
+			g_cxt->prev_frm[i].size.width      = g_cxt->preview_size.width;
+			g_cxt->prev_frm[i].size.height     = g_cxt->preview_size.height;
+			buffer->addr[i].addr_y = g_cxt->prev_frm[i].addr_phy.addr_y;
+			buffer->addr[i].addr_u = g_cxt->prev_frm[i].addr_phy.addr_u;
+		}
+	}else {
+		for (i = 0; i < CAMERA_PREV_FRM_CNT; i++) {
+			g_cxt->prev_frm[i].addr_vir.addr_y = (uint32_t)g_cxt->prev_virt_addr_array[i];
+			g_cxt->prev_frm[i].addr_vir.addr_u = g_cxt->prev_frm[i].addr_vir.addr_y + buffer_size;
+
+			g_cxt->prev_frm[i].addr_phy.addr_y = (uint32_t)g_cxt->prev_phys_addr_array[i];
+			g_cxt->prev_frm[i].addr_phy.addr_u = g_cxt->prev_frm[i].addr_phy.addr_y + buffer_size;
+			g_cxt->prev_frm[i].fmt             = format;
+			g_cxt->prev_frm[i].size.width      = g_cxt->preview_size.width;
+			g_cxt->prev_frm[i].size.height     = g_cxt->preview_size.height;
+			buffer->addr[i].addr_y = g_cxt->prev_frm[i].addr_phy.addr_y;
+			buffer->addr[i].addr_u = g_cxt->prev_frm[i].addr_phy.addr_u;
+		}
 	}
 
 	if (g_cxt->prev_rot) {
@@ -4567,6 +4616,7 @@ int camera_v4l2_preview_handle(struct frm_info *data)
 			g_cxt->set_flag--;
 		}
 		ret = camera_set_frame_type(&frame_type, data);
+		g_cxt->prev_buf_id = frame_type.buf_id;
 		camera_call_cb(CAMERA_EVT_CB_FRAME,
 				camera_get_client_data(),
 				CAMERA_FUNC_START_PREVIEW,

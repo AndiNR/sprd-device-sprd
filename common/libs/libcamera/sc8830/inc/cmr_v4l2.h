@@ -85,6 +85,7 @@ struct buffer_cfg {
 	uint32_t                            count;
 	uint32_t                            length;
 	uint32_t                            slice_height;
+	uint32_t                            start_buf_id;
 	struct img_addr	                    addr[V4L2_BUF_MAX];
 };
 

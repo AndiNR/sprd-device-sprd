@@ -509,6 +509,7 @@ int cmr_v4l2_free_frame(uint32_t channel_id, uint32_t index)
 	pthread_mutex_unlock(&status_mutex);
 	if (CHN_BUSY != chn_status[channel_id]) {
 		CMR_LOGV("channel %d not on, no need to free current frame", channel_id);
+		ret = 0;
 		return ret;
 	}
 	v4l2_buf.index = index;
@@ -522,6 +523,7 @@ int cmr_v4l2_free_frame(uint32_t channel_id, uint32_t index)
 	ret = ioctl(fd, VIDIOC_QBUF, &v4l2_buf);
 	if (ret) {
 		CMR_LOGE("Failed to free frame, %d", ret);
+		ret = 0;
 	}
 	return ret;
 }

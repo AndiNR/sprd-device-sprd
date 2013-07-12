@@ -335,6 +335,8 @@ struct camera_context {
 	uint32_t                 wait_for_start;
 	uint32_t                 wait_for_stop;
 	uint32_t                 is_dv_mode;
+	uint32_t                 prev_buf_id;
+	uint32_t                 prev_self_restart;
 
 	/*for capture*/
 	struct img_size          picture_size;
