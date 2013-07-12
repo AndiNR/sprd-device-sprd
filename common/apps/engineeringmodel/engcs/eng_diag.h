@@ -46,6 +46,7 @@ typedef enum
 #define DIAG_CMD_GETVOLTAGE	0x1E
 #define DIAG_CMD_APCALI		0x62
 #define DIAG_CMD_FACTORYMODE	0x0D
+#define DIAG_CMD_ADC_F		0x0F  //add by kenyliu on 2013 07 12 for get ADCV  bug 188809
 #define DIAG_CMD_AUDIO		0x68
 #define DIAG_CMD_CHANGEMODE     DIAG_CHANGE_MODE_F
 
@@ -73,6 +74,7 @@ typedef enum
 	CMD_USER_RESET,
 	CMD_USER_GETVOLTAGE,
 	CMD_USER_APCALI,
+	CMD_USER_ADC, //add by kenyliu on 2013 07 12 for get ADCV  bug 188809
 	CMD_INVALID
 }DIAG_CMD_TYPE;
 
