@@ -217,7 +217,7 @@ int sub_main(int flags, int addr, int value, int nword)
 					fprintf(stderr,"open %s error\n", strPath2);
 					goto Exit;/*sad*/
 				}
-                fprintf(stdout, "0x%08x | %s\n", addr, c);
+			    fprintf(stdout, "0x%08x | %s\n", addr & ~0x3, c);
                 addr += 4;
         }
 
