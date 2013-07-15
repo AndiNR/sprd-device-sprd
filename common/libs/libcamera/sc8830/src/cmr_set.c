@@ -1315,6 +1315,12 @@ int camera_autofocus_start(void)
 		} else {
 			camera_set_flashdevice((uint32_t)FLASH_OPEN);
 		}
+		if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
+			if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
+				sem_wait(&cxt->cmr_set.isp_alg_sem);
+			}
+			camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN);
+		}
 	}
 #endif
 	if (CAMERA_FOCUS_MODE_MACRO == cxt->cmr_set.af_mode) {
@@ -1381,14 +1387,14 @@ int camera_autofocus_start(void)
 			ret = Sensor_Ioctl(SENSOR_IOCTL_FOCUS, (uint32_t) & af_param);
 		}
 	}
-#ifndef CONFIG_CAMERA_FLASH_CTRL
+/*#ifndef CONFIG_CAMERA_FLASH_CTRL
 	if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 			sem_wait(&cxt->cmr_set.isp_alg_sem);
 		}
 		camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN);
 	}
-#endif
+#endif*/
 	CMR_PRINT_TIME;
 	CMR_LOGV("End. %d", ret);
 
