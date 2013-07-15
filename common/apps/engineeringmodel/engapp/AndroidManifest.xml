@@ -154,7 +154,7 @@
 		</intent-filter>
 	</activity>
 
-	<activity android:name="uplmnsettings" android:label="UPLMN" android:screenOrientation="portrait">
+	<activity android:name="uplmnsettings" android:label="UPLMN" android:theme="@style/Theme.Settings" android:uuiTheme="@style/Theme_Settings_new_ui">
 		<intent-filter>
 		<action android:name="android.intent.action.MAIN" />
 		</intent-filter>
