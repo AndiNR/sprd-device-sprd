@@ -53,23 +53,48 @@ void	initialize_ctrl_file(void)
 	}
 	close(fd);
 }
+//modify by kenyliu on 2013 07 15 for set calibration enable or disable  bug 189696
 void	disable_calibration(void)
 {
 	CALI_INFO_DATA_T        cali_info;
-        int ret;
 
-        int fd = open(CALI_CTRL_FILE_PATH,O_RDWR);
+       int fd = open(CALI_CTRL_FILE_PATH,O_RDWR);
 
-        if(fd < 0)
-                return;
-
+       if(fd < 0){
+		ALOGE("%s open %s failed\n",__func__,CALI_CTRL_FILE_PATH);
+		return;
+	}
+	read(fd,&cali_info,sizeof(cali_info));
 	cali_info.magic = CALI_MAGIC;
 	cali_info.cali_flag = CALI_COMP;
 
 	lseek(fd,SEEK_SET,0);
-	write(fd,&cali_info,8);
+	write(fd,&cali_info,sizeof(cali_info));
+	close(fd);
+	fd = open(CALI_CTRL_FILE_PATH,O_RDWR);
 	close(fd);
 }
+
+void	enable_calibration(void)
+{
+	CALI_INFO_DATA_T        cali_info;
+
+       int fd = open(CALI_CTRL_FILE_PATH,O_RDWR);
+
+       if(fd < 0){
+		ALOGE("%s open %s failed\n",__func__,CALI_CTRL_FILE_PATH);
+		return;
+	}
+	   
+	read(fd,&cali_info,sizeof(cali_info));
+	cali_info.magic = 0xFFFFFFFF;
+	cali_info.cali_flag = 0xFFFFFFFF;
+
+	lseek(fd,SEEK_SET,0);
+	write(fd,&cali_info,sizeof(cali_info));
+	close(fd);
+}
+//end kenyliu modify
 
 //add by kenyliu on 2013 07 12 for get ADCV  bug 188809
 void adc_get_result(char* chan)
