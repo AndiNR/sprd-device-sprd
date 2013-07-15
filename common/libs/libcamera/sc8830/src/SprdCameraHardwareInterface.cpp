@@ -698,6 +698,8 @@ status_t SprdCameraHardware::setParameters(const SprdCameraParameters& params)
 	LOGV("setParameters: requested picture size %d x %d", mRawWidth, mRawHeight);
 	LOGV("setParameters: requested preview size %d x %d", mPreviewWidth, mPreviewHeight);
 
+	camera_zsl_rot_cap_param_reset();
+
 	if (camera_set_change_size(mRawWidth, mRawHeight, mPreviewWidth, mPreviewHeight)) {
 		mPreviewStartFlag = 2;
 		stopPreviewInternal();

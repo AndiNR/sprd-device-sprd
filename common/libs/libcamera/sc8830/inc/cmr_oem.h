@@ -340,8 +340,10 @@ struct camera_context {
 
 	/*for capture*/
 	struct img_size          picture_size;
+	struct img_size          picture_size_backup;
 	struct img_size          capture_size;
 	struct img_size          cap_orig_size;
+	struct img_size          cap_orig_size_backup;
 	struct img_size          max_size;
 	uint32_t                 total_cap_num;
 	uint32_t                 total_capture_num;
@@ -350,6 +352,7 @@ struct camera_context {
 	uint32_t                 total_cap_ch_num;
 	uint32_t                 cap_ch_cnt;
 	uint32_t                 cap_rot;
+	uint32_t                 cap_rot_backup;
 	uint32_t                 cap_rot_index;
 	uint32_t                 cap_original_fmt;
 	uint32_t                 cap_target_fmt;

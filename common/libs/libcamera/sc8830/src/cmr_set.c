@@ -959,6 +959,7 @@ int camera_set_ctrl(camera_parm_type id,
 			cxt->prev_rot = parm;
 			camera_set_rot_angle(&cxt->prev_rot);
 			cxt->cap_rot = cxt->prev_rot;
+			cxt->cap_rot_backup = cxt->cap_rot;
 		}
 		break;
 		

@@ -1401,11 +1401,24 @@ camera_ret_code_type camera_set_dimensions(uint16_t picture_width,
 
 		g_cxt->picture_size.width  = picture_width;
 		g_cxt->picture_size.height = picture_height;
+		g_cxt->picture_size_backup = g_cxt->picture_size;
 		ret = camera_capture_sensor_mode();
 	} else {
 		ret = -CAMERA_INVALID_PARM;
 	}
 
+	return ret;
+}
+
+camera_ret_code_type camera_zsl_rot_cap_param_reset(void)
+{
+	int                      ret = CAMERA_SUCCESS;
+
+	if (CAMERA_ZSL_MODE == g_cxt->cap_mode || CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode) {
+		g_cxt->picture_size = g_cxt->picture_size_backup;
+		g_cxt->cap_orig_size = g_cxt->cap_orig_size_backup;
+		g_cxt->cap_rot = g_cxt->cap_rot_backup;
+	}
 	return ret;
 }
 
@@ -4289,6 +4302,7 @@ int camera_capture_ability(SENSOR_MODE_INFO_T *sn_mode,
 
 	g_cxt->cap_orig_size.width    = img_cap->dst_img_size.width;
 	g_cxt->cap_orig_size.height   = img_cap->dst_img_size.height;
+	g_cxt->cap_orig_size_backup = g_cxt->cap_orig_size;
 	CMR_LOGV("cap_orig_size %d %d", g_cxt->cap_orig_size.width, g_cxt->cap_orig_size.height);
 
 	sensor_size.width  = sn_mode->width;
@@ -5096,11 +5110,12 @@ int camera_start_jpeg_encode(struct frm_info *data)
 			CMR_LOGE("Wrong Frame id, 0x%x", data->frame_id);
 			return -CAMERA_INVALID_PARM;
 		}
-		if (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 == g_cxt->cfg_cap_rot) && NO_SCALING)
+		if (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 == g_cxt->cfg_cap_rot) && NO_SCALING) {
 			src_frm    = &g_cxt->cap_mem[frm_id].cap_yuv_rot;
-		else
+		} else {
 			src_frm    = &g_cxt->cap_mem[frm_id].target_yuv;
-		target_frm = &g_cxt->cap_mem[0].target_jpeg;
+		}
+		target_frm = &g_cxt->cap_mem[frm_id].target_jpeg;
 	} else {
 		frm_id = data->frame_id - CAMERA_CAP1_ID_BASE;
 		if (frm_id >= CAMERA_CAP_FRM_CNT) {
@@ -5647,9 +5662,19 @@ static int camera_convert_to_thumb(void)
 	} else {
 		cmr_scale_evt_reg(NULL);
 	}
-
-	src_frame.addr_phy.addr_y = g_cxt->cap_mem[frm_id].target_yuv.addr_phy.addr_y;
-	src_frame.addr_phy.addr_u = g_cxt->cap_mem[frm_id].target_yuv.addr_phy.addr_u;
+	if (IMG_ROT_90 == g_cxt->cfg_cap_rot || IMG_ROT_270 == g_cxt->cfg_cap_rot) {
+		uint32_t temp = 0;
+		temp = g_cxt->thum_size.width;
+		g_cxt->thum_size.width = g_cxt->thum_size.height;
+		g_cxt->thum_size.height = temp;
+	}
+	if (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 == g_cxt->cfg_cap_rot) && NO_SCALING) {
+		src_frame.addr_phy.addr_y = g_cxt->cap_mem[frm_id].cap_yuv_rot.addr_phy.addr_y;
+		src_frame.addr_phy.addr_u =  g_cxt->cap_mem[frm_id].cap_yuv_rot.addr_phy.addr_u;
+	} else {
+		src_frame.addr_phy.addr_y = g_cxt->cap_mem[frm_id].target_yuv.addr_phy.addr_y;
+		src_frame.addr_phy.addr_u = g_cxt->cap_mem[frm_id].target_yuv.addr_phy.addr_u;
+	}
 	src_frame.size.width      = g_cxt->picture_size.width;
 	src_frame.size.height     = g_cxt->picture_size.height;
 	src_frame.fmt             = IMG_DATA_TYPE_YUV420;
