@@ -21,9 +21,12 @@
 
 #define VBC_PIPE_NAME_MAX_LEN 16
 
+#define I2S_CTL_PATH_MAX      16
+#define I2S_CTL_INDEX_MAX     3
+
 #define AUDIO_XML_PATH "/system/etc/audio_hw.xml"
 
-#define RO_MODEM_T_ENABLE_PROPERTY     "ro.modem.t.enable"
+#define RO_MODEM_T_ENABLE_PROPERTY     "ro.modem.t.enable" 
 #define RO_MODEM_W_ENABLE_PROPERTY     "ro.modem.w.enable"
 
 
@@ -48,11 +51,19 @@ typedef struct
     cp_type_t cp_type;
 }vbc_ctrl_pipe_para_t;
 
-
+typedef struct
+{
+    int fd;
+    int8_t ctl_path[I2S_CTL_PATH_MAX];
+    int8_t index[I2S_CTL_INDEX_MAX];
+    int is_switch;
+}i2s_ctl_t;
 
 typedef struct{
-	int num;
-	vbc_ctrl_pipe_para_t *vbc_ctrl_pipe_info;
+    int num;
+    vbc_ctrl_pipe_para_t *vbc_ctrl_pipe_info;
+    i2s_ctl_t i2s_bt;
+    i2s_ctl_t i2s_extspk;
 }audio_modem_t;
 
 
