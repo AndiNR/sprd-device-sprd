@@ -598,19 +598,28 @@ static void SetCall_VolumePara(struct tiny_audio_device *adev,paras_mode_gain_t 
 		__func__,pga_gain_nv.dac_pga_gain_l,pga_gain_nv.dac_pga_gain_r,pga_gain_nv.adc_pga_gain_l,pga_gain_nv.adc_pga_gain_r,pga_gain_nv.devices,adev->mode);
 }
 
-int SetParas_OpenHal_Incall(int fd_pipe)	//Get open hal cmd and sim card
+int SetParas_OpenHal_Incall(struct tiny_audio_device *adev, int fd_pipe)	//Get open hal cmd and sim card
 {
     int ret = 0;
     open_hal_t hal_open_param;
     parameters_head_t read_common_head;
+    parameters_head_t write_common_head;
+
+    uint32_t i2s_ctl = ((adev->cp->i2s_bt.is_switch << 8) | (atoi(adev->cp->i2s_bt.index) << 0) 
+		      |(adev->cp->i2s_extspk.is_switch << 9) | (atoi(adev->cp->i2s_extspk.index) << 4));
+
     memset(&hal_open_param,0,sizeof(open_hal_t));
     memset(&read_common_head, 0, sizeof(parameters_head_t));
-    MY_TRACE("%s in...",__func__);
+    memset(&write_common_head, 0, sizeof(parameters_head_t));
 
-    ret = Write_Rsp2cp(fd_pipe,VBC_CMD_HAL_OPEN);
-    if(ret < 0){
-        ALOGE("Error, %s Write_Rsp2cp1 failed(%d).",__func__,ret);
-    }
+    MY_TRACE("%s in...",__func__);
+    ALOGD("i2s_ctl is %x",i2s_ctl);
+
+    write_common_head.cmd_type = VBC_CMD_RSP_OPEN;
+    write_common_head.paras_size = i2s_ctl ;
+
+    WriteParas_Head(fd_pipe, &write_common_head);
+    
     ret = ReadParas_OpenHal(fd_pipe,&hal_open_param);
     if (ret <= 0) {
         ALOGE("Error, read %s ret(%d) failed(%s).",__func__,ret,strerror(errno));
@@ -1018,6 +1027,24 @@ int vbc_ctrl_close()
     return (0);
 }
 
+static int is_voip( struct tiny_audio_device *adev)
+{
+    struct tiny_stream_in *in;
+    struct tiny_stream_out *out;
+    int voip=0;
+
+    if (adev->active_output) {
+	out = adev->active_output;
+	voip = out->is_sco;
+    }
+
+    if (adev->active_input) {
+	in = adev->active_input;
+	voip |= in->is_sco;
+    }
+    return voip; 
+}
+
 void *vbc_ctrl_thread_routine(void *arg)
 {
     int ret = 0;
@@ -1056,7 +1083,8 @@ RESTART:
                         (adev->cur_vbpipe_fd==para->vbpipe_pre_fd/*only current vbpipe need to close*/)){                  //cp crash during call
                     mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch to arm
                     pthread_mutex_lock(&adev->lock);
-                    force_all_standby(adev);
+		            if(!is_voip(adev))
+			            force_all_standby(adev);
                     pcm_close(adev->pcm_modem_ul);
                     pcm_close(adev->pcm_modem_dl);
                     adev->call_start = 0;
@@ -1104,7 +1132,8 @@ RESTART:
                 {
                     mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch to arm
                     pthread_mutex_lock(&adev->lock);
-                    force_all_standby(adev);
+		    		if(!is_voip(adev))
+						force_all_standby(adev);
                     pcm_close(adev->pcm_modem_ul);
                     pcm_close(adev->pcm_modem_dl);
                     adev->call_start = 0;
@@ -1146,7 +1175,9 @@ RESTART:
                 ALOGW("VBC_CMD_HAL_OPEN, try lock");
                 pthread_mutex_lock(&adev->lock);
                 ALOGW("VBC_CMD_HAL_OPEN, got lock");
-                force_all_standby(adev);    /*should standby because MODE_IN_CALL is later than call_start*/
+
+		if(!is_voip(adev))
+		    force_all_standby(adev);    /*should standby because MODE_IN_CALL is later than call_start*/
                 adev->pcm_modem_dl= pcm_open(s_tinycard, PORT_MODEM, PCM_OUT, &pcm_config_vx);
                 if (!pcm_is_ready(adev->pcm_modem_dl)) {
                     ALOGE("cannot open pcm_modem_dl : %s", pcm_get_error(adev->pcm_modem_dl));
@@ -1162,11 +1193,11 @@ RESTART:
                 }
                 ALOGW("START CALL,open pcm device...");
                 adev->call_start = 1;
-                SetParas_OpenHal_Incall(para->vbpipe_fd);   //get sim card number
+                SetParas_OpenHal_Incall(adev,para->vbpipe_fd);   //get sim card number
                 adev->cur_vbpipe_fd = para->vbpipe_fd;
 		adev->cp_type = para->cp_type;
 
-	        if(adev->devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+	        if(adev->devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
 		    if(adev->cp_type == CP_TG)
 			i2s_pin_mux_sel(adev,1);
 		    else if(adev->cp_type == CP_W)
@@ -1180,6 +1211,8 @@ RESTART:
             {
                 MY_TRACE("VBC_CMD_HAL_CLOSE IN.");
                 adev->call_prestop = 1;
+		
+
                 write_common_head.cmd_type = VBC_CMD_RSP_CLOSE;     //ask cp to read vaudio data, "call_prestop" will stop to write pcm data again.
                 ret = WriteParas_Head(para->vbpipe_fd, &write_common_head);
                 if(ret < 0){
@@ -1190,11 +1223,14 @@ RESTART:
                     ALOGW("VBC_CMD_HAL_CLOSE, try lock");
                     pthread_mutex_lock(&adev->lock);
                     ALOGW("VBC_CMD_HAL_CLOSE, got lock");
-                    force_all_standby(adev);
+		    		if(!is_voip(adev))
+						force_all_standby(adev);
+           
                     pcm_close(adev->pcm_modem_ul);
                     pcm_close(adev->pcm_modem_dl);
                     adev->call_start = 0;
                     adev->call_connected = 0;
+		    i2s_pin_mux_sel(adev,2);
                     adev->cur_vbpipe_fd = -1;
                     ALOGW("END CALL,close pcm device & switch to arm...");
                     pthread_mutex_unlock(&adev->lock);
@@ -1216,6 +1252,13 @@ RESTART:
             case VBC_CMD_SET_MODE:
             {
                 MY_TRACE("VBC_CMD_SET_MODE IN.");
+		
+	        if(adev->devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
+		    if(adev->cp_type == CP_TG)
+			i2s_pin_mux_sel(adev,1);
+		    else if(adev->cp_type == CP_W)
+			i2s_pin_mux_sel(adev,0);
+		}
 
 		if(para->vbpipe_fd!=-1)
 		{

@@ -253,7 +253,6 @@ struct tiny_audio_device {
     audio_modem_t *cp;
 
     struct stream_routing_manager  routing_mgr;
-    int pin_fd;
 };
 
 struct tiny_stream_out {
@@ -426,22 +425,44 @@ static int out_dump_release(FILE **fd);
 int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
 {
     int count = 0;
+    audio_modem_t  *modem;
+    uint8_t *ctl_str = NULL;
 
-    ALOGW("i2s_pin_mux_sel in fd is %d, type is %d",adev->pin_fd,type);
+    ALOGW("i2s_pin_mux_sel in type is %d",type);
 
-    if(adev->pin_fd == -1) {
-	return -1;
-    }
+    modem = adev->cp;
     
     if(type == 0) {
-	count = write(adev->pin_fd,"1",1);
+	ctl_str = "1";
     }
     else if (type == 1){
-	count = write(adev->pin_fd,"2",1);
+	ctl_str = "2";
     }
     else if(type == 2) {
-	count = write(adev->pin_fd,"0",1);
+	ctl_str = "0";
     }
+
+    ALOGW("i2s_pin_mux_sel in bt fd is %d, extspk fd is %d,type is %d,str is %s",modem->i2s_bt.fd,modem->i2s_extspk.fd,type,ctl_str);
+
+    if(type != 2) {
+	if(adev->devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+	    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd >= 0))
+		count = write(modem->i2s_bt.fd,ctl_str,1);
+	}
+
+	if(adev->devices & AUDIO_DEVICE_OUT_SPEAKER) {
+	    if(modem->i2s_extspk.is_switch && (modem->i2s_extspk.fd >= 0))
+		count = write(modem->i2s_extspk.fd,ctl_str,1);
+	}
+    }
+    else {
+	if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd >= 0))
+	    count = write(modem->i2s_bt.fd,ctl_str,1);
+
+	if(modem->i2s_extspk.is_switch && (modem->i2s_extspk.fd >= 0))
+	    count = write(modem->i2s_extspk.fd,ctl_str,1);
+    }
+
     return (count==1);
 }
 
@@ -902,7 +923,9 @@ static int start_output_stream(struct tiny_stream_out *out)
      * tinyalsa.
      */
     if(out->is_sco){
+        pthread_mutex_unlock(&adev->lock);
         ret=start_sco_output_stream(out);
+        pthread_mutex_lock(&adev->lock);
         if(ret){
             return ret;
         }
@@ -1211,8 +1234,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             adev->devices |= val;
             ALOGW("out_set_parameters want to set devices:0x%x old_mode:%d new_mode:%d call_start:%d ",adev->devices,cur_mode,adev->mode,adev->call_start);
 
-	    if(AUDIO_MODE_IN_CALL == adev->mode) {
-		if(adev->devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+	    if(1 == adev->call_start) {
+		if(adev->devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
 		    if(adev->cp_type == CP_TG)
 			i2s_pin_mux_sel(adev,1);
 		    else if(adev->cp_type == CP_W)
@@ -1616,6 +1639,7 @@ static int start_input_stream(struct tiny_stream_in *in)
     /* this assumes routing is done previously */
 
     if(in->is_sco){
+	    pthread_mutex_unlock(&adev->lock);
         BLUE_TRACE("start sco input stream in");
         in->config = pcm_config_scocapture;
         if(in->config.channels  != in->requested_channels) {
@@ -1623,6 +1647,7 @@ static int start_input_stream(struct tiny_stream_in *in)
         }
         in->active_rec_proc = 0;
         in->pcm = pcm_open(s_sco,PORT_MM,PCM_IN,&in->config );
+	pthread_mutex_lock(&adev->lock);
         if (!pcm_is_ready(in->pcm)) {
             goto err;
         }      
@@ -2549,7 +2574,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
                 adev->devices |= val;
 
-		if(adev->devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+		if(adev->devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
 		    if(adev->cp_type == CP_TG)
 			i2s_pin_mux_sel(adev,1);
 		    else if(adev->cp_type == CP_W)
@@ -3174,6 +3199,17 @@ static int aud_rec_do_process(void * buffer, size_t bytes)
 static void *stream_routing_thread_entry(void * param)
 {
     struct tiny_audio_device *adev = (struct tiny_audio_device *)param;
+    pthread_attr_t attr;
+    struct sched_param m_param;
+    int newprio=39;
+
+    pthread_attr_init(&attr);
+    pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM); 
+    pthread_attr_setschedpolicy(&attr, SCHED_FIFO); 
+    pthread_attr_getschedparam(&attr, &m_param);
+    m_param.sched_priority=newprio;
+    pthread_attr_setschedparam(&attr, &m_param);
+
     while(!adev->routing_mgr.is_exit) {
         ALOGI("stream_routing_thread looping now...");
         pthread_mutex_lock(&adev->routing_mgr.device_switch_mutex);
@@ -3310,6 +3346,69 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
 			
 		} else {
 			ALOGE("error profile!");
+		}
+	}
+	else if (strcmp(tag_name, "i2s_for_btcall") == 0) {
+		/* Obtain the modem num */
+		if (strcmp(attr[0], "ctl_path") == 0) {
+			ALOGD("The iis_for_btcall ctl path  is '%s'", attr[1]);
+			if((strlen(attr[1]) +1) <= I2S_CTL_PATH_MAX){
+			    memcpy(modem->i2s_bt.ctl_path , attr[1], strlen(attr[1])+1);		
+			    modem->i2s_bt.fd = open(modem->i2s_bt.ctl_path,O_RDWR | O_SYNC);
+			    if(modem->i2s_bt.fd == -1) {
+				ALOGE(" audio_hw_primary: could not open i2s ctl fd,errno is %d",errno);
+			    }
+			}
+
+		} else {
+			ALOGE("no iis_ctl path for bt call!");
+		}
+		
+		if (strcmp(attr[2], "index") == 0) {
+			ALOGD("The iis_for_btcall index is '%s'", attr[3]);
+			if((strlen(attr[3]) +1) <= I2S_CTL_INDEX_MAX)
+			    memcpy(modem->i2s_bt.index , attr[3], strlen(attr[3])+1);		
+		} else {
+			ALOGE("no iis_ctl index for bt call!");
+		}
+
+		if (strcmp(attr[4], "switch") == 0) {
+			ALOGD("The iis_for_btcall switch is '%s'", attr[5]);
+			if(strcmp(attr[5],"1") == 0)
+			    modem->i2s_bt.is_switch = true;
+		} else {
+			ALOGE("no iis_ctl index for bt call!");
+		}
+	}
+	else if (strcmp(tag_name, "i2s_for_extspeaker") == 0) {
+		/* Obtain the modem num */
+		if (strcmp(attr[0], "ctl_path") == 0) {
+			ALOGD("The iis_for_extspk ctl path  is '%s'", attr[1]);
+			if((strlen(attr[1]) +1) <= I2S_CTL_PATH_MAX) {
+			    memcpy(modem->i2s_extspk.ctl_path , attr[1], strlen(attr[1])+1);		
+			    modem->i2s_extspk.fd = open(modem->i2s_extspk.ctl_path,O_RDWR | O_SYNC);
+			    if(modem->i2s_extspk.fd == -1) {
+				ALOGE(" audio_hw_primary: could not open i2s ctl fd,errno is %d",errno);
+			    }
+			}
+		} else {
+			ALOGE("no iis_ctl path for ext spk!");
+		}
+		
+		if (strcmp(attr[2], "index") == 0) {
+			ALOGD("The iis_for_extspk index is '%s'", attr[3]);
+			if((strlen(attr[3]) +1) <= I2S_CTL_INDEX_MAX)
+			    memcpy(modem->i2s_extspk.index , attr[3], strlen(attr[3])+1);		
+		} else {
+			ALOGE("no iis_ctl index for ext spk!");
+		}
+
+		if (strcmp(attr[4], "switch") == 0) {
+			ALOGD("The iis_for_extspk switch is '%s'", attr[5]);
+			if(strcmp(attr[5],"1") == 0)
+			    modem->i2s_extspk.is_switch = true;
+		} else {
+			ALOGE("no iis_ctl index for bt call!");
 		}
 	}
 attr_err:
@@ -3451,10 +3550,6 @@ static int adev_open(const hw_module_t* module, const char* name,
         goto ERROR;
     }
 
-    adev->pin_fd = open("/d/efuse/iis-0",O_RDWR | O_SYNC);
-    if(adev->pin_fd == -1) {
-	ALOGE(" audio_hw_primary: could not open /dev/mem,errno is %d",errno);
-    }
 
     adev->mixer = mixer_open(s_tinycard);
     if (!adev->mixer) {
