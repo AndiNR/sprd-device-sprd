@@ -32,6 +32,9 @@ extern int parse_vb_effect_params(void *audio_params_ptr, unsigned int params_si
 extern int SetAudio_pga_parameter_eng(AUDIO_TOTAL_T *aud_params_ptr, unsigned int params_size, uint32_t vol_level);
 extern int eng_battery_calibration(char *data,unsigned int count,char *out_msg,int out_len);
 extern void adc_get_result(char* chan); //add by kenyliu on 2013 07 12 for get ADCV  bug 188809
+extern void disable_calibration(void);//add by kenyliu on 2013 07 15 for set calibration enable or disable  bug 189696
+extern void enable_calibration(void);//add by kenyliu on 2013 07 15 for set calibration enable or disable  bug 189696
+
 extern  struct eng_bt_eutops bt_eutops;
 extern  struct eng_wifi_eutops wifi_eutops;
 extern	struct eng_gps_eutops gps_eutops;
@@ -59,9 +62,11 @@ int get_sub_str(char *buf,char **revdata, char a, char b);
 int get_cmd_index(char *buf);
 int eng_diag_decode7d7e(char *buf,int len);
 int eng_diag_adc(char *buf, int * Irsp); //add by kenyliu on 2013 07 12 for get ADCV  bug 188809
+void At_cmd_back_sig(void);//add by kenyliu on 2013 07 15 for set calibration enable or disable  bug 189696
 
 static const char *at_sadm="AT+SADM4AP";
 static const char *at_spenha="AT+SPENHA";
+static const char *at_calibr="AT+CALIBR";
 
 //static int at_sadm_cmd_to_handle[] = {7,8,9,10,11,12,-1};
 static int at_sadm_cmd_to_handle[] = {7,8,9,10,11,12,-1};
@@ -1008,6 +1013,16 @@ int is_audio_at_cmd_need_to_handle(char *buf,int len){
 			}
 		}
 	}
+	//add by kenyliu on 2013 07 15 for set calibration enable or disable  bug 189696
+	//AT+CALIBR
+	ret = strncmp(ptr,at_calibr,strlen(at_calibr));
+	if ( 0==ret ) {
+		at_tok_equel_start(&ptr);
+		at_tok_nextint(&ptr,&cmd_type);
+		ENG_LOG("%s,CALIBR :value = 0x%02x",__FUNCTION__,cmd_type);
+		return 1;
+	}
+	//end kenyliu added
 
 	ENG_LOG("%s,cmd don't need to handle",__FUNCTION__);
 
@@ -1034,6 +1049,26 @@ int eng_diag_adc(char *buf, int *Irsp)
 }
 //end kenyliu add
 
+//add by kenyliu on 2013 07 15 for set calibration enable or disable  bug 189696
+//for mobile test tool
+void At_cmd_back_sig(void)
+{
+	eng_diag_buf[0] =0x7e;
+
+	eng_diag_buf[1] =0x00;
+	eng_diag_buf[2] =0x00;
+	eng_diag_buf[3] =0x00;
+	eng_diag_buf[4] =0x00;
+	eng_diag_buf[5] =0x08;
+	eng_diag_buf[6] =0x00;
+	eng_diag_buf[7] =0xD5;
+	eng_diag_buf[8] =0x00;
+
+	eng_diag_buf[9] =0x7e;
+	eng_diag_write2pc(get_vser_fd());
+	memset(eng_diag_buf, 0, 10);
+}
+//end kenyliu added
 int eng_diag_audio(char *buf,int len, char *rsp)
 {
 	int fd;
@@ -1054,6 +1089,21 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 	ENG_LOG("Call %s, subtype=%x\n",__FUNCTION__, head_ptr->subtype);
 	ptr = buf + 1 + sizeof(MSG_HEAD_T);
 
+//add by kenyliu on 2013 07 15 for set calibration enable or disable  bug 189696
+//AT+CALIBR
+	ret = strncmp(ptr,at_calibr,strlen(at_calibr));
+	if ( 0==ret ) {
+		if(SET_CALIBRATION_ENABLE == cmd_type){
+			enable_calibration();
+			sprintf(rsp,"\r\nenable_calibration   \r\n");
+		}else if (SET_CALIBRATION_DISABLE == cmd_type){
+			disable_calibration();
+			sprintf(rsp,"\r\ndisable_calibration   \r\n");
+		}
+		At_cmd_back_sig();
+		return rsp != NULL ? strlen(rsp):0;
+	}
+//end kenyliu added
     audio_fd = open(ENG_AUDIO_PARA_DEBUG,O_RDWR);
 	if(g_is_data){
 		ENG_LOG("HEY,DATA HAS COME!!!!");

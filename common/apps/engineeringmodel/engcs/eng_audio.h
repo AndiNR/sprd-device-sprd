@@ -58,7 +58,13 @@ enum{
 	GET_AUDIO_ENHA_DATA_FROM_FLASH,
 	SET_AUDIO_ENHA_DATA_TO_FLASH,
 };
-	
+
+//add by kenyliu on 2013 07 15 for set calibration enable or disable  bug 189696
+enum{
+	SET_CALIBRATION_DISABLE,
+	SET_CALIBRATION_ENABLE,
+};
+//end kenyliu added
 
 
 typedef unsigned char  uint8;
