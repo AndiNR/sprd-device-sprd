@@ -215,6 +215,10 @@ int main(int argc, char *argv[])
 		perror("recv failed");
 		return -1;
 	}
+	if(!strcmp(cmd.content,"FAIL")){
+		printf("slogctl cmd fail \n");
+		return -1;
+	}
 	printf("%s\n", cmd.content);
 
 	close(sockfd);
