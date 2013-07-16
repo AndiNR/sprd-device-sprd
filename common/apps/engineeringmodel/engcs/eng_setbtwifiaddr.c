@@ -29,6 +29,10 @@
 #define GET_BTMAC_ATCMD		"AT+SNVM=0,401"
 #define GET_WIFIMAC_ATCMD	"AT+SNVM=0,409"
 
+#define BT_SHIFT_BIT            0
+#define WIFI_SHIFT_BIT          1
+static int BT_WIFI_status = 0;
+
 typedef enum {
 	BT_MAC_ADDR=0,
 	WIFI_MAC_ADDR
@@ -219,7 +223,8 @@ static int read_btwifimac_from_modem(char *btmac, char *wifimac)
 
 	engapi_close(fd);
 	ALOGD("bt_ok:%d wifi_ok:%d \n",bt_ok,wifi_ok);
-	return bt_ok & wifi_ok;
+	//return bt_ok & wifi_ok;
+        return (bt_ok<<BT_SHIFT_BIT)|(wifi_ok<<WIFI_SHIFT_BIT);
 }
 
 // realtek_add_start
@@ -242,112 +247,115 @@ static int get_urandom(unsigned int *buf, size_t len){
 
 static void mac_rand(char *btmac, char *wifimac)
 {
-	int fd,i, j, k;
-	off_t pos;
-	char buf[80];
-	char *ptr;
-	unsigned int randseed;
-	// realtek_add_start
-	int rc;
-	struct timeval tt;
-	// realtek_add_end
+    int fd,i, j, k;
+    off_t pos;
+    char buf[80];
+    char *ptr;
+    unsigned int randseed;
+    // realtek_add_start
+    int rc;
+    struct timeval tt;
+    // realtek_add_end
 
-	memset(buf, 0, sizeof(buf));
+    memset(buf, 0, sizeof(buf));
 
-	// realtek_add_start
-	ALOGD("+%s+",__FUNCTION__);
-	// realtek_add_end
-	if(access(MAC_RAND_FILE, F_OK) == 0) {
-		ALOGD("%s: %s exists",__FUNCTION__, MAC_RAND_FILE);
-		fd = open(MAC_RAND_FILE, O_RDWR);
-		if(fd>=0) {
-			read(fd, buf, sizeof(buf));
-			ALOGD("%s: read %s %s",__FUNCTION__, MAC_RAND_FILE, buf);
-			ptr = strchr(buf, ';');
-			if(ptr != NULL) {
+    // realtek_add_start
+    ALOGD("+%s+",__FUNCTION__);
+    // realtek_add_end
+    if(access(MAC_RAND_FILE, F_OK) == 0) {
+        ALOGD("%s: %s exists",__FUNCTION__, MAC_RAND_FILE);
+        fd = open(MAC_RAND_FILE, O_RDWR);
+        if(fd>=0) {
+            read(fd, buf, sizeof(buf));
+            ALOGD("%s: read %s %s",__FUNCTION__, MAC_RAND_FILE, buf);
+            ptr = strchr(buf, ';');
+            if(ptr != NULL) {
 
-				if((strstr(wifimac, MAC_ERROR)!=NULL)||(strstr(wifimac, MAC_ERROR_EX)!=NULL)||(strlen(wifimac)==0))
-					strcpy(wifimac, ptr+1);
+                if((strstr(wifimac, MAC_ERROR)!=NULL)||(strstr(wifimac, MAC_ERROR_EX)!=NULL)||(strlen(wifimac)==0))
+                    strcpy(wifimac, ptr+1);
 
-				*ptr = '\0';
+                *ptr = '\0';
 
-				if((strstr(btmac, MAC_ERROR)!=NULL)||(strstr(btmac, MAC_ERROR_EX)!=NULL)||(strlen(btmac)==0))
-					strcpy(btmac, buf);
+                if((strstr(btmac, MAC_ERROR)!=NULL)||(strstr(btmac, MAC_ERROR_EX)!=NULL)||(strlen(btmac)==0))
+                    strcpy(btmac, buf);
 
-				ALOGD("%s: read btmac=%s, wifimac=%s",__FUNCTION__, btmac, wifimac);
-				close(fd);
-				return;
-			}
-			// realtek_add_start
-			close(fd);
-			// realtek_add_end
-		}
-	}
+                ALOGD("%s: read btmac=%s, wifimac=%s",__FUNCTION__, btmac, wifimac);
+                close(fd);
+                return;
+            }
+            // realtek_add_start
+            close(fd);
+            // realtek_add_end
+        }
+    }
 
-	// realtek_add_start
+    // realtek_add_start
 #if 0
-	usleep(counter*1000);
-	memset(buf, 0, sizeof(buf));
-	sprintf(buf, "dmesg>%s",KMSG_LOG);
-	system(buf);
-	fd = open(KMSG_LOG, O_RDONLY);
-	ALOGD("%s: counter=%d, fd=%d",__FUNCTION__, counter, fd);
-	if (fd > 0) {
-		pos = lseek(fd, -(counter*10), SEEK_END);
-		memset(buf, 0, sizeof(buf));
-		read(fd, buf, counter);
-		ALOGD("%s: read %s: %s",__FUNCTION__, KMSG_LOG, buf);
-		close(fd);
-	}
+    usleep(counter*1000);
+    memset(buf, 0, sizeof(buf));
+    sprintf(buf, "dmesg>%s",KMSG_LOG);
+    system(buf);
+    fd = open(KMSG_LOG, O_RDONLY);
+    ALOGD("%s: counter=%d, fd=%d",__FUNCTION__, counter, fd);
+    if (fd > 0) {
+        pos = lseek(fd, -(counter*10), SEEK_END);
+        memset(buf, 0, sizeof(buf));
+        read(fd, buf, counter);
+        ALOGD("%s: read %s: %s",__FUNCTION__, KMSG_LOG, buf);
+        close(fd);
+    }
 
-	k=0;
-	for(i=0; i<counter; i++)
-		k += buf[i];
+    k=0;
+    for(i=0; i<counter; i++)
+        k += buf[i];
 
-	//rand seed
-	randseed = (unsigned int) time(NULL) + k*fd*counter + buf[counter-2];
-	ALOGD("%s: randseed=%d",__FUNCTION__, randseed);
+    //rand seed
+    randseed = (unsigned int) time(NULL) + k*fd*counter + buf[counter-2];
+    ALOGD("%s: randseed=%d",__FUNCTION__, randseed);
 #endif
 
-	rc = get_urandom(&randseed, sizeof(randseed));
-	if (rc > 0) {
-		ALOGD("urandom:%u", randseed);
-	} else {
-		if (gettimeofday(&tt, (struct timezone *)0) > 0)
-			randseed = (unsigned int) tt.tv_usec;
-		else
-			randseed = (unsigned int) time(NULL);
+    rc = get_urandom(&randseed, sizeof(randseed));
+    if (rc > 0) {
+        ALOGD("urandom:%u", randseed);
+    } else {
+        if (gettimeofday(&tt, (struct timezone *)0) > 0)
+            randseed = (unsigned int) tt.tv_usec;
+        else
+            randseed = (unsigned int) time(NULL);
 
-		ALOGD("urandom fail, using system time for randseed");
-	}
-	// realtek_add_end
-	ALOGD("%s: randseed=%u",__FUNCTION__, randseed);
-	srand(randseed);
+        ALOGD("urandom fail, using system time for randseed");
+    }
+    // realtek_add_end
+    ALOGD("%s: randseed=%u",__FUNCTION__, randseed);
+    srand(randseed);
 
-	//FOR BT
-	i=rand(); j=rand();
-	ALOGD("%s:  rand i=0x%x, j=0x%x",__FUNCTION__, i,j);
-	sprintf(btmac, "00:%02x:%02x:%02x:%02x:%02x", \
-									   (unsigned char)((i>>8)&0xFF), \
-									   (unsigned char)((i>>16)&0xFF), \
-									   (unsigned char)((j)&0xFF), \
-									   (unsigned char)((j>>8)&0xFF), \
-									   (unsigned char)((j>>16)&0xFF));
+    //FOR BT
+    if(!(BT_WIFI_status&(1<<BT_SHIFT_BIT))){
+        i=rand(); j=rand();
+        ALOGD("%s:  rand i=0x%x, j=0x%x",__FUNCTION__, i,j);
+        sprintf(btmac, "00:%02x:%02x:%02x:%02x:%02x", \
+                (unsigned char)((i>>8)&0xFF), \
+                (unsigned char)((i>>16)&0xFF), \
+                (unsigned char)((j)&0xFF), \
+                (unsigned char)((j>>8)&0xFF), \
+                (unsigned char)((j>>16)&0xFF));
+    }
 
-	//FOR WIFI
-	i=rand(); j=rand();
-	ALOGD("%s:  rand i=0x%x, j=0x%x",__FUNCTION__, i,j);
-	sprintf(wifimac, "00:%02x:%02x:%02x:%02x:%02x", \
-									   (unsigned char)((i>>8)&0xFF), \
-									   (unsigned char)((i>>16)&0xFF), \
-									   (unsigned char)((j)&0xFF), \
-									   (unsigned char)((j>>8)&0xFF), \
-									   (unsigned char)((j>>16)&0xFF));
+    //FOR WIFI
+    if(!(BT_WIFI_status&(1<<WIFI_SHIFT_BIT))){
+        i=rand(); j=rand();
+        ALOGD("%s:  rand i=0x%x, j=0x%x",__FUNCTION__, i,j);
+        sprintf(wifimac, "00:%02x:%02x:%02x:%02x:%02x", \
+                (unsigned char)((i>>8)&0xFF), \
+                (unsigned char)((i>>16)&0xFF), \
+                (unsigned char)((j)&0xFF), \
+                (unsigned char)((j>>8)&0xFF), \
+                (unsigned char)((j>>16)&0xFF));
+    }
+    ALOGD("%s: bt mac=%s, wifi mac=%s",__FUNCTION__, btmac, wifimac);
 
-	ALOGD("%s: bt mac=%s, wifi mac=%s",__FUNCTION__, btmac, wifimac);
-
-	//create rand file
-	write_to_randmacfile(btmac, wifimac);
+    //create rand file
+    write_to_randmacfile(btmac, wifimac);
 }
 
 static void write_mac2file(char *wifimac, char *btmac)
@@ -392,10 +400,13 @@ int main(void)
 	mac_ok = read_btwifimac_from_modem(bt_mac, wifi_mac);
 #endif
 
-	if(mac_ok==0)
+	//if(mac_ok==0)
+        if(mac_ok != (1<<BT_SHIFT_BIT)|(1<<WIFI_SHIFT_BIT)){
+                BT_WIFI_status = mac_ok; 
 		mac_rand(bt_mac, wifi_mac);
-	else
+        }else{
 		write_to_randmacfile(bt_mac, wifi_mac);
+        }
 
 	ALOGD("property ro.mac.wifi=%s, ro.mac.bluetooth=%s",wifi_mac,bt_mac);
 	write_mac2file(wifi_mac,bt_mac);
