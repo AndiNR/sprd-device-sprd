@@ -1128,18 +1128,21 @@ int camera_arrange_capture_buf2(struct cmr_cap_2_frm *cap_2_frm,
 			cap_mem->cap_yuv_rot.fmt             = IMG_DATA_TYPE_YUV420;
 		} else  {
 			unsigned int addr_phy, addr_vir;
-			if (cap_2_frm->alloc_mem(cap_2_frm->handle, size_pixel, &addr_phy, &addr_vir) != 0) {
-				CMR_LOGE("Failed to alloc the buffer used in capture");
-				return -1;
-			}
-
 			CMR_LOGV("Rot buffer located at Minor frame");
 			tmp = 1;
 
+			if (cap_2_frm->alloc_mem(cap_2_frm->handle, channel_size, &addr_phy, &addr_vir) != 0) {
+				CMR_LOGE("Failed to alloc the buffer used in capture");
+				return -1;
+			}
 			cap_mem->cap_yuv_rot.addr_phy.addr_y = addr_phy;
 			cap_mem->cap_yuv_rot.addr_vir.addr_y = addr_vir;
-			cap_mem->cap_yuv_rot.addr_phy.addr_u = cap_mem->cap_yuv_rot.addr_phy.addr_y  + channel_size;
-			cap_mem->cap_yuv_rot.addr_vir.addr_u = cap_mem->cap_yuv_rot.addr_vir.addr_y + channel_size;
+			if (cap_2_frm->alloc_mem(cap_2_frm->handle, channel_size>>1, &addr_phy, &addr_vir) != 0) {
+				CMR_LOGE("Failed to alloc the buffer used in capture");
+				return -1;
+			}
+			cap_mem->cap_yuv_rot.addr_phy.addr_u = addr_phy;
+			cap_mem->cap_yuv_rot.addr_vir.addr_u = addr_vir;
 			cap_mem->cap_yuv_rot.size.width      = image_size->height;
 			cap_mem->cap_yuv_rot.size.height     = image_size->width;
 			cap_mem->cap_yuv_rot.buf_size        = size_pixel;
@@ -1309,15 +1312,18 @@ int camera_arrange_capture_buf2(struct cmr_cap_2_frm *cap_2_frm,
 			unsigned int addr_phy, addr_vir;
 			channel_size = (uint32_t)(image_size->width * image_size->height);
 			offset = (channel_size * 3) >> 1;
-			if (cap_2_frm->alloc_mem(cap_2_frm->handle, offset, &addr_phy, &addr_vir) != 0) {
+			if (cap_2_frm->alloc_mem(cap_2_frm->handle, channel_size, &addr_phy, &addr_vir) != 0) {
 				CMR_LOGE("Failed to alloc the buffer used in capture");
 				return -1;
 			}
-
 			cap_mem->target_yuv.addr_phy.addr_y = addr_phy;
 			cap_mem->target_yuv.addr_vir.addr_y = addr_vir;
-			cap_mem->target_yuv.addr_phy.addr_u = cap_mem->target_yuv.addr_phy.addr_y + channel_size;
-			cap_mem->target_yuv.addr_vir.addr_u = cap_mem->target_yuv.addr_vir.addr_y + channel_size;
+			if (cap_2_frm->alloc_mem(cap_2_frm->handle, channel_size>>1, &addr_phy, &addr_vir) != 0) {
+				CMR_LOGE("Failed to alloc the buffer used in capture");
+				return -1;
+			}
+			cap_mem->target_yuv.addr_phy.addr_u = addr_phy;
+			cap_mem->target_yuv.addr_vir.addr_u = addr_vir;
 
 			if (IMG_DATA_TYPE_JPEG == orig_fmt) {
 				yy_to_y = (uint32_t)(image_size->width * image_size->height);
