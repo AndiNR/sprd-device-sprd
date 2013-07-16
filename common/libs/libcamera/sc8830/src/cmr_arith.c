@@ -98,7 +98,6 @@ void *arithmetic_fd_thread_proc(void *data)
 		case ARITHMETIC_EVT_FD_START:
 			CMR_PRINT_TIME;
 			s_arith_cxt->fd_busy = 1;
-			sem_post(&s_arith_cxt->fd_sync_sem);
 			pthread_mutex_lock(&s_arith_cxt->fd_lock);
 			if (CMR_IDLE == cxt->preview_status) {
 				s_arith_cxt->fd_busy = 0;
@@ -112,6 +111,7 @@ void *arithmetic_fd_thread_proc(void *data)
 				break;
 			}
 			memcpy(s_arith_cxt->addr,addr,s_arith_cxt->mem_size);
+			sem_post(&s_arith_cxt->fd_sync_sem);
 			frame_type.face_num = 0;
 			if( 0 != FaceSolid_Function((uint8_t*)s_arith_cxt->addr,
 				                         &face_rect_ptr,
@@ -243,11 +243,6 @@ int arithmetic_fd_start(void *data_addr)
 
 	CMR_LOGI("0x%x.",(uint32_t)s_arith_cxt->addr);
 
-	pthread_mutex_lock(&s_arith_cxt->fd_lock);
-	if (NULL == s_arith_cxt->addr) {		
-		ret = ARITH_NO_MEM;
-	}
-	pthread_mutex_unlock(&s_arith_cxt->fd_lock);
 	CMR_LOGI("%d,%d.",ret,s_arith_cxt->fd_busy);
 	if (!ret && (1 != s_arith_cxt->fd_busy)) {
 		message.msg_type = ARITHMETIC_EVT_FD_START;
