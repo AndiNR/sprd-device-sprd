@@ -862,11 +862,11 @@ int SetParas_Samplerate_Incall(int fd_pipe,struct tiny_audio_device *adev)
 		return ret;
     }
     if(adev->pcm_modem_dl){
-        ret = set_snd_card_samplerate(adev->pcm_modem_dl->fd, PCM_OUT, &pcm_config_vx, device_set_samplerate.samplerate);
+        ret = pcm_set_samplerate(adev->pcm_modem_dl, PCM_OUT, &pcm_config_vx, device_set_samplerate.samplerate);
         if(ret < 0){
             return ret;
         }
-        ret = set_snd_card_samplerate(adev->pcm_modem_ul->fd, PCM_IN, &pcm_config_vrec_vx, device_set_samplerate.samplerate);
+        ret = pcm_set_samplerate(adev->pcm_modem_ul, PCM_IN, &pcm_config_vrec_vx, device_set_samplerate.samplerate);
         if(ret < 0){
             return ret;
         }
