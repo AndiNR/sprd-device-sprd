@@ -1382,6 +1382,8 @@ bool SprdCameraHardware::allocatePreviewMem()
 	mPreviewHeapArray = (sprd_camera_memory_t**)malloc(mPreviewHeapNum * sizeof(sprd_camera_memory_t*));
 	if (mPreviewHeapArray == NULL) {
 	        return false;
+	} else {
+		memset(&mPreviewHeapArray[0],0,mPreviewHeapNum * sizeof(sprd_camera_memory_t*));
 	}
 	for (i=0; i<mPreviewHeapNum; i++) {
 		sprd_camera_memory_t* mPreviewHeap = GetCachePmem(buffer_size, 1);
