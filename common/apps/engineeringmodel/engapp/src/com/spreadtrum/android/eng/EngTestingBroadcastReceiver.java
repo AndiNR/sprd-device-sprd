@@ -63,6 +63,11 @@ public class  EngTestingBroadcastReceiver extends BroadcastReceiver {
                 i.setClass(context, Eng83781Activity.class);
                 context.startActivity(i);
             }
+			//heng.xiao add for can riveiw patch list
+            else if("72824".equals(host)){
+                i.setClass(context, EngPatchRecordActivity.class);
+                context.startActivity(i);
+            }
             
         }
     }
