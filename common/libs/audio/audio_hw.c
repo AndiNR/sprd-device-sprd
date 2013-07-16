@@ -1176,9 +1176,18 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     if (ret >= 0) {
         val = atoi(value);
         ALOGW("[out_set_parameters],after str_parms_get_str,val(0x%x) ",val);
+
         pthread_mutex_lock(&adev->lock);
         pthread_mutex_lock(&out->lock);
-        if ((((adev->devices & AUDIO_DEVICE_OUT_ALL) != val) && (val != 0)) || (AUDIO_MODE_IN_CALL == adev->mode)) {
+
+        if (((AUDIO_MODE_RINGTONE == adev->mode) || (AUDIO_MODE_NORMAL == adev->mode)) &&
+            (val & AUDIO_DEVICE_OUT_ALL_SCO))
+        {
+            // Do nothing ...
+            ALOGW("out_set_parameters forbidden to route to SCO\n");
+        }
+        else if (((adev->devices & AUDIO_DEVICE_OUT_ALL) != val) && (val != 0))
+        {
             adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
             adev->devices |= val;
             ALOGW("out_set_parameters want to set devices:0x%x old_mode:%d new_mode:%d call_start:%d ",adev->devices,cur_mode,adev->mode,adev->call_start);
@@ -1187,20 +1196,21 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             if(!adev->call_start)
             #endif
                 select_devices_signal(adev);
-            pthread_mutex_unlock(&out->lock);
-            pthread_mutex_unlock(&adev->lock);
-
-            if (AUDIO_MODE_IN_CALL == adev->mode) {
-                ret = at_cmd_route(adev);  //send at command to cp
-                if (ret < 0) {
-                    ALOGE("out_set_parameters at_cmd_route error(%d) ",ret);
-                    return ret;
-                }
-            }
-        }else{
-            pthread_mutex_unlock(&out->lock);
-            pthread_mutex_unlock(&adev->lock);
+        }
+        else
+        {
             ALOGW("the same devices(0x%x) with val(0x%x) val is zero...",adev->devices,val);
+        }
+
+        pthread_mutex_unlock(&out->lock);
+        pthread_mutex_unlock(&adev->lock);
+    }
+
+    if (AUDIO_MODE_IN_CALL == adev->mode) {
+        ret = at_cmd_route(adev);  //send at command to cp
+        if (ret < 0) {
+            ALOGE("out_set_parameters at_cmd_route error(%d) ",ret);
+            //return ret;
         }
     }
 
