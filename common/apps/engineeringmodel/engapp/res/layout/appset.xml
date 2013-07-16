@@ -55,6 +55,13 @@
 			android:summaryOff="Close"
 			android:defaultValue="false">
 	</CheckBoxPreference>
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="long_press_not_showDialog"
+        android:summaryOff="Show dialog when long press power key"
+        android:summaryOn="Don't show dialog when long press power key"
+        android:title="Power Key Menu Setting" >
+    </CheckBoxPreference>
 
 	<!-- add by liguxiang 07-12-11 for engineeringmodel usb settings begin -->
 	<CheckBoxPreference android:key="enable_vser_gser"
