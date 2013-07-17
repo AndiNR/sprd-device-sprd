@@ -120,6 +120,7 @@ int eng_diag(char *buf,int len);
 int eng_diag_write2pc(int fd);
 int eng_diag_writeimei(char *req, char *rsp);
 void *eng_vlog_thread(void *x);
+void * eng_getpara(void);
 void *eng_vdiag_thread(void *x);
 void * eng_sd_log(void * args);
 

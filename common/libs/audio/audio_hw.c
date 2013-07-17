@@ -48,6 +48,8 @@
 #include "eng_audio.h"
 #include "aud_proc.h"
 #include "vb_control_parameters.h"
+#include "string_exchange_bin.h"
+
 
 #ifdef AUDIO_MUX_PCM
 #include "audio_mux_pcm.h"
@@ -76,6 +78,15 @@
 #define PRIVATE_VBC_EQ_PROFILE            "eq profile"
 #define PRIVATE_INTERNAL_PA              "internal PA"
 #define FM_DIGITAL_SUPPORT_PROPERTY  "ro.digital.fm.support"
+
+#define PRIVATE_VBC_DA_EQ_SWITCH            "da eq switch"
+#define PRIVATE_VBC_AD01_EQ_SWITCH            "ad01 eq switch"
+#define PRIVATE_VBC_AD23_EQ_SWITCH            "ad23 eq switch"
+
+#define PRIVATE_VBC_DA_EQ_PROFILE            "da eq profile"
+#define PRIVATE_VBC_AD01_EQ_PROFILE            "ad01 eq profile"
+#define PRIVATE_VBC_AD23_EQ_PROFILE            "ad23 eq profile"
+
 /* ALSA cards for sprd */
 #define CARD_SPRDPHONE "sprdphone"
 #define CARD_VAUDIO    "VIRTUAL AUDIO"
@@ -207,6 +218,12 @@ struct tiny_private_ctl {
     struct mixer_ctl *vbc_eq_update;
     struct mixer_ctl *vbc_eq_profile_select;
     struct mixer_ctl *internal_pa;
+    struct mixer_ctl *vbc_da_eq_switch;
+    struct mixer_ctl *vbc_ad01_eq_switch;
+    struct mixer_ctl *vbc_ad23_eq_switch;
+	struct mixer_ctl *vbc_da_eq_profile_select;
+    struct mixer_ctl *vbc_ad01_eq_profile_select;
+    struct mixer_ctl *vbc_ad23_eq_profile_select;
 };
 
 struct stream_routing_manager {
@@ -215,8 +232,6 @@ struct stream_routing_manager {
     pthread_cond_t   device_switch_cv;
     bool             is_exit;
 };
-
-
 
 struct tiny_audio_device {
     struct audio_hw_device hw_device;
@@ -251,6 +266,7 @@ struct tiny_audio_device {
     bool eq_available;
 
     audio_modem_t *cp;
+    AUDIO_TOTAL_T *audio_para;
 
     struct stream_routing_manager  routing_mgr;
 };
@@ -376,6 +392,10 @@ static int s_tinycard = -1;
 static int s_vaudio = -1;
 static int s_vaudio_w = -1;
 static int s_sco= -1;
+static AUDIO_TOTAL_T *audio_para_ptr = NULL;
+static struct tiny_audio_device *s_adev= NULL;
+
+
 
 /**
  * NOTE: when multiple mutexes have to be acquired, always respect the following order:
@@ -2801,6 +2821,7 @@ static int adev_close(hw_device_t *device)
 	free(adev->cp->vbc_ctrl_pipe_info);
 	free(adev->cp);
 
+	adev_free_audmode();
     mixer_close(adev->mixer);
     stream_routing_manager_close(adev);
     free(device);
@@ -2861,6 +2882,36 @@ static void adev_config_parse_private(struct config_parse_state *s, const XML_Ch
             s->adev->private_ctl.internal_pa =
                  mixer_get_ctl_by_name(s->adev->mixer, name);
             CTL_TRACE(s->adev->private_ctl.internal_pa);
+        }
+        else if (strcmp(s->private_name, PRIVATE_VBC_DA_EQ_SWITCH) == 0) {
+            s->adev->private_ctl.vbc_da_eq_switch =
+                 mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.vbc_da_eq_switch);
+        }
+        else if (strcmp(s->private_name, PRIVATE_VBC_AD01_EQ_SWITCH) == 0) {
+            s->adev->private_ctl.vbc_ad01_eq_switch =
+                 mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.vbc_ad01_eq_switch);
+        }
+        else if (strcmp(s->private_name, PRIVATE_VBC_AD23_EQ_SWITCH) == 0) {
+            s->adev->private_ctl.vbc_ad23_eq_switch =
+                 mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.vbc_ad23_eq_switch);
+        }
+		else if (strcmp(s->private_name, PRIVATE_VBC_DA_EQ_PROFILE) == 0) {
+            s->adev->private_ctl.vbc_da_eq_profile_select =
+                 mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.vbc_da_eq_switch);
+        }
+        else if (strcmp(s->private_name, PRIVATE_VBC_AD01_EQ_PROFILE) == 0) {
+            s->adev->private_ctl.vbc_ad01_eq_profile_select =
+                 mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.vbc_ad01_eq_switch);
+        }
+        else if (strcmp(s->private_name, PRIVATE_VBC_AD23_EQ_PROFILE) == 0) {
+            s->adev->private_ctl.vbc_ad23_eq_profile_select =
+                 mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.vbc_ad23_eq_switch);
         }
     }
 }
@@ -3091,13 +3142,47 @@ static int adev_config_parse(struct tiny_audio_device *adev)
 static void aud_vb_effect_start(struct tiny_audio_device *adev)
 {
     if (adev)
-        mixer_ctl_set_value(adev->private_ctl.vbc_eq_switch, 0, 1);
+    {
+    	if(adev->private_ctl.vbc_eq_switch)
+    	{
+    		mixer_ctl_set_value(adev->private_ctl.vbc_eq_switch, 0, 1);
+    	}
+    	if(adev->private_ctl.vbc_da_eq_switch)
+    	{
+    		mixer_ctl_set_value(adev->private_ctl.vbc_da_eq_switch, 0, 1);
+    	}
+    	if(adev->private_ctl.vbc_ad01_eq_switch)
+    	{
+    		//mixer_ctl_set_value(adev->private_ctl.vbc_ad01_eq_switch, 0, 1);
+    	}
+    	if(adev->private_ctl.vbc_ad23_eq_switch)
+    	{
+    		//mixer_ctl_set_value(adev->private_ctl.vbc_ad23_eq_switch, 0, 1);
+    	}
+    }
 }
 
 static void aud_vb_effect_stop(struct tiny_audio_device *adev)
 {
     if (adev)
-        mixer_ctl_set_value(adev->private_ctl.vbc_eq_switch, 0, 0);
+    {
+		if(adev->private_ctl.vbc_eq_switch)
+    	{
+    		mixer_ctl_set_value(adev->private_ctl.vbc_eq_switch, 0, 0);
+    	}
+    	if(adev->private_ctl.vbc_da_eq_switch)
+    	{
+    		mixer_ctl_set_value(adev->private_ctl.vbc_da_eq_switch, 0, 0);
+    	}
+    	if(adev->private_ctl.vbc_ad01_eq_switch)
+    	{
+    		mixer_ctl_set_value(adev->private_ctl.vbc_ad01_eq_switch, 0, 0);
+    	}
+    	if(adev->private_ctl.vbc_ad23_eq_switch)
+    	{
+    		mixer_ctl_set_value(adev->private_ctl.vbc_ad23_eq_switch, 0, 0);
+    	}
+    }
 }
 
 /* Headset is 0, Handsfree is 3 */
@@ -3118,7 +3203,6 @@ static int get_mode_from_devices(int devices)
 */
 static int init_rec_process(int rec_mode, int sample_rate)
 {
-    int audio_fd;
     int ret0 = 0; //failed
     int ret1 = 0;
     off_t offset = 0;
@@ -3128,30 +3212,9 @@ static int init_rec_process(int rec_mode, int sample_rate)
     unsigned int extendArraySize = 0;
     
     ALOGW("rec_mode(%d), sample_rate(%d)", rec_mode, sample_rate);
-    audio_fd = open(ENG_AUDIO_PARA_DEBUG, O_RDONLY);
-    if (-1 == audio_fd) {
-        ALOGW("file %s open failed:%s\n",ENG_AUDIO_PARA_DEBUG,strerror(errno));
-        audio_fd = open(ENG_AUDIO_PARA,O_RDONLY);
-        if(-1 == audio_fd){
-            ALOGE("file %s open error:%s\n",ENG_AUDIO_PARA,strerror(errno));
-            return 0;
-        }
-    }else{
-    //check the size of /data/local/tmp/audio_para
-        offset = lseek(audio_fd,-1,SEEK_END);
-        if((offset+1) != 4*sizeof(AUDIO_TOTAL_T)){
-            ALOGE("%s, file %s size (%d) error \n",__func__,ENG_AUDIO_PARA_DEBUG,offset+1);
-            close(audio_fd);
-            audio_fd = open(ENG_AUDIO_PARA,O_RDONLY);
-            if(-1 == audio_fd){
-                ALOGE("%s, file %s open error:%s\n",__func__,ENG_AUDIO_PARA,strerror(errno));
-                return 0;
-            }
-        }
-    }
-    aud_params_ptr = (AUDIO_TOTAL_T *)mmap(0, 4*sizeof(AUDIO_TOTAL_T),PROT_READ,MAP_SHARED,audio_fd,0);
+
+    aud_params_ptr = audio_para_ptr;//(AUDIO_TOTAL_T *)mmap(0, 4*sizeof(AUDIO_TOTAL_T),PROT_READ,MAP_SHARED,audio_fd,0);
     if ( NULL == aud_params_ptr ) {
-        close(audio_fd);
         ALOGE("mmap failed %s",strerror(errno));
         return 0;
     }
@@ -3170,9 +3233,6 @@ static int init_rec_process(int rec_mode, int sample_rate)
     }else{
         ALOGE("Parameters error: No EQ params to init.");
     }
-    
-    munmap((void *)aud_params_ptr, 4*sizeof(AUDIO_TOTAL_T));
-    close(audio_fd);
     
     return (ret0 || ret1);
 }
@@ -3503,6 +3563,41 @@ err_calloc:
 	return ret;
 }
 
+static void vb_effect_getpara(struct tiny_audio_device *adev)
+{
+   static bool read_already=0;
+   off_t offset = 0;
+	AUDIO_TOTAL_T * aud_params_ptr;
+	int len = sizeof(AUDIO_TOTAL_T)*adev_get_audiomodenum4eng();
+	int srcfd;
+	char *filename = NULL;
+
+	if(read_already)
+	{
+		ALOGI("vb_effect_getpara read already.");
+		return;
+	}
+	else
+	{
+		ALOGI("vb_effect_getpara read first.");
+		read_already = 1;
+	}
+	//adev->audio_para = vb_effect_readpara();//get data from audio_para
+	adev->audio_para = calloc(1, len);
+	if (!adev->audio_para)
+		return;
+	memset(adev->audio_para, 0, len);
+    #if 0
+    filename = ENG_AUDIO_PARA;
+    #else
+    srcfd = open((char *)(ENG_AUDIO_PARA_DEBUG), O_RDONLY);
+    filename = (srcfd < 0 )? ( ENG_AUDIO_PARA):(ENG_AUDIO_PARA_DEBUG);
+    close(srcfd);
+    #endif
+    ALOGI("vb_effect_getpara read name:%s.", filename);
+	stringfile2nvstruct(filename, adev->audio_para, len); //get data from audio_hw.txt.
+	audio_para_ptr = adev->audio_para;
+}
 static int adev_open(const hw_module_t* module, const char* name,
                      hw_device_t** device)
 {
@@ -3537,7 +3632,16 @@ static int adev_open(const hw_module_t* module, const char* name,
     adev->hw_device.open_input_stream = adev_open_input_stream;
     adev->hw_device.close_input_stream = adev_close_input_stream;
     adev->hw_device.dump = adev_dump;
-
+    
+	pthread_mutex_lock(&adev->lock);
+	ret = adev_modem_parse(adev);
+	pthread_mutex_unlock(&adev->lock);
+	if (ret < 0) {
+		ALOGE("Warning:Unable to locate all audio modem parameters from XML.");
+	}
+    /* get audio para from audio_para.txt*/
+    vb_effect_getpara(adev);
+    vb_effect_setpara(adev->audio_para);
     /* query sound cards*/
     s_tinycard = get_snd_card_number(CARD_SPRDPHONE);
     s_vaudio = get_snd_card_number(CARD_VAUDIO);
@@ -3549,8 +3653,6 @@ static int adev_open(const hw_module_t* module, const char* name,
         ALOGE("Unable to load sound card, aborting.");
         goto ERROR;
     }
-
-
     adev->mixer = mixer_open(s_tinycard);
     if (!adev->mixer) {
         ALOGE("Unable to open the mixer, aborting.");
@@ -3585,7 +3687,9 @@ static int adev_open(const hw_module_t* module, const char* name,
     }
     if (adev->eq_available) {
         vb_effect_config_mixer_ctl(adev->private_ctl.vbc_eq_update, adev->private_ctl.vbc_eq_profile_select);
-        aud_vb_effect_start(adev);
+        vb_da_effect_config_mixer_ctl(adev->private_ctl.vbc_da_eq_profile_select);
+        vb_ad_effect_config_mixer_ctl(adev->private_ctl.vbc_ad01_eq_profile_select, adev->private_ctl.vbc_ad23_eq_profile_select);
+		aud_vb_effect_start(adev);
     }
     /*Parse PGA*/
     adev->pga = audio_pga_init(adev->mixer);
@@ -3630,6 +3734,7 @@ static int adev_open(const hw_module_t* module, const char* name,
 ERROR:
     if (adev->pga)    audio_pga_free(adev->pga);
     if (adev->mixer)  mixer_close(adev->mixer);
+    if (adev->audio_para)  free(adev->audio_para);
     if (adev)         free(adev);
     return -EINVAL;
 }

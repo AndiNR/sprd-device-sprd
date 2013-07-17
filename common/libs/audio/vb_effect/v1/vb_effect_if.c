@@ -32,6 +32,7 @@
 #include "aud_enha.h"
 #include "vb_effect_if.h"
 #include <tinyalsa/asoundlib.h>
+#include "string_exchange_bin.h"
 
 #define VBC_VERSION     "vbc.r0p0"
 
@@ -138,6 +139,7 @@ static FILE *  fd_dest_paras;
 static struct mixer_ctl *s_ctl_eq_update = NULL;
 static struct mixer_ctl *s_ctl_eq_select = NULL;
 static int s_cur_devices = 0;
+static AUDIO_TOTAL_T * s_vb_effect_ptr = NULL;
 
 extern int get_snd_card_number(const char *card_name);
 //get audio nv struct
@@ -231,10 +233,7 @@ int create_vb_effect_params(void)
 
     //close fd
     if (aud_params_ptr) {
-        ret = do_parse(aud_params_ptr, 4*sizeof(AUDIO_TOTAL_T));
-        munmap((void *)aud_params_ptr, 4*sizeof(AUDIO_TOTAL_T));
-        close(fd_src_paras);
-        fd_src_paras = -1;
+        ret = do_parse(aud_params_ptr, adev_get_audiomodenum4eng()*sizeof(AUDIO_TOTAL_T));
     }
 
     ALOGI("create_vb_effect_params...done");
@@ -243,40 +242,11 @@ int create_vb_effect_params(void)
 
 static AUDIO_TOTAL_T *get_aud_paras()
 {
-    off_t offset = 0;
-    AUDIO_TOTAL_T * aud_params_ptr = NULL;
-
-    fd_src_paras = open(ENG_AUDIO_PARA_DEBUG, O_RDONLY);
-    if (-1 == fd_src_paras) {
-        ALOGW("file %s open failed:%s\n",ENG_AUDIO_PARA_DEBUG,strerror(errno));
-        fd_src_paras = open(ENG_AUDIO_PARA,O_RDONLY);
-        if(-1 == fd_src_paras){
-            ALOGE("file %s open error:%s\n",ENG_AUDIO_PARA,strerror(errno));
-            return NULL;
-        }
-    }else{
-    //check the size of /data/local/tmp/audio_para
-        offset = lseek(fd_src_paras,-1,SEEK_END);
-        if((offset+1) != 4*sizeof(AUDIO_TOTAL_T)){
-            ALOGE("%s, file %s size (%d) error \n",__func__,ENG_AUDIO_PARA_DEBUG,offset+1);
-            close(fd_src_paras);
-            fd_src_paras = open(ENG_AUDIO_PARA,O_RDONLY);
-            if(-1 == fd_src_paras){
-                ALOGE("%s, file %s open error:%s\n",__func__,ENG_AUDIO_PARA,strerror(errno));
-                return NULL;
-            }
-        }
-    }
-
-    aud_params_ptr = (AUDIO_TOTAL_T *)mmap(0, 4*sizeof(AUDIO_TOTAL_T),PROT_READ,MAP_SHARED,fd_src_paras,0);
-    if ( NULL == aud_params_ptr ) {
-        close(fd_src_paras);
-        fd_src_paras = -1;
-        ALOGE("mmap failed %s",strerror(errno));
-        return NULL;
-    }
-
-    return aud_params_ptr;
+    return s_vb_effect_ptr;
+}
+void vb_effect_setpara(AUDIO_TOTAL_T *para)
+{
+    s_vb_effect_ptr = para;
 }
 
 void vb_effect_config_mixer_ctl(struct mixer_ctl *eq_update, struct mixer_ctl *profile_select)
@@ -284,7 +254,15 @@ void vb_effect_config_mixer_ctl(struct mixer_ctl *eq_update, struct mixer_ctl *p
     s_ctl_eq_update = eq_update;
     s_ctl_eq_select = profile_select;
 }
+void vb_da_effect_config_mixer_ctl(struct mixer_ctl *da_profile_select)
+{
+	return;
+}
 
+void vb_ad_effect_config_mixer_ctl(struct mixer_ctl *ad01_profile_select, struct mixer_ctl *ad23_profile_select)
+{
+	return;
+}
 void vb_effect_sync_devices(int cur_devices)
 {
     s_cur_devices = cur_devices;

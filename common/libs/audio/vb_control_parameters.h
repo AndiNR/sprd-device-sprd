@@ -23,6 +23,7 @@
 
 #define I2S_CTL_PATH_MAX      16
 #define I2S_CTL_INDEX_MAX     3
+#define AUDIO_MODE_NAME_MAX_LEN 24
 
 #define AUDIO_XML_PATH "/system/etc/audio_hw.xml"
 
@@ -66,10 +67,26 @@ typedef struct{
     i2s_ctl_t i2s_extspk;
 }audio_modem_t;
 
+/*audio mode structure,we can expand  for more fields if necessary*/
+typedef struct
+{
+	int index;
+    char mode_name[NAME_LEN_MAX];
+    
+}audio_mode_item_t;
 
+/*we mostly have four mode,(headset,headfree,handset,handsfree),
+    differet product may configure different mode number,htc have 25 modes.*/
+typedef struct{
+	int num;
+	audio_mode_item_t *audio_mode_item_info;
+}aud_mode_t;
 struct modem_config_parse_state{
 	audio_modem_t *modem_info;
 	vbc_ctrl_pipe_para_t *vbc_ctrl_pipe_info;
+	aud_mode_t  *audio_mode_info;
+	audio_mode_item_t *audio_mode_item_info;
+
 };
 
 #endif

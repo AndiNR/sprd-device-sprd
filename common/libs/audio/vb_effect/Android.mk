@@ -20,11 +20,23 @@ include $(CLEAR_VARS)
 LOCAL_CFLAGS := -D_POSIX_SOURCE -Wno-multichar -g
 
 LOCAL_C_INCLUDES += device/sprd/common/apps/engineeringmodel/engcs \
-			external/tinyalsa/include
+			external/tinyalsa/include \
+			device/sprd/common/libs/audio \
+			device/sprd/common/libs/audio/nv_exchange
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
+	BOARD_EQ_DIR := v2
+else
+	BOARD_EQ_DIR := v1
+endif
 
-LOCAL_SRC_FILES := vb_effect_if.c vbc_codec_eq.c filter_calc.c vb_hal_if.c vb_hal_adp.c tinyalsa_util.c
+LOCAL_SRC_FILES := $(BOARD_EQ_DIR)/vb_effect_if.c \
+		$(BOARD_EQ_DIR)/vbc_codec_eq.c \
+		$(BOARD_EQ_DIR)/filter_calc.c \
+		$(BOARD_EQ_DIR)/vb_hal_if.c \
+		$(BOARD_EQ_DIR)/vb_hal_adp.c \
+		$(BOARD_EQ_DIR)/tinyalsa_util.c
 
-LOCAL_SHARED_LIBRARIES := liblog libc libcutils libtinyalsa
+LOCAL_SHARED_LIBRARIES := liblog libc libcutils libtinyalsa  libnvexchange
 
 LOCAL_MODULE := libvbeffect
 

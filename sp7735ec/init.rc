@@ -136,6 +136,8 @@ on post-fs
     chown system system /productinfo
     chmod 0774 /productinfo
 # ---------------------------- spreadtrum on post-fs section end
+    chmod 0660 /productinfo/vbc_eq
+    chown media  system /productinfo/vbc_eq
 
     # This may have been created by the recovery system with odd permissions
     chown system cache /cache/recovery

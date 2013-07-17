@@ -18,7 +18,7 @@
 
 
 #define	MAX_AUDIO_MODE_COUNT			14			/*  */
-#define	MAX_AUDIO_VOLUME_MODE_COUNT		4			/*  */
+//#define	MAX_AUDIO_VOLUME_MODE_COUNT		4			/*  */
 
 #define	AUDIO_NV_ARM_DATA_FLASH			0x01			/*  */
 #define	AUDIO_NV_ARM_DATA_MEMORY                0x02			/*  */

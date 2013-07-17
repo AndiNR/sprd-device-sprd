@@ -13,24 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef __VB_EFFECT_IF_H__
-#define __VB_EFFECT_IF_H__
+#ifndef __AUD_COMMON_H__
+#define __AUD_COMMON_H__
 
-#include <tinyalsa/asoundlib.h>
+#define 	LOCAL		static
+#define	PUBLIC
+#define 	SCI_TRUE	1
+#define	SCI_FALSE	0
+#define 	SCI_ASSERT(condition)
+#define	SCI_NULL	0
+#define PNULL  ((void *)0)
+#define		CONST		const
+#define REG32(addr)		(*(volatile unsigned int *) (addr))
 
-/*
- * Success if return 0
- */
-int parse_vb_effect_params(void *audio_params_ptr, unsigned int params_size);
+#define udelay  usleep
 
-void vb_effect_config_mixer_ctl(struct mixer_ctl *eq_update, struct mixer_ctl *profile_select);
+typedef  unsigned char 		BOOLEAN;
 
-void vb_effect_sync_devices(int cur_devices);
+typedef unsigned char  uint8_t;
+typedef    short    int16_t;
+typedef    int    int32_t;
 
-int vb_effect_loading(void);
-
-int vb_effect_profile_apply(void);
-
-int create_vb_effect_params(void);
 
 #endif

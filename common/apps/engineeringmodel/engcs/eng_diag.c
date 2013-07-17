@@ -25,7 +25,7 @@
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
 
 //extern int audio_fd;
-extern AUDIO_TOTAL_T audio_total[4];
+extern AUDIO_TOTAL_T *audio_total;
 extern void eng_check_factorymode_fornand(void);
 extern void eng_check_factorymode_formmc(void);
 extern int parse_vb_effect_params(void *audio_params_ptr, unsigned int params_size);
@@ -34,6 +34,8 @@ extern int eng_battery_calibration(char *data,unsigned int count,char *out_msg,i
 extern void adc_get_result(char* chan); //add by kenyliu on 2013 07 12 for get ADCV  bug 188809
 extern void disable_calibration(void);//add by kenyliu on 2013 07 15 for set calibration enable or disable  bug 189696
 extern void enable_calibration(void);//add by kenyliu on 2013 07 15 for set calibration enable or disable  bug 189696
+extern void stringfile2nvstruct(char *filename, void *para_ptr, int lenbytes);
+extern void  nvstruct2stringfile(char* filename,void *para_ptr, int lenbytes);
 
 extern  struct eng_bt_eutops bt_eutops;
 extern  struct eng_wifi_eutops wifi_eutops;
@@ -967,10 +969,10 @@ int is_audio_at_cmd_need_to_handle(char *buf,int len){
 				ENG_LOG("at_sadm_cmd_to_handle=%d",at_sadm_cmd_to_handle[i]);	
 				if ( GET_ARM_VOLUME_MODE_COUNT!=cmd_type ) {
 					ENG_LOG("NOT CMD TO GET COUNT");
-					g_index = *ptr;
-					g_index -= '0';
+					g_index = atoi(ptr);
+					//g_index -= '0';
 					ENG_LOG("index = %d",g_index);
-					if ( g_index>=MAX_AUDIO_VOLUME_MODE_COUNT) {
+					if ( g_index>=adev_get_audiomodenum4eng()) {
 						return 0;	
 					}
 				}
@@ -996,7 +998,7 @@ int is_audio_at_cmd_need_to_handle(char *buf,int len){
 				ENG_LOG("at_spenha_cmd_to_handle=%d",at_spenha_cmd_to_handle[i]);	
 				if ( GET_AUDIO_ENHA_MODE_COUNT!=cmd_type ) {
 					at_tok_nextint(&ptr,&g_index);
-					if (( g_index>MAX_AUDIO_VOLUME_MODE_COUNT)||( g_index<=0)) {
+					if (( g_index>adev_get_audiomodenum4eng())||( g_index<=0)) {
 						return 0;	
 					}
 					g_index--;
@@ -1069,6 +1071,62 @@ void At_cmd_back_sig(void)
 	memset(eng_diag_buf, 0, 10);
 }
 //end kenyliu added
+static AUDIO_TOTAL_T * eng_regetpara(void)
+{
+	int srcfd;
+	char *filename = NULL;
+	//eng_getparafromnvflash();
+	ALOGW("wangzuo eng_regetpara 1");
+
+	AUDIO_TOTAL_T * aud_params_ptr;
+	int len = sizeof(AUDIO_TOTAL_T)*adev_get_audiomodenum4eng();
+
+	aud_params_ptr = calloc(1, len);
+    if (!aud_params_ptr)
+        return 0;
+    memset(aud_params_ptr, 0, len);
+	srcfd = open((char *)(ENG_AUDIO_PARA_DEBUG), O_RDONLY);
+	filename = (srcfd < 0 )? ( ENG_AUDIO_PARA):(ENG_AUDIO_PARA_DEBUG);
+    close(srcfd); 
+
+    ALOGW("eng_regetpara %s", filename);////done,into
+	stringfile2nvstruct(filename,aud_params_ptr,len);
+
+	return aud_params_ptr;
+}
+
+static void eng_setpara(AUDIO_TOTAL_T * ptr)
+{//to do
+	int len = sizeof(AUDIO_TOTAL_T)*adev_get_audiomodenum4eng();
+
+	ALOGW("wangzuo eng_setpara 2");
+	nvstruct2stringfile(ENG_AUDIO_PARA_DEBUG, ptr, len);
+}
+void * eng_getpara(void)
+{
+	int srcfd;
+	char *filename = NULL;
+	ALOGW("wangzuo eng_getpara 3");////done,into
+	int audio_fd;
+	static int read = 0;
+	int len = sizeof(AUDIO_TOTAL_T)*adev_get_audiomodenum4eng();
+	if(read)
+	{
+		ALOGW("eng_getpara read already.");////done,into
+		return audio_total;
+	}
+	else
+	{
+		read =1;
+	}
+    memset(audio_total, 0, len);
+	srcfd = open((char *)(ENG_AUDIO_PARA_DEBUG), O_RDONLY);
+	filename = (srcfd < 0 )? ( ENG_AUDIO_PARA):(ENG_AUDIO_PARA_DEBUG);
+	close(srcfd); 
+	ALOGW("wangzuo eng_getpara %s", filename);////done,into
+	stringfile2nvstruct(filename, audio_total, len); //get data from audio_hw.txt.
+    return  audio_total;
+}
 int eng_diag_audio(char *buf,int len, char *rsp)
 {
 	int fd;
@@ -1077,6 +1135,7 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 	char *ptr = NULL;
 	AUDIO_TOTAL_T *audio_ptr;
 	int audio_fd = -1;
+		int audiomode_count =0;
 	if(rsp != NULL){
 		sprintf(rsp,"\r\nERROR\r\n");
 	}
@@ -1104,14 +1163,14 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 		return rsp != NULL ? strlen(rsp):0;
 	}
 //end kenyliu added
-    audio_fd = open(ENG_AUDIO_PARA_DEBUG,O_RDWR);
+    //audio_fd = open(ENG_AUDIO_PARA_DEBUG,O_RDWR);
 	if(g_is_data){
 		ENG_LOG("HEY,DATA HAS COME!!!!");
 		g_is_data = g_is_data;
 		wlen = head_ptr->len - sizeof(MSG_HEAD_T) - 1;
 		ENG_LOG("NOTICE:length is %x,%x,%x,%x",wlen,sizeof(AUDIO_TOTAL_T),sizeof(AUDIO_NV_ARM_MODE_INFO_T),sizeof(AUDIO_ENHA_EQ_STRUCT_T));
 
-		audio_ptr = (AUDIO_TOTAL_T *)mmap(0,4*sizeof(AUDIO_TOTAL_T),PROT_READ|PROT_WRITE,MAP_SHARED,audio_fd,0);
+		audio_ptr = (AUDIO_TOTAL_T *)eng_regetpara();//audio_ptr = (AUDIO_TOTAL_T *)mmap(0,4*sizeof(AUDIO_TOTAL_T),PROT_READ|PROT_WRITE,MAP_SHARED,audio_fd,0);
 		if ((AUDIO_TOTAL_T *)(-1) == audio_ptr ) {
 			ALOGE("mmap failed %s",strerror(errno));
 			goto out;
@@ -1148,14 +1207,16 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 		ENG_LOG("g_indicator = 0x%x,%x\n",g_indicator,AUDIO_DATA_READY_INDI_FLAG);
 
 		if ( audio_ptr ) {
-			msync((void *)audio_ptr,4*sizeof(AUDIO_TOTAL_T),MS_ASYNC);
-			munmap((void *)audio_ptr,4*sizeof(AUDIO_TOTAL_T));
+			//msync((void *)audio_ptr,4*sizeof(AUDIO_TOTAL_T),MS_ASYNC);
+			ALOGW("wangzuo eng_diag_audio 5");
+			eng_setpara(audio_ptr);
+			free(audio_ptr);
 		}
 
 		if ( g_indicator ) {
 			ENG_LOG("data is ready!g_indicator = 0x%x\n",g_indicator);
 			g_indicator = 0;
-			parse_vb_effect_params((void *)audio_total, 4*sizeof(AUDIO_TOTAL_T));
+			parse_vb_effect_params((void *)audio_total, adev_get_audiomodenum4eng()*sizeof(AUDIO_TOTAL_T));
 			SetAudio_pga_parameter_eng(&audio_total[g_index],sizeof(AUDIO_TOTAL_T),1);
 		}
 
@@ -1168,12 +1229,14 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 	if ( 0==ret ) {
 		switch ( cmd_type) {
 		    	case GET_ARM_VOLUME_MODE_COUNT:
-				ENG_LOG("%s,GET MODE COUNT\n",__FUNCTION__);
-				sprintf(rsp,"+SADM4AP: 4");
+				ENG_LOG("%s,GET MODE COUNT:%d\n",__FUNCTION__,adev_get_audiomodenum4eng());
+				sprintf(rsp,"+SADM4AP: %d",adev_get_audiomodenum4eng());
+				ENG_LOG("%s,GET MODE COUNT:%s\n",__FUNCTION__,rsp);
 				break;
 			case GET_ARM_VOLUME_MODE_NAME:	
 				ENG_LOG("ARM VOLUME NAME is %s",audio_total[g_index].audio_nv_arm_mode_info.ucModeName);
 				sprintf(rsp,"+SADM4AP: %d,\"%s\"",g_index,audio_total[g_index].audio_nv_arm_mode_info.ucModeName);
+				ENG_LOG("%s,GET_ARM_VOLUME_MODE_NAME:%d ---- >%s \n",__FUNCTION__,g_index,rsp);
 				break;
 			case SET_ARM_VOLUME_DATA_TO_RAM:
 				ENG_LOG("%s,set arm nv mode data to memory\n",__FUNCTION__);
@@ -1186,14 +1249,16 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 				sprintf(rsp,"\r\n> ");	
 				break;
 			case GET_ARM_VOLUME_DATA_FROM_FLASH:	
-				audio_ptr = (AUDIO_TOTAL_T *)mmap(0,4*sizeof(AUDIO_TOTAL_T),PROT_READ|PROT_WRITE,MAP_SHARED,audio_fd,0);
+				audio_ptr = (AUDIO_TOTAL_T *)eng_regetpara();//(AUDIO_TOTAL_T *)mmap(0,4*sizeof(AUDIO_TOTAL_T),PROT_READ|PROT_WRITE,MAP_SHARED,audio_fd,0);
 				if ((AUDIO_TOTAL_T *)( -1 )!= audio_ptr ) {
+					//audio_total[g_index].audio_nv_arm_mode_info.tAudioNvArmModeStruct=audio_ptr[g_index].audio_nv_arm_mode_info.tAudioNvArmModeStruct;
+					//munmap((void *)audio_ptr,4*sizeof(AUDIO_TOTAL_T));
 					audio_total[g_index].audio_nv_arm_mode_info.tAudioNvArmModeStruct=audio_ptr[g_index].audio_nv_arm_mode_info.tAudioNvArmModeStruct;
-					munmap((void *)audio_ptr,4*sizeof(AUDIO_TOTAL_T));
+					free(audio_ptr);
 				}
 				//there is no break in this case,'cause it will share the code with the following case
 			case GET_ARM_VOLUME_DATA_FROM_RAM:	
-				ENG_LOG("%s,get arm volume data\n",__FUNCTION__);
+				ENG_LOG("%s,get arm volume data,audio_total:0x%0x,--->%d \n",__FUNCTION__,audio_total,g_index);
 				sprintf(rsp,"+SADM4AP: 0,\"%s\",",audio_total[g_index].audio_nv_arm_mode_info.ucModeName);
 				bin2ascii((unsigned char *)(rsp+strlen(rsp)),(unsigned char *)(&audio_total[g_index].audio_nv_arm_mode_info.tAudioNvArmModeStruct),sizeof(AUDIO_NV_ARM_MODE_STRUCT_T));
 				break;
@@ -1233,7 +1298,7 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 
 			switch ( cmd_type ) {
 				case GET_AUDIO_ENHA_MODE_COUNT:	
-					sprintf(rsp,"+SPENHA: 4");
+					sprintf(rsp,"+SPENHA: %d",adev_get_audiomodenum4eng());
 					break;
 					
 				case SET_AUDIO_ENHA_DATA_TO_MEMORY:	
@@ -1247,10 +1312,10 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 					sprintf(rsp,"\r\n> ");	
 					break;
 				case GET_AUDIO_ENHA_DATA_FROM_FLASH:	
-					audio_ptr = (AUDIO_TOTAL_T *)mmap(0,4*sizeof(AUDIO_TOTAL_T),PROT_READ|PROT_WRITE,MAP_SHARED,audio_fd,0);
+					audio_ptr = (AUDIO_TOTAL_T *)eng_regetpara();// (AUDIO_TOTAL_T *)mmap(0,4*sizeof(AUDIO_TOTAL_T),PROT_READ|PROT_WRITE,MAP_SHARED,audio_fd,0);
 					if ( NULL != audio_ptr ) {
 						audio_total[g_index].audio_enha_eq=audio_ptr[g_index].audio_enha_eq;
-						munmap((void *)audio_ptr,4*sizeof(AUDIO_TOTAL_T));
+						free(audio_ptr);//munmap((void *)audio_ptr,4*sizeof(AUDIO_TOTAL_T));
 					}
 					//there is no break in this case,'cause it will share the code with the following case
 				case GET_AUDIO_ENHA_DATA_FROM_MEMORY:	
@@ -1265,8 +1330,8 @@ int eng_diag_audio(char *buf,int len, char *rsp)
 	}
 	
 out:
-	if (audio_fd >=0)
-		close(audio_fd);
+	//if (audio_fd >=0)
+		//close(audio_fd);
 
 	return rsp != NULL ? strlen(rsp):0;
 }

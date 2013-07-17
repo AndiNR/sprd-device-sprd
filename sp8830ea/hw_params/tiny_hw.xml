@@ -31,17 +31,30 @@
 <private name="vb control">
    <func name="VBC Switch" val="arm" />
 </private>
-
-<private name="eq switch">
-  <func name="VBC EQ Switch" val="0" />
-</private>
-
 <private name="eq update">
   <func name="VBC EQ Update" val="0" />
 </private>
 
-<private name="eq profile">
-  <func name="VBC EQ Profile Select" val="0" />
+<private name="da eq switch">
+  <func name="VBC DA EQ Switch" val="0" />
+</private>
+
+<private name="ad01 eq switch">
+  <func name="VBC AD01 EQ Switch" val="0" />
+</private>
+
+<private name="ad23 eq switch">
+  <func name="VBC AD02 EQ Switch" val="0" />
+</private>
+
+<private name="da eq profile">
+  <func name="VBC DA EQ Profile Select" val="0" />
+</private>
+<private name="ad01 eq profile">
+  <func name="VBC AD01 EQ Profile Select" val="0" />
+</private>
+<private name="ad23 eq profile">
+  <func name="VBC AD23 EQ Profile Select" val="0" />
 </private>
 
 <private name="internal PA">

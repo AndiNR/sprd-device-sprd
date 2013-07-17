@@ -26,7 +26,9 @@ static char ext_data_buf[DATA_EXT_DIAG_SIZE];
 static int ext_buf_len;
 //referrenced by eng_diag.c
 //int audio_fd;
-AUDIO_TOTAL_T audio_total[4];
+//AUDIO_TOTAL_T audio_total[4];
+extern int adev_get_audiomodenum4eng(void);
+AUDIO_TOTAL_T *audio_total = NULL;
 
 static char* s_connect_ser_path[]={
 	"/dev/ttyS1", //uart
@@ -261,17 +263,16 @@ void *eng_vdiag_thread(void *x)
 			sleep(5);
 		}
 	}while(pipe_fd < 0);
-
-	memset(&audio_total, 0, sizeof(audio_total));
-	if(0 == ensure_audio_para_file_exists((char *)(ENG_AUDIO_PARA_DEBUG))){
-		audio_fd = open(ENG_AUDIO_PARA_DEBUG,O_RDWR);
-	}
-	if (audio_fd >= 0) {
-		read(audio_fd, &audio_total, sizeof(audio_total));
-		close(audio_fd);
-	}
-	ENG_LOG("put diag data from serial to pipe\n");
-
+	audio_total = calloc(1,sizeof(AUDIO_TOTAL_T)*adev_get_audiomodenum4eng());
+	if(!audio_total)
+	{
+		ENG_LOG("eng_vdiag_thread malloc audio_total memory error\n");
+		return NULL;
+	}	
+	memset(audio_total, 0, sizeof(AUDIO_TOTAL_T)*adev_get_audiomodenum4eng());
+	ret = ensure_audio_para_file_exists((char *)(ENG_AUDIO_PARA_DEBUG));
+	eng_getpara();
+	ENG_LOG("put diag data from serial to pipe %d\n", ret);
 	init_user_diag_buf();
 	
 	while(1) {
@@ -291,14 +292,11 @@ void *eng_vdiag_thread(void *x)
 			}
 			continue;
 		}
-		ret=0;
-
-		
+		ret=0;	
 		if (get_user_diag_buf(log_data,r_cnt)){
 			ret = eng_diag(ext_data_buf,ext_buf_len);
 			init_user_diag_buf();
 		}
-
 		if(ret == 1)
 			continue;
 		

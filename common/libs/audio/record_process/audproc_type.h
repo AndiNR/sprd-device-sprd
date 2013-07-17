@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "../vb_effect/aud_common.h"
+#include "aud_common.h"
 
 typedef    long long               int64;
 
