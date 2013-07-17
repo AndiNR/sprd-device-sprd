@@ -22,6 +22,7 @@ void	disconnect_vbus_charger(void)
 		if(fd >= 0){
 			write(fd,"1",2);
 			close(fd);
+			sleep(1);
 		}	
 	}
 }
