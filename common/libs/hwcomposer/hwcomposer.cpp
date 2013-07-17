@@ -724,6 +724,8 @@ static int set_GSP_layers(struct hwc_context_t *context, hwc_layer_t * l0,hwc_la
             }
             gsp_cfg_info.layer1_info.pitch = private_h1->width;
             gsp_cfg_info.layer1_info.des_pos.pos_pt_x = gsp_cfg_info.layer1_info.des_pos.pos_pt_y = 0;
+			gsp_cfg_info.layer1_info.endian_mode.a_swap_mode = GSP_A_SWAP_RGBA;//Bug 188828
+			gsp_cfg_info.layer1_info.endian_mode.y_word_endn = GSP_WORD_ENDN_1;
             gsp_cfg_info.layer1_info.layer_en = 1;
 
             ALOGI_IF(debugenable,"set_GSP_layers L%d,L1 [x%d,y%d,w%d,h%d,p%d] r%d [x%d,y%d]",__LINE__,
@@ -1077,7 +1079,17 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
         ALOGI_IF(debugenable , "no video layer, abandon osd overlay");
     }
 
-    if ((ctx->pre_fb_layer_count != ctx->fb_layer_count) && overlay_video) {
+#ifdef _HWCOMPOSER_USE_GSP_BLEND  //Bug 189296
+		if ((ctx->fb_layer_count > 0) && overlay_video){
+			/*no blending use gpu, can be optimized*/
+			overlay_video->compositionType = HWC_FRAMEBUFFER;
+			ctx->video_overlay_flag = 0;
+			ctx->fb_layer_count++;
+			ALOGI_IF(debugenable,"----------------------clear fb");
+			overlay_video->hints = HWC_HINT_CLEAR_FB;
+		}
+#else
+		    if ((ctx->pre_fb_layer_count != ctx->fb_layer_count) && overlay_video) {
         /*no blending use gpu, can be optimized*/
         //overlay_video->compositionType = HWC_FRAMEBUFFER;
         //ctx->video_overlay_flag = 0;
@@ -1085,6 +1097,7 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
         //ALOGI("----------------------clear fb");
         //overlay_video->hints = HWC_HINT_CLEAR_FB;
     }
+#endif
 
     //if(1) {
     //  if (ctx->procs && ctx->procs->invalidate) {
