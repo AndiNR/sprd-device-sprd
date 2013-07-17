@@ -101,12 +101,14 @@ void *arithmetic_fd_thread_proc(void *data)
 			pthread_mutex_lock(&s_arith_cxt->fd_lock);
 			if (CMR_IDLE == cxt->preview_status) {
 				s_arith_cxt->fd_busy = 0;
+				sem_post(&s_arith_cxt->fd_sync_sem);
 				pthread_mutex_unlock(&s_arith_cxt->fd_lock);
 				break;
 			}
 			addr = message.data;
 			if (NULL == s_arith_cxt->addr) {
 				s_arith_cxt->fd_busy = 0;
+				sem_post(&s_arith_cxt->fd_sync_sem);
 				pthread_mutex_unlock(&s_arith_cxt->fd_lock);
 				break;
 			}
