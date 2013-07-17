@@ -102,5 +102,5 @@ PRODUCT_MANUFACTURER := Spreadtrum
 
 
 PRODUCT_PACKAGES += $(MULTILANGUAGE_PRODUCT_PACKAGES)
-PRODUCT_LOCALES := zh_CN zh_TW en_US fr_BE in_ID hi_IN ru_RU es_ES vi_VN bn_BD th_TH te_IN
+PRODUCT_LOCALES := zh_CN zh_TW en_US fr_BE in_ID hi_IN ru_RU es_ES vi_VN bn_BD th_TH te_IN am_ET ar_EG cs_CZ pt_BR tl_PH ta_IN my_MM ce_PH uk_UA
 
