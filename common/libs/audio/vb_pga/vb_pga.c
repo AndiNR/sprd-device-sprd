@@ -28,6 +28,9 @@
 
 /* ALSA cards for sprd */
 #define CARD_SPRDPHONE "sprdphone"
+/* mixer control */
+#define MIXER_CTL_INNER_PA_CONFIG   "Inter PA Config"
+
 
 static int fd_audio_para = -1;
 static int tiny_card_num = -1;
@@ -35,6 +38,7 @@ static int tiny_card_num = -1;
 typedef struct {
 	unsigned short adc_pga_gain_l;
 	unsigned short adc_pga_gain_r;
+    unsigned short pa_config;
     uint32_t fm_pga_gain_l;
     uint32_t fm_pga_gain_r;
 	uint32_t dac_pga_gain_l;
@@ -75,18 +79,22 @@ static int  GetAudio_pga_nv(AUDIO_TOTAL_T *aud_params_ptr, pga_gain_nv_t *pga_ga
     pga_gain_nv->fm_pga_gain_l  = (aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_FM_GAINL_INDEX]
         | ((aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_FM_DGAIN_INDEX]<<16) & 0xffff0000));  //18,19
     pga_gain_nv->fm_pga_gain_r  = pga_gain_nv->fm_pga_gain_l;
-    ALOGW("%s, dac_pga_gain_l:0x%x adc_pga_gain_l:0x%x fm_pga_gain_l:0x%x fm_pga_gain_r:0x%x vol_level:0x%x ",
-        __func__,pga_gain_nv->dac_pga_gain_l,pga_gain_nv->adc_pga_gain_l,pga_gain_nv->fm_pga_gain_l,pga_gain_nv->fm_pga_gain_r,vol_level);
+    pga_gain_nv->pa_config = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_INTPA_GAIN_INDEX];    //45
+    ALOGW("%s, dac_pga_gain_l:0x%x adc_pga_gain_l:0x%x fm_pga_gain_l:0x%x fm_pga_gain_r:0x%x pa_config:0x%x vol_level:0x%x ",
+        __func__,pga_gain_nv->dac_pga_gain_l,pga_gain_nv->adc_pga_gain_l,pga_gain_nv->fm_pga_gain_l,pga_gain_nv->fm_pga_gain_r,pga_gain_nv->pa_config,vol_level);
     return 0;
 }
 
 static int SetAudio_gain_4eng(struct audio_pga *pga, pga_gain_nv_t *pga_gain_nv, AUDIO_TOTAL_T *aud_params_ptr)
 {
     int32_t lmode = 0;
+    struct mixer *mixer;
+    struct mixer_ctl *pa_config_ctl;
     if((NULL == aud_params_ptr) || (NULL == pga_gain_nv) || (NULL == pga)){
         ALOGE("%s aud_params_ptr or pga_gain_nv or audio_pga is NULL",__func__);
         return -1;
     }
+    pa_config_ctl = mixer_get_ctl_by_name(mixer, MIXER_CTL_INNER_PA_CONFIG);
     lmode = GetAudio_mode_number_from_nv(aud_params_ptr);
     if(0 == lmode){ //Headset
         audio_pga_apply(pga,pga_gain_nv->fm_pga_gain_l,"linein-hp-l");
@@ -97,7 +105,8 @@ static int SetAudio_gain_4eng(struct audio_pga *pga, pga_gain_nv_t *pga_gain_nv,
 	    audio_pga_apply(pga,pga_gain_nv->adc_pga_gain_r,"capture-r");
     }else if(1 == lmode){   //Headfree
         audio_pga_apply(pga,pga_gain_nv->dac_pga_gain_l,"headphone-spk-l");
-        audio_pga_apply(pga,pga_gain_nv->dac_pga_gain_r,"headphone-spk-r"); 
+        audio_pga_apply(pga,pga_gain_nv->dac_pga_gain_r,"headphone-spk-r");
+        mixer_ctl_set_value(pa_config_ctl, 0, pga_gain_nv->pa_config);
     }else if(2 == lmode){   //Handset
         audio_pga_apply(pga,pga_gain_nv->dac_pga_gain_l,"earpiece");
         audio_pga_apply(pga,pga_gain_nv->adc_pga_gain_l,"capture-l");
@@ -107,6 +116,7 @@ static int SetAudio_gain_4eng(struct audio_pga *pga, pga_gain_nv_t *pga_gain_nv,
         audio_pga_apply(pga,pga_gain_nv->fm_pga_gain_r,"linein-spk-r");
         audio_pga_apply(pga,pga_gain_nv->dac_pga_gain_l,"speaker-l");
         audio_pga_apply(pga,pga_gain_nv->dac_pga_gain_r,"speaker-r");
+        mixer_ctl_set_value(pa_config_ctl, 0, pga_gain_nv->pa_config);
         audio_pga_apply(pga,pga_gain_nv->adc_pga_gain_l,"capture-l");
 	    audio_pga_apply(pga,pga_gain_nv->adc_pga_gain_r,"capture-r");
     }
