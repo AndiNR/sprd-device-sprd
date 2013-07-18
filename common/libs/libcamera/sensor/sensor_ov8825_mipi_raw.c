@@ -1471,10 +1471,10 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->hist_bypass=0x01;
 	sensor_ptr->auto_contrast_bypass=0x01;
 	sensor_ptr->af_bypass=0x00;
-	sensor_ptr->edge_bypass=0x01;
-	sensor_ptr->fcs_bypass=0x01;
+	sensor_ptr->edge_bypass=0x00;
+	sensor_ptr->fcs_bypass=0x00;
 	sensor_ptr->css_bypass=0x01;
-	sensor_ptr->saturation_bypass=0x01;
+	sensor_ptr->saturation_bypass=0x00;
 	sensor_ptr->hdr_bypass=0x01;
 	sensor_ptr->glb_gain_bypass=0x01;
 	sensor_ptr->chn_gain_bypass=0x01;
@@ -1615,14 +1615,14 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->ae.target_zone=8;
 	sensor_ptr->ae.quick_mode=1;
 	sensor_ptr->ae.smart=0;
-	sensor_ptr->ae.smart_rotio=255;
-	sensor_ptr->ae.ev[0]=0xe8;
-	sensor_ptr->ae.ev[1]=0xf0;
-	sensor_ptr->ae.ev[2]=0xf8;
+	sensor_ptr->ae.smart_rotio=256;
+	sensor_ptr->ae.ev[0]=0xd0;
+	sensor_ptr->ae.ev[1]=0xe0;
+	sensor_ptr->ae.ev[2]=0xf0;
 	sensor_ptr->ae.ev[3]=0x00;
-	sensor_ptr->ae.ev[4]=0x08;
-	sensor_ptr->ae.ev[5]=0x10;
-	sensor_ptr->ae.ev[6]=0x18;
+	sensor_ptr->ae.ev[4]=0x10;
+	sensor_ptr->ae.ev[5]=0x20;
+	sensor_ptr->ae.ev[6]=0x30;
 	sensor_ptr->ae.ev[7]=0x00;
 	sensor_ptr->ae.ev[8]=0x00;
 	sensor_ptr->ae.ev[9]=0x00;
@@ -1640,37 +1640,37 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->awb.win_size.h=30;
 	sensor_ptr->awb.quick_mode = 1;
 	sensor_ptr->awb.r_gain[0]=0x6c0;
-	sensor_ptr->awb.g_gain[0]=0x3fc;
+	sensor_ptr->awb.g_gain[0]=0x400;
 	sensor_ptr->awb.b_gain[0]=0x600;
 	sensor_ptr->awb.r_gain[1]=0x480;
-	sensor_ptr->awb.g_gain[1]=0x3fc;
+	sensor_ptr->awb.g_gain[1]=0x400;
 	sensor_ptr->awb.b_gain[1]=0xc00;
-	sensor_ptr->awb.r_gain[2]=0x3fc;
-	sensor_ptr->awb.g_gain[2]=0x3fc;
-	sensor_ptr->awb.b_gain[2]=0x3fc;
+	sensor_ptr->awb.r_gain[2]=0x400;
+	sensor_ptr->awb.g_gain[2]=0x400;
+	sensor_ptr->awb.b_gain[2]=0x400;
 	sensor_ptr->awb.r_gain[3]=0x3fc;
-	sensor_ptr->awb.g_gain[3]=0x3fc;
-	sensor_ptr->awb.b_gain[3]=0x3fc;
+	sensor_ptr->awb.g_gain[3]=0x400;
+	sensor_ptr->awb.b_gain[3]=0x400;
 	sensor_ptr->awb.r_gain[4]=0x480;
-	sensor_ptr->awb.g_gain[4]=0x3fc;
+	sensor_ptr->awb.g_gain[4]=0x400;
 	sensor_ptr->awb.b_gain[4]=0x800;
 	sensor_ptr->awb.r_gain[5]=0x700;
-	sensor_ptr->awb.g_gain[5]=0x3fc;
+	sensor_ptr->awb.g_gain[5]=0x400;
 	sensor_ptr->awb.b_gain[5]=0x500;
 	sensor_ptr->awb.r_gain[6]=0xa00;
-	sensor_ptr->awb.g_gain[6]=0x3fc;
+	sensor_ptr->awb.g_gain[6]=0x400;
 	sensor_ptr->awb.b_gain[6]=0x4c0;
-	sensor_ptr->awb.r_gain[7]=0x3fc;
-	sensor_ptr->awb.g_gain[7]=0x3fc;
-	sensor_ptr->awb.b_gain[7]=0x3fc;
-	sensor_ptr->awb.r_gain[8]=0x3fc;
-	sensor_ptr->awb.g_gain[8]=0x3fc;
-	sensor_ptr->awb.b_gain[8]=0x3fc;
+	sensor_ptr->awb.r_gain[7]=0x400;
+	sensor_ptr->awb.g_gain[7]=0x400;
+	sensor_ptr->awb.b_gain[7]=0x400;
+	sensor_ptr->awb.r_gain[8]=0x400;
+	sensor_ptr->awb.g_gain[8]=0x400;
+	sensor_ptr->awb.b_gain[8]=0x400;
 	sensor_ptr->awb.cali_zone=0x40;
-	sensor_ptr->awb.target_zone=0x40;
+	sensor_ptr->awb.target_zone=0x10;
 
 	/*awb cali*/
-	sensor_ptr->awb.cali_num=20;
+	sensor_ptr->awb.cali_num=0;
 
 	sensor_ptr->awb.cali[0].x=140;
 	sensor_ptr->awb.cali[0].yt=241;
@@ -1795,7 +1795,7 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->bpc.texture_thr=2;
 
 	// denoise
-	sensor_ptr->denoise.write_back=0x02;
+	sensor_ptr->denoise.write_back=0x00;
 	sensor_ptr->denoise.r_thr=0x08;
 	sensor_ptr->denoise.g_thr=0x08;
 	sensor_ptr->denoise.b_thr=0x08;
@@ -1986,13 +1986,13 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->auto_contrast.mode;
 	
 	//saturation
-	sensor_ptr->saturation.factor[0]=0x40;
-	sensor_ptr->saturation.factor[1]=0x40;
-	sensor_ptr->saturation.factor[2]=0x40;
+	sensor_ptr->saturation.factor[0]=0x28;
+	sensor_ptr->saturation.factor[1]=0x30;
+	sensor_ptr->saturation.factor[2]=0x38;
 	sensor_ptr->saturation.factor[3]=0x40;
-	sensor_ptr->saturation.factor[4]=0x40;
-	sensor_ptr->saturation.factor[5]=0x40;
-	sensor_ptr->saturation.factor[6]=0x40;
+	sensor_ptr->saturation.factor[4]=0x48;
+	sensor_ptr->saturation.factor[5]=0x50;
+	sensor_ptr->saturation.factor[6]=0x58;
 	sensor_ptr->saturation.factor[7]=0x40;
 	sensor_ptr->saturation.factor[8]=0x40;
 	sensor_ptr->saturation.factor[9]=0x40;
@@ -2008,25 +2008,28 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->af.stab_period=10;
 
 	//edge
-	sensor_ptr->edge.info[0].detail_thr=0x03;
-	sensor_ptr->edge.info[0].smooth_thr=0x05;
-	sensor_ptr->edge.info[0].strength=10;
-	sensor_ptr->edge.info[1].detail_thr=0x03;
-	sensor_ptr->edge.info[1].smooth_thr=0x05;
-	sensor_ptr->edge.info[1].strength=10;
-	sensor_ptr->edge.info[2].detail_thr=0x03;
-	sensor_ptr->edge.info[2].smooth_thr=0x05;
-	sensor_ptr->edge.info[2].strength=10;
+	sensor_ptr->edge.info[0].detail_thr=0x00;
+	sensor_ptr->edge.info[0].smooth_thr=0x30;
+	sensor_ptr->edge.info[0].strength=0;
+	sensor_ptr->edge.info[1].detail_thr=0x01;
+	sensor_ptr->edge.info[1].smooth_thr=0x20;
+	sensor_ptr->edge.info[1].strength=3;
+	sensor_ptr->edge.info[2].detail_thr=0x2;
+	sensor_ptr->edge.info[2].smooth_thr=0x10;
+	sensor_ptr->edge.info[2].strength=5;
 	sensor_ptr->edge.info[3].detail_thr=0x03;
 	sensor_ptr->edge.info[3].smooth_thr=0x05;
 	sensor_ptr->edge.info[3].strength=10;
-	sensor_ptr->edge.info[4].detail_thr=0x03;
+	sensor_ptr->edge.info[4].detail_thr=0x06;
 	sensor_ptr->edge.info[4].smooth_thr=0x05;
-	sensor_ptr->edge.info[4].strength=10;
-	sensor_ptr->edge.info[5].detail_thr=0x03;
+	sensor_ptr->edge.info[4].strength=20;
+	sensor_ptr->edge.info[5].detail_thr=0x09;
 	sensor_ptr->edge.info[5].smooth_thr=0x05;
-	sensor_ptr->edge.info[5].strength=10;
-	
+	sensor_ptr->edge.info[5].strength=30;
+	sensor_ptr->edge.info[6].detail_thr=0x0c;
+	sensor_ptr->edge.info[6].smooth_thr=0x05;
+	sensor_ptr->edge.info[6].strength=40;
+
 	//emboss
 	sensor_ptr->emboss.step=0x00;
 	
