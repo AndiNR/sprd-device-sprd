@@ -6,6 +6,12 @@
 	<cp name="w" pipe="/dev/spipe_w6" vbchannel="0" />
 </modem>
 
+<audiomode num="4">
+	<item name="Headset" index="0" />
+	<item name="Headfree" index="1" />
+	<item name="Handset" index="2" />
+	<item name="Handsfree" index="3" />
+</audiomode>
 </audio>
 
 
