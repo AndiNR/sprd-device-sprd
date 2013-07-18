@@ -1974,11 +1974,12 @@ status_t SprdCameraHardware::setCameraParameters()
 	SET_PARM(CAMERA_PARM_FOCUS_RECT, (int32_t)area);
 
 	int ae_mode = mParameters.getAutoExposureMode();
-	SET_PARM(CAMERA_PARM_AUTO_EXPOSURE_MODE, ae_mode);
 	if (2 == ae_mode) { // CAMERA_AE_SPOT_METERING
 		mParameters.getMeteringAreas(&area[1], &area[0], &preview_size, &preview_rect,
 						kCameraInfo[mCameraId].orientation, is_mirror);
 		SET_PARM(CAMERA_PARM_EXPOSURE_METERING, (int32_t)area);
+	} else {
+		SET_PARM(CAMERA_PARM_AUTO_EXPOSURE_MODE, ae_mode);
 	}
 
 

@@ -1190,7 +1190,10 @@ int camera_set_ctrl(camera_parm_type id,
 
 	case CAMERA_PARM_AUTO_EXPOSURE_MODE:
 		CMR_LOGV("CAMERA_PARM_AUTO_EXPOSURE_MODE = %d \n", parm);
-		ret = camera_set_ae_measure_lum(parm, &skip_mode, &skip_number);
+		if (parm != cxt->cmr_set.auto_exposure_mode) {
+			ret = camera_set_ae_measure_lum(parm, &skip_mode, &skip_number);
+			cxt->cmr_set.auto_exposure_mode = parm;
+		}
 		break;
 
 	case CAMERA_PARM_EXPOSURE_METERING:
