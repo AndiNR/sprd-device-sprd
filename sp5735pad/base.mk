@@ -50,6 +50,7 @@ PRODUCT_PACKAGES += \
 # own copyright packages files
 PRODUCT_PACKAGES += \
     AudioProfile \
+    FileExplorer \
     SprdNote \
     ValidationTools \
     libsprddm \
