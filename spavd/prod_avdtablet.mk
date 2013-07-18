@@ -72,12 +72,12 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/sdk.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/telephony.mk)
 
 # Overrides
-PRODUCT_NAME := spavd
+PRODUCT_NAME := spavdtablet
 PRODUCT_DEVICE := $(TARGET_BOARD)
 PRODUCT_MODEL := sprd-avd
 PRODUCT_BRAND := Spreadtrum
 PRODUCT_MANUFACTURER := Spreadtrum
-
+PRODUCT_CHARACTERISTICS := tablet
 
 PRODUCT_LOCALES := zh_CN zh_TW en_US
 ifeq ($(MULTILANGUAGE_SUPPORT),true)

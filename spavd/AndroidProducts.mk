@@ -14,3 +14,5 @@
 # limitations under the License.
 
 PRODUCT_MAKEFILES := $(LOCAL_DIR)/prod_avdbase.mk
+PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_avdphone.mk
+PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_avdtablet.mk
