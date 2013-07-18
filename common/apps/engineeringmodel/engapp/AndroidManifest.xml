@@ -240,6 +240,7 @@
 	<!-- add by wangxiaobin 2011-10-04 for move wifitest to 83780 end -->
 
 	<activity android:name="Eng83781Activity"  android:screenOrientation="portrait" android:windowSoftInputMode="stateAlwaysHidden"></activity>
+	<activity android:name="EngPatchRecordActivity" android:label="Patch" android:screenOrientation="portrait" android:windowSoftInputMode="stateAlwaysHidden"></activity>
 	<activity android:name="WifiCMCCTest" android:screenOrientation="portrait"></activity>
 	<activity android:name="Misc" android:screenOrientation="portrait"></activity>
 
@@ -258,6 +259,10 @@
 		<intent-filter>
 			<action android:name="android.provider.Telephony.SECRET_CODE" />
 			<data android:scheme="android_secret_code" android:host="83781" />
+		</intent-filter>
+		<intent-filter>
+			<action android:name="android.provider.Telephony.SECRET_CODE" />
+			<data android:scheme="android_secret_code" android:host="72824" />
 		</intent-filter>
 	</receiver>
 	<!-- add by wangxiaobin 2011-10-04 for move wifitest to 83780 end -->
