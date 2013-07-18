@@ -1,1 +1,2 @@
-add_lunch_combo spavd-eng
+add_lunch_combo spavdphone-eng
+add_lunch_combo spavdtablet-eng

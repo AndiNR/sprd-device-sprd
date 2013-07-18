@@ -25,7 +25,22 @@ PRODUCT_AAPT_CONFIG := hdpi
 PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
 	ro.com.android.dataroaming=false \
-	persist.msms.phone_count=1 \
+	persist.msms.phone_count=2 \
+	ro.msms.phone_count=2 \
+	persist.msms.phone_default=0 \
+	ro.modem.count=1 \
+	ro.modem.t.enable=1 \
+	ro.modem.t.dev=/dev/cpt \
+	ro.modem.t.tty=/dev/stty_td \
+	ro.modem.t.eth=seth_td \
+	ro.modem.t.snd=1 \
+	ro.modem.t.diag=/dev/slog_td \
+	ro.modem.t.loop=/dev/spipe_td0 \
+	ro.modem.t.nv=/dev/spipe_td1 \
+	ro.modem.t.assert=/dev/spipe_td2 \
+	ro.modem.t.vbc=/dev/spipe_td6 \
+	ro.modem.t.id=0 \
+	ro.modem.t.count=2 \
 
 
 
@@ -72,12 +87,11 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/sdk.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/telephony.mk)
 
 # Overrides
-PRODUCT_NAME := spavd
+PRODUCT_NAME := spavdphone
 PRODUCT_DEVICE := $(TARGET_BOARD)
 PRODUCT_MODEL := sprd-avd
 PRODUCT_BRAND := Spreadtrum
 PRODUCT_MANUFACTURER := Spreadtrum
-
 
 PRODUCT_LOCALES := zh_CN zh_TW en_US
 ifeq ($(MULTILANGUAGE_SUPPORT),true)
