@@ -3734,6 +3734,7 @@ int camera_preview_init(int format_mode)
 
 	if (v4l2_cfg.cfg.need_isp) {
 		uint32_t video_mode = g_cxt->cmr_set.video_mode;
+		struct isp_trim_size wb_trim;
 		isp_param.size.w = sensor_mode->width;
 		if (v4l2_cfg.cfg.need_binning) {
 			isp_param.size.w = (isp_param.size.w >> 1);
@@ -3747,6 +3748,14 @@ int camera_preview_init(int format_mode)
 		ret = isp_ioctl(ISP_CTRL_AE_INFO,(void*)&sensor_aec_info);
 		if (CAMERA_SUCCESS != ret) {
 			CMR_LOGE("set ae information error.");
+		}
+		wb_trim.x = v4l2_cfg.cfg.src_img_rect.start_x;
+		wb_trim.y = v4l2_cfg.cfg.src_img_rect.start_y;
+		wb_trim.w = v4l2_cfg.cfg.src_img_rect.width;
+		wb_trim.h = v4l2_cfg.cfg.src_img_rect.height;
+		ret = isp_ioctl(ISP_CTRL_WB_TRIM,(void*)&wb_trim);
+		if (CAMERA_SUCCESS != ret) {
+			CMR_LOGE("set wb trim information error.");
 		}
 		ret = isp_video_start(&isp_param);
 		if (CAMERA_SUCCESS == ret) {
@@ -3812,6 +3821,17 @@ int camera_preview_weak_init(int format_mode)
 	if (ret) {
 		CMR_LOGE("Can't support this capture configuration");
 		goto exit;
+	}
+	if (1 == v4l2_cfg.cfg.need_isp) {
+		struct isp_trim_size wb_trim;
+		wb_trim.x = v4l2_cfg.cfg.src_img_rect.start_x;
+		wb_trim.y = v4l2_cfg.cfg.src_img_rect.start_y;
+		wb_trim.w = v4l2_cfg.cfg.src_img_rect.width;
+		wb_trim.h = v4l2_cfg.cfg.src_img_rect.height;
+		ret = isp_ioctl(ISP_CTRL_WB_TRIM,(void*)&wb_trim);
+		if (CAMERA_SUCCESS != ret) {
+			CMR_LOGE("set wb trim information error.");
+		}
 	}
 
 exit:
