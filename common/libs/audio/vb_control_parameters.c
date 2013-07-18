@@ -89,6 +89,7 @@ typedef struct Open_hal
 typedef struct {
 	unsigned short adc_pga_gain_l;
 	unsigned short adc_pga_gain_r;
+    unsigned short pa_config;
     uint32_t fm_pga_gain_l;
     uint32_t fm_pga_gain_r;
 	uint32_t dac_pga_gain_l;
@@ -378,10 +379,11 @@ static int  GetAudio_pga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *aud_p
         | ((aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_FM_DGAIN_INDEX]<<16) & 0xffff0000));  //18,19
     pga_gain_nv->fm_pga_gain_r  = pga_gain_nv->fm_pga_gain_l;
 
+    pga_gain_nv->pa_config = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_INTPA_GAIN_INDEX];    //45
     pga_gain_nv->devices = adev->devices;
 
-    ALOGW("%s, dac_pga_gain_l:0x%x adc_pga_gain_l:0x%x fm_pga_gain_l:0x%x fm_pga_gain_r:0x%x device:0x%x vol_level:0x%x ",
-        __func__,pga_gain_nv->dac_pga_gain_l,pga_gain_nv->adc_pga_gain_l,pga_gain_nv->fm_pga_gain_l,pga_gain_nv->fm_pga_gain_r,pga_gain_nv->devices,vol_level);
+    ALOGW("%s, dac_pga_gain_l:0x%x adc_pga_gain_l:0x%x fm_pga_gain_l:0x%x fm_pga_gain_r:0x%x pa_config:0x%x device:0x%x vol_level:0x%x ",
+        __func__,pga_gain_nv->dac_pga_gain_l,pga_gain_nv->adc_pga_gain_l,pga_gain_nv->fm_pga_gain_l,pga_gain_nv->fm_pga_gain_r,pga_gain_nv->pa_config,pga_gain_nv->devices,vol_level);
     return 0;
 }
 
@@ -448,10 +450,12 @@ static int SetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
     if((pga_gain_nv->devices & AUDIO_DEVICE_OUT_SPEAKER) && ((pga_gain_nv->devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) || (pga_gain_nv->devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE))){
         audio_pga_apply(adev->pga,pga_gain_nv->dac_pga_gain_l,"headphone-spk-l");
         audio_pga_apply(adev->pga,pga_gain_nv->dac_pga_gain_r,"headphone-spk-r");
+        mixer_ctl_set_value(adev->private_ctl.internal_pa, 0, pga_gain_nv->pa_config);
     }else{
         if(pga_gain_nv->devices & AUDIO_DEVICE_OUT_SPEAKER){
             audio_pga_apply(adev->pga,pga_gain_nv->dac_pga_gain_l,"speaker-l");
             audio_pga_apply(adev->pga,pga_gain_nv->dac_pga_gain_r,"speaker-r");
+            mixer_ctl_set_value(adev->private_ctl.internal_pa, 0, pga_gain_nv->pa_config);
         }
         if((pga_gain_nv->devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) || (pga_gain_nv->devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE)){
     	    audio_pga_apply(adev->pga,pga_gain_nv->dac_pga_gain_l,"headphone-l");
@@ -464,6 +468,7 @@ static int SetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
     }else if(pga_gain_nv->devices & AUDIO_DEVICE_OUT_FM_SPEAKER){
         audio_pga_apply(adev->pga,pga_gain_nv->fm_pga_gain_l,"linein-spk-l");
         audio_pga_apply(adev->pga,pga_gain_nv->fm_pga_gain_r,"linein-spk-r");
+        mixer_ctl_set_value(adev->private_ctl.internal_pa, 0, pga_gain_nv->pa_config);
     }else if((pga_gain_nv->devices & AUDIO_DEVICE_IN_BUILTIN_MIC) || (pga_gain_nv->devices & AUDIO_DEVICE_IN_BACK_MIC) || (pga_gain_nv->devices & AUDIO_DEVICE_IN_WIRED_HEADSET)){
         audio_pga_apply(adev->pga,pga_gain_nv->adc_pga_gain_l,"capture-l");
 	    audio_pga_apply(adev->pga,pga_gain_nv->adc_pga_gain_r,"capture-r");
@@ -578,13 +583,14 @@ static void SetCall_VolumePara(struct tiny_audio_device *adev,paras_mode_gain_t 
 	pga_gain_nv.adc_pga_gain_r= (mode_gain_paras->adc_gain & 0xff00) >> 8;
 	pga_gain_nv.dac_pga_gain_l= mode_gain_paras->dac_gain & 0x000000ff;
 	pga_gain_nv.dac_pga_gain_r= (mode_gain_paras->dac_gain & 0x0000ff00) >> 8;
+    pga_gain_nv.pa_config   =   mode_gain_paras->pa_setting;
 
 	ret = SetVoice_gain_by_devices(adev,&pga_gain_nv);
     if(ret < 0){
         return;
     }
-	ALOGW("%s successfully ,dac_pga_gain_l:0x%x ,dac_pga_gain_r:0x%x ,adc_pga_gain_l:0x%x ,adc_pga_gain_r:0x%x ,devices:0x%x ,mode:%d ",
-		__func__,pga_gain_nv.dac_pga_gain_l,pga_gain_nv.dac_pga_gain_r,pga_gain_nv.adc_pga_gain_l,pga_gain_nv.adc_pga_gain_r,pga_gain_nv.devices,adev->mode);
+	ALOGW("%s successfully ,dac_pga_gain_l:0x%x ,dac_pga_gain_r:0x%x ,adc_pga_gain_l:0x%x ,adc_pga_gain_r:0x%x ,pa_config:0x%x, devices:0x%x ,mode:%d ",
+		__func__,pga_gain_nv.dac_pga_gain_l,pga_gain_nv.dac_pga_gain_r,pga_gain_nv.adc_pga_gain_l,pga_gain_nv.adc_pga_gain_r,pga_gain_nv.pa_config,pga_gain_nv.devices,adev->mode);
 }
 
 int SetParas_OpenHal_Incall(struct tiny_audio_device *adev, int fd_pipe)	//Get open hal cmd and sim card
