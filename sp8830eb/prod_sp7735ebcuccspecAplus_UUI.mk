@@ -76,7 +76,8 @@ PRODUCT_PACKAGES += \
 	20130308_iFlyIME_v3.0.1265_Spreadtrum_01430228.apk \
 	Wostore.apk \
 	UnicomClient.apk \
-	116114.apk
+	116114.apk \
+        DeviceRegister_debug.apk
 
 # packages files
 PRODUCT_PACKAGES += \
