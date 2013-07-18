@@ -157,6 +157,13 @@ public class DebugParam extends PreferenceActivity {
         }
         /*Modify 20130306 Spreadst of 130799 77XX dont support PLMN end  */
         /*Add 20130206 Spreadst of 122017 8810 7710 don't support PLMN end*/
+        /*Add 20130718 Spreadst of 181960 modem don't support this AT cmd start*/
+        String baseBandVersion = SystemProperties.get("gsm.version.baseband");
+        if(baseBandVersion.contains("sc8830")){
+            getPreferenceScreen().removePreference((Preference)findPreference("key_forbidplmn"));
+            getPreferenceScreen().removePreference((Preference)findPreference("key_plmnselect"));
+        }
+        /*Add 20130718 Spreadst of 181960 modem don't support this AT cmd  end*/
         mUiThread = new Handler();
         HandlerThread t = new HandlerThread("debugparam");
         t.start();
