@@ -39,7 +39,7 @@ typedef enum {
 }MAC_ADDR;
 
 //#define MAC_FROM_ANDROID
-static int counter=0;
+
 
 static int read_btwifimac_from_database(char *btmac, char *wifimac)
 {
@@ -119,7 +119,7 @@ static void write_to_randmacfile(char *btmac, char *wifimac)
 
 static int send_to_modem(int fd, char *buf, int buflen)
 {
-	ALOGD("%s",__FUNCTION__);
+	ALOGD("%s: %s",__FUNCTION__, buf);
 	return eng_write(fd, buf, buflen);
 }
 
@@ -156,13 +156,14 @@ static int recv_from_modem(int fd, char *buf, int buflen)
 	return readlen;
 }
 
+#define READ_COUNTER_MAX 3
 static int read_btwifimac_from_modem(char *btmac, char *wifimac)
 {
-	int fd, timeout;
+	int fd, readlen;
 	int bt_ok=1;
 	int wifi_ok=1;
 	char cmdbuf[128];
-	counter = 0;
+	int counter = 0;
 	ALOGD("%s",__FUNCTION__);
 
 	fd = engapi_open(0);
@@ -176,20 +177,27 @@ static int read_btwifimac_from_modem(char *btmac, char *wifimac)
 
 
 	ALOGD("===========BT MAC===========");
+	counter = 0;
 	//get bt mac address
 	do {
+		readlen = -1;
+		counter++;
+		if(counter > READ_COUNTER_MAX){
+			break;
+		}
+		else if(counter > 1){
+			usleep(100*1000);
+		}
 		memset(cmdbuf, 0, sizeof(cmdbuf));
 		sprintf(cmdbuf , "%d,%d,%s",ENG_AT_NOHANDLE_CMD, 1, GET_BTMAC_ATCMD);
 		ALOGD("%s: send %s",__FUNCTION__, cmdbuf);
 		send_to_modem(fd, cmdbuf, strlen(cmdbuf));
 		memset(cmdbuf, 0, sizeof(cmdbuf));
-		timeout = recv_from_modem(fd, cmdbuf, sizeof(cmdbuf));
-		ALOGD("%s: BT timeout=%d, response=%s\n", __FUNCTION__,timeout,cmdbuf);
-		usleep(100*1000);
-		counter++;
-	}while((timeout>0)&&(strstr(cmdbuf, "OK") == NULL));
+		readlen = recv_from_modem(fd, cmdbuf, sizeof(cmdbuf));
+		ALOGD("%s: BT readlen=%d, response=%s\n", __FUNCTION__,readlen,cmdbuf);
+	}while((readlen>0)&&(strstr(cmdbuf, "OK") == NULL));
 
-	if(timeout<=0) {
+	if( (readlen<=0) || (counter > READ_COUNTER_MAX) ){
 		ALOGD("%s: Get BT MAC from modem fail",__FUNCTION__);
 		engapi_close(fd);
 		return 0;
@@ -200,18 +208,27 @@ static int read_btwifimac_from_modem(char *btmac, char *wifimac)
 		bt_ok = 0;
 
 	ALOGD("===========WIFI MAC===========");
+	counter = 0;
 	//get wifi mac address
 	do {
+		readlen = -1;
+		counter++;
+		if(counter > READ_COUNTER_MAX){
+			break;
+		}
+		else if(counter > 1){
+			usleep(100*1000);
+		}
 		memset(cmdbuf, 0, sizeof(cmdbuf));
 		sprintf(cmdbuf , "%d,%d,%s",ENG_AT_NOHANDLE_CMD, 1, GET_WIFIMAC_ATCMD);
 		ALOGD("%s: send %s",__FUNCTION__, cmdbuf);
 		send_to_modem(fd, cmdbuf, strlen(cmdbuf));
 		memset(cmdbuf, 0, sizeof(cmdbuf));
-		timeout = recv_from_modem(fd, cmdbuf, sizeof(cmdbuf));
-		ALOGD("%s: WIFI timeout=%d, response=%s\n", __FUNCTION__,timeout,cmdbuf);
-	}while((timeout>0)&&(strstr(cmdbuf, "OK") == NULL));
+		readlen = recv_from_modem(fd, cmdbuf, sizeof(cmdbuf));
+		ALOGD("%s: WIFI readlen=%d, response=%s\n", __FUNCTION__,readlen,cmdbuf);
+	}while((readlen>0)&&(strstr(cmdbuf, "OK") == NULL));
 
-	if(timeout<=0) {
+	if( (readlen<=0) || (counter > READ_COUNTER_MAX) ){
 		ALOGD("%s: Get WIFI MAC from modem fail",__FUNCTION__);
 		engapi_close(fd);
 		return 0;
@@ -384,9 +401,8 @@ static void write_mac2file(char *wifimac, char *btmac)
 int main(void)
 {
 	int mac_ok=0;
-	char bt_mac[32], *bt_ptr;
-	char wifi_mac[32], *wifi_ptr;
-	char mac_buf[80];
+	char bt_mac[32];
+	char wifi_mac[32];
 
 	ALOGD("set BT/WIFI mac");
 
