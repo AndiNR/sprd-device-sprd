@@ -66,7 +66,7 @@ PRODUCT_PACKAGES := \
 
 # prebuild files
 PRODUCT_PACKAGES += \
-    APV_PDF_Viewer.apk \
+    moffice.apk \
     CMCCFetion.apk \
     CMCCGameHall.apk \
     CMCCMM.apk \
