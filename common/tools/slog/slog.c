@@ -511,9 +511,7 @@ static void check_sdcard_volume()
 			err_log("statfs return err!");
 			return;
 		}
-		unsigned int blocksize = diskInfo.f_bsize;
-		unsigned int availabledisk = diskInfo.f_bavail * blocksize;
-		ret = availabledisk >> 20;
+		ret = diskInfo.f_bavail * diskInfo.f_bsize >> 20;
 		if(ret < 50) {
 			err_log("sdcard available %dM", ret);
 			sprintf(cmd, "%s", "am start -n com.spreadtrum.android.eng/.SlogUILowStorage");
