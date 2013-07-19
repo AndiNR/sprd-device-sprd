@@ -25,4 +25,4 @@ ro.installer.limitpercent=85
 ro.support.orange=true
 
 #if our product support VT
-ro.device.support.vt=0
+ro.device.support.vt=1
