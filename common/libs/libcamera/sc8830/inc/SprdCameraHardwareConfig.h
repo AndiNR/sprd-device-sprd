@@ -396,7 +396,7 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"preferred-preview-size-for-video", "352x288"},
 	{"video-frame-format-values", "yuv420sp,yuv420p"},
 	{"video-frame-format", "yuv420sp"},
-	{"preview-format-values", "yuv420sp,,yuv420p"},
+	{"preview-format-values", "yuv420sp,yuv420p"},
 	{"preview-format", "yuv420sp"},
 	{"picture-format-values", "jpeg"},
 	{"picture-format", "jpeg"},
