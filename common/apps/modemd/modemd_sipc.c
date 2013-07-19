@@ -295,11 +295,13 @@ reconnect:
 			MODEMD_LOGD("%s: open loop dev: %s, fd = %d", __func__, loop_dev, loop_fd);
 			if (loop_fd < 0) {
 				MODEMD_LOGE("%s: open %s failed, error: %s", __func__, loop_dev, strerror(errno));
+				goto raw_reset;
 			}
 			ret = write(loop_fd, "AT", 3);
 			if(ret < 0) {
 				MODEMD_LOGE("%s: write %s failed, error:%s", __func__, loop_dev, strerror(errno));
 				close(loop_fd);
+				goto raw_reset;
 			}
 			usleep(100*1000);
 			ret = read(loop_fd, buffer, sizeof(buffer));
@@ -312,6 +314,7 @@ reconnect:
 			}
 			close(loop_fd);
 
+raw_reset:
 			/* info socket clients that modem is blocked */
 			MODEMD_LOGE("Info all the sock clients that modem is blocked");
 			loop_info_sockclients(buf, numRead);
@@ -326,7 +329,6 @@ reconnect:
 				is_assert = 0;
 			} else {
 				MODEMD_LOGD("%s: reset is not enabled , not reset", __func__);
-				return NULL;
 			}
 		}
 	}
