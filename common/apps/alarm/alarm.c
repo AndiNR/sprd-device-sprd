@@ -158,7 +158,7 @@ char *get_ring_file(void)
 	char *ring_time = strtok(NULL, " \t\n");
 	char *snooze_time = strtok(NULL, " \t\n");
 	char *time_mdm = strtok(NULL, " \t\n");
-	char *file_path = strtok(NULL, " \t\n");
+	char *file_path = strtok(NULL, "\t\n");
 	if(ring_time != NULL)
 		ring_length = strtoul(ring_time, (char **)NULL, 10);
 	else
