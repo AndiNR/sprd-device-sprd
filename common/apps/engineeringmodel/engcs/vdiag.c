@@ -292,6 +292,8 @@ void *eng_vdiag_thread(void *x)
 				ALOGE("eng_vdiag cannot open vendor serial\n");
 				return NULL;
 			}
+
+			sleep(1);
 			continue;
 		}
 		ret=0;	
