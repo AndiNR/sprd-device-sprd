@@ -23,7 +23,8 @@ int g_ass_start = 0;
 
 static char log_data[DATA_BUF_SIZE];
 static char ext_data_buf[DATA_EXT_DIAG_SIZE];
-static int ext_buf_len;
+static char backup_data_buf[DATA_EXT_DIAG_SIZE];
+static int ext_buf_len,backup_data_len;
 //referrenced by eng_diag.c
 //int audio_fd;
 //AUDIO_TOTAL_T audio_total[4];
@@ -231,6 +232,7 @@ void *eng_vdiag_thread(void *x)
 	int res, ret=0;
 	int audio_fd = -1;
 	int wait_cnt = 0;
+	int offset = 0;
 	struct eng_param * param = (struct eng_param *)x;
 
 	if(param == NULL){
@@ -294,29 +296,36 @@ void *eng_vdiag_thread(void *x)
 		}
 		ret=0;	
 		if (get_user_diag_buf(log_data,r_cnt)){
+			memcpy(backup_data_buf,ext_data_buf,ext_buf_len);
+			backup_data_len = ext_buf_len;
 			ret = eng_diag(ext_data_buf,ext_buf_len);
 			init_user_diag_buf();
-		}
-		if(ret == 1)
+		}else continue;
+
+		if(ret == 1){
+			backup_data_len = 0;
 			continue;
-		
+		}
+
                if(2 == r_cnt && log_data[1] == 0xa){
                        ENG_LOG("eng_vdiag: start to dump memory");
                        g_ass_start = 1;
                }
 
 		ENG_LOG("eng_vdiag DIAGLOG:: read length =%d\n", r_cnt);
-		//print_log_data(r_cnt);
+		offset = 0;
 		do{
-			w_cnt = write(pipe_fd, log_data, r_cnt);
+			w_cnt = write(pipe_fd, backup_data_buf+offset, backup_data_len);
 			if (w_cnt < 0) {
 				ENG_LOG("eng_vdiag no log data write:%d ,%s\n", w_cnt, strerror(errno));
 				continue;
 			}else{
-				r_cnt -= w_cnt;
+				backup_data_len -= w_cnt;
+				offset += w_cnt;
 			}
-		}while(r_cnt >0);
-		ENG_LOG("eng_vdiag read from diag %d, write to pipe%d\n", r_cnt, w_cnt);
+		}while(backup_data_len >0);
+		backup_data_len = 0; //reset backup buffer
+		ENG_LOG("eng_vdiag read from diag: backup_datalen:%d, w_cnt: %d, offset: %d\n", backup_data_len, w_cnt, offset);
 	}
 out:
 	close(pipe_fd);
