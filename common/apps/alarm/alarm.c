@@ -1308,7 +1308,8 @@ int musicProcess(char *filename, int op)
 		return -5;
 	}
 	if(filename == NULL)
-		filename=BOOT_ALARM_DEFAULT_RING;
+//		filename=BOOT_ALARM_DEFAULT_RING;
+                return -1; //Bug176869
 	pid = fork();
 	pid_mp3_player = pid;
 
