@@ -3918,6 +3918,15 @@ static int HAL_camera_device_open(const struct hw_module_t* module,
 #endif
 
     int cameraId = atoi(id);
+
+    //if camera,ensure sys.camera.atv is 0
+    char propBuf_atv[10];
+    property_get("sys.camera.atv", propBuf_atv, "0");
+
+    if( ((0==cameraId)||(1==cameraId)) && (0 == strcmp(propBuf_atv, "1")) ){
+        property_set("sys.camera.atv", "0");
+    }
+
     if (cameraId < 0 || cameraId >= HAL_getNumberOfCameras()) {
         ALOGE("Invalid camera ID %s", id);
         return -EINVAL;
