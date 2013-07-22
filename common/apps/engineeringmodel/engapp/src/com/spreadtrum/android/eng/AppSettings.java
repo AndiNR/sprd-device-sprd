@@ -59,10 +59,8 @@ public class AppSettings extends PreferenceActivity {
         mModemReset = (CheckBoxPreference)findPreference(MODEM_RESET);
 
         // Disable call forward query with Orange feature
-		if(ORANGE_SUPPORT == false) {
-	        mCallForwardQuery = (CheckBoxPreference)findPreference(CALL_FORWARD_QUERY);
-            getPreferenceScreen().removePreference(mCallForwardQuery);
-        }
+		//if(ORANGE_SUPPORT == true) {
+        //}
 
         String result = SystemProperties.get("persist.sys.sprd.modemreset");
         if(DEBUG) Log.d(LOG_TAG, "result: "+ result + ", result.equals(): " + (result.equals("1")));
