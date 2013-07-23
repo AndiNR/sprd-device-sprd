@@ -9,10 +9,12 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
+import android.view.WindowManager.BadTokenException;
 import android.widget.TabHost;
 import android.widget.Toast;
 
 public class LogSettingSlogUITabHostActivity extends TabActivity {
+    private static final String TAG = "LogSettingSlogUITabHostActivity"; 
     /** Called when the activity is first created. */
     public static ProgressDialog mProgressDialog;
     private static Context sContext;
@@ -77,14 +79,26 @@ public class LogSettingSlogUITabHostActivity extends TabActivity {
             case SlogAction.ANDROIDKEY:
                 isAndroidLog = true;
                 countAndroidLogBranchComplete = 1;
-                mProgressDialog.show();
+                try {
+                    mProgressDialog.show();
+                } catch (Exception error) {
+                    Log.e(TAG, "failed show progress dialog, maybe "
+                            + "the activity was finished."
+                            + error.getMessage());
+                }
                 break;
 
             case SlogAction.MESSAGE_START_RUN:
                 if (isAndroidLog) {
                     break;
                 }
-                mProgressDialog.show();
+                try {
+                    mProgressDialog.show();
+                } catch (Exception error) {
+                    Log.e(TAG, "failed show progress dialog, maybe "
+                            + "the activity was finished."
+                            + error.getMessage());
+                }
                 break;
 
             case SlogAction.MESSAGE_END_RUN:
@@ -97,7 +111,13 @@ public class LogSettingSlogUITabHostActivity extends TabActivity {
                 break;
             case SlogAction.MESSAGE_DUMP_START:
                 mProgressDialog.setCancelable(false);
-                mProgressDialog.show();
+                try {
+                    mProgressDialog.show();
+                } catch (Exception error) {
+                    Log.e(TAG, "failed show progress dialog, maybe "
+                            + "the activity was finished."
+                            + error.getMessage());
+                }
                 break;
             case SlogAction.MESSAGE_DUMP_STOP:
                 if (mContext != null) {
@@ -122,11 +142,27 @@ public class LogSettingSlogUITabHostActivity extends TabActivity {
                 break;
             case SlogAction.MESSAGE_CLEAR_START:
                 mProgressDialog.setCancelable(false);
-                mProgressDialog.show();
+                try {
+                    mProgressDialog.show();
+                } catch (Exception error) {
+                    Log.e(TAG, "failed show progress dialog, maybe "
+                            + "the activity was finished."
+                            + error.getMessage());
+                }
                 break;
             case SlogAction.MESSAGE_CLEAR_END:
                 mProgressDialog.setCancelable(true);
                 mProgressDialog.cancel();
+                if (mContext != null) {
+                    Toast.makeText(mContext, R.string.slog_clear_ok, Toast.LENGTH_LONG).show();
+                }
+                break;
+            case SlogAction.MESSAGE_CLEAR_FAILED:
+                mProgressDialog.setCancelable(true);
+                mProgressDialog.cancel();
+                if (mContext != null) {
+                    Toast.makeText(mContext, R.string.slog_clear_failed, Toast.LENGTH_LONG).show();
+                }
                 break;
             case SlogAction.MESSAGE_SNAP_SUCCESSED:
                 if (mContext == null) {

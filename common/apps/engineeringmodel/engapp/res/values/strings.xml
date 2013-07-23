@@ -231,8 +231,10 @@
     <string name="mode_dialog_duplicate_message">The mode name just input is duplicated, update the mode or rename instead</string>
     <string name="mode_dialog_duplicate_positive">Update</string>
     <string name="mode_dialog_duplicate_negative">Rename</string>
-    
-    <string name="slog_version_info">Updated on 2013-6-13, add SlogProvider, fix slogstart</string>
+    <string name="slog_clear_ok">Clear done</string>
+    <string name="slog_clear_failed">Failed to clear</string>
+
+    <string name="slog_version_info">Updated on 2013-7-11, Correct some reading functions, remove duplicate query, remove effect of child thread.</string>
 	<!-- SlogUI Added Done -->
 
 <!-- add IMEI start -->

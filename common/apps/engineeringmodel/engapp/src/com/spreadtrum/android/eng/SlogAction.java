@@ -14,7 +14,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.database.Cursor;
+import android.media.MediaScannerConnection;
 import android.net.ConnectivityManager;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -133,6 +135,7 @@ public class SlogAction {
     public static final int MESSAGE_DUMP_STOP = 18;
     public static final int MESSAGE_CLEAR_START = 19;
     public static final int MESSAGE_CLEAR_END = 20;
+    public static final int MESSAGE_CLEAR_FAILED = 25;
     public static final int MESSAGE_SNAP_SUCCESSED = 21;
     public static final int MESSAGE_SNAP_FAILED = 22;
     public static final int MESSAGE_DUMP_OUTTIME = 23;
@@ -140,12 +143,11 @@ public class SlogAction {
 
     private static Context mContext;
 
-    public static String tester;
-
     // Temp Solution.
     private static boolean MMC_SUPPORT = "1".equals(android.os.SystemProperties.get("ro.device.support.mmc"));
 
     private static Object mLock = new Object();
+    private static Object mResetLock = new Object();
 
     // ========================================================================================================
 
@@ -165,23 +167,28 @@ public class SlogAction {
         }
 
         try {
-            if (GetState(keyName, false).equals(ON))
-                return true;
-            if (GetState(keyName, true).equals(ON))
-                return true;
             if (keyName.equals(GENERALKEY)
-                    && GetState(keyName, true).equals(GENERALON))
+                    && GetState(keyName, true).equals(GENERALON)) {
                 return true;
+            }
             if (keyName.equals(STORAGEKEY)
-                    && GetState(keyName, true).equals(STORAGESDCARD))
+                    && GetState(keyName, true).equals(STORAGESDCARD)) {
                 return true;
+            }
+            if (keyName.equals(CLEARLOGAUTOKEY)
+                    && GetState(keyName, true).equals(ON)) {
+                return true;
+            } else if (GetState(keyName, false).equals(ON)) {
+                return true;
+            } else {
+                return false;
+            }
         } catch (NullPointerException nullPointer) {
             Log.e("GetState",
                     "Maybe you change GetState(),but don't return null.Log:\n"
                     + nullPointer);
             return false;
         }
-        return false;
     }
 
     /** Reload GetState function, for other condition **/
@@ -220,7 +227,7 @@ public class SlogAction {
      * FIXME: The getState and setState has many problems, may change the
      * function of get and set States.
      **/
-    public static String GetState(String keyName, boolean isLastOption) {
+    public static synchronized String GetState(String keyName, boolean isLastOption) {
         // recieve all text from slog.conf
         StringBuilder conf = null;
         FileInputStream freader = null;
@@ -233,6 +240,13 @@ public class SlogAction {
             // Dim a byte[] to get file we read.
             byte[] buffer = new byte[freader.available()];
             result = new char[freader.available()];
+            if (freader.available() < 10) {
+                freader.close();
+                resetSlogConf();
+
+                return DECODE_ERROR;
+            }
+
             // Begin reading
             try {
                 freader.read(buffer);
@@ -243,25 +257,52 @@ public class SlogAction {
             } catch (Exception e) {
                 // Although I'm dead, I close it!
                 freader.close();
-                Log.e("GetStates->Readfile", e.toString());
+                Log.e(TAG, "Read buffer failed, because " + e.getMessage() + "Now print stack");
+                e.printStackTrace();
                 return DECODE_ERROR;
             }
             freader.close();
-
+        } catch (java.io.FileNotFoundException fileNotFound) {
+            Log.e(TAG ,"File not found, reset slog.conf");
+            resetSlogConf();
+            return DECODE_ERROR;
         } catch (Exception e) {
-            Log.e("GetState(String,boolean):String", e.toString());
+            Log.e(TAG, "Failed reading file. Now dump stack");
+            e.printStackTrace();
             return DECODE_ERROR;
         }
 
-        conf.getChars(
-                conf.indexOf(keyName) + keyName.length(), // start cursor
-                conf.indexOf(isLastOption ? "\n" : "\t", conf.indexOf(keyName)
-                        + keyName.length() + 1), // ending cursor
-                result, 0);//
+        if (conf == null || conf.length() < 1) {
+            Log.d(TAG, "conf.lenght < 1, return decode_error");
+            return DECODE_ERROR;
+        }
 
+        try {
+            conf.getChars(
+                    conf.indexOf(keyName) + keyName.length(), // start cursor
+                    conf.indexOf(isLastOption ? "\n" : "\t", conf.indexOf(keyName)
+                            + keyName.length() + 1), // ending cursor
+                    result, 0);//
+        } catch(Exception e) {
+            Log.d(TAG, "Catch exception");
+            e.printStackTrace();
+            return DECODE_ERROR;
+        }
         return String.valueOf(result).trim();
     }
 
+    private static synchronized void resetSlogConf() {
+        new Thread() {
+            @Override
+            public void run() {
+                synchronized (mResetLock) {
+                    runSlogCommand("rm " + SLOG_CONF_LOCATION);
+                    runCommand();
+                }
+            }
+
+        }.start();
+    }
     /* <----------------------Old Feature */
 
     /*
@@ -346,7 +387,7 @@ public class SlogAction {
         }
     }
 
-    public static void SetState(String keyName, String status,
+    public static synchronized void SetState(String keyName, String status,
             boolean isLastOption) {
         final String MethodName = "SetState(String,String,boolean):void";
         if (keyName == null) {
@@ -380,6 +421,11 @@ public class SlogAction {
             }
             conf = new StringBuilder(EncodingUtils.getString(buffer, "UTF-8"));
             int searchCursor = conf.indexOf(keyName);
+            if (searchCursor < 0) {
+                Log.e(TAG, "start index < 0, reset slog.conf");
+                resetSlogConf();
+                return;
+            }
             int keyNameLength = keyName.length();
             // ==================Judge Complete
             conf.replace(
@@ -399,6 +445,9 @@ public class SlogAction {
                 Log.e(MethodName, "Writing file failed,now close,log:\n" + e);
                 return;
             }
+        } catch (java.io.FileNotFoundException fileNotFound){
+            Log.e(TAG, "Init FileInputStream failed, reset slog.conf");
+            resetSlogConf();
         } catch (Exception e) {
 
             e.printStackTrace();
@@ -454,7 +503,10 @@ public class SlogAction {
                         SlogProvider.Contract.COLUMN_MISC)) == 1), false);
         SetState(CLEARLOGAUTOKEY, (cursor.getInt(
                 cursor.getColumnIndex(
-                        SlogProvider.Contract.COLUMN_CLEAR_AUTO)) == 1), false);
+                        SlogProvider.Contract.COLUMN_CLEAR_AUTO)) == 1), true);
+        SetState(STORAGEKEY, (cursor.getInt(
+                cursor.getColumnIndex(
+                        SlogProvider.Contract.COLUMN_STORAGE)) == 1), true);
 
     }
 
@@ -472,7 +524,7 @@ public class SlogAction {
                         getAllStatesInContentValues(),
                         null, null);
     }
-    
+
     public static void deleteMode(Context context, int id) {
         context.getContentResolver().delete(
                 ContentUris.withAppendedId(SlogProvider.URI_ID_MODES, id), null, null);
@@ -491,6 +543,7 @@ public class SlogAction {
         cv.put(SlogProvider.Contract.COLUMN_BLUETOOTH, GetState(BLUETOOTHKEY) ? 1:0);
         cv.put(SlogProvider.Contract.COLUMN_CLEAR_AUTO, GetState(CLEARLOGAUTOKEY) ? 1:0);
         cv.put(SlogProvider.Contract.COLUMN_MISC, GetState(MISCKEY) ? 1:0);
+        cv.put(SlogProvider.Contract.COLUMN_STORAGE, GetState(STORAGEKEY) ? 1:0);
 
         return cv;
     }
@@ -739,26 +792,14 @@ public class SlogAction {
     private static void runClearLog(){
         Message msg = new Message();
         msg.what = MESSAGE_CLEAR_END;
-        try {
-            Runtime runtime = Runtime.getRuntime();
-            Process proc = runtime.exec(SLOG_COMMAND_CLEAR);
-
-            try {
-                if (proc.waitFor() != 0) {
-                    Log.w("ClearLog", "Command" + SLOG_COMMAND_CLEAR
-                            + " return value = " + proc.exitValue()
-                            + ", maybe something wrong.");
-                }
-            } catch (InterruptedException e) {
-                Log.e("ClearLog", e.toString());
-                LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
-                return;
-            }
-        } catch (Exception e) {
-            LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
-            return;
+        if (SLOG_COMMAND_RETURN_OK != runSlogCommand(SLOG_COMMAND_CLEAR)) {
+            msg.what = MESSAGE_CLEAR_FAILED;
         }
-        LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
+        try {
+            LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
+        } catch (Exception e) {
+            Log.e(TAG, "Clear log failed, sendMessage failed");
+        }
     }
 
     private static int mTryTimes = 0;
@@ -879,7 +920,7 @@ public class SlogAction {
             } catch (NameNotFoundException e) {
                 Log.e(TAG, "NameNotFoundException " + e);
                 return ;
-            }          
+            }
         } else {
             Log.e(TAG, "Failed registBroadcast, unknown command " + command);
         }
@@ -893,32 +934,19 @@ public class SlogAction {
 
         if (filename == null) {
             Log.e(NowMethodName, "Do NOT give me null");
-            LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
-            return;
-        }
-
-        try {
-            Process proc = Runtime.getRuntime().exec(
-                    SLOG_COMMAND_DUMP + filename);
-            try {
-                if (proc.waitFor() != 0) {
-                    Log.w(NowMethodName, "Command" + SLOG_COMMAND_DUMP
-                            + " exit value=" + proc.exitValue()
-                            + ",maybe it has some problem");
-                }
-                
-            } catch (InterruptedException e) {
-                Log.e(NowMethodName, "InterruptedException->" + e);
-                msg.what = MESSAGE_DUMP_OUTTIME;
-            }
-
-        } catch (Exception e) {
-            Log.e(NowMethodName, e.toString());
             msg.what = MESSAGE_DUMP_FAILED;
             LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
             return;
         }
-        LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
+
+        if (SLOG_COMMAND_RETURN_OK != runSlogCommand(SLOG_COMMAND_DUMP + " " +filename)) {
+            msg.what = MESSAGE_DUMP_FAILED;
+        }
+        try {
+            LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to send message!");
+        }
     }
 
     public static void dump(String filename){
@@ -969,17 +997,20 @@ public class SlogAction {
         }
     }
 
-    public static boolean sendATCommand(int atCommandCode, boolean openLog) {
+    /**
+     * XXX: A time casting method, should not use in main thread.
+     */
+    public static synchronized boolean sendATCommand(int atCommandCode, boolean openLog) {
         /* require set AT Control to modem and this may be FIXME
         * 1. Why write byte can catch IOException?
         * 2. Whether Setting AT Command in main thread can cause ANR or not?
         */
-        
+
         // Feature changed, remove close action of openLog now.
         if (!openLog) {
             return false;
         }
-        
+
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos);
         try {
@@ -1156,10 +1187,18 @@ public class SlogAction {
     /**
      * Screenshot
      */
-    public static void snap() {
-        Thread snapThread = new Thread() {
+    public static void snap(final Context context) {
+        class SnapThread extends Thread {
+            Context mContext;
+            SnapThread(Context context) {
+                this.mContext = context.getApplicationContext();
+            }
+
             @Override
             public void run() {
+                screenShot();
+            }
+            synchronized void screenShot() {
                 Message msg = new Message();
                 /*Add 20130527 Spreadst of 169012 No init Looper start*/
                 try {
@@ -1170,37 +1209,39 @@ public class SlogAction {
                 /*Add 20130527 Spreadst of 169012 No init Looper end*/
                 try {
                     Thread.sleep(500);
-                    Runtime runtime = Runtime.getRuntime();
-                    Process proc = runtime.exec(SLOG_COMMAND_SCREENSHOT);
-                    try {
-                        if (proc.waitFor() != 0) {
-                        Log.d("Snap", "Exit value=" + proc.exitValue()
-                            + ".Maybe not correct");
-                        }
-
-                        msg.what = MESSAGE_SNAP_SUCCESSED;
-                        LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
-                    } catch (InterruptedException e) {
-                        msg.what = MESSAGE_SNAP_FAILED;
+                    
+                    if (runSlogCommand(SLOG_COMMAND_SCREENSHOT) == 0) {
                         try {
-                            LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
+                            LogSettingSlogUITabHostActivity.mTabHostHandler
+                                    .sendEmptyMessage(MESSAGE_SNAP_SUCCESSED);
                         } catch (ExceptionInInitializerError initError) {
-                            Log.e(TAG, "Can't send message");
+                            Log.e(TAG, "Failed send message, dump stack trace");
+                            initError.printStackTrace();
                         }
-                        Log.e("Snap", e.toString());
+                    } else {
+                        try {
+                            LogSettingSlogUITabHostActivity.mTabHostHandler
+                                    .sendEmptyMessage(MESSAGE_SNAP_FAILED);
+                        } catch (ExceptionInInitializerError initError) {
+                            Log.e(TAG, "Failed send message, dump stack trace");
+                            initError.printStackTrace();
+                        }
                     }
-
                 } catch (Exception e) {
-                    System.err.println(SLOG_COMMAND_RESTART
-                        + " has Exception, log followed");
-                    msg.what = MESSAGE_SNAP_FAILED;
                     try {
-                        LogSettingSlogUITabHostActivity.mTabHostHandler.sendMessage(msg);
+                        LogSettingSlogUITabHostActivity.mTabHostHandler
+                                .sendEmptyMessage(MESSAGE_SNAP_FAILED);
                     } catch (ExceptionInInitializerError initError) {
                         Log.e(TAG, "Can't send message");
                     }
-                    return ;
                 }
+                File screenpath;
+                if (GetState(STORAGEKEY) && IsHaveSDCard()) {
+                    screenpath = getExternalStorage();
+                } else {
+                    screenpath = android.os.Environment.getDataDirectory();
+                }
+                scanScreenShotFile(new File(screenpath.getAbsolutePath() + File.separator + "slog"), this.mContext);
                 /*Add 20130527 Spreadst of 169012 No init Looper start*/
                 try {
                     Looper.loop();
@@ -1208,10 +1249,32 @@ public class SlogAction {
                     Log.e(TAG, "Failed loop the Looper");
                 }
                 /*Add 20130527 Spreadst of 169012 No init Looper end*/
+
             }
-        };
-        snapThread.start();
+        }
+
+        new SnapThread(context).start();
         return ;
+    }
+
+    private static void scanScreenShotFile(File file, Context context) {
+        if (file == null) {
+            Log.i(TAG, "scanFailed!");
+            return;
+        }
+        if ("last_log".equals(file.getName())) {
+            return;
+        }
+        if (file.isDirectory()) {
+            File[] files = file.listFiles();
+            for (File f : files) {
+                scanScreenShotFile(f, context);
+            }
+        }
+        if (file.getName().endsWith("jpg")) {
+            MediaScannerConnection.scanFile(context,
+                    new String[] { file.getAbsolutePath() }, null, null);
+        }
     }
 
     private static class RunThread implements Runnable {

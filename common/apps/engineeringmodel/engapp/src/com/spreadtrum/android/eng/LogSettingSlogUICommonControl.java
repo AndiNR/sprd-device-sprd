@@ -15,7 +15,9 @@ import android.content.res.Configuration;
 import android.content.ServiceConnection;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -35,6 +37,8 @@ import android.widget.Toast;
 import com.android.internal.app.IMediaContainerService;
 
 public class LogSettingSlogUICommonControl extends Activity implements SlogUISyncState {
+    private static final int SET_STATE_COMPLETE = 1;
+
     private Button btnClear;
     private Button btnDump;
     private RadioButton rdoGeneralOn;
@@ -59,6 +63,24 @@ public class LogSettingSlogUICommonControl extends Activity implements SlogUISyn
     private DialogInterface.OnClickListener mSettingListener;
     private DialogInterface.OnClickListener mDeleteListener;
 
+    private MainThreadHandler mHandler;
+    private class MainThreadHandler extends Handler {
+        public MainThreadHandler(Looper looper) {
+            super(looper);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            switch(msg.what) {
+                case SET_STATE_COMPLETE:
+                    syncState();
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
+
     private IMediaContainerService mMediaContainer;
     private static final ComponentName DEFAULT_CONTAINER_COMPONENT = new ComponentName(
             "com.android.defcontainer", "com.android.defcontainer.DefaultContainerService");
@@ -78,6 +100,8 @@ public class LogSettingSlogUICommonControl extends Activity implements SlogUISyn
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_general_commoncontrol);
+
+        mHandler = new MainThreadHandler(getMainLooper());
 
         // Init views
         rdoGeneralOn = (RadioButton) findViewById(R.id.rdo_general_on);
@@ -129,12 +153,12 @@ public class LogSettingSlogUICommonControl extends Activity implements SlogUISyn
         };
 
         // Sync view's status
-        syncState();
+        // No need to run syncState in onCreate
+        // syncState();
         prepareModeListDialogs();
 
         chkAlwaysRun.setChecked (SlogAction.isAlwaysRun (SlogAction.SERVICESLOG));
         chkSnap.setChecked (SlogAction.isAlwaysRun (SlogAction.SERVICESNAP));
-        chkClearLogAuto.setChecked (SlogAction.GetState (SlogAction.CLEARLOGAUTOKEY));
 
         if (chkAlwaysRun.isChecked()) {
             startService(intentSvc);
@@ -230,10 +254,10 @@ public class LogSettingSlogUICommonControl extends Activity implements SlogUISyn
                     public void run() {
                         SlogAction.setAllStates(LogSettingSlogUICommonControl.this,
                                     (int) mModeListAdapter.getItemId(which));
-                        LogSettingSlogUICommonControl.this.syncState();
+                        mHandler.sendEmptyMessage(SET_STATE_COMPLETE);
                     }
                 };
-                setThread.run();
+                setThread.start();
             }
         };
         
@@ -323,32 +347,21 @@ public class LogSettingSlogUICommonControl extends Activity implements SlogUISyn
         } else {
             rdoGeneralOff.setChecked(true);
         }
+
         boolean tempHost = tempHostOn || tempHostLowPower;
         SlogAction.SetCheckBoxBranchState(chkAndroid, tempHost,
                 SlogAction.GetState(SlogAction.ANDROIDKEY));
 
         SlogAction.SetCheckBoxBranchState(chkModem, tempHost,
                 SlogAction.GetState(SlogAction.MODEMKEY));
+        SlogAction.SetCheckBoxBranchState(chkClearLogAuto, tempHost,
+                SlogAction.GetState(SlogAction.CLEARLOGAUTOKEY));
 
         // Set Radio buttons
-        if (SlogAction.GetState(SlogAction.STORAGEKEY)) {
-            if (SlogAction.IsHaveSDCard()) {
-                rdoSDCard.setChecked(true);
-                btnDump.setEnabled(true);
-            } else {
-                rdoNAND.setChecked(true);
-                
-                // The UI should not control the config automatically
-                // This may effect the logic of the slog design
-                // SlogAction.SetState(SlogAction.STORAGEKEY,
-                //         SlogAction.STORAGENAND, true);
-                btnDump.setEnabled(false);
-            }
-        } else {
-            rdoNAND.setChecked(true);
-            btnDump.setEnabled(false);
-        }
+        boolean isSDCard = SlogAction.GetState(SlogAction.STORAGEKEY);
         rdoSDCard.setEnabled(SlogAction.IsHaveSDCard() ? true : false);
+        rdoSDCard.setChecked(isSDCard);
+        rdoNAND.setChecked(!isSDCard);
 
         // set clear all logs
         if (tempHost) {
@@ -368,14 +381,14 @@ public class LogSettingSlogUICommonControl extends Activity implements SlogUISyn
                 SlogAction.SetState(SlogAction.GENERALKEY,
                         SlogAction.GENERALON, true);
                 syncState();
-                if (rdoGeneralOff.isChecked()) {
-                    requestDumpLog();
-                }
                 break;
                 
             case R.id.rdo_general_off:
                 SlogAction.SetState(SlogAction.GENERALKEY,
                         SlogAction.GENERALOFF, true);
+                if (rdoGeneralOff.isChecked()) {
+                    requestDumpLog();
+                }
                 syncState();
             break;
             

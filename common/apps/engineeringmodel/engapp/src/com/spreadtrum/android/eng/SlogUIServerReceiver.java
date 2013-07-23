@@ -38,7 +38,6 @@ public class SlogUIServerReceiver extends BroadcastReceiver {
             int phoneId = receivedIntent.getIntExtra(IccCard.INTENT_KEY_PHONE_ID,0);
             if ("LOADED".equals(state)) {
                 boolean enable = "cn".equals(SystemProperties.get("gsm.sim.operator.iso-country" + phoneId, "nil"));
-//                Log.e("duke", "Loaded sim"+phoneId + " and iso-contry=" + SystemProperties.get("gsm.sim.operator.iso-country" + phoneId, "cn"));
                 synchronized (mLock) {
                     PackageSettingRunnable psr = new PackageSettingRunnable(receiverContext, enable);
                     if (!isCancelSynchronism) {
