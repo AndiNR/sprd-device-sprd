@@ -172,7 +172,8 @@ public class DmServiceCU extends Service {
     private int mPhoneCnt = 0;
     private int curPhoneId = 0;
     public int mStartid= 0;
-
+    private boolean isRegSendMessageReceiver = false;
+    
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -312,7 +313,7 @@ public class DmServiceCU extends Service {
         // Stop listening for service state
         stopListeningServiceState();
         unregisterReceiver(mReceiver);
-	if(sendMessageReceiver != null){
+	if(true == isRegSendMessageReceiver){
         	unregisterReceiver(sendMessageReceiver);
 	}
         Log.d(TAG, "onDestroy: DmServiceCU is killed!");
@@ -1147,6 +1148,7 @@ public class DmServiceCU extends Service {
             IntentFilter mFilter = new IntentFilter(SENT_SMS_ACTION);
             mFilter.addAction(DELIVERED_SMS_ACTION);
             registerReceiver(sendMessageReceiver, mFilter);
+            isRegSendMessageReceiver = true;
 
             smsManager.sendDmDataMessage(destAddr, null, destPort, srcPort, data, sentPI, deliverPI );
             return;
