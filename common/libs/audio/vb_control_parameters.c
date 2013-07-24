@@ -1148,14 +1148,15 @@ RESTART:
             case VBC_CMD_HAL_OPEN:
             {
                 MY_TRACE("VBC_CMD_HAL_OPEN IN.");
-                ALOGW("VBC_CMD_HAL_OPEN, try lock");
                 pthread_mutex_lock(&adev->lock);
-                ALOGW("VBC_CMD_HAL_OPEN, got lock");
+                ALOGW("VBC_CMD_HAL_OPEN, got adev->lock");
                 force_all_standby(adev);    /*should standby because MODE_IN_CALL is later than call_start*/
+                ALOGW("VBC_CMD_HAL_OPEN standby ok");
                 if (vbc_call_open_device(adev) != 0)
                 {
                     para->is_exit = 1;
                 }
+                ALOGW("VBC_CMD_HAL_OPEN open device ok");
                 SetParas_OpenHal_Incall(para->vbpipe_fd);   //get sim card number
                 adev->cur_vbpipe_fd = para->vbpipe_fd;
 		adev->cp_type = para->cp_type;

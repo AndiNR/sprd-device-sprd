@@ -53,7 +53,7 @@
 #include "audio_mux_pcm.h"
 #endif
 
-//#define XRUN_DEBUG
+#define XRUN_DEBUG
 
 #ifdef XRUN_DEBUG
 #define XRUN_TRACE  ALOGW
@@ -669,8 +669,10 @@ static void force_all_standby(struct tiny_audio_device *adev)
     struct tiny_stream_out *out;
 
     if (adev->active_output) {
+        ALOGW("force_all_standby request out->lock");
 	out = adev->active_output;
 	pthread_mutex_lock(&out->lock);
+        ALOGW("force_all_standby got out->lock");
 	do_output_standby(out);
 	pthread_mutex_unlock(&out->lock);
     }
@@ -681,6 +683,7 @@ static void force_all_standby(struct tiny_audio_device *adev)
 	do_input_standby(in);
 	pthread_mutex_unlock(&in->lock);
     }
+    ALOGW("force_all_standby exit");
 }
 
 static void select_mode(struct tiny_audio_device *adev)
@@ -1146,9 +1149,11 @@ static int out_standby(struct audio_stream *stream)
 
     pthread_mutex_lock(&out->dev->lock);
     pthread_mutex_lock(&out->lock);
+    ALOGW("out_standby got out->lock"); 
     status = do_output_standby(out);
     pthread_mutex_unlock(&out->lock);
     pthread_mutex_unlock(&out->dev->lock);
+    ALOGW("out_standby release out->lock");
     return status;
 }
 
@@ -1204,6 +1209,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
         pthread_mutex_unlock(&out->lock);
         pthread_mutex_unlock(&adev->lock);
+        ALOGW("out_set_parameters release out->lock");
     }
 
     if (AUDIO_MODE_IN_CALL == adev->mode) {
@@ -1259,6 +1265,7 @@ static bool out_bypass_data(struct tiny_stream_out *out, uint32_t frame_size, ui
         usleep(bytes * 1000000 / frame_size / sample_rate);
         return true;
     }else{
+        ALOGW("no bypass data");
         return false;
     }
 }
