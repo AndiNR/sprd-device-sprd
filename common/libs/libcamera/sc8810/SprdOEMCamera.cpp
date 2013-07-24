@@ -1077,7 +1077,7 @@ void *camera_encoder_thread(void *client_data)
 	 	time_t timep;
 		struct tm *p;
 		time(&timep);
-		p=gmtime(&timep);
+		p=localtime(&timep);
 		sprintf(s_camera_info.datetime_buf, "%4d:%02d:%02d %02d:%02d:%02d", (1900+p->tm_year), (1+p->tm_mon),p->tm_mday,
 			p->tm_hour, p->tm_min, p->tm_sec);
 		s_camera_info.datetime_buf[19] = '\0';
