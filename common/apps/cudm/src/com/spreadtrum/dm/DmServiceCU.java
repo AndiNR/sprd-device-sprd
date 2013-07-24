@@ -557,9 +557,13 @@ public class DmServiceCU extends Service {
 	 	}
     }
     private String getLastImsi() {
+// merge from 177633
+	String imsi = null;
+	if(mContext != null){
         SharedPreferences sharedPreferences = getSharedPreferences(PREFERENCE_NAME, MODE);
-        String imsi =  sharedPreferences.getString("IMSI", "");;
+        imsi =  sharedPreferences.getString("IMSI", "");;
 	    Log.d(TAG, "getLastImsi : imsi = " + imsi);
+	}
 	    return imsi;
     }
     
