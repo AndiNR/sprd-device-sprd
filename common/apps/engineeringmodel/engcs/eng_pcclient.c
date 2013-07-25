@@ -288,7 +288,7 @@ static int restart_gser(void)
 
     ENG_LOG("%s ERROR : %s\n", __FUNCTION__, strerror(errno));
 
-    close(pc_client_fd);
+ //   close(pc_client_fd);
 
     ENG_LOG("reopen serial\n");
     pc_client_fd = open(PC_GSER_DEV,O_RDWR);
@@ -377,6 +377,8 @@ static int eng_linux2pc(int pc_client_fd, char *databuf)
     ENG_LOG("%s: eng response = %s\n", __FUNCTION__, databuf);
     len = write(pc_client_fd, databuf, strlen(databuf));
     if (len <= 0) {
+        if(pc_client_fd >= 0)
+            close(pc_client_fd);
         restart_gser();
     }
 
@@ -488,8 +490,8 @@ static int eng_handle_raw_input(int fd,char * buf){
                }
                ret = read(fd, &buf[j], 1);
                if(ret<=0){
-                       restart_gser();
-                       continue;
+                       //restart_gser();
+                       return -1;
                }
                //ENG_LOG("read char from pc client is buf[%d]= %x",j,buf[j]);
                ret_char = buf[j++] ;
@@ -507,7 +509,8 @@ static int eng_handle_raw_input(int fd,char * buf){
                        }else if( ret > 0 ){
                                ret = read(fd, &is_lf, 1);
                                if( ret<=0 ){
-                                       restart_gser();
+                                      // restart_gser();
+                                      return -1;
                                }
                                ENG_LOG("LAST BYTE IS %x",is_lf);
                                if(0x0a == is_lf){
@@ -555,13 +558,20 @@ static void *eng_pcclient_hdlr(void *_param)
 
         memset(readbuf, 0, ENG_BUFFER_SIZE);
 
-        if (pc_client_fd<0)
+        if(pc_client_fd<0)
         {
             restart_gser();
             continue;
         }
 
         length = eng_handle_raw_input(pc_client_fd,readbuf);
+        if(length == -1){
+            if(pc_client_fd >= 0)
+                close(pc_client_fd);
+            pc_client_fd = -1;
+            continue;
+        }
+
         ENG_LOG("%s ### data read length %d %s###", __FUNCTION__, length,readbuf);
 
         total = eng_dispatch_simfd_counts(readbuf);
