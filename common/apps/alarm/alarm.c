@@ -310,7 +310,7 @@ int update_ring_file(void)
 		reltime=abstime -abstime_aralm +reltime;
 		if(abstime < abstime_power || abstime_power <= timenow){
 			LOGD("timenow=%d,abstime=%d,reltime=%d\n", timenow, abstime,reltime);
-			sprintf(buf,"%d\n%d\n%s\n%s\n%s\n", reltime, abstime,ring_time,snooze_time,time_mdm,file_path);
+			sprintf(buf,"%d\n%d\n%s\n%s\n%s\n%s\n", reltime, abstime,ring_time,snooze_time,time_mdm,file_path);
 			alarm_flag_fd = open(alarm_name, O_CREAT | O_RDWR,0664);
 			if(alarm_flag_fd < 0){
 				LOGE("%s open error: %s\n", alarm_name, strerror(errno));
