@@ -569,6 +569,7 @@ static void *eng_pcclient_hdlr(void *_param)
             if(pc_client_fd >= 0)
                 close(pc_client_fd);
             pc_client_fd = -1;
+            usleep(20*1000);
             continue;
         }
 
