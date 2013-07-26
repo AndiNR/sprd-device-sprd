@@ -18570,6 +18570,7 @@
         type="default,supl"
         authtype="1"
     />
+    <!-- Bug#190902 Remove by Katrina 2013.07.24
     <apn carrier="AIS WAP"
         mcc="520"
         mnc="01"
@@ -18580,6 +18581,7 @@
         type="default,supl"
         authtype="1"
     />
+    -->
     <apn carrier="AIS MMS"
         mcc="520"
         mnc="01"
