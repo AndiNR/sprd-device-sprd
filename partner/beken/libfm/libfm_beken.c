@@ -51,6 +51,7 @@
 #define FM_IOCTL_STOP_SEARCH _IOW(FM_IOCTL_BASE, 5, int)
 #define FM_IOCTL_SET_VOLUME  _IOW(FM_IOCTL_BASE, 7, int)
 #define FM_IOCTL_GET_VOLUME  _IOW(FM_IOCTL_BASE, 8, int)
+#define FM_IOCTL_GET_STATUS  _IOW(FM_IOCTL_BASE, 9, int[2])
 
 // operation result
 #define FM_SUCCESS 0
@@ -202,7 +203,17 @@ close_fm(struct hw_device_t *dev)
     return 0;
 }
 
+static int getRssi(struct fm_device_t* dev,int* rssi){
+    int status[2];
+    struct bekenfm_device_t *device = (struct bekenfm_device_t *)dev;
 
+    ioctl(device->fd,FM_IOCTL_GET_STATUS,status);
+    *rssi = status[0];
+    return FM_SUCCESS;
+}
+static int setRssi(struct fm_device_t* dev,int rssi){
+    return FM_SUCCESS;
+}
 
 static int open_fm(const struct hw_module_t* module, char const* name,
         struct hw_device_t** device)
@@ -222,6 +233,9 @@ static int open_fm(const struct hw_module_t* module, char const* name,
     bekenfm_dev->dev.setControl = setControl;
     bekenfm_dev->dev.startSearch = startSearch;
     bekenfm_dev->dev.cancelSearch = cancelSearch;
+    bekenfm_dev->dev.setRssi = setRssi;
+    bekenfm_dev->dev.getRssi = getRssi;
+
     fd = open("/dev/BEKEN_FM", O_RDONLY);
     if(fd <0)
     {
