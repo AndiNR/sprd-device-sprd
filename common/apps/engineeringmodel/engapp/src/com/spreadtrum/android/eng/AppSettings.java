@@ -58,9 +58,19 @@ public class AppSettings extends PreferenceActivity {
         mEnableUsbFactoryMode = (CheckBoxPreference)findPreference(ENABLE_USB_FACTORY_MODE);
         mModemReset = (CheckBoxPreference)findPreference(MODEM_RESET);
 
+        // Bug 189027 start
+        int isCallforward = 0;
+
         // Disable call forward query with Orange feature
-		//if(ORANGE_SUPPORT == true) {
-        //}
+        if(ORANGE_SUPPORT == false) {
+            isCallforward = SystemProperties.getInt("persist.sys.callforwarding", 1);
+        } else {
+            isCallforward = SystemProperties.getInt("persist.sys.callforwarding", 0);
+        }
+
+        mCallForwardQuery = (CheckBoxPreference)findPreference(CALL_FORWARD_QUERY);
+        mCallForwardQuery.setChecked((isCallforward == 1));
+        // Bug 189027 end
 
         String result = SystemProperties.get("persist.sys.sprd.modemreset");
         if(DEBUG) Log.d(LOG_TAG, "result: "+ result + ", result.equals(): " + (result.equals("1")));
