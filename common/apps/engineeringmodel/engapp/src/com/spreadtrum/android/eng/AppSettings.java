@@ -36,6 +36,8 @@ public class AppSettings extends PreferenceActivity {
 
     private static final String MODEM_RESET = "modem_reset";
 
+    private static final String POWERON_SSIM = "poweron_ssim";
+
     private static final String ENG_TESTMODE = "engtestmode";
 
     private CheckBoxPreference mAutoAnswer;
@@ -43,6 +45,7 @@ public class AppSettings extends PreferenceActivity {
     private CheckBoxPreference mAcceRotation;
     private CheckBoxPreference mEnableUsbFactoryMode;
     private CheckBoxPreference mModemReset;
+    private CheckBoxPreference mPowerOnSsim;
     private CheckBoxPreference mCallForwardQuery;
     private EngSqlite mEngSqlite;
     public static final boolean ORANGE_SUPPORT = SystemProperties.get("ro.support").equals("orange");
@@ -57,7 +60,7 @@ public class AppSettings extends PreferenceActivity {
         mAcceRotation = (CheckBoxPreference)findPreference(ACCELEROMETER);
         mEnableUsbFactoryMode = (CheckBoxPreference)findPreference(ENABLE_USB_FACTORY_MODE);
         mModemReset = (CheckBoxPreference)findPreference(MODEM_RESET);
-
+        mPowerOnSsim = (CheckBoxPreference)findPreference(POWERON_SSIM);
         // Bug 189027 start
         int isCallforward = 0;
 
@@ -75,6 +78,10 @@ public class AppSettings extends PreferenceActivity {
         String result = SystemProperties.get("persist.sys.sprd.modemreset");
         if(DEBUG) Log.d(LOG_TAG, "result: "+ result + ", result.equals(): " + (result.equals("1")));
         mModemReset.setChecked(result.equals("1"));
+        String poweronssim = SystemProperties.get("persist.sys.sprd.powerssim");
+        Log.d(LOG_TAG, "poweronssim: "+ poweronssim + ", poweronssim.equals(): " + (poweronssim.equals("1")));
+        mPowerOnSsim.setChecked(poweronssim.equals("1"));
+
         mEngSqlite = EngSqlite.getInstance(this);
     }
 
@@ -173,7 +180,13 @@ public class AppSettings extends PreferenceActivity {
 		((CheckBoxPreference) preference).isChecked() ? "1" : "0");
             }
             return true;
-	}else{
+	} else if (POWERON_SSIM.equals(key)) {
+	    if(preference instanceof CheckBoxPreference){
+		  SystemProperties.set("persist.sys.sprd.powerssim",((CheckBoxPreference) preference).isChecked() ? "1" : "0");
+		}
+		return true;
+	}
+	else{
             return false;
         }
 
