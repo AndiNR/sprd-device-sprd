@@ -25,9 +25,14 @@ implements Preference.OnPreferenceChangeListener{
     private int valueofsms = 0;
     private int mModemType = 0;
 //    private Phone mPhone;
-    private Phone mPhone[];
+    private Phone mPhone;
     private MyHandler mHandler;
     private ListPreference mButtonPreferredNetworkMode;
+
+    private boolean mNetworkModereferenceEnabled = true;
+    protected static final int NETWORKMODE_MESSAGE_WAIT_LONG_TIME = 3000; // time (msec)
+    protected static final int NETWORKMODE_MESSAGE_WAIT_SHORT_TIME = 1000; // time (msec)
+    static final int PREFERRED_NT_MODE_SEARCHING_STATE = 0xFF;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,41 +56,20 @@ implements Preference.OnPreferenceChangeListener{
         looper = Looper.myLooper();
         mHandler = new MyHandler(looper);
 
-        mPhone = new Phone[2];
+        //mPhone = new Phone[2];
         //phone = PhoneFactory.getDefaultPhone();
         boolean isCardReady = PhoneFactory.isCardReady(0);
         if (isCardReady) {
-            mPhone[0] = PhoneFactory.getPhone(0);
-            isCardReady = PhoneFactory.isCardReady(1);
-            if (isCardReady) {
-                mPhone[1] = PhoneFactory.getPhone(1);
-            }
-            else {
-                mPhone[1] = null;
-            }
+            mPhone = PhoneFactory.getPhone(0);
+        } else {
+            mPhone = null;
+            mNetworkModereferenceEnabled = false;
+            mButtonPreferredNetworkMode.setEnabled(false);
         }
-        else {
-            mPhone[0] = null;
-            isCardReady = PhoneFactory.isCardReady(1);
-            if (isCardReady) {
-                mPhone[1] = PhoneFactory.getPhone(1);
-            }
-            else {
-                mPhone[1] = null;
-            }
-        }
-       // int settingsNetworkMode = android.provider.Settings.Secure.getInt(mPhone.getContext().
-         //       getContentResolver(),android.provider.Settings.Secure.PREFERRED_NETWORK_MODE,
-           //     preferredNetworkMode);
 
-//    mPhone.getPreferredNetworkType(mHandler
-//                        .obtainMessage(MyHandler.MESSAGE_GET_PREFERRED_NETWORK_TYPE));
-
-        for(int i=0; i<2; i++) {
-            if(mPhone[i] != null) {
-                mPhone[i].getPreferredNetworkType(mHandler
-                     .obtainMessage(MyHandler.MESSAGE_GET_PREFERRED_NETWORK_TYPE));
-            }
+        if(mPhone != null) {
+            mPhone.getPreferredNetworkType(mHandler
+                 .obtainMessage(MyHandler.MESSAGE_GET_PREFERRED_NETWORK_TYPE));
         }
     }
 
@@ -93,6 +77,9 @@ implements Preference.OnPreferenceChangeListener{
 
         private static final int MESSAGE_GET_PREFERRED_NETWORK_TYPE = 0;
         private static final int MESSAGE_SET_PREFERRED_NETWORK_TYPE = 1;
+        private static final int MESSAGE_RELOAD_PREFERRED_NETWORK_TYPE = 2;
+        private static final int MESSAGE_REQUEST_GET_PREFERRED_NETWORK_TYPE = 3;
+        private static final int MESSAGE_REQUEST_SET_PREFERRED_NETWORK_TYPE = 4;
         public MyHandler(Looper looper) {
             super(looper);
         }
@@ -106,6 +93,18 @@ implements Preference.OnPreferenceChangeListener{
                 case MESSAGE_SET_PREFERRED_NETWORK_TYPE:
                     handleSetPreferredNetworkTypeResponse(msg);
                     break;
+
+                case MESSAGE_RELOAD_PREFERRED_NETWORK_TYPE:
+                    handleReloadPreferredNetworkTypeResponse(msg);
+                    break;
+
+                case MESSAGE_REQUEST_GET_PREFERRED_NETWORK_TYPE:
+                    requestGetPreferredNetworkType();
+                    break;
+
+                case MESSAGE_REQUEST_SET_PREFERRED_NETWORK_TYPE:
+                    requestSetPreferredNetworkType();
+                    break;
             }
         }
 
@@ -114,58 +113,70 @@ implements Preference.OnPreferenceChangeListener{
             if (ar.exception == null) {
                 int modemNetworkMode = ((int[])ar.result)[0];
 
-            if (DBG) {
-                log ("handleGetPreferredNetworkTypeResponse: modemNetworkMode = " + modemNetworkMode);
-            }
+                if (DBG) {
+                    log ("handleGetPreferredNetworkTypeResponse: modemNetworkMode = " + modemNetworkMode);
+                }
 
-                //int settingsNetworkMode = android.provider.Settings.Secure.getInt(
-                  //      mPhone.getContext().getContentResolver(),
-                  //      android.provider.Settings.Secure.PREFERRED_NETWORK_MODE,
-                   //     preferredNetworkMode);
-            int settingsNetworkMode = 0;
-            for(int i=0; i<2; i++) {
-                if(mPhone[i] != null) {
+                int settingsNetworkMode = 0;
+                if(mPhone != null) {
                     settingsNetworkMode = android.provider.Settings.Secure.getInt(
-                        mPhone[i].getContext().getContentResolver(),
+                        mPhone.getContext().getContentResolver(),
                         android.provider.Settings.Secure.PREFERRED_NETWORK_MODE,
                         preferredNetworkMode);
                 }
-            }
 
-            if (DBG) {
-                log("handleGetPreferredNetworkTypeReponse: settingsNetworkMode = " +
-                    settingsNetworkMode);
-            }
-
-            if (modemNetworkMode == Phone.PREFERRED_NT_MODE ||
-                modemNetworkMode == Phone.NT_MODE_GSM_ONLY ||
-                modemNetworkMode == Phone.NT_MODE_WCDMA_ONLY ) {
                 if (DBG) {
-                    log("handleGetPreferredNetworkTypeResponse: if 1: modemNetworkMode = " +
+                    log("handleGetPreferredNetworkTypeReponse: settingsNetworkMode = " +
+                        settingsNetworkMode);
+                    log ("handleGetPreferredNetworkTypeResponse: modemNetworkMode = " +
                         modemNetworkMode);
                 }
 
-                //check changes in modemNetworkMode and updates settingsNetworkMode
                 if (modemNetworkMode != settingsNetworkMode) {
+                    UpdatePreferredNetworkModeSummary(PREFERRED_NT_MODE_SEARCHING_STATE);
                     if (DBG) {
-                        log("handleGetPreferredNetworkTypeResponse: if 2: " +
-                                    "modemNetworkMode != settingsNetworkMode");
+                        log ("handleGetPreferredNetworkTypeResponse: settingsNetworkMode not the same ");
+                        log ("sendEmptyMessageDelayed MESSAGE_REQUEST_SET_PREFERRED_NETWORK_TYPE: sleep NETWORKMODE_MESSAGE_WAIT_SHORT_TIME");
                     }
-
-                    settingsNetworkMode = modemNetworkMode;
-
-                    if (DBG) { log("handleGetPreferredNetworkTypeResponse: if 2: " +
-                                "settingsNetworkMode = " + settingsNetworkMode);
+                    // We should set templory
+                    mButtonPreferredNetworkMode.setEnabled(false);
+                    mNetworkModereferenceEnabled = false;
+                    mHandler.sendEmptyMessageDelayed(MyHandler.MESSAGE_REQUEST_SET_PREFERRED_NETWORK_TYPE, NETWORKMODE_MESSAGE_WAIT_SHORT_TIME);
+                    return;
+                } else {
+                    if (DBG) {
+                        log ("handleGetPreferredNetworkTypeResponse: mNetworkModereferenceEnabled = " + mNetworkModereferenceEnabled );
                     }
+                    mNetworkModereferenceEnabled = true;
+                }
 
-                    //changes the Settings.System accordingly to modemNetworkMode
-                    for(int i=0; i<2; i++) {
-                        if(mPhone[i] != null) {
-                            android.provider.Settings.Secure.putInt(
-                                mPhone[i].getContext().getContentResolver(),
-                                android.provider.Settings.Secure.PREFERRED_NETWORK_MODE,
-                                settingsNetworkMode );
-                            }
+				if (modemNetworkMode == Phone.PREFERRED_NT_MODE ||
+					modemNetworkMode == Phone.NT_MODE_GSM_ONLY ||
+					modemNetworkMode == Phone.NT_MODE_WCDMA_ONLY ) {
+					if (DBG) {
+						log("handleGetPreferredNetworkTypeResponse: if 1: modemNetworkMode = " +
+							modemNetworkMode);
+					}
+
+					//check changes in modemNetworkMode and updates settingsNetworkMode
+					if (modemNetworkMode != settingsNetworkMode) {
+						if (DBG) {
+							log("handleGetPreferredNetworkTypeResponse: if 2: " +
+										"modemNetworkMode != settingsNetworkMode");
+						}
+
+						settingsNetworkMode = modemNetworkMode;
+
+						if (DBG) { log("handleGetPreferredNetworkTypeResponse: if 2: " +
+									"settingsNetworkMode = " + settingsNetworkMode);
+						}
+
+						//changes the Settings.System accordingly to modemNetworkMode
+						if(mPhone != null) {
+							android.provider.Settings.Secure.putInt(
+								mPhone.getContext().getContentResolver(),
+								android.provider.Settings.Secure.PREFERRED_NETWORK_MODE,
+								settingsNetworkMode );
                         }
                     }
                     if (DBG) { log (" 4 "); }
@@ -179,40 +190,133 @@ implements Preference.OnPreferenceChangeListener{
             }
         }
 
+        private void handleResetPreferredNetworkTypeResponse() {
+
+                int settingsNetworkMode = 0;
+                if(mPhone != null) {
+                    settingsNetworkMode = android.provider.Settings.Secure.getInt(
+                        mPhone.getContext().getContentResolver(),
+                        android.provider.Settings.Secure.PREFERRED_NETWORK_MODE,
+                        preferredNetworkMode);
+                }
+
+                if(mPhone != null) {
+                    android.provider.Settings.Secure.putInt(mPhone.getContext().getContentResolver(),
+                    android.provider.Settings.Secure.PREFERRED_NETWORK_MODE,
+                    settingsNetworkMode );
+                }
+                if (DBG) {
+                    log ("handleResetPreferredNetworkTypeResponse: send PREFERRED_NETWORK_MODE");
+                }
+
+        }
+
         private void handleSetPreferredNetworkTypeResponse(Message msg) {
             AsyncResult ar = (AsyncResult) msg.obj;
             if (ar.exception == null) {
                 int networkMode = Integer.valueOf(
                     mButtonPreferredNetworkMode.getValue()).intValue();
-                for(int i=0; i<2; i++) {
-                    if(mPhone[i] != null) {
-                        android.provider.Settings.Secure.putInt(mPhone[i].getContext().getContentResolver(),
-                        android.provider.Settings.Secure.PREFERRED_NETWORK_MODE,
-                        networkMode );
-                    }
+                if(mPhone != null) {
+                    android.provider.Settings.Secure.putInt(mPhone.getContext().getContentResolver(),
+                    android.provider.Settings.Secure.PREFERRED_NETWORK_MODE,
+                    networkMode );
                 }
+                // dobule check again if the value is correct or not
+                if(mPhone != null) {
+                    mPhone.getPreferredNetworkType(mHandler
+                         .obtainMessage(MyHandler.MESSAGE_RELOAD_PREFERRED_NETWORK_TYPE));
+                }
+
             } else {
-                for(int i=0; i<2; i++) {
-                    if(mPhone[i] != null) {
-                        mPhone[i].getPreferredNetworkType(obtainMessage(MESSAGE_GET_PREFERRED_NETWORK_TYPE));
-                    }
+                if(mPhone != null) {
+                    mPhone.getPreferredNetworkType(obtainMessage(MESSAGE_GET_PREFERRED_NETWORK_TYPE));
                 }
             }
         }
+
+
+        private void handleReloadPreferredNetworkTypeResponse(Message msg) {
+            AsyncResult ar = (AsyncResult) msg.obj;
+            if (ar.exception == null) {
+                int modemNetworkMode = ((int[])ar.result)[0];
+
+                if (DBG) {
+                    log ("handleReloadPreferredNetworkTypeResponse: modemNetworkMode = " + modemNetworkMode);
+                }
+
+                int settingsNetworkMode = 0;
+                if(mPhone != null) {
+                    settingsNetworkMode = android.provider.Settings.Secure.getInt(
+                        mPhone.getContext().getContentResolver(),
+                        android.provider.Settings.Secure.PREFERRED_NETWORK_MODE,
+                        preferredNetworkMode);
+                }
+
+                if (DBG) {
+                    log("handleReloadPreferredNetworkTypeResponse: settingsNetworkMode = " +
+                        settingsNetworkMode);
+                }
+
+                if (modemNetworkMode != settingsNetworkMode) {
+                    UpdatePreferredNetworkModeSummary(PREFERRED_NT_MODE_SEARCHING_STATE);
+                    if (DBG) {
+                        log ("handleReloadPreferredNetworkTypeResponse: settingsNetworkMode not the same ");
+                        log ("sendEmptyMessageDelayed MESSAGE_SET_PREFERRED_NETWORK_TYPE: sleep NETWORKMODE_MESSAGE_WAIT_LONG_TIME");
+                    }
+                    // We should set templory
+                    if (mNetworkModereferenceEnabled == false) {
+                        mButtonPreferredNetworkMode.setEnabled(false);
+                    } else {
+                        mButtonPreferredNetworkMode.setEnabled(true);
+                    }
+                    mHandler.sendEmptyMessageDelayed(MyHandler.MESSAGE_REQUEST_SET_PREFERRED_NETWORK_TYPE, NETWORKMODE_MESSAGE_WAIT_LONG_TIME);
+
+                    return;
+                } else {
+                    if (DBG) {
+                        log ("handleReloadPreferredNetworkTypeResponse: mNetworkModereferenceEnabled = " + mNetworkModereferenceEnabled );
+                    }
+                    mNetworkModereferenceEnabled = true;
+                    UpdatePreferredNetworkModeSummary(modemNetworkMode);
+                    mButtonPreferredNetworkMode.setEnabled(true);
+                }
+            }
+        }
+
+        private void requestGetPreferredNetworkType() {
+            if(mPhone != null) {
+                mPhone.getPreferredNetworkType(mHandler
+                     .obtainMessage(MyHandler.MESSAGE_GET_PREFERRED_NETWORK_TYPE));
+            }
+        }
+
+        private void requestSetPreferredNetworkType() {
+            int settingsNetworkMode = 0;
+            if(mPhone != null) {
+                settingsNetworkMode = android.provider.Settings.Secure.getInt(
+                    mPhone.getContext().getContentResolver(),
+                    android.provider.Settings.Secure.PREFERRED_NETWORK_MODE,
+                    preferredNetworkMode);
+            }
+
+            if(mPhone != null) {
+                mPhone.setPreferredNetworkType(settingsNetworkMode,
+                        this.obtainMessage(MyHandler.MESSAGE_SET_PREFERRED_NETWORK_TYPE));
+            }
+        }
+
         private void resetNetworkModeToDefault() {
             //set the mButtonPreferredNetworkMode
             mButtonPreferredNetworkMode.setValue(Integer.toString(preferredNetworkMode));
             //set the Settings.System
-            for(int i=0; i<2; i++) {
-                if(mPhone[i] != null) {
-                    android.provider.Settings.Secure.putInt(mPhone[i].getContext().getContentResolver(),
-                        android.provider.Settings.Secure.PREFERRED_NETWORK_MODE,
-                        preferredNetworkMode );
-                    //Set the Modem
-                    mPhone[i].setPreferredNetworkType(preferredNetworkMode,
-                        this.obtainMessage(MyHandler.MESSAGE_SET_PREFERRED_NETWORK_TYPE));
-                 }
-            }
+            if(mPhone != null) {
+                android.provider.Settings.Secure.putInt(mPhone.getContext().getContentResolver(),
+                    android.provider.Settings.Secure.PREFERRED_NETWORK_MODE,
+                    preferredNetworkMode );
+                //Set the Modem
+                mPhone.setPreferredNetworkType(preferredNetworkMode,
+                    this.obtainMessage(MyHandler.MESSAGE_SET_PREFERRED_NETWORK_TYPE));
+             }
         }
 
     }
@@ -233,6 +337,9 @@ implements Preference.OnPreferenceChangeListener{
                     mButtonPreferredNetworkMode.setSummary("Preferred network mode: WCDMA only");
                 }
                 break;
+            case PREFERRED_NT_MODE_SEARCHING_STATE:
+                mButtonPreferredNetworkMode.setSummary("Preferred network mode: Searching");
+                break;
             default:
                 mButtonPreferredNetworkMode.setSummary("Preferred network mode: Auto");
                 break;
@@ -248,13 +355,12 @@ implements Preference.OnPreferenceChangeListener{
             int buttonNetworkMode;
             buttonNetworkMode = Integer.valueOf((String) objValue).intValue();
             int settingsNetworkMode = 0;
-            for(int i=0; i<2; i++) {
-                if(mPhone[i] != null) {
-                    settingsNetworkMode = android.provider.Settings.Secure.getInt(
-                        mPhone[i].getContext().getContentResolver(),
-                        android.provider.Settings.Secure.PREFERRED_NETWORK_MODE, preferredNetworkMode);
-                }
+            if(mPhone != null) {
+                settingsNetworkMode = android.provider.Settings.Secure.getInt(
+                    mPhone.getContext().getContentResolver(),
+                    android.provider.Settings.Secure.PREFERRED_NETWORK_MODE, preferredNetworkMode);
             }
+            
             if (buttonNetworkMode != settingsNetworkMode) {
                 int modemNetworkMode;
                 switch(buttonNetworkMode) {
@@ -272,16 +378,16 @@ implements Preference.OnPreferenceChangeListener{
                 }
                 UpdatePreferredNetworkModeSummary(buttonNetworkMode);
 
-                for(int i=0; i<2; i++) {
-                    if(mPhone[i] != null) {
-                        android.provider.Settings.Secure.putInt(mPhone[i].getContext().getContentResolver(),
-                            android.provider.Settings.Secure.PREFERRED_NETWORK_MODE,
-                            buttonNetworkMode );
-                        //Set the modem network mode
-                        mPhone[i].setPreferredNetworkType(modemNetworkMode, mHandler
-                             .obtainMessage(MyHandler.MESSAGE_SET_PREFERRED_NETWORK_TYPE));
-                    }
+                if(mPhone != null) {
+                    android.provider.Settings.Secure.putInt(mPhone.getContext().getContentResolver(),
+                        android.provider.Settings.Secure.PREFERRED_NETWORK_MODE,
+                        buttonNetworkMode );
+                    //Set the modem network mode
+                    mPhone.setPreferredNetworkType(modemNetworkMode, mHandler
+                         .obtainMessage(MyHandler.MESSAGE_SET_PREFERRED_NETWORK_TYPE));
                 }
+
+                mNetworkModereferenceEnabled = false;
             }
             /*Add 20130129 Spreadst of 121769 check whether the dialog is dismiss start  */
             if(mButtonPreferredNetworkMode.getDialog()!=null){
