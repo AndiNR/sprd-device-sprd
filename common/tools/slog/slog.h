@@ -69,7 +69,6 @@ enum {
 #define DEFAULT_USER_SLOG_CONFIG	"/system/etc/slog.conf.user"
 #define TMP_FILE_PATH			"/data/local/tmp/slog/"
 #define SLOG_SOCKET_FILE		TMP_FILE_PATH "slog_sock"
-#define PID_FILE			TMP_FILE_PATH "slog.pid"
 #define TMP_SLOG_CONFIG			TMP_FILE_PATH "slog.conf"
 #define DEFAULT_DUMP_FILE_NAME		"slog.tgz"
 #define FB_DEV_NODE			"/dev/graphics/fb0"

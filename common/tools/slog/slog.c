@@ -500,13 +500,14 @@ static int sdcard_mounted()
 	return 0;
 }
 
-static void check_sdcard_volume()
+static void check_available_volume()
 {
 	struct statfs diskInfo;
 	char cmd[MAX_NAME_LEN];
 	unsigned int ret;
 
 	if(!strncmp(current_log_path, external_storage, strlen(external_storage))) {
+		sleep(3); /* wait 3s to slog reload */
 		if( statfs(external_path, &diskInfo) < 0 ) {
 			err_log("statfs return err!");
 			return;
@@ -517,6 +518,16 @@ static void check_sdcard_volume()
 			sprintf(cmd, "%s", "am start -n com.spreadtrum.android.eng/.SlogUILowStorage");
 			system(cmd);
 			sleep(300);
+		}
+	} else {
+		if( statfs(current_log_path, &diskInfo) < 0 ) {
+			err_log("statfs return err!");
+			return;
+		}
+		ret = diskInfo.f_bavail * diskInfo.f_bsize >> 20;
+		if(ret < 5 && slog_enable != SLOG_DISABLE) {
+			err_log("internal available %dM is not enough, disable slog", ret);
+			slog_enable = SLOG_DISABLE;
 		}
 	}
 }
@@ -607,20 +618,31 @@ static void *monitor_sdcard_fun()
 static void handler_internal_log_size()
 {
 	struct statfs diskInfo;
+	unsigned int internal_availabled_size;
 
-	if(!strncmp(current_log_path, external_storage, strlen(external_storage)))
+	if( strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)))
 		return;
+
 	if( statfs(current_log_path, &diskInfo) < 0) {
-		err_log("statfs return err!");
+		slog_enable = SLOG_DISABLE;
+		err_log("statfs return err, disable slog");
 		return;
 	}
-	unsigned int blocksize = diskInfo.f_bsize;
-	unsigned int availabledisk = diskInfo.f_bavail * blocksize;
-	debug_log("internal available %dM", availabledisk >> 20);
+	internal_availabled_size = diskInfo.f_bavail * diskInfo.f_bsize / 1024 / 1024;
+	err_log("internal available space %dM", internal_availabled_size);
+	if( internal_availabled_size < 5 ) {
+		slog_enable = SLOG_DISABLE;
+		err_log("internal available space %dM is not enough, disable slog", internal_availabled_size);
+		return;
+	}
 
 	/* default setting internal log size, half of available */
-	internal_log_size = (availabledisk >> 20) /20;
-	debug_log("set internal log size %dM", internal_log_size);
+	internal_log_size = ( internal_availabled_size - 5 ) / 10;
+	if(internal_log_size == 0)
+		internal_log_size = 1;
+	err_log("set internal log size %dM", internal_log_size);
+
+	return;
 }
 
 /*
@@ -632,7 +654,7 @@ static void handle_dropbox()
 	char cmd[MAX_NAME_LEN];
 	sprintf(cmd, "tar czf %s/%s/dropbox.tgz /data/system/dropbox", current_log_path, top_logdir);
 	err_log("%s", cmd);
-	return system(cmd);
+	system(cmd);
 }
 
 /*
@@ -644,7 +666,10 @@ static void handle_top_logdir()
 	int ret;
 	char value[PROPERTY_VALUE_MAX];
 
-	property_get("slog.step", value, "");
+	if(slog_enable != SLOG_ENABLE)
+		return;
+
+	property_get("slog.step", value, "0");
 	slog_start_step = atoi(value);
 
 	ret = mkdir(current_log_path, S_IRWXU | S_IRWXG | S_IRWXO);
@@ -654,8 +679,7 @@ static void handle_top_logdir()
 	}
 
 	if( !strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH))) {
-		debug_log("slog use internal storage");
-		handler_internal_log_size();
+		err_log("slog use internal storage");
 		switch(slog_start_step){
 		case 0:
 			create_log_dir();
@@ -668,13 +692,20 @@ static void handle_top_logdir()
 			break;
 		}
 	} else {
-		debug_log("slog use external storage");
+		err_log("slog use external storage");
 		switch(slog_start_step){
+		case 0:
+			create_log_dir();
+			capture_snap_for_last(snapshot_log_head);
+			handle_dropbox();
+			handler_modem_memory_log();
+			property_set("slog.step", "2");
+			break;
 		case 1:
 			create_log_dir();
 			handler_modem_memory_log();
 			property_set("slog.step", "2");
-		break;
+			break;
 		default:
 			use_ori_log_dir();
 			break;
@@ -710,10 +741,12 @@ static int start_monitor_sdcard_fun()
  * 1.start running slog system(stream,snapshot,inotify)
  * 2.monitoring sdcard status
  */
-static int do_init()
+static void do_init()
 {
 	if(slog_enable != SLOG_ENABLE)
-		return 0;
+		return;
+
+	handler_internal_log_size();
 
 	handle_top_logdir();
 
@@ -724,7 +757,7 @@ static int do_init()
 
 	slog_init_complete = 1;
 
-	return 0;
+	return;
 }
 
 void *command_handler(void *arg)
@@ -853,64 +886,9 @@ void *command_handler(void *arg)
 	}
 }
 
-void create_pidfile()
-{
-	pid_t pid = 0;
-	FILE *fp;
-	struct stat st;
-	char buffer[MAX_NAME_LEN];
-	int ret;
-
-	if(stat(PID_FILE, &st))
-		goto write_pid;
-
-	fp = fopen(PID_FILE, "r");
-	if(fp == NULL) {
-		err_log("can't open pid file: %s.", PID_FILE);
-		exit(0);
-	}
-	memset(buffer, 0, MAX_NAME_LEN);
-	fgets(buffer, MAX_NAME_LEN, fp);
-	fclose(fp);
-
-	pid = atoi(buffer);
-	if(pid != 0) {
-		sprintf(buffer, "/proc/%d/cmdline", pid);
-		fp = fopen(buffer, "r");
-		if (fp != NULL) {
-			fgets(buffer, MAX_NAME_LEN, fp);
-			if(!strncmp(buffer, "/system/bin/slog", 16)) {
-				/* means daemon has started, just exit */
-				err_log("Slog is running already, the quit immediately.");
-				fclose(fp);
-				exit(0);
-			}
-			fclose(fp);
-		}
-	}
-
-write_pid:
-	ret = mkdir(TMP_FILE_PATH, S_IRWXU | S_IRWXG | S_IRWXO);
-	if (-1 == ret && (errno != EEXIST)) {
-		err_log("mkdir %s failed.", TMP_FILE_PATH);
-		exit(0);
-	}
-
-	fp = fopen(PID_FILE, "w");
-	if(fp == NULL) {
-		err_log("can't open pid file: %s.", PID_FILE);
-		exit(0);
-	}
-
-	fprintf(fp, "%d", getpid());
-	fclose(fp);
-	return;
-}
-
 static void sig_handler1(int sig)
 {
 	err_log("get a signal %d.", sig);
-	unlink(PID_FILE);
 	exit(0);
 }
 
@@ -980,9 +958,6 @@ int main(int argc, char *argv[])
 	/* sets slog process's file mode creation mask */
 	umask(0);
 
-	/* pid file */
-	create_pidfile();
-
 	/* handle signal */
 	setup_signals();
 
@@ -1005,7 +980,7 @@ int main(int argc, char *argv[])
 
 	while(1) {
 		sleep(10);
-		check_sdcard_volume();
+		check_available_volume();
 	}
 	return 0;
 }

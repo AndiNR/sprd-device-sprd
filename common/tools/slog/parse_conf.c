@@ -335,7 +335,19 @@ int parse_config()
 	fp = fopen(TMP_SLOG_CONFIG, "r");
 	if(fp == NULL) {
 		err_log("open file failed, %s.", TMP_SLOG_CONFIG);
-		return -1;
+		if (strcmp(buffer, "1") != 0) {
+			fp = fopen(DEFAULT_USER_SLOG_CONFIG, "r");
+			if(fp == NULL) {
+				err_log("open file failed, %s.", DEFAULT_USER_SLOG_CONFIG);
+				exit(0);
+			}
+		} else {
+			fp = fopen(DEFAULT_DEBUG_SLOG_CONFIG, "r");
+			if(fp == NULL) {
+				err_log("open file failed, %s.", DEFAULT_DEBUG_SLOG_CONFIG);
+				exit(0);
+			}
+		}
 	}
 
 	/* parse line by line */
