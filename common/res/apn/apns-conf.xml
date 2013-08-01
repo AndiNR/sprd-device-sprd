@@ -2380,7 +2380,7 @@
     <apn carrier="TIM MMS"
         mcc="724"
         mnc="03"
-        apn="tim.br"
+        apn="mms.tim.br"
         mmsproxy="200.179.66.242"
         mmsport="8080"
         user="tim"
