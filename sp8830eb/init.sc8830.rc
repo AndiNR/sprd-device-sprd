@@ -1,18 +1,18 @@
 import init.sc8830.usb.rc
 
 on early-init
-    export EXTERNAL_STORAGE /storage/sdcard0
-    export SECONDARY_STORAGE /storage/sdcard1
+#    export EXTERNAL_STORAGE /storage/sdcard0
+#    export SECONDARY_STORAGE /storage/sdcard1
     # 0 for nand,1 for emmc,2 for sdcard
-    export SECOND_STORAGE_TYPE 2
-    mkdir /storage 0777 system sdcard_rw
-    mkdir /storage/sdcard0 0000 system system
-    mkdir /storage/sdcard1 0000 system system
-    mkdir /storage/usbdisk 0000 system system
+#    export SECOND_STORAGE_TYPE 2
+#    mkdir /storage 0777 system sdcard_rw
+#    mkdir /storage/sdcard0 0000 system system
+#    mkdir /storage/sdcard1 0000 system system
+#    mkdir /storage/usbdisk 0000 system system
     # for backwards compatibility
-    symlink /storage/sdcard0 /sdcard
-    symlink /storage/sdcard0 /mnt/sdcard
-    symlink /storage/usbdisk /mnt/usbdisk
+#    symlink /storage/sdcard0 /sdcard
+#    symlink /storage/sdcard0 /mnt/sdcard
+#    symlink /storage/usbdisk /mnt/usbdisk
 # radio pipe
     mkdir /dev/rpipe 0550 radio radio
     pipe 666 /dev/rpipe/ril.vt.0
@@ -21,7 +21,8 @@ on early-init
 
 on fs
     mount_all /fstab.sc8830
-    #setprop ro.crypto.fuse_sdcard true
+    setprop ro.crypto.fuse_sdcard true
+    write /sys/kernel/boot_adsp/boot 1
 
 on post-fs
     insmod /system/lib/modules/ump.ko
@@ -29,15 +30,30 @@ on post-fs
 
 on post-fs-data
     # we will remap this as /storage/sdcard0 with the sdcard fuse tool
-    #mkdir /data/media 0770 media_rw media_rw
+    mkdir /data/media 0770 media_rw media_rw
     #chown media_rw media_rw /data/media
     mkdir /data/misc/sensors 0777 system system
 
+    chown system /dev/block/platform/sprd-sdhci.3/by-name
     # Set indication (checked by vold) that we have finished this action
     setprop vold.post_fs_data_done 1
 on init
     mkdir /dev/pipe 0755 system system
     pipe 666 /dev/pipe/mmi.audio.ctrl
+
+    # See storage config details at http://source.android.com/tech/storage/
+    mkdir /mnt/shell/emulated 0700 shell shell
+    mkdir /storage/emulated 0555 root root
+
+    export EXTERNAL_STORAGE /storage/emulated/legacy
+    export EMULATED_STORAGE_SOURCE /mnt/shell/emulated
+    export EMULATED_STORAGE_TARGET /storage/emulated
+
+    # Support legacy paths
+    symlink /storage/emulated/legacy /sdcard
+    symlink /storage/emulated/legacy /mnt/sdcard
+    symlink /storage/emulated/legacy /storage/sdcard0
+    symlink /mnt/shell/emulated/0 /storage/emulated/legacy
     
 on boot
     chown system system /sys/class/backlight/sprd_backlight/brightness
@@ -266,6 +282,10 @@ service nvitemd_w /system/bin/nvitemd /dev/spipe_w1 ./nvitem_w.cfg        FALSE
 # underlying files in /data/media will be created with user and group media_rw (1023)
 #service sdcard /system/bin/sdcard /data/media 1023 1023
 #    class late_start
+
+# virtual sdcard daemon running as media_rw (1023)
+service sdcard /system/bin/sdcard /data/media /mnt/shell/emulated 1023 1023
+    class late_start
 
 
 service hfag /system/bin/sdptool add --channel=10 HFAG

@@ -104,7 +104,6 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/init.sc8830.usb.rc:root/init.sc8830.usb.rc \
 	$(BOARDDIR)/ueventd.sc8830.rc:root/ueventd.sc8830.rc \
 	$(BOARDDIR)/fstab.sc8830:root/fstab.sc8830 \
-	$(BOARDDIR)/vold.fstab:system/etc/vold.fstab \
 	$(BOARDDIR)/nvitem_td.cfg:root/nvitem_td.cfg \
 	$(BOARDDIR)/nvitem_w.cfg:root/nvitem_w.cfg \
 	device/sprd/common/res/CDROM/adb.iso:system/etc/adb.iso \
@@ -139,11 +138,13 @@ PRODUCT_COPY_FILES := \
 	frameworks/native/data/etc/android.hardware.telephony.gsm.xml:system/etc/permissions/android.hardware.telephony.gsm.xml \
 	frameworks/native/data/etc/android.hardware.usb.accessory.xml:system/etc/permissions/android.hardware.usb.accessory.xml \
 	frameworks/native/data/etc/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml \
-	frameworks/native/data/etc/android.software.live_wallpaper.xml:system/etc/permissions/android.software.live_wallpaper.xml \
 	device/sprd/common/res/apn/apns-conf.xml:system/etc/apns-conf.xml \
 	device/sprd/partner/brcm/gps/glgps:/system/bin/glgps \
 	device/sprd/partner/brcm/gps/gpsconfig_shark.xml:/system/etc/gpsconfig.xml \
 	device/sprd/partner/brcm/gps/gps.default.so:/system/lib/hw/gps.default.so
+
+#        frameworks/native/data/etc/android.software.live_wallpaper.xml:system/etc/permissions/android.software.live_wallpaper.xml \
+
 
 BOARD_WLAN_DEVICE_REV       := bcm4330_b2
 $(call inherit-product, hardware/broadcom/wlan/bcmdhd/firmware/bcm4330/device-bcm.mk)

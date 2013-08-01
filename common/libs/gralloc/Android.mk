@@ -14,7 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+ifeq ($(strip $(SPRDROID4.3_DEV)),true)
 ifneq ($(TARGET_SIMULATOR),true)
 LOCAL_PATH := $(call my-dir)
 
@@ -77,4 +77,5 @@ LOCAL_SRC_FILES := \
 
 #LOCAL_CFLAGS+= -DMALI_VSYNC_EVENT_REPORT_ENABLE
 include $(BUILD_SHARED_LIBRARY)
+endif
 endif

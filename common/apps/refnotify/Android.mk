@@ -10,5 +10,6 @@ LOCAL_SHARED_LIBRARIES := \
     libutils
 
 LOCAL_MODULE := refnotify
+LOCAL_STATIC_LIBRARIES := liblog
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)

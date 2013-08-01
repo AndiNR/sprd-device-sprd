@@ -1,3 +1,4 @@
+ifeq ($(strip $(SPRDROID4.3_DEV)),true)
 ifeq ($(BOARD_HAVE_BLUETOOTH_BCM),true)
 ifeq ($(BOARD_HAVE_FM_BCM),true)
 
@@ -114,5 +115,6 @@ LOCAL_MODULE:=FmTest
 
 include $(BUILD_EXECUTABLE)
 
+endif
 endif
 endif

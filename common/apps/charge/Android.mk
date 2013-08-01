@@ -55,7 +55,7 @@ LOCAL_FORCE_STATIC_EXECUTABLE := true
 LOCAL_MODULE_PATH := $(TARGET_ROOT_OUT_BIN)
 LOCAL_UNSTRIPPED_PATH := $(TARGET_ROOT_OUT_BIN_UNSTRIPPED)
 
-LOCAL_STATIC_LIBRARIES := libliteui libpixelflinger_static libpng libcutils
+LOCAL_STATIC_LIBRARIES := libliteui libpixelflinger_static libpng libcutils liblog
 LOCAL_STATIC_LIBRARIES += libstdc++ libc libz
 LOCAL_REQUIRED_MODULES := charge_res_images
 

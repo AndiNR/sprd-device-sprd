@@ -1,3 +1,4 @@
+ifeq ($(strip $(SPRDROID4.3_DEV)),true)
 LOCAL_PATH:= $(call my-dir)
 
 #slog
@@ -72,3 +73,4 @@ CUSTOM_MODULES += tar
 CUSTOM_MODULES += tcp
 CUSTOM_MODULES += slog.conf
 CUSTOM_MODULES += slog.conf.user
+endif

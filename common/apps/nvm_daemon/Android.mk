@@ -15,5 +15,6 @@ LOCAL_CFLAGS := -DCONFIG_EMMC
 endif
 
 LOCAL_MODULE := nvm_daemon
+LOCAL_STATIC_LIBRARIES := liblog
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+ifeq ($(strip $(SPRDROID4.3_DEV)),true)
 LOCAL_PATH := $(call my-dir)
 
 # HAL module implemenation stored in
@@ -119,4 +119,4 @@ include $(call all-makefiles-under,$(LOCAL_PATH))
 
 
 
-
+endif
