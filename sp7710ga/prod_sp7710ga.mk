@@ -50,8 +50,6 @@ else
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=0
 endif
 
-  PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.powerssim=0
-
 ifeq ($(TARGET_HVGA_ENABLE), true)
 PRODUCT_PROPERTY_OVERRIDES += ro.sf.lcd_density=160
 else
