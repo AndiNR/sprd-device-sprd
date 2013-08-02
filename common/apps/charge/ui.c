@@ -138,7 +138,7 @@ static void draw_progress_locked(int level)
 		level = 100;
 	else if (level < 0)
 		level = 0;
-	sprintf(bat, "%d%%%c", (level/5)*5, '\0');
+        sprintf(bat, "%d%%%c", level, '\0');
 	draw_text_xy((dy + height - 10), (gr_fb_width()/2 - 20), bat);
 
 	if (gProgressBarType == PROGRESSBAR_TYPE_NORMAL) {
