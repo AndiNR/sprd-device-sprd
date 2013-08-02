@@ -619,9 +619,16 @@ static void handler_internal_log_size()
 {
 	struct statfs diskInfo;
 	unsigned int internal_availabled_size;
+	int ret;
 
 	if( strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)))
 		return;
+
+	ret = mkdir(current_log_path, S_IRWXU | S_IRWXG | S_IRWXO);
+	if(-1 == ret && (errno != EEXIST)) {
+		err_log("mkdir %s failed.", current_log_path);
+		exit(0);
+	}
 
 	if( statfs(current_log_path, &diskInfo) < 0) {
 		slog_enable = SLOG_DISABLE;
