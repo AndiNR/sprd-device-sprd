@@ -79,6 +79,7 @@ public class LogSettingSlogUITabHostActivity extends TabActivity {
             case SlogAction.ANDROIDKEY:
                 isAndroidLog = true;
                 countAndroidLogBranchComplete = 1;
+                if(mProgressDialog == null) break;
                 try {
                     mProgressDialog.show();
                 } catch (Exception error) {
@@ -92,6 +93,7 @@ public class LogSettingSlogUITabHostActivity extends TabActivity {
                 if (isAndroidLog) {
                     break;
                 }
+                if(mProgressDialog == null) break;
                 try {
                     mProgressDialog.show();
                 } catch (Exception error) {
@@ -107,9 +109,11 @@ public class LogSettingSlogUITabHostActivity extends TabActivity {
                         isAndroidLog = false;
                     }
                 }
+                if(mProgressDialog == null) break;
                 mProgressDialog.cancel();
                 break;
             case SlogAction.MESSAGE_DUMP_START:
+                if(mProgressDialog == null) break;
                 mProgressDialog.setCancelable(false);
                 try {
                     mProgressDialog.show();
@@ -123,10 +127,12 @@ public class LogSettingSlogUITabHostActivity extends TabActivity {
                 if (mContext != null) {
                     Toast.makeText(mContext, R.string.slog_dump_ok, Toast.LENGTH_LONG).show();
                 }
+                if(mProgressDialog == null) break;
                 mProgressDialog.cancel();
                 mProgressDialog.setCancelable(true);
                 break;
             case SlogAction.MESSAGE_DUMP_FAILED:
+                if(mProgressDialog == null) break;
                 mProgressDialog.cancel();
                 mProgressDialog.setCancelable(true);
                 if (mContext != null) {
@@ -134,6 +140,7 @@ public class LogSettingSlogUITabHostActivity extends TabActivity {
                 }
                 break;
             case SlogAction.MESSAGE_DUMP_OUTTIME:
+                if(mProgressDialog == null) break;
                 mProgressDialog.cancel();
                 mProgressDialog.setCancelable(true);
                 if (mContext != null) {
@@ -141,6 +148,7 @@ public class LogSettingSlogUITabHostActivity extends TabActivity {
                 }
                 break;
             case SlogAction.MESSAGE_CLEAR_START:
+                if(mProgressDialog == null) break;
                 mProgressDialog.setCancelable(false);
                 try {
                     mProgressDialog.show();
@@ -151,6 +159,7 @@ public class LogSettingSlogUITabHostActivity extends TabActivity {
                 }
                 break;
             case SlogAction.MESSAGE_CLEAR_END:
+                if(mProgressDialog == null) break;
                 mProgressDialog.setCancelable(true);
                 mProgressDialog.cancel();
                 if (mContext != null) {
@@ -158,6 +167,7 @@ public class LogSettingSlogUITabHostActivity extends TabActivity {
                 }
                 break;
             case SlogAction.MESSAGE_CLEAR_FAILED:
+                if(mProgressDialog == null) break;
                 mProgressDialog.setCancelable(true);
                 mProgressDialog.cancel();
                 if (mContext != null) {
