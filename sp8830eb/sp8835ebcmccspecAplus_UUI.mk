@@ -27,11 +27,10 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
 	ro.com.android.dataroaming=false \
 	persist.msms.phone_count=2 \
-	universe_ui_support=true \
 	ro.msms.phone_count=2 \
+	ro.digital.fm.support=0 \
 	persist.msms.phone_default=0 \
 	ro.modem.count=1 \
-	ro.digital.fm.support=0 \
 	ro.modem.t.enable=1 \
 	ro.modem.t.dev=/dev/cpt \
 	ro.modem.t.tty=/dev/stty_td \
@@ -49,6 +48,8 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.config.hw.search_support=false \
     persist.surpport.oplpnn=true \
     persist.surpport.cphsfirst=false
+
+#PRODUCT_PROPERTY_OVERRIDES += universe_ui_support=true
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1
@@ -101,8 +102,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \
 	$(BOARDDIR)/sci-keypad.kl:system/usr/keylayout/sci-keypad.kl \
-	$(BOARDDIR)/pixcir_ts.kl:system/usr/keylayout/pixcir_ts.kl \
-	$(BOARDDIR)/pixcir_ts.idc:system/usr/idc/pixcir_ts.idc \
+	$(BOARDDIR)/sec_touchscreen.idc:system/usr/idc/sec_touchscreen.idc \
 	$(BOARDDIR)/ft5x0x_ts.idc:system/usr/idc/ft5x0x_ts.idc
 
 $(call inherit-product, frameworks/native/build/phone-HD720-dalvik-heap.mk)
@@ -111,7 +111,7 @@ $(call inherit-product, frameworks/native/build/phone-HD720-dalvik-heap.mk)
 $(call inherit-product, $(BOARDDIR)/base.mk)
 $(call inherit-product, $(BOARDDIR)/proprietories.mk)
 $(call inherit-product, device/sprd/common/res/boot/boot_res.mk)
-$(call inherit-product, vendor/sprd/UniverseUI/universeui.mk)
+#$(call inherit-product, vendor/sprd/UniverseUI/universeui.mk)
 
 # include standard configs
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base.mk)

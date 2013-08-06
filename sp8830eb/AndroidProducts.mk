@@ -15,9 +15,9 @@
 #
 
 
-#PRODUCT_MAKEFILES := $(LOCAL_DIR)/prod_sp7735ebcuccspecAplus_UUI.mk
+PRODUCT_MAKEFILES := $(LOCAL_DIR)/sp7735ebcuccspecAplus_UUI.mk
 #PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_sp8735ebplus_UUI.mk
-#PRODUCT_MAKEFILES += $(LOCAL_DIR)/prod_sp8835ebcmccspecAplus_UUI.mk
+PRODUCT_MAKEFILES += $(LOCAL_DIR)/sp8835ebcmccspecAplus_UUI.mk
 PRODUCT_MAKEFILES += $(LOCAL_DIR)/sp8835ebbase.mk
 				      
 
