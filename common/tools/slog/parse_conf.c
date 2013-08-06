@@ -312,14 +312,13 @@ int parse_config()
 	char buffer[MAX_LINE_LEN];
 	struct stat st;
 
-	ret = mkdir(TMP_FILE_PATH, S_IRWXU | S_IRWXG | S_IRWXO);
-	if (-1 == ret && (errno != EEXIST)) {
-		err_log("mkdir %s failed.", TMP_FILE_PATH);
-		exit(0);
-	}
-
 	/* we use tmp log config file first */
 	if(stat(TMP_SLOG_CONFIG, &st)){
+		ret = mkdir(TMP_FILE_PATH, S_IRWXU | S_IRWXG | S_IRWXO);
+		if (-1 == ret && (errno != EEXIST)) {
+			err_log("mkdir %s failed.", TMP_FILE_PATH);
+			exit(0);
+		}
 		property_get("ro.debuggable", buffer, "");
 		if (strcmp(buffer, "1") != 0) {
 			if(!stat(DEFAULT_USER_SLOG_CONFIG, &st))
