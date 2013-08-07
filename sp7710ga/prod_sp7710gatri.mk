@@ -41,8 +41,11 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.modem.w.tty=/dev/ts0710mux \
 	ro.modem.w.eth=veth \
 	ro.modem.w.id=0 \
-	ro.modem.w.count=3 \
-	persist.sys.lowcost=true
+	ro.modem.w.count=3 
+	
+ifeq ($(TARGET_LOWCOST_SUPPORT),true)
+  PRODUCT_PROPERTY_OVERRIDES += persist.sys.lowcost=true
+endif
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1

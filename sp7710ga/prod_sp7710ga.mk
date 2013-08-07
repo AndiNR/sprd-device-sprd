@@ -41,8 +41,11 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.modem.w.eth=veth \
 	ro.modem.w.id=0 \
 	ro.modem.w.count=2 \
-	persist.sys.lowcost=true\
-	ro.debuggable=0
+	ro.debuggable=0 
+
+ifeq ($(TARGET_LOWCOST_SUPPORT),true)
+  PRODUCT_PROPERTY_OVERRIDES += persist.sys.lowcost=true
+endif
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1
