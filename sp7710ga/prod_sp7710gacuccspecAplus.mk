@@ -24,7 +24,7 @@ PRODUCT_PACKAGE_OVERLAYS := vendor/sprd/operator/cucc/specA/overlay
 PRODUCT_AAPT_CONFIG := hdpi
 
 #enable dexopt for cu 
-WITH_DEXPREOPT=true
+
 
 PRODUCT_PROPERTY_OVERRIDES := \
 	keyguard.no_require_sim=true \
