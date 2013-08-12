@@ -263,6 +263,23 @@ BOOLEAN		ramDisk_Read(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 	note:
 		first imageBakPath then imagePath
 */
+BOOLEAN     try_read_back(const char * filename,uint8* buf,uint32 size){
+	int fileHandle = 0;
+	int ret=0;
+
+	memset(buf,0xFF,size);
+	fileHandle = open(filename, O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
+	ret = read(fileHandle, buf, size);
+	close(fileHandle);
+	if(ret == size){
+		if(_chkEcc(buf, size)){
+			NVITEM_PRINT("read back sucess!\n");
+			return 1;
+		}
+	}
+	NVITEM_PRINT("read back error!\n");
+    return 0;
+}
 BOOLEAN		ramDisk_Write(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 {
 	BOOLEAN ret;
@@ -292,6 +309,12 @@ BOOLEAN		ramDisk_Write(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 	}
 	fsync(fileHandle);
 	close(fileHandle);
+    #ifdef CONFIG_SC7710G2
+    if(0 == try_read_back(_ramdiskCfg[idx].imageBak_path,buf,size)){
+        printf("Fatal error,readback failed!\n");
+        while(1);
+    }
+    #endif
 // 3 write origin image
 	fileHandle = open(_ramdiskCfg[idx].image_path, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
 	if(size != write(fileHandle, buf, size)){
@@ -301,6 +324,32 @@ BOOLEAN		ramDisk_Write(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 	fsync(fileHandle);
 	close(fileHandle);
 	NVITEM_PRINT("NVITEM partId%x:image write finished %d!\n",_ramdiskCfg[idx].partId,ret);
+    #ifdef CONFIG_SC7710G2
+    if(0 == try_read_back(_ramdiskCfg[idx].image_path,buf,size)){
+        printf("Fatal error,readback failed!\n");
+        while(1);
+    }
+    #endif
+
+    #ifdef CONFIG_SC7710G2
+    if(idx == 0){
+        printf("update /backupfixnv/fixnv.bin ...\n");
+        fileHandle = open("/backupfixnv/fixnv.bin", O_RDWR | O_CREAT | O_TRUNC,
+                S_IRWXU | S_IRWXG | S_IRWXO);
+        if(size != write(fileHandle, buf, size)){
+            printf("update /backupfixnv/fixnv.bin fail!\n");
+            ret = 0;
+        }
+        fsync(fileHandle);
+        close(fileHandle);
+        printf("update /backupfixnv/fixnv.bin finished!\n");
+
+        if(0 == try_read_back("/backupfixnv/fixnv.bin",buf,size)){
+            printf("Fatal error,readback failed!\n");
+            while(1);
+        }
+    }
+    #endif
 	return ret;
 
 }
