@@ -46,6 +46,7 @@
 #include "vb_pga.h"
 
 #include "eng_audio.h"
+
 #include "aud_proc.h"
 #include "vb_control_parameters.h"
 #include "string_exchange_bin.h"
@@ -1139,13 +1140,13 @@ static size_t out_get_buffer_size(const struct audio_stream *stream)
     be a multiple of 16 frames */
     size_t size = (SHORT_PERIOD_SIZE * DEFAULT_OUT_SAMPLING_RATE) / out->config.rate;
     size = ((size + 15) / 16) * 16;
-    BLUE_TRACE("[TH] size=%d, frame_size=%d", size, audio_stream_frame_size((struct audio_stream *)stream));
-    return size * audio_stream_frame_size((struct audio_stream *)stream);
+    BLUE_TRACE("[TH] size=%d, frame_size=%d", size, audio_stream_frame_size(stream));
+    return size * audio_stream_frame_size(stream);
 }
 
-static uint32_t out_get_channels(const struct audio_stream *stream)
+static audio_channel_mask_t out_get_channels(const struct audio_stream *stream)
 {
-    return AUDIO_CHANNEL_OUT_STEREO;
+    return (audio_channel_mask_t)AUDIO_CHANNEL_OUT_STEREO;
 }
 
 static audio_format_t out_get_format(const struct audio_stream *stream)
@@ -1344,7 +1345,7 @@ static ssize_t out_write_mux(struct tiny_stream_out *out, const void* buffer,
     size_t in_frames = 0;
     size_t out_frames =0; 
      BLUE_TRACE("mux_playback out_write call_start(%d) call_connected(%d) ...in....",out->dev->call_start,out->dev->call_connected);
-    frame_size = audio_stream_frame_size(&out->stream.common);
+    frame_size = audio_stream_frame_size((const struct audio_stream *)(&out->stream.common));
     ALOGE(":out_write_mux in frame_size is %d",frame_size);
     in_frames = bytes / frame_size;
     out_frames = RESAMPLER_BUFFER_SIZE / frame_size;
@@ -1376,7 +1377,7 @@ static ssize_t out_write_vaudio(struct tiny_stream_out *out, const void* buffer,
     size_t frame_size = 0;
     size_t in_frames = 0;
     size_t out_frames =0; 
-    frame_size = audio_stream_frame_size(&out->stream.common);
+    frame_size = audio_stream_frame_size((const struct audio_stream *)(&out->stream.common));
     in_frames = bytes / frame_size;
     out_frames = RESAMPLER_BUFFER_SIZE / frame_size;
     if(out->pcm_vplayback) {
@@ -1405,7 +1406,7 @@ static ssize_t out_write_sco(struct tiny_stream_out *out, const void* buffer,
     size_t in_frames = 0;
     size_t out_frames =0;    
    
-    frame_size = audio_stream_frame_size(&out->stream.common);
+    frame_size = audio_stream_frame_size((const struct audio_stream *)(&out->stream.common));
     in_frames = bytes / frame_size;
     out_frames = RESAMPLER_BUFFER_SIZE / frame_size;
     BLUE_TRACE("out_write_sco in bytes is %d,frame_size %d, in_frames %d, out_frames %d,out->pcm_sco %x", bytes, frame_size,in_frames, out_frames,out->pcm_sco);
@@ -1449,7 +1450,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
     pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&out->lock);
 #ifndef _VOICE_CALL_VIA_LINEIN
-    if (out_bypass_data(out,audio_stream_frame_size(&stream->common),out_get_sample_rate(&stream->common),bytes)) {
+    if (out_bypass_data(out,audio_stream_frame_size((const struct audio_stream *)(&stream->common)),out_get_sample_rate(&stream->common),bytes)) {
         return bytes;
     }
 #endif
@@ -1493,7 +1494,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
  #endif
         
     }else {
-        frame_size = audio_stream_frame_size(&out->stream.common);
+        frame_size = audio_stream_frame_size((const struct audio_stream *)(&out->stream.common));
         in_frames = bytes / frame_size;
         out_frames = RESAMPLER_BUFFER_SIZE / frame_size;
 
@@ -1625,7 +1626,7 @@ static int in_init_resampler(struct tiny_stream_in *in)
         in->buf_provider.release_buffer = release_buffer;
 
         in->buffer = malloc(in->config.period_size *
-                audio_stream_frame_size(&in->stream.common));
+                audio_stream_frame_size((const struct audio_stream *)(&in->stream.common)));
         if (!in->buffer) {
             ret = -ENOMEM;
             goto err;
@@ -2111,19 +2112,19 @@ static int get_next_buffer(struct resampler_buffer_provider *buffer_provider,
                   in->read_status = mux_pcm_read(in->pcm,
                                  (void*)in->buffer,
                                  in->config.period_size *
-                                     audio_stream_frame_size(&in->stream.common));
+                                     audio_stream_frame_size((const struct audio_stream *)(&in->stream.common)));
               }
               else{
                   in->read_status = pcm_read(in->pcm,
                                  (void*)in->buffer,
                                  in->config.period_size *
-                                     audio_stream_frame_size(&in->stream.common));
+                                     audio_stream_frame_size((const struct audio_stream *)(&in->stream.common)));
               }        
   #else
               in->read_status = pcm_read(in->pcm,
                                          (void*)in->buffer,
                                          in->config.period_size *
-                                             audio_stream_frame_size(&in->stream.common));
+                                             audio_stream_frame_size((const struct audio_stream *)(&in->stream.common)));
 #endif                                     
 
         if (in->read_status != 0) {
@@ -2137,7 +2138,7 @@ static int get_next_buffer(struct resampler_buffer_provider *buffer_provider,
         }
         if (in->active_rec_proc)
             aud_rec_do_process((void *)in->buffer,
-                                in->config.period_size *audio_stream_frame_size(&in->stream.common));
+                                in->config.period_size *audio_stream_frame_size((const struct audio_stream *)(&in->stream.common)));
         in->frames_in = in->config.period_size;
     }
 
@@ -2176,7 +2177,7 @@ static ssize_t read_frames(struct tiny_stream_in *in, void *buffer, ssize_t fram
         if (in->resampler != NULL) {
             in->resampler->resample_from_provider(in->resampler,
                     (int16_t *)((char *)buffer +
-                            frames_wr * audio_stream_frame_size(&in->stream.common)),
+                            frames_wr * audio_stream_frame_size((const struct audio_stream *)(&in->stream.common))),
                     &frames_rd);
         } else {
             struct resampler_buffer buf = {
@@ -2186,9 +2187,9 @@ static ssize_t read_frames(struct tiny_stream_in *in, void *buffer, ssize_t fram
             get_next_buffer(&in->buf_provider, &buf);
             if (buf.raw != NULL) {
                 memcpy((char *)buffer +
-                           frames_wr * audio_stream_frame_size(&in->stream.common),
+                           frames_wr * audio_stream_frame_size((const struct audio_stream *)(&in->stream.common)),
                         buf.raw,
-                        buf.frame_count * audio_stream_frame_size(&in->stream.common));
+                        buf.frame_count * audio_stream_frame_size((const struct audio_stream *)(&in->stream.common)));
                 frames_rd = buf.frame_count;
             }
             release_buffer(&in->buf_provider, &buf);
@@ -2296,7 +2297,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
     int ret = 0;
     struct tiny_stream_in *in = (struct tiny_stream_in *)stream;
     struct tiny_audio_device *adev = in->dev;
-    size_t frames_rq = bytes / audio_stream_frame_size(&stream->common);
+    size_t frames_rq = bytes / audio_stream_frame_size((const struct audio_stream *)(&stream->common));
 
     /* acquiring hw device mutex systematically is useful if a low priority thread is waiting
      * on the input stream mutex - e.g. executing select_mode() while holding the hw device
@@ -2305,7 +2306,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
     pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&in->lock);
 #ifndef _VOICE_CALL_VIA_LINEIN
-    if(in_bypass_data(in,audio_stream_frame_size(&stream->common),in_get_sample_rate(&stream->common),buffer,bytes)){
+    if(in_bypass_data(in,audio_stream_frame_size((const struct audio_stream *)(&stream->common)),in_get_sample_rate(&stream->common),buffer,bytes)){
         return bytes;
     }
 #endif
@@ -2663,6 +2664,18 @@ static int adev_set_master_volume(struct audio_hw_device *dev, float volume)
     return -ENOSYS;
 }
 
+static int adev_set_master_mute(struct audio_hw_device *dev, bool mute)
+{
+	// TO DO
+	return 0;
+}
+
+static int adev_get_master_mute(struct audio_hw_device *dev, bool *mute)
+{
+	// TO DO
+	return 0;
+}
+
 static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
 {
     struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
@@ -2834,32 +2847,6 @@ static int adev_close(hw_device_t *device)
     stream_routing_manager_close(adev);
     free(device);
     return 0;
-}
-
-static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
-{
-    return (/* OUT */
-            AUDIO_DEVICE_OUT_EARPIECE |
-            AUDIO_DEVICE_OUT_SPEAKER |
-            AUDIO_DEVICE_OUT_WIRED_HEADSET |
-            AUDIO_DEVICE_OUT_WIRED_HEADPHONE |
-            AUDIO_DEVICE_OUT_AUX_DIGITAL |
-            AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET |
-            AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET |
-            AUDIO_DEVICE_OUT_ALL_SCO |
-            AUDIO_DEVICE_OUT_ALL_FM |
-            AUDIO_DEVICE_OUT_DEFAULT |
-            /* IN */
-            AUDIO_DEVICE_IN_COMMUNICATION |
-            AUDIO_DEVICE_IN_AMBIENT |
-            AUDIO_DEVICE_IN_BUILTIN_MIC |
-            AUDIO_DEVICE_IN_WIRED_HEADSET |
-            AUDIO_DEVICE_IN_AUX_DIGITAL |
-            AUDIO_DEVICE_IN_BACK_MIC |
-            AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET |
-            AUDIO_DEVICE_IN_ALL_SCO|
-            AUDIO_DEVICE_IN_VOICE_CALL |
-            AUDIO_DEVICE_IN_DEFAULT);
 }
 
 /* parse the private field of xml config file. */
@@ -3621,11 +3608,10 @@ static int adev_open(const hw_module_t* module, const char* name,
     memset(adev, 0, sizeof(struct tiny_audio_device));
 
     adev->hw_device.common.tag = HARDWARE_DEVICE_TAG;
-    adev->hw_device.common.version = AUDIO_DEVICE_API_VERSION_1_0;
+    adev->hw_device.common.version = AUDIO_DEVICE_API_VERSION_2_0;
     adev->hw_device.common.module = (struct hw_module_t *) module;
     adev->hw_device.common.close = adev_close;
 
-    adev->hw_device.get_supported_devices = adev_get_supported_devices;
     adev->hw_device.init_check = adev_init_check;
     adev->hw_device.set_voice_volume = adev_set_voice_volume;
     adev->hw_device.set_master_volume = adev_set_master_volume;
@@ -3640,13 +3626,15 @@ static int adev_open(const hw_module_t* module, const char* name,
     adev->hw_device.open_input_stream = adev_open_input_stream;
     adev->hw_device.close_input_stream = adev_close_input_stream;
     adev->hw_device.dump = adev_dump;
+    adev->hw_device.set_master_mute = adev_set_master_mute;
+    adev->hw_device.get_master_mute = adev_get_master_mute;
     
-	pthread_mutex_lock(&adev->lock);
-	ret = adev_modem_parse(adev);
-	pthread_mutex_unlock(&adev->lock);
-	if (ret < 0) {
-		ALOGE("Warning:Unable to locate all audio modem parameters from XML.");
-	}
+    pthread_mutex_lock(&adev->lock);
+    ret = adev_modem_parse(adev);
+    pthread_mutex_unlock(&adev->lock);
+    if (ret < 0) {
+        ALOGE("Warning:Unable to locate all audio modem parameters from XML.");
+    }
     /* get audio para from audio_para.txt*/
     vb_effect_getpara(adev);
     vb_effect_setpara(adev->audio_para);
@@ -3666,13 +3654,6 @@ static int adev_open(const hw_module_t* module, const char* name,
         ALOGE("Unable to open the mixer, aborting.");
         goto ERROR;
     }
-	 pthread_mutex_lock(&adev->lock);
-	 ret = adev_modem_parse(adev);
-	 pthread_mutex_unlock(&adev->lock);
-	if (ret < 0) {
-		ALOGE("Warning:Unable to locate all audio modem parameters from XML.");
-	}	
-
     
     /* parse mixer ctl */
     ret = adev_config_parse(adev);
