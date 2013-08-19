@@ -111,7 +111,8 @@ public class LogSettingSlogUIModemPage extends Activity implements SlogUISyncSta
         SlogAction.SetCheckBoxBranchState(chkBlueTooth,
                 tempHost && SlogAction.GetState(SlogAction.STORAGEKEY),
                 SlogAction.GetState(SlogAction.BLUETOOTHKEY));
-        SlogAction.SetCheckBoxBranchState(chkTcp, tempHost,
+        SlogAction.SetCheckBoxBranchState(chkTcp,
+                tempHost && SlogAction.GetState(SlogAction.STORAGEKEY),
                 SlogAction.GetState(SlogAction.TCPKEY));
         SlogAction.SetCheckBoxBranchState(chkMisc, tempHost,
                 SlogAction.GetState(SlogAction.MISCKEY));
