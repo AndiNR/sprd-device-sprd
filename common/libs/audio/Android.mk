@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ifeq ($(strip $(SPRDROID4.3_DEV)),true)
 
 ifeq ($(strip $(BOARD_USES_TINYALSA_AUDIO)),true)
 
@@ -72,12 +71,11 @@ endif
 LOCAL_SHARED_LIBRARIES := \
 	liblog libcutils libtinyalsa libaudioutils \
 	libexpat libdl \
-	libengclient libvbeffect libvbpga libnvexchange
+	libvbeffect libvbpga libnvexchange
 
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
 
 include $(call all-makefiles-under,$(LOCAL_PATH))
-endif
 endif

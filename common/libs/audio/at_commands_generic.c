@@ -1,4 +1,6 @@
+#ifdef OLD_ENG_API
 #include <engat.h>
+#endif
 #include <sys/uio.h>
 #include <string.h>
 #include <stdio.h>
@@ -14,10 +16,31 @@ static pthread_mutex_t  ATlock = PTHREAD_MUTEX_INITIALIZER;         //eng cannot
 #ifdef __cplusplus
 extern "C" {
 #endif
+#ifdef OLD_ENG_API
     int engapi_read(int, void*, size_t);
     int engapi_write(int, const void*, size_t);
     int engapi_open(int);
     void engapi_close(int);
+#else
+    /* FIXME: just for compile */
+    int engapi_read(int fd, void* buffer, size_t len)
+    {
+        return 0;
+    }
+    int engapi_write(int fd, const void* buffer, size_t len)
+    {
+        return 0;
+    }
+    int engapi_open(int fd)
+    {
+        return 0;
+    }
+    void engapi_close(int fd)
+    {
+        return;
+    }
+
+#endif
 #ifdef __cplusplus
 }
 #endif
@@ -44,6 +67,7 @@ int at_cmd_deinit(void)
 static int cur_call_sim = 0;
 int at_cmd_init(void)
 {
+#ifdef OLD_ENG_API
 #ifndef _VOICE_CALL_VIA_LINEIN
     if (at_cmd_fd <= 0 || cur_call_sim != android_sim_num) {
         at_cmd_deinit();
@@ -64,6 +88,7 @@ int at_cmd_init(void)
         ALOGW("at cmd using sim%d", cur_call_sim);
     else
         ALOGE("at cmd using sim%d failed", cur_call_sim);
+#endif
     return 0;
 }
 
@@ -97,7 +122,7 @@ int at_cmd_send_recv(void *s_buf, size_t s_len, void *r_buf, size_t r_len)
 
     return -1;
 }
-
+#ifdef OLD_ENG_API
 static int at_cmd_route(struct tiny_audio_device *adev)
 {
     char r_buf[32];
@@ -122,6 +147,12 @@ static int at_cmd_route(struct tiny_audio_device *adev)
 
     return 0;
 }
+#else
+static int at_cmd_route(struct tiny_audio_device *adev)
+{
+    return 0;
+}
+#endif
 
 #define AT_CMD_INCALL_FREQ1 "AT+STONE=1,400,100"
 #define AT_CMD_INCALL_FREQ2 "AT+STONE=1,1200,50"
@@ -245,6 +276,7 @@ int at_cmd_headset_volume_max(void)
 
 #include <cutils/properties.h>
 #define VOICECALL_VOLUME_MAX_UI	6
+#ifdef OLD_ENG_API
 int at_cmd_volume(float vol, int mode)
 {
     char r_buf[256];
@@ -260,6 +292,12 @@ int at_cmd_volume(float vol, int mode)
     do_cmd(at_cmd);
     return 0;
 }
+#else
+int at_cmd_volume(float vol, int mode)
+{
+    return 0;
+}
+#endif
 
 int at_cmd_mic_mute(bool mute)
 {
