@@ -1237,11 +1237,16 @@ camera_ret_code_type camera_init(int32_t camera_id)
          {
                 streamparm.parm.raw_data[i] = sensor_param[i-188];
          }
-	if (-1 == xioctl(fd, VIDIOC_S_PARM, &streamparm))
-	{
-		ALOGE("preview: Fail to VIDIOC_S_PARM.");
-		return CAMERA_FAILED;
-	}
+         if (-1 == xioctl(fd, VIDIOC_S_PARM, &streamparm))
+         {
+             ALOGE("preview: Fail to VIDIOC_S_PARM.");
+             close_device();
+             if(NULL != fp)
+             {
+                 fclose(fp);
+             }
+             return CAMERA_FAILED;
+         }
         if(1 == streamparm.parm.raw_data[196])/*need to save index of sensor*/
         {
             for(i=188;i<(188+SENSOR_PARAM_NUM);i++)
