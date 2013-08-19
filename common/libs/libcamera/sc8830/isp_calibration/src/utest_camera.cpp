@@ -54,6 +54,7 @@ enum utest_calibration_cmd_id {
 	UTEST_CALIBRATION_AWB= 0,
 	UTEST_CALIBRATION_LSC,
 	UTEST_CALIBRATION_FLASHLIGHT,
+	UTEST_CALIBRATION_CAP_JPG,
 	UTEST_CALIBRATION_MAX
 };
 
@@ -89,13 +90,19 @@ struct utest_cmr_context {
 	int preview_physical_addr[UTEST_PREVIEW_BUF_NUM];
 	unsigned char* preview_virtual_addr[UTEST_PREVIEW_BUF_NUM];
 
-	sem_t sem_cap_done;
+	sem_t sem_cap_raw_done;
+	sem_t sem_cap_jpg_done;
+
+	void * jpg_buffer;
+	uint32_t jpg_size;
 };
 
 static char calibration_awb_file[] = "/data/sensor_%s_awb_%s.dat";
 static char calibration_flashlight_file[] = "/data/sensor_%s_flashlight_%s.dat";
 static char calibration_lsc_file[] = "/data/sensor_%s_lnc_%d_%d_%d_%s.dat";
 static char calibration_raw_data_file[] = "/data/sensor_%s_raw_%d_%d_%s.raw";
+static char calibration_cap_jpg_file[] = "/data/sensor_cali_cap_jpg.jpg";
+extern uint32_t g_is_calibration;
 
 static struct utest_cmr_context utest_cmr_cxt;
 static struct utest_cmr_context *g_utest_cmr_cxt_ptr = &utest_cmr_cxt;
@@ -164,6 +171,14 @@ static int utest_dcam_param_set(int argc, char **argv)
 			return -1;
 		}
 	}
+
+	if (sem_init(&(cmr_cxt_ptr->sem_cap_raw_done), 0, 0))
+		return -1;
+
+	if (sem_init(&(cmr_cxt_ptr->sem_cap_jpg_done), 0, 0))
+		return -1;
+
+	g_is_calibration = 1;
 
 	return 0;
 }
@@ -356,6 +371,7 @@ static int utest_dcam_cap_memory_alloc(void)
 
 static void utest_dcam_close(void)
 {
+	g_is_calibration = 0;
 	utest_dcam_preview_mem_release();
 	utest_dcam_cap_memory_release();
 	camera_stop(NULL, NULL);
@@ -398,16 +414,75 @@ static int32_t utest_dcam_save_raw_data(void)
 	return rtn;
 }
 
+static int32_t utest_dcam_save_jpg(void)
+{
+	int32_t rtn = 0;
+	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
+	FILE* fp = 0;
+
+	fp = fopen(calibration_cap_jpg_file, "wb");
+	if (fp != NULL) {
+		fwrite(cmr_cxt_ptr->jpg_buffer , 1, cmr_cxt_ptr->jpg_size , fp);
+		fclose(fp);
+	} else {
+		ERR("utest_dcam_save_cap_jpg: failed to open save_file.\n");
+		rtn = -1;
+	}
+	return rtn;
+}
+
+static int32_t utest_dcam_find_param_index(struct utest_cmr_context *cmr_cxt_ptr )
+{
+	uint32_t i = 0, index = 0;
+	uint32_t height1 = 0;
+	uint32_t height2 = 0;
+	SENSOR_TRIM_T *trim_ptr = 0;
+	struct sensor_raw_fix_info *raw_fix_info_ptr = 0;
+	SENSOR_EXP_INFO_T *sensor_info_ptr = Sensor_GetInfo();
+
+	height2 = cmr_cxt_ptr->capture_height;
+
+	trim_ptr = (SENSOR_TRIM_T *)(sensor_info_ptr->ioctl_func_ptr->get_trim(0));
+
+	i = 1;
+	while(1) {
+
+		height1 =  trim_ptr[i].trim_height;
+
+		INFO("trim: index:%d, width:%d height:%d\n", (int32_t)i, (int32_t)trim_ptr[i].trim_width, (int32_t)trim_ptr[i].trim_height);
+
+		if (height2 == trim_ptr[i].trim_height)
+		{
+			index = i -1;
+			INFO("find the param i = %d, width = %d, height = %d\n", i, (int32_t)trim_ptr[i].trim_width, (int32_t)trim_ptr[i].trim_height);
+			break;
+
+		}
+
+		if  ((0 == trim_ptr[i].trim_height) || (0 == trim_ptr[i].trim_height)) {
+			index = -1;
+			INFO("do not find the param: i = %d \n", (int32_t)i);
+			break;
+		}
+
+		i++;
+	}
+
+	return index;
+}
+
 static int32_t utest_dcam_awb(uint8_t sub_cmd)
 {
 	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
 	SENSOR_EXP_INFO_T *sensor_ptr = (SENSOR_EXP_INFO_T*)Sensor_GetInfo();
+	struct sensor_raw_fix_info *fix_ptr = 0;
 	struct isp_addr_t img_addr = {0, 0, 0};
 	struct isp_rect_t rect = {0, 0, 0,0};
 	struct isp_size_t img_size = {0, 0};
 	struct isp_bayer_ptn_stat_t stat_param;
 	struct isp_addr_t dst_addr = {0, 0, 0};
 	struct isp_addr_t tmp_addr = {0, 0, 0};
+	int32_t index = 0;;
 #if 0
 	uint32_t *dst_temp_addr = NULL;
 #endif
@@ -468,10 +543,28 @@ static int32_t utest_dcam_awb(uint8_t sub_cmd)
 	}
 	memset(img_tmp_addr, 0x00, img_len);
 
-	if (ISP_Cali_GetLensTabs(tmp_addr, lsc_grid, img_size, (uint32_t*)len_tab_addr, 0, 0, sub_cmd)) {
+	index = utest_dcam_find_param_index(cmr_cxt_ptr);
+	if (index < 0) {
 		rtn = -1;
-		ERR("utest_dcam_lsc: fail to isp_cali_getlenstab.\n");
+		ERR("utest_dcam_awb: do not find param index.\n");
 		goto awb_exit;
+	}
+
+	if (0 == sub_cmd) {
+
+		uint16_t* tmp_lnc_ptr = 0;
+		uint16_t len = 0;
+		fix_ptr = (struct sensor_raw_fix_info*)sensor_ptr->raw_info_ptr->fix_ptr;
+		tmp_lnc_ptr = (uint16_t*)(fix_ptr->lnc.map[0][0].param_addr);
+		len = fix_ptr->lnc.map[0][0].len;
+		memcpy((void*)len_tab_addr, (void*)tmp_lnc_ptr, len);
+
+	} else {
+		if (ISP_Cali_GetLensTabs(tmp_addr, lsc_grid, img_size, (uint32_t*)len_tab_addr, index, 0, sub_cmd)) {
+			rtn = -1;
+			ERR("utest_dcam_awb: fail to isp_cali_getlenstab.\n");
+			goto awb_exit;
+		}
 	}
 
 	dst_addr.y_addr = (uint32_t)img_tmp_addr;
@@ -502,6 +595,10 @@ static int32_t utest_dcam_awb(uint8_t sub_cmd)
 		}
 		break;
 		default:
+		{
+			ERR("utest_dcam_awb: sub cmd is invalid\n");
+			goto awb_exit;
+		}
 		break;
 	}
 
@@ -541,17 +638,25 @@ static int32_t utest_dcam_flashlight(uint8_t sub_cmd)
 {
 	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
 	SENSOR_EXP_INFO_T *sensor_ptr = (SENSOR_EXP_INFO_T*)Sensor_GetInfo();
+	struct sensor_raw_fix_info *fix_ptr = 0;
 	struct isp_addr_t img_addr = {0, 0, 0};
 	struct isp_rect_t rect = {0, 0, 0,0};
 	struct isp_size_t img_size = {0, 0};
-	struct isp_bayer_ptn_stat_t stat_param;
+	struct isp_bayer_ptn_stat_t stat_param = {0, 0, 0, 0};
 	struct isp_addr_t dst_addr = {0, 0, 0};
+	struct isp_addr_t tmp_addr = {0,0,0};
+	int32_t index = 0;
 #if 0
 	uint32_t *dst_temp_addr = NULL;
 #endif
+	uint32_t *img_tmp_addr = NULL;
+	uint16_t *len_tab_addr = NULL;
+	uint32_t len_tab_size = 0;
+	uint32_t img_len = 0;
 	char file_name[128] = {0};
 	FILE *fp = NULL;
 	int32_t rtn = 0;
+	uint32_t lsc_grid =32;
 
 	memset(&stat_param, 0, sizeof(isp_bayer_ptn_stat_t));
 	img_addr.y_addr = cmr_cxt_ptr->capture_raw_vir_addr;
@@ -561,6 +666,7 @@ static int32_t utest_dcam_flashlight(uint8_t sub_cmd)
 	rect.height = cmr_cxt_ptr->capture_height / 6;
 	img_size.width = cmr_cxt_ptr->capture_width;
 	img_size.height = cmr_cxt_ptr->capture_height;
+	img_len = img_size.width * img_size.height * 2;
 
 #if 0
 	dst_temp_addr = (uint32_t *)malloc(cmr_cxt_ptr->capture_width * cmr_cxt_ptr->capture_height * 2);
@@ -578,10 +684,62 @@ static int32_t utest_dcam_flashlight(uint8_t sub_cmd)
 		return -1;
 	}
 #else
-	dst_addr.y_addr = img_addr.y_addr;
-	dst_addr.uv_addr = img_addr.uv_addr;
-	dst_addr.v_addr = img_addr.v_addr;
+	tmp_addr.y_addr = img_addr.y_addr;
+	tmp_addr.uv_addr = img_addr.uv_addr;
+	tmp_addr.v_addr = img_addr.v_addr;
 #endif
+
+ISP_Cali_GetLensTabSize(img_size, lsc_grid, &len_tab_size);
+
+	len_tab_addr = (uint16_t *)malloc(len_tab_size);
+	if (NULL == len_tab_addr) {
+		rtn = -1;
+		ERR("utest_dcam_flashlight: failed to alloc buffer.\n");
+		goto flashlight_exit;
+	}
+	memset(len_tab_addr, 0x00, len_tab_size);
+
+	img_tmp_addr = (uint32_t*)malloc(img_len);
+	if (0 == img_tmp_addr) {
+		rtn = -1;
+		ERR("utest_dcam_flashlight: failed to alloc buffer.\n");
+		goto flashlight_exit;
+	}
+	memset(img_tmp_addr, 0x00, img_len);
+
+	index = utest_dcam_find_param_index(cmr_cxt_ptr);
+	if (index < 0) {
+		rtn = -1;
+		ERR("utest_dcam_flashlight: do not find param index.\n");
+		goto flashlight_exit;
+	}
+
+	if (0 == sub_cmd) {
+		uint16_t* tmp_lnc_ptr = 0;
+		uint16_t len = 0;
+		fix_ptr = (struct sensor_raw_fix_info*)sensor_ptr->raw_info_ptr->fix_ptr;
+		tmp_lnc_ptr = (uint16_t*)fix_ptr->lnc.map[0][0].param_addr;
+		len = fix_ptr->lnc.map[0][0].len;
+		memcpy((void*)len_tab_addr, (void*)tmp_lnc_ptr, len);
+
+	} else {
+
+		if (ISP_Cali_GetLensTabs(tmp_addr, lsc_grid, img_size, (uint32_t*)len_tab_addr, index, 0, sub_cmd)) {
+			rtn = -1;
+			ERR("utest_dcam_lsc: fail to isp_cali_getlenstab.\n");
+			goto flashlight_exit;
+		}
+	}
+
+	dst_addr.y_addr = (uint32_t)img_tmp_addr;
+	dst_addr.v_addr = 0;
+	dst_addr.uv_addr = 0;
+
+	ISP_Cali_LensCorrection(&tmp_addr,
+							&dst_addr,
+							img_size,
+							lsc_grid,
+							len_tab_addr);
 
 	if (ISP_Cali_RawRGBStat(&dst_addr, &rect, &img_size, &stat_param)) {
 		ERR("utest_dcam_flashlight: failed to isp_cali_raw_rgb_status.\n");
@@ -626,6 +784,15 @@ flashlight_exit:
 		free(dst_temp_addr);
 	}
 #endif
+
+	if (img_tmp_addr) {
+		free(img_tmp_addr);
+	}
+
+	if (len_tab_addr) {
+		free(len_tab_addr);
+	}
+
 	return rtn;
 }
 
@@ -645,7 +812,8 @@ static int32_t utest_dcam_lsc(uint8_t sub_cmd)
 	int32_t rtn = 0;
 	char file_name[128] = {0};
 	FILE *fp = NULL;
-	uint32_t lsc_grid = 32;
+	uint32_t lsc_grid = 32;/*grid: 16, 32, 64*/
+	int32_t index = 0;
 
 	img_addr.y_addr = cmr_cxt_ptr->capture_raw_vir_addr;
 	rect.x = 0;
@@ -685,7 +853,14 @@ static int32_t utest_dcam_lsc(uint8_t sub_cmd)
 	dst_addr.v_addr = img_addr.v_addr;
 #endif
 
-	if (ISP_Cali_GetLensTabs(dst_addr, lsc_grid, img_size, len_tab_addr, 0, 0, sub_cmd)) {
+	index = utest_dcam_find_param_index(cmr_cxt_ptr);
+	if (index < 0) {
+		rtn = -1;
+		ERR("utest_dcam_lsc: do not find param index.\n");
+		goto lsc_exit;
+	}
+
+	if (ISP_Cali_GetLensTabs(dst_addr, lsc_grid, img_size, len_tab_addr, index, 0, sub_cmd)) {
 		rtn = -1;
 		ERR("utest_dcam_lsc: fail to isp_cali_getlenstab.\n");
 		goto lsc_exit;
@@ -828,22 +1003,39 @@ static void utest_dcam_cap_cb(camera_cb_type cb,
 			camera_func_type func,
 			int32_t parm4)
 {
+	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
+
 	if (CAMERA_FUNC_TAKE_PICTURE == func) {
-
-		struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
-
 		switch(cb) {
 		case CAMERA_RSP_CB_SUCCESS:
 			break;
 		case CAMERA_EVT_CB_SNAPSHOT_DONE:
 			break;
 		case CAMERA_EXIT_CB_DONE:
-			{
+			if (UTEST_CALIBRATION_AWB == cmr_cxt_ptr->cmd ||
+				UTEST_CALIBRATION_LSC == cmr_cxt_ptr->cmd  ||
+				UTEST_CALIBRATION_FLASHLIGHT == cmr_cxt_ptr->cmd ) {
 				camera_frame_type *frame = (camera_frame_type *)parm4;
 				cmr_cxt_ptr->capture_raw_vir_addr = (uint32_t)frame->buf_Virt_Addr;
 				cmr_cxt_ptr->capture_width = frame->captured_dx;
 				cmr_cxt_ptr->capture_height= frame->captured_dy;
-				sem_post(&(cmr_cxt_ptr->sem_cap_done));
+				sem_post(&(cmr_cxt_ptr->sem_cap_raw_done));
+			}
+			break;
+		default:
+			break;
+		}
+	} else if (CAMERA_FUNC_ENCODE_PICTURE ==  func) {
+		switch (cb) {
+		case CAMERA_RSP_CB_SUCCESS:
+			break;
+		case CAMERA_EXIT_CB_DONE:
+			{
+				JPEGENC_CBrtnType *encInfo = (JPEGENC_CBrtnType *)parm4;
+				camera_encode_mem_type *enc = (camera_encode_mem_type *)encInfo->outPtr;
+				cmr_cxt_ptr->jpg_size = encInfo->size;
+				cmr_cxt_ptr->jpg_buffer = enc->buffer;
+				sem_post(&(cmr_cxt_ptr->sem_cap_jpg_done));
 			}
 			break;
 		default:
@@ -889,10 +1081,18 @@ static int32_t utest_dcam_capture(void)
 	if (utest_dcam_capture_flash_eb())
 		return -1;
 
-	if (CAMERA_SUCCESS != camera_take_picture_raw(utest_dcam_cap_cb,
-								NULL, CAMERA_RAW_MODE)) {
-		rtn = -1;
-		goto cap_exit;
+	if (UTEST_CALIBRATION_CAP_JPG == cmr_cxt_ptr->cmd) {
+		if (CAMERA_SUCCESS != camera_take_picture(utest_dcam_cap_cb,
+			NULL, CAMERA_NORMAL_MODE)) {
+			rtn = -1;
+			goto cap_exit;
+		}
+	} else {
+		if (CAMERA_SUCCESS != camera_take_picture_raw(utest_dcam_cap_cb,
+			NULL, CAMERA_TOOL_RAW_MODE)) {
+			rtn = -1;
+			goto cap_exit;
+		}
 	}
 
 	if (clock_gettime(CLOCK_REALTIME, &ts)) {
@@ -902,9 +1102,17 @@ static int32_t utest_dcam_capture(void)
 
 	ts.tv_sec += 3;
 
-	if (sem_timedwait(&(cmr_cxt_ptr->sem_cap_done), &ts)) {
-		rtn = -1;
-		goto cap_exit;
+
+	if (UTEST_CALIBRATION_CAP_JPG == cmr_cxt_ptr->cmd) {
+		if (sem_timedwait(&(cmr_cxt_ptr->sem_cap_jpg_done), &ts)) {
+			rtn = -1;
+			goto cap_exit;
+		}
+	} else {
+		if (sem_timedwait(&(cmr_cxt_ptr->sem_cap_raw_done), &ts)) {
+			rtn = -1;
+			goto cap_exit;
+		}
 	}
 
 cap_exit:
@@ -921,9 +1129,6 @@ int main(int argc, char **argv)
 	if (utest_dcam_param_set(argc, argv))
 		return -1;
 
-	if (sem_init(&(cmr_cxt_ptr->sem_cap_done), 0, 0)) 
-		return -1;
-
 	if (CAMERA_SUCCESS != camera_init(cmr_cxt_ptr->sensor_id))
 		return -1;
 
@@ -932,7 +1137,8 @@ int main(int argc, char **argv)
 					UTEST_PREVIEW_WIDTH,/*cmr_cxt_ptr->capture_width,*/
 					UTEST_PREVIEW_HEIGHT,/*cmr_cxt_ptr->capture_height,*/
 					NULL,
-					NULL);
+					NULL,
+					0);
 
 	if (utest_dcam_preview()) {
 		rtn = -1;
@@ -952,6 +1158,9 @@ int main(int argc, char **argv)
 			break;
 		case UTEST_CALIBRATION_FLASHLIGHT:
 			utest_dcam_flashlight(cmr_cxt_ptr->sub_cmd);
+			break;
+		case UTEST_CALIBRATION_CAP_JPG:
+			utest_dcam_save_jpg();
 			break;
 		default:
 			rtn = -1;

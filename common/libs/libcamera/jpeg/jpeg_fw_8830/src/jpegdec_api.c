@@ -220,7 +220,8 @@ LOCAL JPEG_RET_E JPEGDEC_start_decode(JPEGDEC_PARAMS_T *jpegdec_params)
 	SCI_TRACE_LOW("enter [JPEG_HWDecStart]   ");
 	/*if(jpegdec_params->height > SLICE_HEIGHT){*/
 	if(jpegdec_params->set_slice_height != 0){
-		ret_value = JPEG_HWDecStart(slice_height,  &jpeg_dec_out_param);
+	//	ret_value = JPEG_HWDecStart(slice_height,  &jpeg_dec_out_param);
+	ret_value = JPEG_HWDecStart( jpegdec_params->height,  &jpeg_dec_out_param);
 	}
 	else{
 		ret_value = JPEG_HWDecStart(jpegdec_params->height,&jpeg_dec_out_param);
@@ -533,7 +534,7 @@ int JPEGDEC_decode_one_pic(JPEGDEC_PARAMS_T *jpegdec_params,  jpegdec_callback c
 	int32_t jpg_fd = -1;
 	void *jpg_addr = NULL;
 	uint32_t ret = 0;
-	uint32 value = 0, int_val = 0, temp = 0;
+	uint32 value = 0, int_val = 0, temp = 0,jpg_clk = 0;
 	JPEG_DEC_INPUT_PARA_T input_para_ptr;
 	uint32 align_height = ((jpegdec_params->height  + 7)/8)*8;
 	uint32_t slice_num = (align_height > 1024) ? 2 : 1;
@@ -566,6 +567,7 @@ int JPEGDEC_decode_one_pic(JPEGDEC_PARAMS_T *jpegdec_params,  jpegdec_callback c
 	SCI_TRACE_LOW("JPEGDEC_decode_one_pic --2 ");
 	ioctl(jpg_fd,JPG_ENABLE,NULL);
 	ioctl(jpg_fd,JPG_RESET,NULL);
+	ioctl(jpg_fd,JPG_CONFIG_FREQ,&jpg_clk);
 	SCI_TRACE_LOW("JPEGDEC_decode_one_pic --3 ");
 	JPG_SetVirtualBaseAddr((uint32)jpg_addr);
 	SCI_TRACE_LOW("JPEGDEC_decode_one_pic --4 ");
@@ -604,7 +606,7 @@ int JPEGDEC_Slice_Start(JPEGDEC_PARAMS_T *jpegdec_params,  JPEGDEC_SLICE_OUT_T *
 	int jpg_fd = -1;
 	void *jpg_addr = NULL;
 	uint32_t ret = 0;
-	uint32 value = 0, int_val = 0, temp = 0;
+	uint32 value = 0, int_val = 0, temp = 0,jpg_clk = 0;
 	JPEG_DEC_INPUT_PARA_T input_para_ptr;
 	uint32 align_height = ((jpegdec_params->height  + 7)/8)*8;
 	uint32_t slice_num = (align_height > 1024) ? 2 : 1;
@@ -638,6 +640,7 @@ int JPEGDEC_Slice_Start(JPEGDEC_PARAMS_T *jpegdec_params,  JPEGDEC_SLICE_OUT_T *
 	SCI_TRACE_LOW("JPEGDEC_decode_one_pic --2 ");
 	ioctl(jpg_fd,JPG_ENABLE,NULL);
 	ioctl(jpg_fd,JPG_RESET,NULL);
+	ioctl(jpg_fd,JPG_CONFIG_FREQ,&jpg_clk);
 	SCI_TRACE_LOW("JPEGDEC_decode_one_pic --3 ");
 	JPG_SetVirtualBaseAddr((uint32)jpg_addr);
 	SCI_TRACE_LOW("JPEGDEC_decode_one_pic --4 ");
@@ -671,6 +674,15 @@ slice_start_end:
 	jpeg_fw_codec->addr = (uint32)jpg_addr;
 	if(0 == jpeg_fw_codec->slice_num) {
 		out_ptr->is_over = 1;
+
+		munmap(jpg_addr,SPRD_JPG_MAP_SIZE);
+		ioctl(jpg_fd,JPG_DISABLE,NULL);
+		ioctl(jpg_fd,JPG_RELEASE,NULL);
+
+		if(jpg_fd >= 0){
+ 			close(jpg_fd);
+ 		}
+	
 	}
 	SCI_TRACE_LOW("JPEGDEC_Slice_start end,slice_num %d.",jpeg_fw_codec->slice_num);
 	return ret;

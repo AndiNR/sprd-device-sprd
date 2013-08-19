@@ -37,6 +37,8 @@ static int s_ov5640_gain = 0;
 static int s_capture_shutter = 0;
 static int s_capture_VTS = 0;
 static uint32_t preview_hts;
+static uint32_t af_quit_flag = 0;
+
 LOCAL uint32_t s_is_streamoff = 0;
 LOCAL uint32_t _ov5640_InitExifInfo(void);
 LOCAL uint32_t _ov5640_GetResolutionTrimTab(uint32_t param);
@@ -1123,16 +1125,16 @@ LOCAL SENSOR_REG_TAB_INFO_T s_ov5640_resolution_Tab_YUV[] = {
 };
 
 LOCAL SENSOR_TRIM_T s_ov5640_Resolution_Trim_Tab[] = {
-	{0, 0, 640, 480, 0, 0},
-	{0, 0, 1024, 768, 68, 56},
-	{0, 0, 1280, 720, 68, 56},
-	{0, 0, 1280, 960, 68, 42},
-	{0, 0, 1600, 1200, 68, 42},//88,78
-	{0, 0, 2048, 1536, 68, 42},
-	{0, 0, 2592, 1944, 68, 42},
-	{0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0}
+	{0, 0, 640, 480, 0, 0, 0},
+	{0, 0, 1024, 768, 68, 56, 0x03b8},
+	{0, 0, 1280, 720, 68, 56, 0x03b8},
+	{0, 0, 1280, 960, 68, 42, 0x03b8},
+	{0, 0, 1600, 1200, 68, 42, 0x07b0},//88,78
+	{0, 0, 2048, 1536, 68, 42, 0x07b0},
+	{0, 0, 2592, 1944, 68, 42, 0x07b0},
+	{0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0, 0, 0}
 };
 
 LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_ov5640_exif;
@@ -1186,6 +1188,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5640_ioctl_func_tab = {
 	PNULL, //get_status
 	_ov5640_StreamOn,
 	_ov5640_StreamOff,
+	PNULL,
 };
 
 
@@ -1246,7 +1249,7 @@ SENSOR_INFO_T g_ov5640_mipi_yuv_info = {
 	SENSOR_AVDD_1800MV,	// iovdd
 	SENSOR_AVDD_1500MV,	// dvdd
 	3,			// skip frame num before preview
-	3,			// skip frame num before capture
+	1,			// skip frame num before capture
 	0,			// deci frame num during preview
 	0,			// deci frame num during video preview
 
@@ -2593,6 +2596,7 @@ LOCAL uint32_t _ov5640_AutoFocusTrig(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 	uint32_t rtn = SENSOR_SUCCESS;
 	uint16_t i=300;
 	uint16_t reg_value = 0x00;
+	af_quit_flag = 0;
 
 	SENSOR_PRINT_HIGH("Start");
 
@@ -2603,6 +2607,9 @@ LOCAL uint32_t _ov5640_AutoFocusTrig(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 		if (0x00 == i) {
 			SENSOR_PRINT_HIGH("error!");
 			rtn = SENSOR_FAIL;
+			break;
+		} else if (af_quit_flag) {
+			SENSOR_PRINT_HIGH("quit!");
 			break;
 		}
 		usleep(10*1000);
@@ -2660,6 +2667,9 @@ LOCAL uint32_t _ov5640_AutoFocusZone(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 			if (0x00 == i) {
 				SENSOR_PRINT_ERR("error!");
 				rtn = SENSOR_FAIL;
+				break;
+			} else if (af_quit_flag) {
+				SENSOR_PRINT_HIGH("quit!");
 				break;
 			}
 			usleep(100*1000);
@@ -2736,6 +2746,9 @@ LOCAL uint32_t _ov5640_AutoFocusMultiZone(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 			SENSOR_PRINT_ERR
 			    ("error!");
 			rtn = SENSOR_FAIL;
+			break;
+		} else if (af_quit_flag) {
+			SENSOR_PRINT_HIGH("quit!");
 			break;
 		}
 		usleep(100*1000);
@@ -2820,6 +2833,15 @@ LOCAL uint32_t _ov5640_StartAutoFocus(uint32_t param)
 	}
 	return rtn;
 }
+
+LOCAL uint32_t _ov5640_QuitAutoFocus(void)
+{
+	uint32_t ret = SENSOR_SUCCESS;
+	af_quit_flag = 0x1;
+	SENSOR_PRINT("af quit flag setted!");
+	return ret;
+}
+
 
 LOCAL uint32_t _ov5640_ExposureAuto(void)
 {
@@ -7145,6 +7167,9 @@ LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param)
 		break;
 	case SENSOR_EXT_FOCUS_START:
 		rtn = _ov5640_StartAutoFocus(ctl_param);
+		break;
+	case SENSOR_EXT_FOCUS_QUIT:
+		rtn = _ov5640_QuitAutoFocus();
 		break;
 	case SENSOR_EXT_EXPOSURE_START:
 		rtn = _ov5640_StartExposure(ctl_param);

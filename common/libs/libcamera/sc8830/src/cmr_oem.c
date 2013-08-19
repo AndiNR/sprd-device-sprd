@@ -273,7 +273,7 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 	}
 
 	time(&timep);
-	p = gmtime(&timep);
+	p = localtime(&timep);
 	sprintf(datetime_buf,
 			"%4d:%02d:%02d %02d:%02d:%02d",
 			(1900+p->tm_year),
@@ -285,12 +285,12 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 	datetime_buf[19] = '\0';
 	datetime = datetime_buf;
 
-	CMR_LOGI("datetime %s.",datetime);
+	CMR_LOGI("datetime %s",datetime);
 
 	if(0 == s_position.timestamp)
 		time(&s_position.timestamp);
 	p = gmtime(&s_position.timestamp);
-	sprintf(gps_date_buf, "%4d:%2d:%2d", (1900+p->tm_year), (1+p->tm_mon),p->tm_mday);
+	sprintf(gps_date_buf, "%4d:%02d:%02d", (1900+p->tm_year), (1+p->tm_mon),p->tm_mday);
 	gps_date_buf[10] = '\0';
 	gps_date = gps_date_buf;
 	gps_hour = p->tm_hour;
@@ -410,7 +410,6 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 			CMR_LOGI("set DateTimeOriginal.");
 		}
 	}
-
 	memset(&s_position, 0, sizeof(camera_position_type));
 	return p_exif_info;
 }
@@ -424,6 +423,9 @@ int camera_sync_var_init(struct camera_context *p_cxt)
 	sem_init(&p_cxt->start_sem, 0, 0);
 	sem_init(&p_cxt->stop_sem, 0, 0);
 	sem_init(&p_cxt->set_sem, 0, 0);
+	sem_init(&p_cxt->cap_path_sem, 0, 0);
+	sem_init(&p_cxt->scale_path_sem, 0, 0);
+	sem_init(&p_cxt->thum_sem, 0, 0);
 	sem_init(&p_cxt->takepicdone_sem, 0, 0);
 	sem_init(&p_cxt->takepic_callback_sem, 0, 0);
 
@@ -439,6 +441,9 @@ int camera_sync_var_deinit(struct camera_context *p_cxt)
 	sem_destroy(&p_cxt->start_sem);
 	sem_destroy(&p_cxt->stop_sem);
 	sem_destroy(&p_cxt->set_sem);
+	sem_destroy(&p_cxt->cap_path_sem);
+	sem_destroy(&p_cxt->scale_path_sem);
+	sem_destroy(&p_cxt->thum_sem);
 	sem_destroy(&p_cxt->takepicdone_sem);
 	sem_destroy(&p_cxt->takepic_callback_sem);
 
@@ -480,6 +485,66 @@ int camera_set_done(struct camera_context *p_cxt)
 
 	sem_post(&p_cxt->set_sem);
 
+	return ret;
+}
+
+int camera_wait_cap_path(struct camera_context *p_cxt)
+{
+	int                      ret = CAMERA_SUCCESS;
+	int                      tmpval = 0;
+	struct camera_context    *cxt = camera_get_cxt();
+
+	sem_wait(&p_cxt->cap_path_sem);
+	sem_getvalue(&p_cxt->cap_path_sem, &tmpval);
+	CMR_LOGE("got cap path sem, val = %d", tmpval);
+	ret = cxt->err_code;
+	return ret;
+}
+
+int camera_cap_path_done(struct camera_context *p_cxt)
+{
+	int                      ret = CAMERA_SUCCESS;
+	int                      tmpval = 0;
+
+	sem_post(&p_cxt->cap_path_sem);
+	sem_getvalue(&p_cxt->cap_path_sem, &tmpval);
+	CMR_LOGE("post cap path sem, val = %d", tmpval);
+	return ret;
+}
+
+int camera_wait_scale_path(struct camera_context *p_cxt)
+{
+	int                      ret = CAMERA_SUCCESS;
+	struct camera_context    *cxt = camera_get_cxt();
+
+	sem_wait(&p_cxt->scale_path_sem);
+	ret = cxt->err_code;
+	return ret;
+}
+
+int camera_scale_path_done(struct camera_context *p_cxt)
+{
+	int                      ret = CAMERA_SUCCESS;
+
+	sem_post(&p_cxt->scale_path_sem);
+	return ret;
+}
+
+int camera_wait_convert_thum(struct camera_context *p_cxt)
+{
+	int                      ret = CAMERA_SUCCESS;
+	struct camera_context    *cxt = camera_get_cxt();
+
+	sem_wait(&p_cxt->thum_sem);
+	ret = cxt->err_code;
+	return ret;
+}
+
+int camera_convert_thum_done(struct camera_context *p_cxt)
+{
+	int                      ret = CAMERA_SUCCESS;
+
+	sem_post(&p_cxt->thum_sem);
 	return ret;
 }
 

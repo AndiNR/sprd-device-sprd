@@ -40,6 +40,9 @@ extern "C"
 #define CMR_EVT_EXIT                                 (CMR_EVT_OEM_BASE + 3)
 #define CMR_EVT_BEFORE_SET                           (CMR_EVT_OEM_BASE + 4)
 #define CMR_EVT_AFTER_SET                            (CMR_EVT_OEM_BASE + 5)
+#define CMR_EVT_BEFORE_CAPTURE                       (CMR_EVT_OEM_BASE + 6)
+#define CMR_EVT_AFTER_CAPTURE                        (CMR_EVT_OEM_BASE + 7)
+#define CMR_EVT_CONVERT_THUM                         (CMR_EVT_OEM_BASE + 8)
 #define CMR_EVT_AF_START                             (CMR_EVT_OEM_BASE + 10)
 #define CMR_EVT_AF_EXIT                              (CMR_EVT_OEM_BASE + 11)
 #define CMR_EVT_AF_INIT                              (CMR_EVT_OEM_BASE + 12)
@@ -63,10 +66,16 @@ extern "C"
 #define CMR_EVT_CAP_START_CAP                        (CMR_EVT_CAP_BASE + 3)
 #define CMR_EVT_CAP_RAW_TX_DONE                      (CMR_EVT_CAP_BASE + 4)
 
+#define CMR_EVT_CB_BASE                              (CMR_EVT_OEM_BASE + 0x800)
+#define CMR_EVT_CB_INIT                              (CMR_EVT_CAP_BASE + 0)
+#define CMR_EVT_CB_EXIT                              (CMR_EVT_CAP_BASE + 1)
+#define CMR_EVT_CB_HANDLE                            (CMR_EVT_CAP_BASE + 2)
+
 #define CAMERA_OEM_MSG_QUEUE_SIZE                    50
 #define CAMERA_AF_MSG_QUEUE_SIZE                     5
 #define CAMERA_PREV_MSG_QUEUE_SIZE                   20
 #define CAMERA_CAP_MSG_QUEUE_SIZE                    20
+#define CAMERA_CB_MSG_QUEUE_SIZE                     40
 #define CAMERA_PREV_ID_BASE                          0x1000
 #define CAMERA_CAP0_ID_BASE                          0x2000
 #define CAMERA_CAP1_ID_BASE                          0x4000
@@ -79,6 +88,8 @@ extern "C"
 #define CAMERA_PIXEL_ALIGNED                         4
 #define CAMERA_WIDTH(w)                              ((w)& ~(CAMERA_PIXEL_ALIGNED - 1))
 #define CAMERA_HEIGHT(h)                             ((h)& ~(CAMERA_PIXEL_ALIGNED - 1))
+#define CAMERA_ALIGNED_16(w)                         ((((w) + 16 -1) >> 4) << 4)
+#define CAMERA_SAFE_SCALE_DOWN(w)                    (uint32_t)((w)*11/10)
 #define CAMERA_FOCUS_RECT_PARAM_LEN                  200
 #define CAMERA_RECOVER_CNT                           3
 
@@ -175,6 +186,7 @@ struct sensor_context {
 	uint32_t                 setting_length;
 	uint32_t                 preview_mode;
 	uint32_t                 capture_mode;
+	uint32_t                 previous_sensor_mode;
 };
 
 
@@ -236,6 +248,8 @@ struct camera_settings {
 	uint32_t                 iso;
 	uint32_t                 luma_adapt;
 	uint32_t                 video_mode;
+	uint32_t                 frame_rate;
+	uint32_t                 sensor_mode;
 	uint32_t                 auto_exposure_mode;
 	/*all the above value will be set as 0xFFFFFFFF after inited*/
 	uint32_t                 set_end;
@@ -281,12 +295,16 @@ struct camera_context {
 	uint32_t                 chn_2_status;
 	uint32_t                 recover_status;
 	uint32_t                 recover_cnt;
+	pthread_mutex_t          recover_mutex;
+
 	pthread_mutex_t          cb_mutex;
 	camera_cb_f_type         camera_cb;
 	pthread_mutex_t          data_mutex;
 	void*                    client_data;
 	uint32_t                 af_inited;
 	pthread_mutex_t          af_cb_mutex;
+	uint32_t                 af_busy;
+
 	camera_cb_f_type         camera_af_cb;
 	uint32_t                 zoom_level;
 	uint32_t                 skip_mode;
@@ -309,11 +327,16 @@ struct camera_context {
 	uint32_t                 prev_msg_que_handle;
 	uint32_t                 prev_inited;
 	sem_t                    prev_sync_sem;
+	uint32_t                 stop_preview_mode;
 	/* capture thread */
 	pthread_t                cap_thread;
+	pthread_t                cap_sub_thread;
 	uint32_t                 cap_msg_que_handle;
+	uint32_t                 cap_sub_msg_que_handle;
 	uint32_t                 cap_inited;
+	uint32_t                 cap_sub_inited;
 	sem_t                    cap_sync_sem;
+	sem_t                    cap_sub_sync_sem;
 
 	int32_t                  set_flag;
 	sem_t                    set_sem;
@@ -349,6 +372,8 @@ struct camera_context {
 	uint32_t                 total_cap_num;
 	uint32_t                 total_capture_num;
 	uint32_t                 cap_cnt;
+	uint32_t                 last_cap_cnt;
+	uint32_t                 cap_cnt_for_err;
 	uint32_t                 cap_process_id;
 	uint32_t                 total_cap_ch_num;
 	uint32_t                 cap_ch_cnt;
@@ -358,6 +383,10 @@ struct camera_context {
 	uint32_t                 cap_original_fmt;
 	uint32_t                 cap_target_fmt;
 	uint32_t                 cap_zoom_mode;
+	sem_t                    cap_path_sem;
+	sem_t                    scale_path_sem;
+
+	sem_t                    thum_sem;
 	uint32_t                 thum_from;
 	uint32_t                 thum_ready;
 	struct img_size          thum_size;
@@ -372,6 +401,12 @@ struct camera_context {
 	uint32_t                 cap_phys_addr;
 	uint32_t                 *cap_virt_addr;
 	uint32_t                 cap_mem_szie;
+
+	/*callback thread*/
+	pthread_t                cb_thread;
+	uint32_t                 cb_msg_que_handle;
+	uint32_t                 cb_inited;
+	sem_t                    cb_sync_sem;
 
 	/*for setting*/
 	struct camera_settings   cmr_set;
@@ -396,6 +431,12 @@ int camera_wait_start(struct camera_context *p_cxt);
 int camera_start_done(struct camera_context *p_cxt);
 int camera_wait_set(struct camera_context *p_cxt);
 int camera_set_done(struct camera_context *p_cxt);
+int camera_wait_cap_path(struct camera_context *p_cxt);
+int camera_cap_path_done(struct camera_context *p_cxt);
+int camera_wait_scale_path(struct camera_context *p_cxt);
+int camera_scale_path_done(struct camera_context *p_cxt);
+int camera_wait_convert_thum(struct camera_context *p_cxt);
+int camera_convert_thum_done(struct camera_context *p_cxt);
 int camera_wait_stop(struct camera_context *p_cxt);
 int camera_stop_done(struct camera_context *p_cxt);
 int camera_wait_init(struct camera_context *p_cxt);

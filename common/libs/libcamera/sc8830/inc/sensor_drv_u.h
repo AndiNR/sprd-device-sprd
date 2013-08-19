@@ -381,6 +381,7 @@ typedef enum {
 	SENSOR_EXT_FUNC_NONE = 0x00,
 	SENSOR_EXT_FUNC_INIT,
 	SENSOR_EXT_FOCUS_START,
+	SENSOR_EXT_FOCUS_QUIT,
 	SENSOR_EXT_EXPOSURE_START,
 	SENSOR_EXT_EV,
 	SENSOR_EXT_FUNC_MAX
@@ -523,6 +524,7 @@ typedef struct sensor_ioctl_func_tab_tag {
 	uint32_t(*get_status) (uint32_t param);
 	uint32_t(*stream_on) (uint32_t param);
 	uint32_t(*stream_off) (uint32_t param);
+	uint32_t(*cfg_otp) (uint32_t param);
 } SENSOR_IOCTL_FUNC_TAB_T, *SENSOR_IOCTL_FUNC_TAB_T_PTR;
 
 typedef struct sensor_trim_tag {
@@ -532,6 +534,7 @@ typedef struct sensor_trim_tag {
 	uint16_t trim_height;
 	uint32_t line_time;
 	uint32_t pclk;
+	uint32_t frame_line;
 } SENSOR_TRIM_T, *SENSOR_TRIM_T_PTR;
 
 
@@ -655,7 +658,7 @@ typedef struct sensor_info_tag {
 	uint32_t image_pattern;
 	SENSOR_REG_TAB_INFO_T_PTR resolution_tab_info_ptr;
 	SENSOR_IOCTL_FUNC_TAB_T_PTR ioctl_func_tab_ptr;
-	struct sensor_raw_info*  raw_info_ptr; /*sensor_raw_info*/
+	struct sensor_raw_info** raw_info_ptr; /*sensor_raw_info*/
 	SENSOR_EXTEND_INFO_T_PTR ext_info_ptr;
 	SENSOR_AVDD_VAL_E iovdd_val;
 	SENSOR_AVDD_VAL_E dvdd_val;
@@ -774,6 +777,7 @@ int Sensor_AutoFocusInit(void);
 int Sensor_WriteI2C(uint16_t slave_addr, uint8_t *cmd, uint16_t cmd_length);
 int Sensor_GetMode(uint32_t *mode);
 int Sensor_GetFlashLevel(SENSOR_FLASH_LEVEL_T *level);
+int Sensor_SetMode_WaitDone();
 
 #ifdef	 __cplusplus
 }

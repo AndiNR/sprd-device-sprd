@@ -33,6 +33,7 @@ extern "C" {
 #include <camera/CameraParameters.h>
 #include "SprdCameraParameters.h"
 #include "SprdOEMCamera.h"
+#include "sprd_dma_copy_k.h"
 
 namespace android {
 
@@ -58,7 +59,7 @@ typedef struct sprd_camera_memory {
 class SprdCameraHardware : public virtual RefBase {
 public:
 	SprdCameraHardware(int cameraId);
-	virtual                      ~SprdCameraHardware();	
+	virtual                      ~SprdCameraHardware();
 	inline int                   getCameraId() const; 
 	virtual void                 release();
 	virtual status_t             startPreview();
@@ -88,7 +89,10 @@ public:
 	virtual status_t             storeMetaDataInBuffers(bool enable);
 	virtual status_t             dump(int fd) const;
 	void                            setCaptureRawMode(bool mode);
-
+	void		antiShakeParamSetup();
+	int		uv420CopyTrim(struct _dma_copy_cfg_tag dma_copy_cfg);
+	int		displayCopy(uint32_t dst_phy_addr, uint32_t dst_virtual_addr,
+				uint32_t src_phy_addr, uint32_t src_virtual_addr, uint32_t src_w, uint32_t src_h);
 
 	enum camera_flush_mem_type_e {
 		CAMERA_FLUSH_RAW_HEAP,
@@ -109,7 +113,7 @@ public:
 	
 private:
 	inline void                  print_time();
-	
+
     // This class represents a heap which maintains several contiguous
     // buffers.  The heap may be backed by pmem (when pmem_pool contains
     // the name of a /dev/pmem* file), or by ashmem (when pmem_pool == NULL).
@@ -186,6 +190,7 @@ private:
 		SPRD_IDLE,     
 		SPRD_ERROR,
 		SPRD_PREVIEW_IN_PROGRESS,
+		SPRD_FOCUS_IN_PROGRESS,
 		SPRD_WAITING_RAW,
 		SPRD_WAITING_JPEG,
 
@@ -201,43 +206,46 @@ private:
 	enum state_owner {
 		STATE_CAMERA,
 		STATE_PREVIEW,
-		STATE_CAPTURE
+		STATE_CAPTURE,
+		STATE_FOCUS,
 	};
 
 	typedef struct _camera_state	{
 		Sprd_camera_state 	camera_state;
 		Sprd_camera_state 	preview_state;
 		Sprd_camera_state 	capture_state;
+		Sprd_camera_state 	focus_state;
 	} camera_state;
 
 	const char* getCameraStateStr(Sprd_camera_state s);
 	Sprd_camera_state transitionState(Sprd_camera_state from,
 						Sprd_camera_state to,
 						state_owner owner,
-						bool lock = true);	
+						bool lock = true);
 	void                            setCameraState(Sprd_camera_state state, 
 								state_owner owner = STATE_CAMERA);
 	inline Sprd_camera_state        getCameraState();
 	inline Sprd_camera_state        getPreviewState();
 	inline Sprd_camera_state        getCaptureState();
+	inline Sprd_camera_state        getFocusState();
 	inline bool                     isCameraError();
 	inline bool                     isCameraInit();
 	inline bool                     isCameraIdle();
 	inline bool                     isPreviewing();
-	inline bool                     isCapturing();	
+	inline bool                     isCapturing();
 	bool                            WaitForPreviewStart();
 	bool                            WaitForPreviewStop();
 	bool                            WaitForCaptureStart();
 	bool                            WaitForCaptureDone();
 	bool                            WaitForCameraStart();
-	bool                            WaitForCameraStop();		
+	bool                            WaitForCameraStop();
 	bool                            isRecordingMode();
-	void                            setRecordingMode(bool enable);	
+	void                            setRecordingMode(bool enable);
 	bool                            startCameraIfNecessary();
 	void                            getPictureFormat(int *format);
 	takepicture_mode                getCaptureMode();
 	bool                            getCameraLocation(camera_position_type *pt);
-	status_t                        startPreviewInternal(bool isRecordingMode);                              
+	status_t                        startPreviewInternal(bool isRecordingMode);
 	void                            stopPreviewInternal();
 	status_t                        cancelPictureInternal();
 	bool                            initPreview();
@@ -246,10 +254,13 @@ private:
 	void                            deinitCapture();
 	status_t                        initDefaultParameters();
 	status_t                        setCameraParameters();
+	status_t                        checkSetParametersEnvironment();
+	status_t                        checkSetParameters(const SprdCameraParameters& params);
 	bool                            setCameraDimensions();	
 	void                            setCameraPreviewMode();
 	void                            changeEmcFreq(char flag);
 	void                            setPreviewFreq();
+	void                            set_ddr_freq(const char* freq_in_khz);
 	void                            restoreFreq();
 	bool                            displayOneFrame(uint32_t width, 
 							uint32_t height,
@@ -270,7 +281,7 @@ private:
 	Mutex                           mPreviewCbLock;
 	Mutex                           mCaptureCbLock;
 	Mutex                           mStateLock;
-	Condition                       mStateWait;	
+	Condition                       mStateWait;
 
 	uint32_t                        mPreviewHeapSize;
 	uint32_t                        mPreviewHeapNum;
@@ -292,7 +303,11 @@ private:
 	camera_memory_t                 *mMetadataHeap;
 	sprd_camera_memory_t            *mReDisplayHeap;
 	//TODO: put the picture dimensions in the CameraParameters object;
-	SprdCameraParameters            mParameters;	
+	SprdCameraParameters            mParameters;
+	uint32_t                   mPreviewHeight_trimy;
+	uint32_t                   mPreviewWidth_trimx;
+	int                             mPreviewHeight_backup;
+	int                             mPreviewWidth_backup;
 	int                             mPreviewHeight;
 	int                             mPreviewWidth;
 	int                             mRawHeight;

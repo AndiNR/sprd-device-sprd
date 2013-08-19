@@ -206,7 +206,9 @@ LOCAL_SRC_FILES:= \
 	sc8830/src/cmr_set.c \
 	sc8830/src/cmr_mem.c \
 	sc8830/src/cmr_msg.c \
-	sc8830/src/cmr_cvt.c \
+	sc8830/src/cmr_scale.c \
+	sc8830/src/cmr_rotate.c \
+	sc8830/src/cmr_copy.c \
 	sc8830/src/cmr_v4l2.c \
 	sc8830/src/jpeg_codec.c \
 	sc8830/src/dc_cfg.c \
@@ -230,6 +232,7 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_ov8825_mipi_raw.c \
 	sensor/sensor_ov8830_mipi_raw.c \
 	sensor/sensor_hi351_mipi.c \
+	sensor/sensor_imx179_mipi_raw.c \
 	sensor/sensor_gc2035.c \
 	vsp/sc8830/src/jpg_drv_sc8830.c \
 	jpeg/jpeg_fw_8830/src/jpegcodec_bufmgr.c \
@@ -283,6 +286,9 @@ ifeq ($(strip $(TARGET_BOARD_CAMERA_FLASH_CTRL)),true)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_FLASH_CTRL
 endif
 
+ifeq ($(strip $(CAMERA_SUPPORT_SIZE)),8M)
+LOCAL_CFLAGS += -DCONFIG_CAMERA_SUPPORT_8M
+endif
 
 ifeq ($(strip $(CAMERA_SUPPORT_SIZE)),5M)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_SUPPORT_5M
@@ -312,6 +318,22 @@ LOCAL_CFLAGS += -DCONFIG_CAMERA_ISP
 endif
 endif
 
+ifeq ($(strip $(TARGET_BOARD_CAMERA_SUPPORT_VIDEO_SIZE)),1080P)
+LOCAL_CFLAGS += -DCONFIG_CAMERA_VIDEO_SIZE_SUPPORT_1080P
+endif
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_SUPPORT_VIDEO_SIZE)),720P)
+LOCAL_CFLAGS += -DCONFIG_CAMERA_VIDEO_SIZE_SUPPORT_720P
+endif
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_SUPPORT_VIDEO_SIZE)),D1)
+LOCAL_CFLAGS += -DCONFIG_CAMERA_VIDEO_SIZE_SUPPORT_D1
+endif
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_CAPTURE_MODE)),true)
+LOCAL_CFLAGS += -DCONFIG_CAMERA_ZSL_CAPTURE
+endif
+
 ifeq ($(strip $(TARGET_BOARD_CAMERA_ROTATION_CAPTURE)),true)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_ROTATION_CAPTURE
 endif
@@ -326,6 +348,14 @@ endif
 
 ifeq ($(strip $(TARGET_BOARD_CAMERA_ROTATION)),true)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_ROTATION
+endif
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_ANTI_SHAKE)),true)
+LOCAL_CFLAGS += -DCONFIG_CAMERA_ANTI_SHAKE
+endif
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_DMA_COPY)),true)
+LOCAL_CFLAGS += -DCONFIG_CAMERA_DMA_COPY
 endif
 
 ifeq ($(strip $(TARGET_BOARD_SP7710_CAMERA)),true)

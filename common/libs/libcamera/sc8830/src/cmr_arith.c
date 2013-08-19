@@ -77,9 +77,10 @@ void *arithmetic_fd_thread_proc(void *data)
 	int                 face_num;
 	int                 k = 0;
 	morpho_FaceRect     *face_rect_ptr;
-	unsigned char       *p_format = (unsigned char*)IMAGE_FORMAT;
+	//unsigned char       *p_format = (unsigned char*)IMAGE_FORMAT;
 	camera_frame_type   frame_type;
 	int                 fd_exit_flag = 0;
+	camera_cb_info      cb_info;
 	struct camera_context  *cxt = camera_get_cxt();
 
 	while (1) {
@@ -118,7 +119,7 @@ void *arithmetic_fd_thread_proc(void *data)
 			if( 0 != FaceSolid_Function((uint8_t*)s_arith_cxt->addr,
 				                         &face_rect_ptr,
 				                         (int*)&face_num,
-				                         0,p_format)) {
+				                         0)) {
 				CMR_LOGE("FaceSolid_Function fail.");
 			} else {
 				frame_type.face_ptr = face_rect_ptr;
@@ -133,10 +134,21 @@ void *arithmetic_fd_thread_proc(void *data)
 					face_rect_ptr++;
 				}
 				if (cxt->arithmetic_cxt.fd_flag) {
+#if CB_LIGHT_SYNC
 					camera_call_cb(CAMERA_EVT_CB_FD,
 								camera_get_client_data(),
 								CAMERA_FUNC_START_PREVIEW,
 								(uint32_t)&frame_type);
+#else
+					memset(&cb_info, 0, sizeof(camera_cb_info));
+					cb_info.cb_type = CAMERA_EVT_CB_FD;
+					cb_info.cb_func = CAMERA_FUNC_START_PREVIEW;
+					cb_info.cb_data = (void *)(&frame_type);
+					cb_info.cb_data_length = sizeof(camera_frame_type);
+					cb_info.refer_data = face_rect_ptr;
+					cb_info.refer_data_length = sizeof(morpho_FaceRect);
+					camera_callback_start(&cb_info);
+#endif
 				}
 			}
 			s_arith_cxt->fd_busy = 0;
@@ -162,7 +174,7 @@ int arithmetic_fd_init(void)
 {
 	CMR_MSG_INIT(message);
 	struct camera_context  *cxt = camera_get_cxt();
-	unsigned char          *p_format = (unsigned char*)IMAGE_FORMAT;
+	//unsigned char          *p_format = (unsigned char*)IMAGE_FORMAT;
 	int                    ret = ARITH_SUCCESS;
 	pthread_attr_t          attr;
 
@@ -170,9 +182,8 @@ int arithmetic_fd_init(void)
 
 	if (cxt->arithmetic_cxt.fd_inited) {
 		FaceSolid_Finalize();
-		if ( 0 != FaceSolid_Init(cxt->display_size.height,
-		                     cxt->display_size.width,
-		                     p_format)) {
+		if ( 0 != FaceSolid_Init(cxt->display_size.width,
+		                    cxt->display_size.height )) {
 			ret = -ARITH_INIT_FAIL;
 			CMR_LOGE("FaceSolid_Init fail.");
 		} else {
@@ -182,9 +193,8 @@ int arithmetic_fd_init(void)
 	}
 
 	CMR_PRINT_TIME;
-	if ( 0 != FaceSolid_Init(cxt->display_size.height,
-		                     cxt->display_size.width,
-		                     p_format)) {
+	if ( 0 != FaceSolid_Init(cxt->display_size.width,
+		                    cxt->display_size.height)) {
 		ret = -ARITH_INIT_FAIL;
 		CMR_LOGE("FaceSolid_Init fail.");
 	} else {
@@ -278,6 +288,10 @@ int arithmetic_hdr_init(uint32_t pic_width, uint32_t pic_height)
 	uint32_t size = pic_width * pic_height * 3/2;
 
 	CMR_LOGI("test log.");
+	if (s_hdr_cxt->addr[0]) {
+		CMR_LOGI("no need to init");
+		return ret;
+	}
 	pthread_mutex_lock(&s_arith_cxt->hdr_lock);
 
 	s_hdr_cxt->addr[0] = (uint8_t*)malloc(size);

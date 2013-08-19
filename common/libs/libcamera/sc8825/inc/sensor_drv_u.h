@@ -514,6 +514,7 @@ typedef struct sensor_ioctl_func_tab_tag {
 	uint32_t(*get_status) (uint32_t param);
 	uint32_t(*stream_on) (uint32_t param);
 	uint32_t(*stream_off) (uint32_t param);
+	uint32_t(*cfg_otp) (uint32_t param);
 } SENSOR_IOCTL_FUNC_TAB_T, *SENSOR_IOCTL_FUNC_TAB_T_PTR;
 
 typedef struct sensor_i2c_tag {
@@ -546,6 +547,7 @@ typedef struct sensor_trim_tag {
 	uint16_t trim_height;
 	uint32_t line_time;
 	uint32_t pclk;
+	uint32_t frame_line;
 } SENSOR_TRIM_T, *SENSOR_TRIM_T_PTR;
 
 typedef struct _sensor_rect_tag {
