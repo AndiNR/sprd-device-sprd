@@ -415,8 +415,8 @@ public class DmServiceCU extends Service {
         mIsDebugMode = sharedPreferences.getBoolean(ITEM_DEBUG_MODE, false);
         Log.d("SmsReg", "mIsDebugMode = " + mIsDebugMode);
         //Bug#202335 Add by Katrina 2013.08.15
-        mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "sprd");
-        mModel = sharedPreferences.getString(ITEM_MODEL, "sp7710ga");
+        mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "Spreadtrum");
+        mModel = sharedPreferences.getString(ITEM_MODEL, "SP7710");
         mSoftVer = SystemProperties.get("ro.build.display.id","JZ055K");
         if (mIsDebugMode) {
             // init manufacture
