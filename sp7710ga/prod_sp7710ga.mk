@@ -99,7 +99,7 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/telephony.mk)
 # Overrides
 PRODUCT_NAME := sp7710ga
 PRODUCT_DEVICE := $(TARGET_BOARD)
-PRODUCT_MODEL := sp7710ga
+PRODUCT_MODEL := sp7710
 PRODUCT_BRAND := Spreadtrum
 PRODUCT_MANUFACTURER := Spreadtrum
 
