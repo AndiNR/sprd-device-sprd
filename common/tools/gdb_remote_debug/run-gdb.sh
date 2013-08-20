@@ -6,6 +6,7 @@ SCRIPT_NAME=$(basename $0)
 ADB=adb
 GDB=${GDB:-prebuilt/$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-x86/toolchain/arm-linux-androideabi-4.4.x/bin/arm-linux-androideabi-gdb}
 [ -f GDB ] || GDB=prebuilt/$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-gdb
+[ -f GDB ] || GDB=prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.6/bin/arm-linux-androideabi-gdb
 B2G_BIN=/system/b2g/b2g
 GDBINIT=/tmp/b2g.gdbinit.$(whoami)
 
@@ -78,7 +79,7 @@ fi
 sleep 1
 echo "set solib-absolute-prefix $SYMDIR" > $GDBINIT
 echo "handle SIGPIPE nostop" >> $GDBINIT
-echo "set solib-search-path $GECKO_OBJDIR/dist/bin:$SYMDIR/system/lib:$SYMDIR/system/lib/hw:$SYMDIR/system/lib/egl:$SYMDIR/system/bin:$GONK_OBJDIR/system/lib:$GONK_OBJDIR/system/lib/egl:$GONK_OBJDIR/system/lib/hw:$GONK_OBJDIR/system/vendor/lib:$GONK_OBJDIR/system/vendor/lib/hw:$GONK_OBJDIR/system/vendor/lib/egl" >> $GDBINIT
+echo "set solib-search-path $GECKO_OBJDIR/dist/bin:$SYMDIR/system/lib:$SYMDIR/system/lib/hw:$SYMDIR/system/lib/egl:$SYMDIR/system/bin:$GONK_OBJDIR/system/lib:$GONK_OBJDIR/system/lib/egl:$GONK_OBJDIR/system/lib/hw:$GONK_OBJDIR/system/lib/soundfx:$GONK_OBJDIR/system/vendor/lib:$GONK_OBJDIR/system/vendor/lib/hw:$GONK_OBJDIR/system/vendor/lib/egl" >> $GDBINIT
 echo "target extended-remote :$GDB_PORT" >> $GDBINIT
 
 PROG=$GECKO_OBJDIR/dist/bin/$(basename $B2G_BIN)
