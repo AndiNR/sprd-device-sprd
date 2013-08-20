@@ -11,6 +11,8 @@ import android.net.NetworkInfo.State;
 import android.os.Bundle;
 import android.os.Debug;
 import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 import android.widget.TextView;
 
@@ -47,8 +49,15 @@ public class netinfo extends Activity {
 					requestEvent(engconstents.ENG_AT_CCED, 0, SCELL);
 					requestEvent(engconstents.ENG_AT_CCED, 0, NCELL);
 				} else {
-					tv1.setText("network is unavailable");
-					if(DEBUG) Log.d(TAG, "network is unavailable");
+                    // Bug 203546 start
+                    Looper.prepare();
+                    new NetinfoToast().sendEmptyMessage(0);
+                    Looper.loop();
+                    /*
+                    tv1.setText("network is unavailable");
+                    if(DEBUG) Log.d(TAG, "network is unavailable");
+                    */
+                    // Bug 203546 end
 				}
 			}
 		}).start();
@@ -140,5 +149,18 @@ public class netinfo extends Activity {
 		else
 			return true;
 	}
+
+	// Bug 203546 start
+	private class NetinfoToast extends Handler
+	{
+	    @Override
+	    public void handleMessage(Message msg) {
+	     // TODO Auto-generated method stub
+	        super.handleMessage(msg);
+            tv1.setText("network is unavailable");
+            if(DEBUG) Log.d(TAG, "network is unavailable");
+	    }
+	}
+	// Bug 203546 end
 
 }
