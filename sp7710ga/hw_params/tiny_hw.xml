@@ -45,7 +45,7 @@
 </private>
 
 <private name="internal PA">
-  <func name="Inter PA Config" val="819" />
+  <func name="Inter PA Config" val="563" />
 </private>
 
 <device name="builtin-mic">
