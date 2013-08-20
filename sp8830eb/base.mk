@@ -79,7 +79,7 @@ PRODUCT_PACKAGES += \
 	libisp.so \
 	lights.$(TARGET_PLATFORM) \
 	audio.primary.$(TARGET_PLATFORM) \
-	audio_policy.$(TARGET_PLATFORM) \
+	audio_policy.default.so \
 	tinymix \
 	libvbeffect \
         sensors.$(TARGET_PLATFORM) \
