@@ -2124,7 +2124,7 @@ static int eng_modem2server(int status, eng_fdtype_t *fdtype)
 				tmp= read(modemfd, ptr, ENG_BUF_LEN);
 				ENG_LOG("%s [ptr=%s] tmp=[%d]",__func__, ptr, tmp);
 				if(tmp < 0) {
-					usleep(1000);
+    				usleep(50*1000);
 					ENG_LOG("%s: ENG_AT_NOHANDLE_CMD continue",__func__);
 					continue;
 				} else {
