@@ -44,8 +44,12 @@
   <func name="VBC EQ Profile Select" val="0" />
 </private>
 
-<private name="internal PA">
+<private name="internal PA for music">
   <func name="Inter PA Config" val="563" />
+</private>
+
+<private name="internal PA for call">
+  <func name="Inter PA Config" val="3123" />
 </private>
 
 <device name="builtin-mic">

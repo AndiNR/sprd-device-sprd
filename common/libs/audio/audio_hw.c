@@ -69,12 +69,13 @@
 
 #define CTL_TRACE(exp) ALOGW(#exp" is %s", ((exp) != NULL) ? "successful" : "failure")
 
-#define PRIVATE_MIC_BIAS                  "mic bias"
+#define PRIVATE_MIC_BIAS                 "mic bias"
 #define PRIVATE_VBC_CONTROL              "vb control"
 #define PRIVATE_VBC_EQ_SWITCH            "eq switch"
 #define PRIVATE_VBC_EQ_UPDATE            "eq update"
-#define PRIVATE_VBC_EQ_PROFILE            "eq profile"
-#define PRIVATE_INTERNAL_PA              "internal PA"
+#define PRIVATE_VBC_EQ_PROFILE           "eq profile"
+#define PRIVATE_INTERNAL_PA_MUSIC        "internal PA for music"
+#define PRIVATE_INTERNAL_PA_CALL         "internal PA for call"
 #define FM_DIGITAL_SUPPORT_PROPERTY  "ro.digital.fm.support"
 /* ALSA cards for sprd */
 #define CARD_SPRDPHONE "sprdphone"
@@ -371,6 +372,12 @@ static int s_tinycard = -1;
 static int s_vaudio = -1;
 static int s_vaudio_w = -1;
 static int s_sco= -1;
+
+/*
+ * Inter PA config
+ * */
+static int inter_pa_music;
+static int inter_pa_call;
 
 /**
  * NOTE: when multiple mutexes have to be acquired, always respect the following order:
@@ -2799,12 +2806,15 @@ static void adev_config_parse_private(struct config_parse_state *s, const XML_Ch
             s->adev->private_ctl.mic_bias_switch =
                  mixer_get_ctl_by_name(s->adev->mixer, name);
             CTL_TRACE(s->adev->private_ctl.mic_bias_switch);
-        } else if (strcmp(s->private_name, PRIVATE_INTERNAL_PA) == 0) {
-            int value = atoi(val);
+        } else if (strcmp(s->private_name, PRIVATE_INTERNAL_PA_MUSIC) == 0) {
+            inter_pa_music = atoi(val);
             s->adev->private_ctl.internal_pa =
                  mixer_get_ctl_by_name(s->adev->mixer, name);
-            mixer_ctl_set_value(s->adev->private_ctl.internal_pa, 0, value);
+            mixer_ctl_set_value(s->adev->private_ctl.internal_pa, 0, inter_pa_music);
             CTL_TRACE(s->adev->private_ctl.internal_pa);
+        } else if (strcmp(s->private_name, PRIVATE_INTERNAL_PA_CALL) == 0) {
+            inter_pa_call = atoi(val);
+            CTL_TRACE(PRIVATE_INTERNAL_PA_CALL);
         }
     }
 }

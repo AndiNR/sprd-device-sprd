@@ -282,6 +282,8 @@ static int vbc_call_open_device(struct tiny_audio_device *adev)
         pcm_close(adev->pcm_modem_dl);
         ret = -1;
     }
+
+    mixer_ctl_set_value(adev->private_ctl.internal_pa, 0, inter_pa_call);
     adev->call_start = 1;
     ALOGW("START CALL,open pcm device..call_start = %d.\n", adev->call_start);
 
@@ -1172,6 +1174,7 @@ RESTART:
                 write_common_head.cmd_type = VBC_CMD_RSP_CLOSE;     //ask cp to read vaudio data, "call_prestop" will stop to write pcm data again.
                 WriteParas_Head(para->vbpipe_fd, &write_common_head);
                 mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch vbc to arm
+                mixer_ctl_set_value(adev->private_ctl.internal_pa, 0, inter_pa_music);
                 if(adev->call_start){  //if mediaserver crashed, audio will reopen, "call_start" value is 0, should bypass all the settings.
                     ALOGW("VBC_CMD_HAL_CLOSE, try lock");
                     pthread_mutex_lock(&adev->lock);

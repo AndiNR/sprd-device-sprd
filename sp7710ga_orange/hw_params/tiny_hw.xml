@@ -48,6 +48,10 @@
   <func name="Inter PA Config" val="563" />
 </private>
 
+<private name="internal PA for call">
+  <func name="Inter PA Config" val="3123" />
+</private>
+
 <device name="builtin-mic">
   <path name="on">
      <ctl name="ADCL Mixer MainMICADCL Switch" val="1" />
