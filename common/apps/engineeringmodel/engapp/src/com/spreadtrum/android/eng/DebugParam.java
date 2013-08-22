@@ -151,7 +151,7 @@ public class DebugParam extends PreferenceActivity {
         /*Add 20130206 Spreadst of 122017 8810 7710 don't support PLMN start*/
         String mode = SystemProperties.get("ro.product.hardware");
         /*Modify 20130306 Spreadst of 130799 77XX dont support PLMN start */
-        if(mode.contains("8810") ||mode.contains("77")||mode.contains("8825")){
+        if(null != mode){//mode.contains("8810") ||mode.contains("77")||mode.contains("8825")){
             getPreferenceScreen().removePreference((Preference)findPreference("key_forbidplmn"));
             getPreferenceScreen().removePreference((Preference)findPreference("key_plmnselect"));
         }
