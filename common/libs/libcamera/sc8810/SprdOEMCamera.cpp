@@ -938,7 +938,7 @@ void *camera_encoder_thread(void *client_data)
 	uint32_t jpeg_enc_buf_len;
 	uint32_t i;
 
-	g_encoder_is_end = 0;
+	//g_encoder_is_end = 0;
 	ALOGV("camera_encoder_thread S. 0x%x 0x%x 0x%x 0x%x",
 		  g_buffers[g_releasebuff_index].virt_addr,g_buffers[g_releasebuff_index].phys_addr,
 		  s_camera_info.jpg_enc_y_temp_virt_addr,s_camera_info.jpg_enc_y_temp_phy_addr);
@@ -1159,7 +1159,8 @@ camera_ret_code_type camera_encode_picture(
 	}
 	else
 	{
-		ALOGV("OK to create thread in encoder mode.");
+	    g_encoder_is_end = 0;
+            ALOGV("OK to create thread in encoder mode.,g_encoder_is_end = %d",g_encoder_is_end);
 	}
 
 	return ret_type;
@@ -5756,7 +5757,7 @@ camera_ret_code_type camera_take_picture (
 
 	//get the take picture memory
 	camera_get_sensor_output_size(&sensor_output_w, &sensor_output_h);
-	ALOGV("camera_take_picture, output_w %d, output_h %d, picture_width %d, picture_height %d", 
+	ALOGV("camera_take_picture, output_w %d, output_h %d, picture_width %d, picture_height %d",
 		sensor_output_w, sensor_output_h, g_dcam_dimensions.picture_width, g_dcam_dimensions.picture_height);
 	if((sensor_output_w * sensor_output_h) > ( g_dcam_dimensions.picture_width* g_dcam_dimensions.picture_height))
 		size = (sensor_output_w * sensor_output_h  * 2) * g_capture_buffer_num;
