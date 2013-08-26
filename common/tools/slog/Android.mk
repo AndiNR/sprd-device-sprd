@@ -1,4 +1,4 @@
-ifeq ($(strip $(SPRDROID4.3_DEV)),true)
+#ifeq ($(strip $(SPRDROID4.3_DEV)),true)
 LOCAL_PATH:= $(call my-dir)
 
 #slog
@@ -8,6 +8,9 @@ LOCAL_MODULE := slog
 LOCAL_STATIC_LIBRARIES := libcutils libc
 LOCAL_MODULE_TAGS := optional
 ifeq ($(PLATFORM_VERSION),4.1.2)
+LOCAL_CFLAGS += -DSLOG_ALOGD_ALOGE
+endif
+ifeq ($(PLATFORM_VERSION),4.3)
 LOCAL_CFLAGS += -DSLOG_ALOGD_ALOGE
 endif
 ifeq ($(PLATFORM_VERSION),2.3.5)
@@ -73,4 +76,4 @@ CUSTOM_MODULES += tar
 CUSTOM_MODULES += tcp
 CUSTOM_MODULES += slog.conf
 CUSTOM_MODULES += slog.conf.user
-endif
+#endif
