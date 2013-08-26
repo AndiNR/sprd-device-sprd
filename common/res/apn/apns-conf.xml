@@ -172,7 +172,7 @@
         user=""
         server=""
         password=""
-        type="default,supl"
+        type="default,supl,hipri"
         preload="1"
     />
     <apn carrier="China Unicom 3G WAP"
@@ -184,7 +184,7 @@
         user=""
         server=""
         password=""
-        type="default,supl"
+        type="default,supl,hipri"
         preload="1"
     />
     <apn carrier="China Unicom 3G MMS"
@@ -206,7 +206,7 @@
         user=""
         server=""
         password=""
-        type="default,supl"
+        type="default,supl,hipri"
         preload="1"
     />
     <apn carrier="China Unicom 3G WAP"
@@ -218,7 +218,7 @@
         user=""
         server=""
         password=""
-        type="default,hirpi"
+        type="default,hipri"
         preload="1"
     />
     <apn carrier="China Unicom 3G MMS"
