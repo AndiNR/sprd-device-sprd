@@ -25,4 +25,10 @@
         android:storageDescription="@string/storage_internal"
         android:emulated="true"
         android:mtpReserve="100" />
+    <!-- external SD card -->
+    <storage android:mountPoint="/storage/sdcard1"
+            android:storageDescription="@string/storage_sd_card"
+            android:removable="true"
+            android:allowMassStorage="true" />
+
 </StorageList>
