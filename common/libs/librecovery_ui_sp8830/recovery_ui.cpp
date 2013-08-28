@@ -24,12 +24,21 @@ static const char* HEADERS[] = { "Volume up/down to move highlight;",
                                  "enter button to select.",
                                  "",
                                  NULL };
+/* SPRD: add menuitems @{ */
+//static const char* ITEMS[] =  {"reboot system now",
+//                               "apply update from ADB",
+//                               "wipe data/factory reset",
+//                               "wipe cache partition",
+//                               NULL };
 
 static const char* ITEMS[] =  {"reboot system now",
                                "apply update from ADB",
                                "wipe data/factory reset",
                                "wipe cache partition",
+                               "apply update from external storage",
+                               "apply update from cache",
                                NULL };
+/* @} */
 
 class DefaultUI : public ScreenRecoveryUI {
   public:
@@ -74,6 +83,10 @@ class DefaultDevice : public Device {
           case 1: return APPLY_ADB_SIDELOAD;
           case 2: return WIPE_DATA;
           case 3: return WIPE_CACHE;
+          /* SPRD: invoke menuitem @{ */
+          case 4: return APPLY_EXT;
+          case 5: return APPLY_CACHE;
+          /* @} */
           default: return NO_ACTION;
         }
     }
