@@ -207,14 +207,14 @@ BOOLEAN		ramDisk_Read(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 	}
 
 // 0 get read order
-	if(rand()%2){
-		firstName = _ramdiskCfg[idx].image_path;
-		secondName = _ramdiskCfg[idx].imageBak_path;
-	}
-	else{
+//	if(rand()%2){
+//		firstName = _ramdiskCfg[idx].image_path;
+//		secondName = _ramdiskCfg[idx].imageBak_path;
+//	}
+//	else{
 		secondName = _ramdiskCfg[idx].image_path;
 		firstName = _ramdiskCfg[idx].imageBak_path;
-	}
+//	}
 // 1 read first image
 	memset(buf,0xFF,size);
 	fileHandle = open(firstName, O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
