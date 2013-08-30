@@ -19,5 +19,5 @@ add_lunch_combo sp7735ebcuccspecAplus_UUI-userdebug
 add_lunch_combo sp8735ebplus_UUI-userdebug
 add_lunch_combo sp8835ebcmccspecAplus_UUI-userdebug
 add_lunch_combo sp8835ebbase-userdebug
-
+add_lunch_combo sp8835ebplus-userdebug
 
