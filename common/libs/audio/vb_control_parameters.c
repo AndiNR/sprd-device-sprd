@@ -8,6 +8,7 @@
 #include <dlfcn.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
+#include <tinyalsa/asoundlib.h>
 #include "aud_enha.h"
 
 //#ifdef __cplusplus
@@ -59,6 +60,11 @@ typedef struct Switch_ctrl
     unsigned int  is_switch; /* switch vbc contrl to dsp.*/
 }switch_ctrl_t;
 
+typedef struct Samplerate_ctrl
+{
+    unsigned short samplerate; /* change samplerate.*/
+}set_samplerate_t;
+
 typedef struct Set_Mute
 {
     unsigned int  is_mute;
@@ -68,9 +74,9 @@ typedef struct Device_ctrl
 {
     unsigned short  	is_open; /* if is_open is true, open device; else close device.*/
     unsigned short  	is_headphone;
-	unsigned int 		is_downlink_mute;
-	unsigned int 		is_uplink_mute;
-	paras_mode_gain_t 	paras_mode;
+    unsigned int 	is_downlink_mute;
+    unsigned int 	is_uplink_mute;
+    paras_mode_gain_t 	paras_mode;
 }device_ctrl_t;
 
 typedef struct Open_hal
@@ -80,14 +86,14 @@ typedef struct Open_hal
 
 
 typedef struct {
-	unsigned short adc_pga_gain_l;
-	unsigned short adc_pga_gain_r;
+    unsigned short adc_pga_gain_l;
+    unsigned short adc_pga_gain_r;
     uint32_t fm_pga_gain_l;
     uint32_t fm_pga_gain_r;
-	uint32_t dac_pga_gain_l;
-	uint32_t dac_pga_gain_r;
-	uint32_t devices;
-	uint32_t mode;
+    uint32_t dac_pga_gain_l;
+    uint32_t dac_pga_gain_r;
+    uint32_t devices;
+    uint32_t mode;
 }pga_gain_nv_t;
 
 /* list vbc cmds */
@@ -109,11 +115,14 @@ enum VBC_CMD_E
     VBC_CMD_DEVICE_CTRL = 9,
     VBC_CMD_RSP_DEVICE = 10,
 
-	VBC_CMD_HAL_OPEN = 11,
-	VBC_CMD_RSP_OPEN  =12,
+    VBC_CMD_HAL_OPEN = 11,
+    VBC_CMD_RSP_OPEN  =12,
 
-	VBC_CMD_HAL_CLOSE = 13,
-	VBC_CMD_RSP_CLOSE = 14,
+    VBC_CMD_HAL_CLOSE = 13,
+    VBC_CMD_RSP_CLOSE = 14,
+
+    VBC_CMD_SET_SAMPLERATE = 15,
+    VBC_CMD_RSP_SAMPLERATE = 16,
 
     VBC_CMD_MAX
 };
@@ -341,6 +350,17 @@ static int  ReadParas_SwitchCtrl(int fd_pipe,  switch_ctrl_t *paras_ptr)
     int ret = 0;
     if (fd_pipe > 0 && paras_ptr != NULL) {
         ret = read(fd_pipe, paras_ptr, sizeof(switch_ctrl_t));
+    }
+    return ret;
+}
+
+static int  ReadParas_SetSamplerate(int fd_pipe,  set_samplerate_t *paras_ptr)
+{
+    int ret = 0;
+    if (fd_pipe > 0 && paras_ptr != NULL) {
+        ret = read(fd_pipe, paras_ptr, sizeof(set_samplerate_t));
+        if(ret != sizeof(set_samplerate_t))
+            ret = -1;
     }
     return ret;
 }
@@ -784,6 +804,30 @@ int GetParas_Switch_Incall(int fd_pipe,switch_ctrl_t *swtich_ctrl_paras)	/* swit
 	return ret;
 }
 
+int GetParas_Samplerate_Incall(int fd_pipe,set_samplerate_t *set_samplerate_paras)	/* set samplerate*/
+{
+    int ret = 0;
+    parameters_head_t read_common_head;
+    memset(&read_common_head, 0, sizeof(parameters_head_t));
+    MY_TRACE("%s in...",__func__);
+
+    ret = Write_Rsp2cp(fd_pipe,VBC_CMD_SET_SAMPLERATE);
+    if(ret < 0){
+        ALOGE("Error, %s Write_Rsp2cp failed(%d)",__func__,ret);
+    }
+    ret = ReadParas_SetSamplerate(fd_pipe,set_samplerate_paras);
+    if (ret <= 0) {
+        ALOGE("Error, read ReadParas_SetSamplerate ret(%d) failed(%s)",ret,strerror(errno));
+    }
+    if(set_samplerate_paras->samplerate <= 0){
+        ALOGW("Error, get wrong samplerate(%d),set default ",set_samplerate_paras->samplerate);
+        set_samplerate_paras->samplerate = VX_NB_SAMPLING_RATE; //8k
+    }
+    MY_TRACE("%s successfully ,samplerate(%d) ",__func__,set_samplerate_paras->samplerate);
+    return ret;
+}
+
+
 int SetParas_Route_Incall(int fd_pipe,struct tiny_audio_device *adev)
 {
 	int ret = 0;
@@ -847,6 +891,7 @@ int SetParas_DeviceCtrl_Incall(int fd_pipe,struct tiny_audio_device *adev)
 {
 	int ret = 0;
 	device_ctrl_t device_ctrl_paras;
+	struct mixer_ctl *ctl;
 	memset(&device_ctrl_paras,0,sizeof(device_ctrl_t));
 	MY_TRACE("%s in.....",__func__);
 
@@ -865,12 +910,56 @@ int SetParas_DeviceCtrl_Incall(int fd_pipe,struct tiny_audio_device *adev)
 	if(device_ctrl_paras.is_open){
 		SetCall_ModePara(adev,&device_ctrl_paras.paras_mode);
 		SetCall_VolumePara(adev,&device_ctrl_paras.paras_mode);
+
+		ctl = mixer_get_ctl_by_name(adev->mixer, "Speaker Function");
+		ret = mixer_ctl_set_value(ctl, 0, 0);
+		ctl = mixer_get_ctl_by_name(adev->mixer, "HeadPhone Mute");
+		ret = mixer_ctl_set_value(ctl, 0, 1);
+		ctl = mixer_get_ctl_by_name(adev->mixer, "Earpiece Function");
+		ret = mixer_ctl_set_value(ctl, 0, 0);
 	}else{
 		ALOGW("%s close device...",__func__);
 	}
 	Write_Rsp2cp(fd_pipe,VBC_CMD_DEVICE_CTRL);
 	MY_TRACE("%s send rsp to cp...",__func__);
 	return ret;
+}
+
+int SetParas_Samplerate_Incall(int fd_pipe,struct tiny_audio_device *adev)
+{
+    int ret = 0;
+    struct mixer_ctl *ctl;
+    set_samplerate_t device_set_samplerate;
+    memset(&device_set_samplerate,0,sizeof(set_samplerate_t));
+    MY_TRACE("%s in.....",__func__);
+
+    ret = GetParas_Samplerate_Incall(fd_pipe,&device_set_samplerate);
+    if(ret < 0){
+        return ret;
+    }
+    if( 10 == device_set_samplerate.samplerate ){
+        if( android_cur_device & AUDIO_DEVICE_OUT_SPEAKER){
+            ctl = mixer_get_ctl_by_name(adev->mixer, "Speaker Function");
+            mixer_ctl_set_value(ctl, 0, 1);
+        }
+        if( android_cur_device & AUDIO_DEVICE_OUT_EARPIECE){
+            ctl = mixer_get_ctl_by_name(adev->mixer, "Earpiece Function");
+            mixer_ctl_set_value(ctl, 0, 1);
+        }
+        if( (android_cur_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) ||
+                (android_cur_device & AUDIO_DEVICE_OUT_WIRED_HEADSET)){
+            ctl = mixer_get_ctl_by_name(adev->mixer, "HeadPhone Mute");
+            mixer_ctl_set_value(ctl, 0, 0);
+        }
+    }
+    else {
+    }
+    ret = Write_Rsp2cp(fd_pipe,VBC_CMD_SET_SAMPLERATE);
+    if(ret < 0){
+        ALOGE("Error, %s Write_Rsp2cp1 failed(%d).",__func__,ret);
+    }
+    MY_TRACE("%s send rsp to cp...",__func__);
+    return ret;
 }
 
 
@@ -974,7 +1063,7 @@ int vbc_ctrl_open(struct tiny_audio_device *adev)
 
     MY_TRACE("%s IN.",__func__);
     s_is_active = 1;
-	vbc_ctrl_init(adev);
+    vbc_ctrl_init(adev);
     while(i<s_vbc_pipe_count)
     {
         rc = pthread_create((pthread_t *)(s_vbc_ctrl_thread_id+i), NULL,
@@ -1031,6 +1120,8 @@ void *vbc_ctrl_thread_routine(void *arg)
     parameters_head_t write_common_head;
     para = (vbc_ctrl_thread_para_t *)arg;
     adev = (struct tiny_audio_device *)(para->adev);
+
+	struct mixer_ctl *ctl;
 
     memset(&read_common_head, 0, sizeof(parameters_head_t));
     memset(&write_common_head, 0, sizeof(parameters_head_t));
@@ -1193,6 +1284,8 @@ RESTART:
                 ReadParas_Head(para->vbpipe_fd,&write_common_head);
                 Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_HAL_CLOSE);
                 adev->call_prestop = 0;
+                ctl = mixer_get_ctl_by_name(adev->mixer, "HeadPhone Mute");
+                ret = mixer_ctl_set_value(ctl, 0, 0);
                 vbc_call_set_flag(VBC_CALL_CLOSE_DEVICE);
                 MY_TRACE("VBC_CMD_HAL_CLOSE OUT.");
             }
@@ -1255,6 +1348,21 @@ RESTART:
             case VBC_CMD_SET_MUTE:
             {
                 MY_TRACE("VBC_CMD_SET_MUTE IN.");
+                int ret;
+                set_mute_t mute_status;
+                ret = read(para->vbpipe_fd, &mute_status, sizeof(set_mute_t));
+
+                ctl = mixer_get_ctl_by_name(adev->mixer, "Speaker Function");
+                ret = mixer_ctl_set_value(ctl, 0, 0);
+                ctl = mixer_get_ctl_by_name(adev->mixer, "HeadPhone Mute");
+                ret = mixer_ctl_set_value(ctl, 0, 1);
+                //ctl = mixer_get_ctl_by_name(adev->mixer, "HeadPhone Function");
+                //ret = mixer_ctl_set_value(ctl, 0, 0);
+                ctl = mixer_get_ctl_by_name(adev->mixer, "Earpiece Function");
+                ret = mixer_ctl_set_value(ctl, 0, 0);
+
+                write_common_head.cmd_type = VBC_CMD_RSP_MUTE;     //ask cp to read vaudio data, "call_prestop" will stop to write pcm data again.
+                WriteParas_Head(para->vbpipe_fd, &write_common_head);
 
                 MY_TRACE("VBC_CMD_SET_MUTE OUT.");
             }
@@ -1270,6 +1378,17 @@ RESTART:
                 MY_TRACE("VBC_CMD_DEVICE_CTRL OUT.");
             }
             break;
+            case VBC_CMD_SET_SAMPLERATE:
+                {
+                    MY_TRACE("VBC_CMD_SET_SAMPLERATE IN.");
+                    ret = SetParas_Samplerate_Incall(para->vbpipe_fd,adev);
+                    if(ret < 0){
+                        MY_TRACE("VBC_CMD_SET_SAMPLERATE SetParas_Samplerate_Incall error.s_is_exit:%d ",para->is_exit);
+                        para->is_exit = 1;
+                    }
+                    MY_TRACE("VBC_CMD_SET_SAMPLERATE OUT.");
+                }
+                break;
             default:
                 ALOGE("Error: %s wrong cmd_type(%d)",__func__,read_common_head.cmd_type);
             break;
