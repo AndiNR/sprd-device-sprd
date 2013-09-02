@@ -1,12 +1,12 @@
 LOCAL_PATH := $(call my-dir)
-
-$(call add-radio-file,modem_bins/modem.bin)
-$(call add-radio-file,modem_bins/nvitem.bin)
-$(call add-radio-file,modem_bins/dsp.bin)
-ifeq ($(strip $(TARGET_VLX_ENABLE)),true)
-$(call add-radio-file,modem_bins/vmjaluna.bin)
-endif
-
+# SPRD: add td and w modem file @{
+$(call add-radio-file,modem_bins/tdmodem.bin)
+$(call add-radio-file,modem_bins/tdnvitem.bin)
+$(call add-radio-file,modem_bins/tddsp.bin)
+$(call add-radio-file,modem_bins/wmodem.bin)
+$(call add-radio-file,modem_bins/wnvitem.bin)
+$(call add-radio-file,modem_bins/wdsp.bin)
+# @}
 
 # Compile U-Boot
 ifneq ($(strip $(TARGET_NO_BOOTLOADER)),true)
