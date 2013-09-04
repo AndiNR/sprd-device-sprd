@@ -1,4 +1,4 @@
-ifeq ($(strip $(SPRDROID4.3_DEV)),true)
+#ifeq ($(strip $(SPRDROID4.3_DEV)),true)
 ifneq ($(TARGET_SIMULATOR),true)
 #ENGSERVER
 LOCAL_PATH := $(call my-dir)
@@ -232,4 +232,4 @@ LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_EXECUTABLE)
 endif
-endif
+#endif

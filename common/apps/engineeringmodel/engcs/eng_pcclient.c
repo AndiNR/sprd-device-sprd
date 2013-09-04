@@ -753,7 +753,7 @@ void eng_check_factorymode_fornand(void)
     ENG_LOG("%s: status=%x\n",__func__, status);
     property_get("persist.sys.usb.config", config_property, "");
     if((status==1)||(status == ENG_SQLSTR2INT_ERR)) {
-        fd=open(ENG_FACOTRYMODE_FILE, O_RDWR|O_CREAT|O_TRUNC);
+        fd=open(ENG_FACOTRYMODE_FILE, O_RDWR|O_CREAT|O_TRUNC, 0666);
         if(fd >= 0)
             close(fd);
         /*
@@ -798,7 +798,7 @@ void eng_check_factorymode_fornand(void)
     }
 #endif
 
-    fd=open(ENG_FACOTRYSYNC_FILE, O_RDWR|O_CREAT|O_TRUNC);
+    fd=open(ENG_FACOTRYSYNC_FILE, O_RDWR|O_CREAT|O_TRUNC, 0666);
     if(fd >= 0)
         close(fd);
 }
@@ -821,7 +821,7 @@ void eng_check_factorymode_formmc(void)
         ALOGD("%s: %s is %s, n=%d\n",__FUNCTION__, RAWDATA_PROPERTY, status_buf,ret);
     }while(ret!=1);
 
-    fd=open(ENG_FACOTRYMODE_FILE, O_RDWR|O_CREAT|O_TRUNC);
+    fd=open(ENG_FACOTRYMODE_FILE, O_RDWR|O_CREAT|O_TRUNC, 0666);
 
     ALOGD("%s: fd=%d, status=%x\n",__FUNCTION__, fd, status);
 
@@ -858,7 +858,7 @@ void eng_check_factorymode_formmc(void)
         close(fd);
     }
 
-    fd=open(ENG_FACOTRYSYNC_FILE, O_RDWR|O_CREAT|O_TRUNC);
+    fd=open(ENG_FACOTRYSYNC_FILE, O_RDWR|O_CREAT|O_TRUNC, 0666);
     if(fd >= 0)
         close(fd);
 }
