@@ -15,7 +15,7 @@
  */
 
 #define LOG_TAG "audio_hw_primary"
-#define LOG_NDEBUG 0
+/* #define LOG_NDEBUG 0 */
 
 #include <errno.h>
 #include <pthread.h>
@@ -53,14 +53,22 @@
 #include "audio_mux_pcm.h"
 #endif
 
-#define XRUN_DEBUG
+//#define XRUN_DEBUG
+//#define ROUTE_DEBUG
 
 #ifdef XRUN_DEBUG
 #define XRUN_TRACE  ALOGW
 #else
 #define XRUN_TRACE
 #endif
+
 #define BLUE_TRACE  ALOGW
+
+#ifdef ROUTE_DEBUG
+#define ROUTE_TRACE ALOGI
+#else
+#define ROUTE_TRACE
+#endif
 
 //#define AUDIO_DUMP
 #define AUDIO_OUT_FILE_PATH    "data/audio_out.pcm"
@@ -548,7 +556,7 @@ static int set_route_by_array(struct mixer *mixer, struct route_setting *route,
                 ALOGE("Failed to set '%s' to '%s'\n",
                 route[i].ctl_name, route[i].strval);
             } else {
-                ALOGI("Set '%s' to '%s'\n",
+                ROUTE_TRACE("Set '%s' to '%s'\n",
                 route[i].ctl_name, route[i].strval);
             }
         } else {
@@ -559,7 +567,7 @@ static int set_route_by_array(struct mixer *mixer, struct route_setting *route,
                     ALOGE("Failed to set '%s'.%d to %d\n",
                     route[i].ctl_name, j, route[i].intval);
                 } else {
-                    ALOGI("Set '%s'.%d to %d\n",
+                    ROUTE_TRACE("Set '%s'.%d to %d\n",
                     route[i].ctl_name, j, route[i].intval);
                 }
 	        }
@@ -676,10 +684,10 @@ static void force_all_standby(struct tiny_audio_device *adev)
     struct tiny_stream_out *out;
 
     if (adev->active_output) {
-        ALOGW("force_all_standby request out->lock");
+        XRUN_TRACE("force_all_standby request out->lock");
 	out = adev->active_output;
 	pthread_mutex_lock(&out->lock);
-        ALOGW("force_all_standby got out->lock");
+        XRUN_TRACE("force_all_standby got out->lock");
 	do_output_standby(out);
 	pthread_mutex_unlock(&out->lock);
     }
@@ -690,7 +698,7 @@ static void force_all_standby(struct tiny_audio_device *adev)
 	do_input_standby(in);
 	pthread_mutex_unlock(&in->lock);
     }
-    ALOGW("force_all_standby exit");
+    XRUN_TRACE("force_all_standby exit");
 }
 
 static void select_mode(struct tiny_audio_device *adev)
@@ -915,7 +923,6 @@ static int start_output_stream(struct tiny_stream_out *out)
             adev->active_output = NULL;
             return -ENOMEM;
         }
-        BLUE_TRACE("open s_tinycard successfully");
     }
 
     if (adev->echo_reference != NULL)
@@ -1156,11 +1163,11 @@ static int out_standby(struct audio_stream *stream)
 
     pthread_mutex_lock(&out->dev->lock);
     pthread_mutex_lock(&out->lock);
-    ALOGW("out_standby got out->lock"); 
+    XRUN_TRACE("out_standby got out->lock");
     status = do_output_standby(out);
     pthread_mutex_unlock(&out->lock);
     pthread_mutex_unlock(&out->dev->lock);
-    ALOGW("out_standby release out->lock");
+    XRUN_TRACE("out_standby release out->lock");
     return status;
 }
 
@@ -1216,7 +1223,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
         pthread_mutex_unlock(&out->lock);
         pthread_mutex_unlock(&adev->lock);
-        ALOGW("out_set_parameters release out->lock");
+        XRUN_TRACE("out_set_parameters release out->lock");
     }
 
     if (AUDIO_MODE_IN_CALL == adev->mode) {
@@ -1272,7 +1279,7 @@ static bool out_bypass_data(struct tiny_stream_out *out, uint32_t frame_size, ui
         usleep(bytes * 1000000 / frame_size / sample_rate);
         return true;
     }else{
-        ALOGW("no bypass data");
+        XRUN_TRACE("no bypass data");
         return false;
     }
 }
