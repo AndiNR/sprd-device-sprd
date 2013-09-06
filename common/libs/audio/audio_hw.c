@@ -608,6 +608,14 @@ static void do_select_devices(struct tiny_audio_device *adev)
 			continue;
 		}
 	    }
+
+            /*
+             * linein means FM play, we should set pga gain before the route path.
+             * */
+            if ((AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET | AUDIO_DEVICE_OUT_ALL_FM) == adev->dev_cfgs[i].mask) {
+                SetAudio_gain_route(adev,1);
+            }
+
 	    set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
 			       adev->dev_cfgs[i].on_len);
     }
