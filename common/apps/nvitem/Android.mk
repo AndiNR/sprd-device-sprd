@@ -1,4 +1,3 @@
-ifeq ($(strip $(SPRDROID4.3_DEV)),true)
 ifneq ($(TARGET_SIMULATOR),true)
 LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
@@ -25,7 +24,8 @@ LOCAL_SHARED_LIBRARIES := \
     libhardware_legacy \
     libc \
     libutils \
-    libengclient
+    libengclient \
+    liblog
 
 #ifeq ($(strip $(TARGET_USERIMAGES_USE_EXT4)),true)
 #LOCAL_CFLAGS := -DCONFIG_EMMC
@@ -34,5 +34,4 @@ LOCAL_SHARED_LIBRARIES := \
 LOCAL_MODULE := nvitemd
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
-endif
 endif
