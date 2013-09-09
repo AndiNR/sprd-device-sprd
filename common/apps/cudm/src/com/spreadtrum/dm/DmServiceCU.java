@@ -343,6 +343,7 @@ public class DmServiceCU extends Service {
 	            Log.d(TAG, "onStart: not need to register");
 	            Intent stop = new Intent("com.android.dm.stop"); 
 	            mContext.sendBroadcast(stop);
+                    return;
             }
             if (getSelfRegSwitch()) {
             	for (int i= 0; i< mPhoneCnt; i++)
