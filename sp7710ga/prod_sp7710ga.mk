@@ -49,8 +49,12 @@ endif
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=1
+#yingmin.piao for #Bug189515 kdump switch 20130715
+  PRODUCT_PROPERTY_OVERRIDES += persist.sys.kdump.enable=0
 else
   PRODUCT_PROPERTY_OVERRIDES += persist.sys.sprd.modemreset=0
+  #yingmin.piao for #Bug189515 kdump switch 20130715
+  PRODUCT_PROPERTY_OVERRIDES += persist.sys.kdump.enable=1
 endif
 
 ifeq ($(TARGET_HVGA_ENABLE), true)

@@ -18,8 +18,13 @@ import android.preference.PreferenceScreen;
 import android.util.Log;
 import android.widget.Toast;
 
+import android.app.Dialog;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnCancelListener;
 
-public class LogSetting extends PreferenceActivity implements OnSharedPreferenceChangeListener {
+
+public class LogSetting extends PreferenceActivity implements OnSharedPreferenceChangeListener, OnCancelListener{ 
     private static final boolean DEBUG = Debug.isDebug();
     private static final String LOG_TAG = "LogSetting";
 
@@ -30,11 +35,21 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
     private static final int LOG_ANDROID = 4;
     private static final int LOG_MODEM_SLOG = 5;
     private static final int LOG_IQ_LOG = 6;
+   //modified by yingmin.piao for #Bug189515 kdump switch 20130715 -->
+    private static final int LOG_KDUMP = 7;
+    private static final int LOG_MANUAL_PANIC = 8;
+    //<--
 
     private static final String PROPERTY_LOGCAT = "persist.sys.logstate";
     private static final String KEY_ANDROID_LOG = "android_log_enable";
+    private static final String KEY_KDUMP = "kdump_enable";
+    //modified by yingmin.piao for #Bug189515 kdump switch 20130715 -->
+    private static final String KEY_MANUAL_PANIC = "manual_panic";
     private static final String KEY_DSP_LOG = "dsplog_enable";
     private static final String KEY_IQ_LOG= "iq_log_enable";
+    private static final int DLG_MANUAL_PANIC = 1;
+    private CheckBoxPreference kdumpPrefs;
+    //<--
 
     private CheckBoxPreference androidLogPrefs;
     private ListPreference DspPrefs;
@@ -58,6 +73,9 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
 
         if(DEBUG) Log.d(LOG_TAG, "logsetting activity onCreate.");
         androidLogPrefs = (CheckBoxPreference)findPreference(KEY_ANDROID_LOG);
+		//modified by yingmin.piao for #Bug189515 kdump switch 20130715 -->
+        kdumpPrefs =  (CheckBoxPreference)findPreference(KEY_KDUMP);
+        //<--
         /*Add 20130530 spreadst of 171854 add dump iq checkbox start*/
         iqLogPrefs = (CheckBoxPreference)findPreference(KEY_IQ_LOG);
         /*Add 20130530 spreadst of 171854 add dump iq checkbox end*/
@@ -98,6 +116,9 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
     if(DEBUG) Log.d(LOG_TAG, "logsetting activity onStart.");
         int androidLogState = LogSettingGetLogState(LOG_ANDROID);
         androidLogPrefs.setChecked(androidLogState == 1);
+        //modified by yingmin.piao for #Bug189515 kdump switch 20130715 -->
+        kdumpPrefs.setChecked(LogSettingGetLogState(LOG_KDUMP) == 1);
+        //<--
         oldDSPValue = LogSettingGetLogState(LOG_DSP);
         updataDSPOption(oldDSPValue);
         super.onStart();
@@ -148,6 +169,12 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
             logType = LOG_MODEM_ARM;
         } else if("android_log_enable".equals(key)){
             logType = LOG_ANDROID;
+		 //modified by yingmin.piao for #Bug189515 kdump switch 20130715 -->
+        }else if(KEY_KDUMP.equals(key)){
+            logType = LOG_KDUMP;
+        } else if(KEY_MANUAL_PANIC.equals(key)){
+            logType = LOG_MANUAL_PANIC;
+        //<--
         } else if("modem_slog_enable".equals(key)){
             logType = LOG_MODEM_SLOG;
         /*Add 20130530 spreadst of 171854 add dump iq checkbox start*/
@@ -297,6 +324,21 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
             state = "running".equals(re)?1:0;
         }
         break;
+       //modified by yingmin.piao for #Bug189515 kdump switch 20130715 -->
+        case LOG_KDUMP:
+	{
+            String re = SystemProperties.get("persist.sys.kdump.enable", "0");
+            try {
+                state = Integer.parseInt(re);
+            } catch (Exception e) {
+                state = 0;
+            }
+        }
+        break;
+        case LOG_MANUAL_PANIC:
+            state = 1;
+        break;
+        //<--
         case LOG_MODEM_SLOG: {
             /*Modify 20130527 spreadst of 166285:close the modem log in user-version start*/
             String re = SystemProperties.get("persist.sys.modem_slog");
@@ -423,6 +465,18 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
                     SystemProperties.set("ctl.stop", "logs4android");
                 }
             break;
+            //modified by yingmin.piao for #Bug189515 kdump switch 20130715 -->
+            case LOG_KDUMP:
+                if(state == 1){
+                    SystemProperties.set("persist.sys.kdump.enable", "1");
+                }else {
+                    SystemProperties.set("persist.sys.kdump.enable", "0");
+                }
+            break;
+            case LOG_MANUAL_PANIC:
+                doManualPanic();
+            break;
+            //<--
             case LOG_MODEM_SLOG: {
                 SystemProperties.set("persist.sys.modem_slog",String.valueOf(state));
                 outputBuffer = new ByteArrayOutputStream();
@@ -509,6 +563,35 @@ public class LogSetting extends PreferenceActivity implements OnSharedPreference
             break;
         }
     }
+    //modified by yingmin.piao for #Bug189515 kdump switch 20130715 -->
+    private void doManualPanic() {
+        removeDialog(DLG_MANUAL_PANIC);
+        showDialog(DLG_MANUAL_PANIC);
+    }
+
+    @Override
+    public Dialog onCreateDialog(int id, Bundle args) {
+        switch (id) {
+        case DLG_MANUAL_PANIC:
+        return new AlertDialog.Builder(this)
+            .setTitle(R.string.manual_panic_title)
+            .setPositiveButton(R.string.dlg_ok, new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int which) {
+                    SystemProperties.set("sys.manual.panic", "1");
+                }})
+            .setNegativeButton(R.string.dlg_cancel, null)
+            .setMessage(R.string.manual_panic_message)
+            .setOnCancelListener(this)
+            .create();
+        }
+        return null;
+    }
+
+    @Override
+    public void onCancel(DialogInterface dialog) {
+        finish();
+    }
+    //<--
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {

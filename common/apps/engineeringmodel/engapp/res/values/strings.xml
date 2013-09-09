@@ -132,6 +132,9 @@
         <string name="btut_test">BT EUT test</string>
         <string name="btut_tag">enter BT EUT mode，waiting...</string>
 
+        <!--  add by yingmin.piao for kdump -->
+        <string name="dlg_ok">ok</string>
+        <string name="dlg_cancel">cancel</string>
 	<!-- SlogUI add by Yuntao.xiao -->
     <string name="label_slogui">SlogUI</string>
     <string name="rdo_general_on">On</string>
@@ -243,5 +246,9 @@
     <string name="sim1">SIM1 IMEI</string>
     <string name="sim2">SIM2 IMEI</string>
 <!-- add IMEI end -->
+    <!-- modified by yingmin.piao for #Bug189515 kdump switch 20130715 begin -->
+    <string name="manual_panic_title">Manual Panic</string>
+    <string name="manual_panic_message">This operation will be manually shut down,Do you want continue?</string>
+    <!-- modified by yingmin.piao for #Bug189515 kdump switch 20130715 end -->
 
 </resources>
