@@ -14019,18 +14019,18 @@
     />
     -->
     <!-- Kenya YU -->
+    <!-- SPRD: Modify the default APN is directly connected @{ -->
     <apn carrier="yu wap"
         mcc="639"
         mnc="05"
         apn="internet"
-        proxy="10.4.16.6"
-        port="8080"
         server="http://wap.yu.co.ke"
         user=""
         password=""
         type="default,supl"
         authtype="1"
     />
+    <!-- @} -->
     <apn carrier="yu mms"
         mcc="639"
         mnc="05"
