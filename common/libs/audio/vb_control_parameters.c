@@ -889,40 +889,51 @@ int SetParas_Switch_Incall(int fd_pipe,int vbchannel_id,struct tiny_audio_device
 
 int SetParas_DeviceCtrl_Incall(int fd_pipe,struct tiny_audio_device *adev)
 {
-	int ret = 0;
-	device_ctrl_t device_ctrl_paras;
-	struct mixer_ctl *ctl;
-	memset(&device_ctrl_paras,0,sizeof(device_ctrl_t));
-	MY_TRACE("%s in.....",__func__);
+    int ret = 0;
+    device_ctrl_t device_ctrl_paras;
+    struct mixer_ctl *ctl;
+    memset(&device_ctrl_paras,0,sizeof(device_ctrl_t));
+    MY_TRACE("%s in.....",__func__);
 
-	//because of codec,we should set headphone on first if codec is controlled by dsp
+    /*
+     * because of codec,we should set headphone on first if codec is controlled by dsp
+     */
 #ifdef _DSP_CTRL_CODEC
-	set_call_route(adev, AUDIO_DEVICE_OUT_WIRED_HEADSET, 1);
+    set_call_route(adev, AUDIO_DEVICE_OUT_WIRED_HEADSET, 1);
 #endif
 
 
-	ret =GetParas_DeviceCtrl_Incall(fd_pipe,&device_ctrl_paras);
-	if(ret < 0){
-		return ret;
-	}
+    ret =GetParas_DeviceCtrl_Incall(fd_pipe,&device_ctrl_paras);
+    if(ret < 0){
+        return ret;
+    }
 
-	//set arm mode paras
-	if(device_ctrl_paras.is_open){
-		SetCall_ModePara(adev,&device_ctrl_paras.paras_mode);
-		SetCall_VolumePara(adev,&device_ctrl_paras.paras_mode);
+    //set arm mode paras
+    if(device_ctrl_paras.is_open){
+        SetCall_ModePara(adev,&device_ctrl_paras.paras_mode);
+        SetCall_VolumePara(adev,&device_ctrl_paras.paras_mode);
 
-		ctl = mixer_get_ctl_by_name(adev->mixer, "Speaker Function");
-		ret = mixer_ctl_set_value(ctl, 0, 0);
-		ctl = mixer_get_ctl_by_name(adev->mixer, "HeadPhone Mute");
-		ret = mixer_ctl_set_value(ctl, 0, 1);
-		ctl = mixer_get_ctl_by_name(adev->mixer, "Earpiece Function");
-		ret = mixer_ctl_set_value(ctl, 0, 0);
-	}else{
-		ALOGW("%s close device...",__func__);
-	}
-	Write_Rsp2cp(fd_pipe,VBC_CMD_DEVICE_CTRL);
-	MY_TRACE("%s send rsp to cp...",__func__);
-	return ret;
+        if( android_cur_device & AUDIO_DEVICE_OUT_SPEAKER){
+            ctl = mixer_get_ctl_by_name(adev->mixer, "Speaker Function");
+            ret = mixer_ctl_set_value(ctl, 0, 0);
+        }
+
+        if( (android_cur_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) ||
+                (android_cur_device & AUDIO_DEVICE_OUT_WIRED_HEADSET)){
+            ctl = mixer_get_ctl_by_name(adev->mixer, "HeadPhone Mute");
+            ret = mixer_ctl_set_value(ctl, 0, 1);
+        }
+
+        if( android_cur_device & AUDIO_DEVICE_OUT_EARPIECE){
+            ctl = mixer_get_ctl_by_name(adev->mixer, "Earpiece Function");
+            ret = mixer_ctl_set_value(ctl, 0, 0);
+        }
+    }else{
+        ALOGW("%s close device...",__func__);
+    }
+    Write_Rsp2cp(fd_pipe,VBC_CMD_DEVICE_CTRL);
+    MY_TRACE("%s send rsp to cp...",__func__);
+    return ret;
 }
 
 int SetParas_Samplerate_Incall(int fd_pipe,struct tiny_audio_device *adev)
@@ -1352,15 +1363,19 @@ RESTART:
                 set_mute_t mute_status;
                 ret = read(para->vbpipe_fd, &mute_status, sizeof(set_mute_t));
 
-                ctl = mixer_get_ctl_by_name(adev->mixer, "Speaker Function");
-                ret = mixer_ctl_set_value(ctl, 0, 0);
-                ctl = mixer_get_ctl_by_name(adev->mixer, "HeadPhone Mute");
-                ret = mixer_ctl_set_value(ctl, 0, 1);
-                //ctl = mixer_get_ctl_by_name(adev->mixer, "HeadPhone Function");
-                //ret = mixer_ctl_set_value(ctl, 0, 0);
-                ctl = mixer_get_ctl_by_name(adev->mixer, "Earpiece Function");
-                ret = mixer_ctl_set_value(ctl, 0, 0);
-
+                if( android_cur_device & AUDIO_DEVICE_OUT_SPEAKER){
+                    ctl = mixer_get_ctl_by_name(adev->mixer, "Speaker Function");
+                    ret = mixer_ctl_set_value(ctl, 0, 0);
+                }
+                if( (android_cur_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) ||
+                        (android_cur_device & AUDIO_DEVICE_OUT_WIRED_HEADSET)){
+                    ctl = mixer_get_ctl_by_name(adev->mixer, "HeadPhone Mute");
+                    ret = mixer_ctl_set_value(ctl, 0, 1);
+                }
+                if( android_cur_device & AUDIO_DEVICE_OUT_EARPIECE){
+                    ctl = mixer_get_ctl_by_name(adev->mixer, "Earpiece Function");
+                    ret = mixer_ctl_set_value(ctl, 0, 0);
+                }
                 write_common_head.cmd_type = VBC_CMD_RSP_MUTE;     //ask cp to read vaudio data, "call_prestop" will stop to write pcm data again.
                 WriteParas_Head(para->vbpipe_fd, &write_common_head);
 
