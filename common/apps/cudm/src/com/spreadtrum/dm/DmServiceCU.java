@@ -417,7 +417,7 @@ public class DmServiceCU extends Service {
         //Bug#202335 Add by Katrina 2013.08.15
         mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "Spreadtrum");
         mModel = sharedPreferences.getString(ITEM_MODEL, "SP7710");
-        mSoftVer = SystemProperties.get("ro.build.display.id","JZ055K");
+        mSoftVer = SystemProperties.get("ro.build.display.id","JZO57K");
         if (mIsDebugMode) {
             // init manufacture
             //mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "sprd");
