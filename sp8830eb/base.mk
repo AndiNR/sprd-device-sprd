@@ -44,6 +44,7 @@ PRODUCT_PACKAGES := \
 # own copyright packages files
 PRODUCT_PACKAGES += \
     FileExplorer \
+    SprdAppBackup \
     AppBackup \
     AudioProfile \
     SprdNote \
