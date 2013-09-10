@@ -1,17 +1,9 @@
 import init.sc8830.usb.rc
 
 on early-init
-#    export EXTERNAL_STORAGE /storage/sdcard0
-#    export SECONDARY_STORAGE /storage/sdcard1
-    # 0 for nand,1 for emmc,2 for sdcard
-#    export SECOND_STORAGE_TYPE 2
-#    mkdir /storage 0777 system sdcard_rw
-#    mkdir /storage/sdcard0 0000 system system
-#    mkdir /storage/sdcard1 0000 system system
+    mkdir /storage 0777 system sdcard_rw
 #    mkdir /storage/usbdisk 0000 system system
     # for backwards compatibility
-#    symlink /storage/sdcard0 /sdcard
-#    symlink /storage/sdcard0 /mnt/sdcard
 #    symlink /storage/usbdisk /mnt/usbdisk
 # radio pipe
     mkdir /dev/rpipe 0550 radio radio
@@ -21,7 +13,7 @@ on early-init
 
 on fs
     mount_all /fstab.sc8830
-    setprop ro.crypto.fuse_sdcard true
+    #setprop ro.crypto.fuse_sdcard true
     write /sys/kernel/boot_adsp/boot 1
 
 on post-fs
@@ -30,7 +22,7 @@ on post-fs
 
 on post-fs-data
     # we will remap this as /storage/sdcard0 with the sdcard fuse tool
-    mkdir /data/media 0770 media_rw media_rw
+    #mkdir /data/media 0770 media_rw media_rw
     #chown media_rw media_rw /data/media
     mkdir /data/misc/sensors 0777 system system
 
@@ -49,6 +41,7 @@ on init
     export EXTERNAL_STORAGE /storage/emulated/legacy
     export EMULATED_STORAGE_SOURCE /mnt/shell/emulated
     export EMULATED_STORAGE_TARGET /storage/emulated
+    export SECONDARY_STORAGE /storage/sdcard1
 
     # Support legacy paths
     symlink /storage/emulated/legacy /sdcard
@@ -286,8 +279,8 @@ service nvitemd_w /system/bin/nvitemd /dev/spipe_w1 ./nvitem_w.cfg        FALSE
 #    class late_start
 
 # virtual sdcard daemon running as media_rw (1023)
-service sdcard /system/bin/sdcard /data/media /mnt/shell/emulated 1023 1023
-    class late_start
+#service sdcard /system/bin/sdcard /data/media /mnt/shell/emulated 1023 1023
+#    class late_start
 
 
 service hfag /system/bin/sdptool add --channel=10 HFAG
