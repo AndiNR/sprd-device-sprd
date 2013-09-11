@@ -44,7 +44,7 @@
   <func name="VBC EQ Profile Select" val="0" />
 </private>
 
-<private name="internal PA">
+<private name="internal PA for music">
   <func name="Inter PA Config" val="563" />
 </private>
 
@@ -54,13 +54,11 @@
 
 <device name="builtin-mic">
   <path name="on">
-     <ctl name="ADCL Mixer MainMICADCL Switch" val="1" />
      <ctl name="ADCR Mixer MainMICADCR Switch" val="1" />
      <ctl name="Mic Function" val="1" />
   </path>
   <path name="off">
      <ctl name="Mic Function" val="0" />
-     <ctl name="ADCL Mixer MainMICADCL Switch" val="0" />
      <ctl name="ADCR Mixer MainMICADCR Switch" val="0" />
   </path>
 </device>
@@ -68,13 +66,11 @@
 <device name="back-mic">
   <path name="on">
      <ctl name="ADCL Mixer AuxMICADCL Switch" val="1" />
-     <ctl name="ADCR Mixer AuxMICADCR Switch" val="1" />
      <ctl name="Aux Mic Function" val="1" />
   </path>
   <path name="off">
      <ctl name="Aux Mic Function" val="0" />
      <ctl name="ADCL Mixer AuxMICADCL Switch" val="0" />
-     <ctl name="ADCR Mixer AuxMICADCR Switch" val="0" />
   </path>
 </device>
 
