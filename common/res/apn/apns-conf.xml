@@ -23965,9 +23965,10 @@
         type="default,supl"
         authtype="1" 
     />
+ <!--Bug#211165 Update by Katrina 2013.09.07 -->
  <apn carrier="movistar MMS"
         mcc="704"
-        mnc="30"
+        mnc="030"
         apn="mms.movistar.gt"
         proxy=""
         port=""
@@ -24253,9 +24254,10 @@
         type="mms"
         authtype="1"
     />
+<!--Bug#211162 Update by Katrina 2013.09.07 -->
 <apn carrier="movistar INTERNET"
         mcc="714"
-        mnc="20"
+        mnc="020"
         apn="internet.movistar.pa"
         proxy=""
         port=""
@@ -24268,9 +24270,10 @@
         type="default,supl"
         authtype="1"
     />
+<!--Bug#211162 Update by Katrina 2013.09.07 -->
 <apn carrier="Movistar mms"
         mcc="714"
-        mnc="20"
+        mnc="020"
         apn="mms.movistar.pa"
         proxy=""
         port=""
@@ -24283,21 +24286,7 @@
         type="mms"
         authtype="1"   
     />
-    <apn carrier="Movistar MMS"
-        mcc="714"
-        mnc="20"
-        apn="mms.movistar.pa"
-        proxy=""
-        port=""
-        user="movistarpa"
-        password="movistarpa"
-	    server=""
-        mmsc="http://mms.movistar.pa"
-        mmsproxy="10.12.21.1"
-        mmsport="80"
-        type="mms"
-        
-    />
+
 <apn carrier="WEB Claro"
         mcc="714"
         mnc="03"
@@ -25678,7 +25667,8 @@
         type="mms"
         authtype="1"
     />
-    <apn carrier="Etisalat MMS"
+    <!--Bug#212503 Update by Katrina 2013.09.11-->
+    <apn carrier="MTNL NET"
         mcc="404"
         mnc="68"
         apn="mtnl.net"
@@ -25693,7 +25683,8 @@
         type="default,supl"
         authtype="1"
     />
-     <apn carrier="Etisalat MMS"
+     <!--Bug#212503 Update by Katrina 2013.09.11-->
+     <apn carrier="MTNL WAP"
         mcc="404"
         mnc="68"
         apn="mtnl.net"
@@ -25708,7 +25699,8 @@
         type="default"
         authtype="1"
     />
-    <apn carrier="Etisalat MMS"
+    <!--Bug#212503 Update by Katrina 2013.09.11-->
+    <apn carrier="MTNL MMS"
         mcc="404"
         mnc="68"
         apn="mtnl.net"
@@ -25720,7 +25712,7 @@
         mmsc="http://mtnlmms/"
         mmsproxy="10.10.10.10"
         mmsport="9401"
-        type="mms"
+        type="MTNL MMS"
         authtype="1"
     />
     <!--Add by Katrina 2013.08.22 -->
