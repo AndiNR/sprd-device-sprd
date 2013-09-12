@@ -540,7 +540,7 @@ static struct route_setting * get_route_setting(
     unsigned int i = 0;
     for (i=0; i<adev->num_dev_cfgs; i++) {
         if ((devices & AUDIO_DEVICE_BIT_IN) && (adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
-            if (devices & adev->dev_cfgs[i].mask) {
+            if ((devices & ~AUDIO_DEVICE_BIT_IN) & adev->dev_cfgs[i].mask) {
                 if (on)
                     return adev->dev_cfgs[i].on;
                 else
@@ -642,7 +642,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
                     adev->dev_cfgs[i].on_len);
         }
 
-	if ((adev->in_devices & adev->dev_cfgs[i].mask)
+	if (((adev->in_devices & ~AUDIO_DEVICE_BIT_IN) & adev->dev_cfgs[i].mask)
 	    && (adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
             set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
                     adev->dev_cfgs[i].on_len);
@@ -656,7 +656,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
                     adev->dev_cfgs[i].off_len);
         }
 
-        if (!(adev->in_devices & adev->dev_cfgs[i].mask)
+        if (!((adev->in_devices & ~AUDIO_DEVICE_BIT_IN) & adev->dev_cfgs[i].mask)
 	    && (adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
             set_route_by_array(adev->mixer, adev->dev_cfgs[i].off,
                     adev->dev_cfgs[i].off_len);
