@@ -73,6 +73,13 @@ PRODUCT_PACKAGES += \
 # packages files
 PRODUCT_PACKAGES += \
 
+# own copyright packages files
+PRODUCT_PACKAGES += \
+    10086cn \
+    Monternet \
+    MyFavorites
+
+
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \
 	$(BOARDDIR)/sci-keypad.kl:system/usr/keylayout/sci-keypad.kl \
