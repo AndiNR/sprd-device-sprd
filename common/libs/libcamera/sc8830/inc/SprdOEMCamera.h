@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 The Android Open Source Project
+ * Copyright (C) 2012 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ extern "C"
 #include "../../arithmetic/sc8825/inc/HDR2.h"
 #include "sprd_dma_copy_k.h"
 
-#define FACE_DETECT_NUM     5
+#define FACE_DETECT_NUM     10
 #define FACE_SMILE_LIMIT    10
 #define HDR_CAP_NUM         3
 #define CB_LIGHT_SYNC       1
@@ -54,6 +54,7 @@ typedef enum {
 	CAMERA_INVALID_STAND_ALONE_FORMAT,
 	CAMERA_MALLOC_FAILED_STAND_ALONE,
 	CAMERA_EXIT,
+	CAMERA_JPEG_SPECIFY_FAILED,
 	CAMERA_RET_CODE_MAX
 } camera_ret_code_type;
 
@@ -153,10 +154,10 @@ typedef struct {
 	uint32_t                 buffer_phy_addr;
 	uint32_t                 thumbnail_phy_addr;
 	uint32_t                 pmem_id;
-	
+
 	uint32_t                 buf_id;
 	int64_t                  timestamp;
-	uint32_t                 buffer_uv_phy_addr;	
+	uint32_t                 buffer_uv_phy_addr;
 	/*face detect*/
 	uint32_t face_num;
 	morpho_FaceRect *face_ptr;
@@ -315,7 +316,7 @@ typedef struct
 	double                   latitude;   /* degrees, WGS ellipsoid */
 	double                   longitude;  /* degrees                */
 	double                   altitude;   /* meters                          */
-	const char               *process_method;	
+	const char               *process_method;
 } camera_position_type;
 
 
@@ -384,6 +385,7 @@ typedef enum {
 	CAMERA_PARM_SHOT_NUM,
 	CAMERA_PARAM_SLOWMOTION,
 	CAMERA_PARAM_ROTATION_CAPTURE,
+	CAMERA_PARM_PREVIEW_ENV,
 	CAMERA_PARM_MAX
 } camera_parm_type;
 
@@ -396,6 +398,11 @@ typedef enum {
 	CAMERA_TOOL_CAP_RAW_NONE,
 	CAMERA_TOOL_CAP_RAW_ENABLE
 } camera_tool_cap_raw_mode;
+
+typedef enum preview_buffer_usage{
+	PREVIEW_BUFFER_USAGE_DCAM = 0,/*camera allocate buffer and copy to grapics buffer*/
+	PREVIEW_BUFFER_USAGE_GRAPHICS/*camera use the grapics buffer directly*/
+} preview_buffer_usage_mode;
 
 camera_ret_code_type camera_encode_picture(camera_frame_type *frame,
 					camera_handle_type *handle,
@@ -465,14 +472,14 @@ int camera_set_preview_mem(uint32_t phy_addr, uint32_t vir_addr, uint32_t mem_si
 
 int camera_capture_get_buffer_size(uint32_t camera_id,
 						uint32_t width,
-						uint32_t height, 
-						uint32_t *size0, 
+						uint32_t height,
+						uint32_t *size0,
 						uint32_t *size1);
 int camera_set_capture_mem(uint32_t     cap_index,
-						uint32_t phy_addr0, 
-						uint32_t vir_addr0, 
+						uint32_t phy_addr0,
+						uint32_t vir_addr0,
 						uint32_t mem_size0,
-						uint32_t phy_addr1, 
+						uint32_t phy_addr1,
 						uint32_t vir_addr1,
 						uint32_t mem_size1);
 int camera_set_capture_mem2(uint32_t     cap_index,
@@ -487,12 +494,12 @@ int camera_copy_data(uint32_t width,
 				uint32_t in_addr,
 				uint32_t out_addr);
 
-int camera_get_data_redisplay(int output_addr, 
-					int output_width, 
-					int output_height, 
-					int input_addr_y, 
-					int input_addr_uv, 					
-					int input_width, 
+int camera_get_data_redisplay(int output_addr,
+					int output_width,
+					int output_height,
+					int input_addr_y,
+					int input_addr_uv,
+					int input_width,
 					int input_height);
 
 uint32_t camera_get_rot_set(void);
@@ -517,6 +524,7 @@ int camera_dma_copy_data(struct _dma_copy_cfg_tag dma_copy_cfg);
 camera_ret_code_type camera_zsl_rot_cap_param_reset(void);
 int camera_get_is_nonzsl(void);
 void camera_set_stop_preview_mode(uint32_t stop_mode);
+int camera_is_sensor_support_zsl(void);
 
 #ifdef __cplusplus
 }

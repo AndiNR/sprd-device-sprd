@@ -1,14 +1,17 @@
 /*
- * Copyright (C) 2012 Spreadtrum Communications Inc.
+ * Copyright (C) 2012 The Android Open Source Project
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 #include <utils/Log.h>
 #include "sensor.h"
@@ -1148,7 +1151,7 @@ LOCAL const SENSOR_REG_T ov5640_2592X1944[] = {
 
 LOCAL SENSOR_REG_TAB_INFO_T s_ov5640_resolution_Tab_YUV[] = {
 	{ADDR_AND_LEN_OF_ARRAY(ov5640_common_init), 0, 0, 24,
-	 SENSOR_IMAGE_FORMAT_YUV422},	
+	 SENSOR_IMAGE_FORMAT_YUV422},
 	{ADDR_AND_LEN_OF_ARRAY(ov5640_640X480_new), 640, 480, 24,
 	 SENSOR_IMAGE_FORMAT_YUV422},
 	{ADDR_AND_LEN_OF_ARRAY(ov5640_1280X960), 1280, 960, 24,
@@ -1304,13 +1307,9 @@ SENSOR_INFO_T g_ov5640_yuv_info = {
 	0,
 	0,
 	0,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
 	PNULL,
 	3,			// skip frame num while change setting
-#else
-	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1}
-#endif
 };
 
 LOCAL uint32_t _ov5640_GetExifInfo(uint32_t param)

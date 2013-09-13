@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 The Android Open Source Project
+ * Copyright (C) 2012 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ enum scale_data_endian {
 	SCALE_ENDIAN_LITTLE,
 	SCALE_ENDIAN_HALFBIG,
 	SCALE_ENDIAN_HALFLITTLE,
-	SCALE_ENDIAN_MAX        
+	SCALE_ENDIAN_MAX
 };
 
 enum scle_mode {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 The Android Open Source Project
+ * Copyright (C) 2012 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -428,6 +428,8 @@ int camera_sync_var_init(struct camera_context *p_cxt)
 	sem_init(&p_cxt->thum_sem, 0, 0);
 	sem_init(&p_cxt->takepicdone_sem, 0, 0);
 	sem_init(&p_cxt->takepic_callback_sem, 0, 0);
+	sem_init(&p_cxt->sync_scale_sem, 0, 1);
+	sem_init(&p_cxt->jpeg_specify_cxt.jpeg_specify_cap_sem, 0, 0);
 
 	return ret;
 }
@@ -446,6 +448,8 @@ int camera_sync_var_deinit(struct camera_context *p_cxt)
 	sem_destroy(&p_cxt->thum_sem);
 	sem_destroy(&p_cxt->takepicdone_sem);
 	sem_destroy(&p_cxt->takepic_callback_sem);
+	sem_destroy(&p_cxt->sync_scale_sem);
+	sem_destroy(&p_cxt->jpeg_specify_cxt.jpeg_specify_cap_sem);
 
 	return ret;
 }
@@ -650,6 +654,23 @@ int camera_takepic_callback_done(struct camera_context *p_cxt)
 	return ret;
 }
 
+int camera_sync_scale_start(struct camera_context *p_cxt)
+{
+	int                      ret = CAMERA_SUCCESS;
+
+	sem_wait(&p_cxt->sync_scale_sem);
+
+	return ret;
+}
+
+int camera_sync_scale_done(struct camera_context *p_cxt)
+{
+	int                      ret = CAMERA_SUCCESS;
+
+	sem_post(&p_cxt->sync_scale_sem);
+
+	return ret;
+}
 
 int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 	uint32_t width, uint32_t height, struct img_addr *addr)
@@ -683,7 +704,7 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 			CMR_LOGV("can not open file: %s \n", file_name);
 			return 0;
 		}
-			
+
 		fwrite((void*)addr->addr_y, 1, width * height, fp);
 	        fclose(fp);
 

@@ -1,14 +1,17 @@
 /*
- * Copyright (C) 2012 Spreadtrum Communications Inc.
+ * Copyright (C) 2012 The Android Open Source Project
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 #ifndef _SENSOR_DRV_U_H_
 #define _SENSOR_DRV_U_H_
@@ -23,6 +26,12 @@
 #include "cmr_common.h"
 #include <sys/types.h>
 #include "sensor_raw.h"
+#include "sensor_drv_k.h"
+
+#ifdef	 __cplusplus
+extern	 "C"
+{
+#endif
 
 #define SENSOR_SUCCESS 0
 #define SENSOR_FAIL 1
@@ -169,6 +178,8 @@
 
 #define FOCUS_ZONE_CNT_MAX   6
 
+#define SENSOR_VIDEO_MODE_MAX   4
+
 /*  isp param for raw */
 
 /*  isp param for raw  end */
@@ -201,6 +212,7 @@ typedef enum {
 
 typedef enum {
 	SENSOR_AVDD_3800MV = 0,
+	SENSOR_AVDD_3300MV,
 	SENSOR_AVDD_3000MV,
 	SENSOR_AVDD_2800MV,
 	SENSOR_AVDD_2500MV,
@@ -241,7 +253,7 @@ typedef enum {
 	SENSOR_INTERFACE_CSI2_2LANES,
 	SENSOR_INTERFACE_CSI2_3LANES,
 	SENSOR_INTERFACE_CSI2_4LANES,
-	
+
 	SENSOR_INTERFACE_MAX
 } SENSOR_INTERFACE_E;
 */
@@ -251,7 +263,7 @@ typedef enum {
 	SENSOR_INTERFACE_TYPE_SPI,
 	SENSOR_INTERFACE_TYPE_SPI_BE,
 	SENSOR_INTERFACE_TYPE_CSI2,
-	
+
 	SENSOR_INTERFACE_TYPE_MAX
 } SENSOR_INF_TYPE_E;
 
@@ -273,7 +285,7 @@ MIPI CSI2 and Lane3
 typedef struct{
 
 	SENSOR_INF_TYPE_E  type;
-	uint32_t bus_width;//lane number or bit-width 
+	uint32_t bus_width;//lane number or bit-width
 	uint32_t pixel_width; //bits per pixel
 	uint32_t is_loose; //0 packet, 1 half word per pixel
 }SENSOR_INF_T;
@@ -372,6 +384,7 @@ typedef enum {
 	SENSOR_EXT_FUNC_NONE = 0x00,
 	SENSOR_EXT_FUNC_INIT,
 	SENSOR_EXT_FOCUS_START,
+	SENSOR_EXT_FOCUS_QUIT,
 	SENSOR_EXT_EXPOSURE_START,
 	SENSOR_EXT_EV,
 	SENSOR_EXT_FUNC_MAX
@@ -517,29 +530,6 @@ typedef struct sensor_ioctl_func_tab_tag {
 	uint32_t(*cfg_otp) (uint32_t param);
 } SENSOR_IOCTL_FUNC_TAB_T, *SENSOR_IOCTL_FUNC_TAB_T_PTR;
 
-typedef struct sensor_i2c_tag {
-	uint8_t  *i2c_data;
-	uint16_t i2c_count;
-	uint16_t slave_addr;
-} SENSOR_I2C_T, *SENSOR_I2C_T_PTR;
-
-typedef struct sensor_reg_tag {
-	uint16_t reg_addr;
-	uint16_t reg_value;
-} SENSOR_REG_T, *SENSOR_REG_T_PTR;
-
-typedef struct sensor_reg_tab_tag {
-	SENSOR_REG_T_PTR sensor_reg_tab_ptr;
-	uint32_t reg_count;
-	uint32_t reg_bits;
-	uint32_t burst_mode;
-} SENSOR_REG_TAB_T, *SENSOR_REG_TAB_PTR;
-
-typedef struct sensor_reg_bits_tag {
-	uint16_t reg_addr;
-	uint16_t reg_value;
-	uint32_t reg_bits;
-} SENSOR_REG_BITS_T, *SENSOR_REG_BITS_T_PTR;
 typedef struct sensor_trim_tag {
 	uint16_t trim_start_x;
 	uint16_t trim_start_y;
@@ -549,6 +539,14 @@ typedef struct sensor_trim_tag {
 	uint32_t pclk;
 	uint32_t frame_line;
 } SENSOR_TRIM_T, *SENSOR_TRIM_T_PTR;
+
+
+typedef struct sensor_ae_info_tag {
+	uint32_t min_frate;  //min frame rate
+	uint32_t max_frate;  //max frame rate
+	uint32_t line_time;  //time of line
+	uint32_t gain;
+} SENSOR_AE_INFO_T, *SENSOR_AE_INFO_T_PTR;
 
 typedef struct _sensor_rect_tag {
 	uint16_t x;
@@ -602,6 +600,11 @@ typedef struct sensor_register_tag {
 	uint8_t is_register[SENSOR_ID_MAX];
 } SENSOR_REGISTER_INFO_T, *SENSOR_REGISTER_INFO_T_PTR;
 
+typedef struct sensor_video_info_tag {
+	SENSOR_AE_INFO_T ae_info[SENSOR_VIDEO_MODE_MAX];
+	SENSOR_REG_T     **setting_ptr;
+}SENSOR_VIDEO_INFO_T, *SENSOR_VIDEO_INFO_T_PTR;
+
 typedef struct sensor_exp_info_tag {
 	SENSOR_IMAGE_FORMAT image_format;
 	uint32_t image_pattern;
@@ -632,6 +635,9 @@ typedef struct sensor_exp_info_tag {
 	uint16_t threshold_end;
 	SENSOR_INF_T sensor_interface;
 	const char *name;
+	SENSOR_VIDEO_INFO_T sensor_video_info[SENSOR_MODE_MAX];
+	uint32_t change_setting_skip_num;
+	uint32_t sensor_image_type;
 } SENSOR_EXP_INFO_T, *SENSOR_EXP_INFO_T_PTR;
 
 typedef struct sensor_info_tag {
@@ -656,7 +662,7 @@ typedef struct sensor_info_tag {
 	uint32_t image_pattern;
 	SENSOR_REG_TAB_INFO_T_PTR resolution_tab_info_ptr;
 	SENSOR_IOCTL_FUNC_TAB_T_PTR ioctl_func_tab_ptr;
-	struct sensor_raw_info**  raw_info_ptr; /*sensor_raw_info*/
+	struct sensor_raw_info** raw_info_ptr; /*sensor_raw_info*/
 	SENSOR_EXTEND_INFO_T_PTR ext_info_ptr;
 	SENSOR_AVDD_VAL_E iovdd_val;
 	SENSOR_AVDD_VAL_E dvdd_val;
@@ -670,6 +676,8 @@ typedef struct sensor_info_tag {
 	uint16_t threshold_end;
 	int32_t i2c_dev_handler;
 	SENSOR_INF_T sensor_interface;
+	SENSOR_VIDEO_INFO_T_PTR video_tab_info_ptr;
+	uint32_t change_setting_skip_num;
 } SENSOR_INFO_T;
 
 typedef enum {
@@ -726,6 +734,10 @@ int Sensor_SetMCLK(uint32_t mclk);
 int Sensor_SetVoltage(SENSOR_AVDD_VAL_E dvdd_val,
 		       SENSOR_AVDD_VAL_E avdd_val, SENSOR_AVDD_VAL_E iodd_val);  // todo splite 3 fun
 
+int Sensor_SetAvddVoltage(SENSOR_AVDD_VAL_E vdd_val);
+int Sensor_SetDvddVoltage(SENSOR_AVDD_VAL_E vdd_val);
+int Sensor_SetIovddVoltage(SENSOR_AVDD_VAL_E vdd_val);
+
 BOOLEAN Sensor_PowerDown(BOOLEAN power_down);
 BOOLEAN Sensor_SetResetLevel(BOOLEAN plus_level);
 void Sensor_Reset(uint32_t level);
@@ -767,5 +779,12 @@ int Sensor_GetMark(uint8_t *buf,uint8_t *is_saved_ptr);
 int _Sensor_Device_WriteRegTab(SENSOR_REG_TAB_PTR reg_tab);
 int Sensor_AutoFocusInit(void);
 int Sensor_WriteI2C(uint16_t slave_addr, uint8_t *cmd, uint16_t cmd_length);
+int Sensor_GetMode(uint32_t *mode);
+int Sensor_GetFlashLevel(SENSOR_FLASH_LEVEL_T *level);
+int Sensor_SetMode_WaitDone();
+
+#ifdef	 __cplusplus
+}
+#endif
 
 #endif

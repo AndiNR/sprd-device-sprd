@@ -1,14 +1,17 @@
 /*
- * Copyright (C) 2012 Spreadtrum Communications Inc.
+ * Copyright (C) 2012 The Android Open Source Project
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 #include <utils/Log.h>
 #include "sensor.h"
@@ -279,14 +282,14 @@ LOCAL const SENSOR_REG_T ov5648_2592X1944_mipi_raw[] = {
 	{0x4004, 0x04}, // black line number
 	{0x4005, 0x1a}, // blc always update
 	{0x350b, 0x40}, // gain = 4x
-	{0x4837, 0x0a}, // MIPI global timing	
+	{0x4837, 0x0a}, // MIPI global timing
 };
 
 LOCAL SENSOR_REG_TAB_INFO_T s_ov5648_resolution_Tab_RAW[] = {
 	{ADDR_AND_LEN_OF_ARRAY(ov5648_com_mipi_raw), 0, 0, 24, SENSOR_IMAGE_FORMAT_RAW},
 	{ADDR_AND_LEN_OF_ARRAY(ov5648_1296X972_mipi_raw), 1296, 972, 24, SENSOR_IMAGE_FORMAT_RAW},
 	{ADDR_AND_LEN_OF_ARRAY(ov5648_2592X1944_mipi_raw), 2592, 1944, 24, SENSOR_IMAGE_FORMAT_RAW},
-	
+
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
@@ -307,7 +310,6 @@ LOCAL SENSOR_TRIM_T s_ov5648_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0, 0}
 };
 
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 LOCAL const SENSOR_REG_T s_ov5648_1296X972_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
 	/*video mode 0: ?fps*/
 	{
@@ -389,7 +391,6 @@ LOCAL uint32_t _ov5648_set_video_mode(uint32_t param)
 	SENSOR_PRINT("0x%02x", param);
 	return 0;
 }
-#endif
 
 struct sensor_raw_info* s_ov5648_mipi_raw_info_ptr=&s_ov5648_mipi_raw_info;
 
@@ -438,11 +439,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5648_ioctl_func_tab = {
 	PNULL, //_ov5648_GetExifInfo,
 	_ov5648_ExtFunc,
 	PNULL, //_ov5648_set_anti_flicker,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	_ov5648_set_video_mode,
-#else
-	PNULL,  //_ov5648_set_video_mode,
-#endif
 	PNULL, //pick_jpeg_stream
 	PNULL,  //meter_mode
 	PNULL, //get_status
@@ -518,13 +515,9 @@ SENSOR_INFO_T g_ov5648_mipi_raw_info = {
 	0,
 	0,
 	0,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0},
 	s_ov5648_video_info,
 	3,			// skip frame num while change setting
-#else
-	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0}
-#endif
 };
 
 LOCAL struct sensor_raw_info* Sensor_GetContext(void)
@@ -1251,7 +1244,7 @@ LOCAL uint32_t _ov5648_Identify(uint32_t param)
 	} else {
 		SENSOR_PRINT("SENSOR_OV5648: identify fail,pid_value=%d", pid_value);
 	}
-	
+
 	return ret_value;
 }
 
@@ -1324,14 +1317,14 @@ LOCAL uint32_t _ov5648_write_af(uint32_t param)
 	uint16_t cmd_len = 0;
 
 	SENSOR_PRINT("SENSOR_OV5648: _write_af %d", param);
-	
+
 	slave_addr = DW9714_VCM_SLAVE_ADDR;
 	cmd_val[0] = (param&0xfff0)>>4;
 	cmd_val[1] = ((param&0x0f)<<4)|0x09;
 	cmd_len = 2;
 	ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
 
-	SENSOR_PRINT("SENSOR_OV5647: _write_af, ret =  %d, MSL:%x, LSL:%x\n", ret_value, cmd_val[0], cmd_val[1]);
+	SENSOR_PRINT("SENSOR_OV5648: _write_af, ret =  %d, MSL:%x, LSL:%x\n", ret_value, cmd_val[0], cmd_val[1]);
 
 	return ret_value;
 }
@@ -1402,7 +1395,7 @@ LOCAL uint32_t _ov5648_PreBeforeSnapshot(uint32_t param)
 	uint32_t gain = 0, value = 0;
 	uint32_t prv_linetime=s_ov5648_Resolution_Trim_Tab[SENSOR_MODE_PREVIEW_ONE].line_time;
 	uint32_t cap_linetime = s_ov5648_Resolution_Trim_Tab[param].line_time;
-	
+
 	SENSOR_PRINT("SENSOR_OV5648: BeforeSnapshot moe: %d",param);
 
 	if (SENSOR_MODE_PREVIEW_ONE >= param){
@@ -1434,7 +1427,7 @@ LOCAL uint32_t _ov5648_PreBeforeSnapshot(uint32_t param)
 	if (0 == capture_exposure) {
 		capture_exposure = 1;
 	}
-	
+
 	while(gain >= 0x20){
 		if(capture_exposure * 2 > capture_maxline)
 			break;
@@ -1442,7 +1435,7 @@ LOCAL uint32_t _ov5648_PreBeforeSnapshot(uint32_t param)
 		gain=gain / 2;
 
 	}
-	
+
 	gain=gain * 320/300;
 
 	if(capture_exposure > (capture_maxline - 4)){
@@ -1516,30 +1509,30 @@ LOCAL uint32_t _dw9174_SRCInit(uint32_t mode)
 	uint8_t cmd_val[6] = {0x00};
 	uint16_t  slave_addr = 0;
 	uint16_t cmd_len = 0;
-	uint32_t ret_value = SENSOR_SUCCESS;	
-	
+	uint32_t ret_value = SENSOR_SUCCESS;
+
 	slave_addr = DW9714_VCM_SLAVE_ADDR;
-	
+
 	switch (mode) {
 		case 1:
 		break;
-		
+
 		case 2:
-		{			
+		{
 			cmd_val[0] = 0xec;
 			cmd_val[1] = 0xa3;
 			cmd_val[2] = 0xf2;
 			cmd_val[3] = 0x00;
 			cmd_val[4] = 0xdc;
-			cmd_val[5] = 0x51;			
+			cmd_val[5] = 0x51;
 			cmd_len = 6;
-			Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);			
+			Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
 		}
 		break;
-		
+
 		case 3:
 		break;
-		
+
 	}
 
 	return ret_value;

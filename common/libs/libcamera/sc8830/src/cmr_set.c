@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 The Android Open Source Project
+ * Copyright (C) 2012 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@
 
 #define IS_NEED_FLASH(x,y)  ((x)&&((CAMERA_ZSL_MODE == (y))|| \
 	                          (CAMERA_NORMAL_MODE == (y))|| \
+	                          (CAMERA_NORMAL_CONTINUE_SHOT_MODE == (y))|| \
+	                          (CAMERA_ZSL_CONTINUE_SHOT_MODE == (y))|| \
 	                          (CAMERA_TOOL_RAW_MODE == (y))))
 
 static int camera_autofocus_need_exit(void);
@@ -39,6 +41,7 @@ static int camera_set_iso(uint32_t iso, uint32_t *skip_mode, uint32_t *skip_num)
 static int camera_set_flash(uint32_t flash_mode, uint32_t *skip_mode, uint32_t *skip_num);
 static int camera_set_video_mode(uint32_t mode, uint32_t frame_rate, uint32_t *skip_mode, uint32_t *skip_num);
 static int camera_get_video_mode(uint32_t frame_rate, uint32_t *video_mode);
+static int camera_set_preview_env(uint32_t mode, uint32_t frame_rate,uint32_t *skip_mode, uint32_t *skip_num);
 
 
 static int camera_param_to_isp(uint32_t cmd, uint32_t in_param, uint32_t *ptr_out_param)
@@ -95,7 +98,7 @@ static int camera_param_to_isp(uint32_t cmd, uint32_t in_param, uint32_t *ptr_ou
 
 	case ISP_CTRL_AWB_MODE:
 	{
-		switch (in_param) 
+		switch (in_param)
 		{
 			case 0:
 			{
@@ -566,6 +569,26 @@ int camera_set_video_mode(uint32_t mode, uint32_t frame_rate,uint32_t *skip_mode
 	return ret;
 }
 
+int camera_set_preview_env(uint32_t mode, uint32_t frame_rate,uint32_t *skip_mode, uint32_t *skip_num)
+{
+	struct camera_context    *cxt = camera_get_cxt();
+	int                      ret = CAMERA_SUCCESS;
+	uint32_t                 isp_param = 0;
+
+	CMR_LOGI("preview env %d", mode);
+	*skip_mode = IMG_SKIP_SW;
+	*skip_num  = 0;
+	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
+		isp_param = mode;
+		*skip_num  = 0;
+		CMR_LOGI("frame rate:%d.",isp_param);
+		ret = isp_ioctl(ISP_CTRL_VIDEO_MODE, (void *)&isp_param);
+		camera_param_to_isp(ISP_CTRL_ISO, 5, &isp_param);
+		ret = isp_ioctl(ISP_CTRL_ISO, (void *)&isp_param);
+	}
+	return ret;
+}
+
 int camera_flash_process(uint32_t on_off)
 {
 	struct camera_context    *cxt = camera_get_cxt();
@@ -579,7 +602,7 @@ int camera_flash_process(uint32_t on_off)
 	} else if (FLASH_TORCH == cxt->cmr_set.flash) {
 		camera_set_flashdevice(status);
 	}
-	
+
 	return CAMERA_SUCCESS;
 }
 
@@ -695,7 +718,10 @@ int camera_preview_start_set(void)
 		ret = camera_set_video_mode(set->video_mode, set->frame_rate, &skip, &skip_num);
 		CMR_RTN_IF_ERR(ret);
 	}
-
+	if (INVALID_SET_WORD != set->preview_env) {
+		ret = camera_set_preview_env(set->preview_env, cxt->cmr_set.frame_rate, &skip, &skip_num);
+		CMR_RTN_IF_ERR(ret);
+	}
 	ret = camera_flash_process(1);
 exit:
 	return ret;
@@ -767,7 +793,8 @@ int camera_snapshot_stop_set(void)
 		/*open flash*/
 		camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN);
 	}
-	if ((CAMERA_NORMAL_MODE == cxt->cap_mode) || (CAMERA_HDR_MODE == cxt->cap_mode)) {
+	if ((CAMERA_NORMAL_MODE == cxt->cap_mode) || (CAMERA_HDR_MODE == cxt->cap_mode)
+		|| (CAMERA_NORMAL_CONTINUE_SHOT_MODE == cxt->cap_mode)) {
 		ret = Sensor_Ioctl(SENSOR_IOCTL_AFTER_SNAPSHOT, cxt->sn_cxt.preview_mode);
 		if (ret) {
 			CMR_LOGE("Sensor can't work at this mode %d", cxt->sn_cxt.preview_mode);
@@ -894,11 +921,12 @@ int camera_set_ctrl(camera_parm_type id,
 		&& (CAMERA_PARM_AUTO_EXPOSURE_MODE != id)
 		&& (CAMERA_PARM_EXPOSURE_METERING != id)
 		&& (CAMERA_PARM_SHARPNESS != id)
-		&& (CAMERA_PARAM_ROTATION_CAPTURE != id)) {
+		&& (CAMERA_PARAM_ROTATION_CAPTURE != id)
+		&& (CAMERA_PARM_PREVIEW_ENV != id)) {
 		return ret;
 	}
 
-	CMR_LOGI("ID %d or parm %d . camera preview_status %d, capture_status=%d", 
+	CMR_LOGI("ID %d or parm %d . camera preview_status %d, capture_status=%d",
 		id, parm, cxt->preview_status, cxt->capture_status);
 
 	if (id >= CAMERA_PARM_MAX || INVALID_SET_WORD == parm) {
@@ -906,6 +934,24 @@ int camera_set_ctrl(camera_parm_type id,
 	}
 
 	switch (id) {
+	case CAMERA_PARM_PREVIEW_ENV:
+		cxt->cmr_set.preview_env = parm;
+		CMR_LOGI("preview env %d.",parm);
+		if ((CMR_PREVIEW == cxt->preview_status) &&
+			(0 != cxt->cmr_set.preview_env)){
+
+			if (before_set) {
+				ret = (*before_set)(RESTART_LIGHTLY);
+				CMR_RTN_IF_ERR(ret);
+			}
+			ret = camera_set_preview_env(parm, cxt->cmr_set.frame_rate, &skip_mode, &skip_number);
+			CMR_RTN_IF_ERR(ret);
+			if (after_set) {
+				ret = (*after_set)(RESTART_LIGHTLY, skip_mode, skip_number);
+				CMR_RTN_IF_ERR(ret);
+			}
+		}
+		break;
 	case CAMERA_PARAM_ROTATION_CAPTURE:
 		cxt->is_cfg_rot_cap = parm;
 		CMR_LOGI("is_cfg_rot_cap:%d.",parm);
@@ -975,7 +1021,7 @@ int camera_set_ctrl(camera_parm_type id,
 			cxt->cmr_set.expo_compen = parm;
 		}
 		break;
-		
+
 	case CAMERA_PARM_ENCODE_ROTATION: /* 0, 90, 180, 270 degrees */
 		if (cxt->is_cfg_rot_cap) {
 			uint32_t orientation;
@@ -1039,11 +1085,11 @@ int camera_set_ctrl(camera_parm_type id,
 			cxt->cap_rot_backup = cxt->cap_rot;
 		}
 		break;
-		
-	case CAMERA_PARM_FOCAL_LENGTH: 
+
+	case CAMERA_PARM_FOCAL_LENGTH:
 		cxt->cmr_set.focal_len = (uint32_t)parm;
-		break;	
-		
+		break;
+
 	case CAMERA_PARM_CONTRAST:    /* contrast */
 		if (parm != cxt->cmr_set.contrast) {
 			if (CMR_PREVIEW == cxt->preview_status) {
@@ -1061,7 +1107,7 @@ int camera_set_ctrl(camera_parm_type id,
 			cxt->cmr_set.contrast = parm;
 		}
 		break;
-		
+
 	case CAMERA_PARM_BRIGHTNESS:/* brightness */
 		if (parm != cxt->cmr_set.brightness) {
 			if (CMR_PREVIEW == cxt->preview_status) {
@@ -1079,7 +1125,7 @@ int camera_set_ctrl(camera_parm_type id,
 			cxt->cmr_set.brightness = parm;
 		}
 		break;
-		
+
 	case CAMERA_PARM_WB:              /* use camera_wb_type */
 		if (parm != cxt->cmr_set.wb_mode) {
 			if (CMR_PREVIEW == cxt->preview_status) {
@@ -1129,7 +1175,7 @@ int camera_set_ctrl(camera_parm_type id,
 					ret = (*after_set)(RESTART_LIGHTLY, skip_mode, skip_number);
 					CMR_RTN_IF_ERR(ret);
 				}
-			} 
+			}
 			cxt->cmr_set.scene_mode = parm;
 		}
 		break;
@@ -1201,7 +1247,7 @@ int camera_set_ctrl(camera_parm_type id,
 					ret = (*after_set)(RESTART_LIGHTLY, skip_mode, skip_number);
 					CMR_RTN_IF_ERR(ret);
 				}
-			} 
+			}
 			cxt->cmr_set.flicker_mode = parm;
 		}
 		break;
@@ -1213,7 +1259,7 @@ int camera_set_ctrl(camera_parm_type id,
 	case CAMERA_PARM_AF_MODE:
 		CMR_LOGV("Set AF Mode %d", parm);
 		if (CMR_PREVIEW == cxt->preview_status) {
-			
+
 		}
 		cxt->cmr_set.af_mode = (uint32_t)parm;
 		break;
@@ -1231,7 +1277,7 @@ int camera_set_ctrl(camera_parm_type id,
 					ret = (*after_set)(RESTART_LIGHTLY, skip_mode, skip_number);
 					CMR_RTN_IF_ERR(ret);
 				}
-				
+
 			}
 			cxt->cmr_set.iso = parm;
 		}
@@ -1368,7 +1414,7 @@ static int camera_check_autofocus_aera(SENSOR_RECT_T *rect_ptr,uint32_t rect_num
 	}
 	sensor_mode = &cxt->sn_cxt.sensor_info->sensor_mode_info[sn_work_mode];
 
-	for ( i==0 ; i<rect_num ; i++) {
+	for ( i=0 ; i<rect_num ; i++) {
 		if ((0 == rect_ptr[i].w) || (0 == rect_ptr[i].h)
 			|| (rect_ptr->w > sensor_mode->trim_width)
 			|| (rect_ptr->h > sensor_mode->trim_height)
@@ -1427,7 +1473,15 @@ int camera_autofocus_start(void)
 			if (CAMERA_SUCCESS != ret) {
 				CMR_LOGE("ISP_AE_BYPASS error.");
 			}
-			sem_wait(&cxt->cmr_set.isp_alg_sem);
+
+			while (CAMERA_SUCCESS != sem_trywait(&cxt->cmr_set.isp_alg_sem)){
+				if (camera_autofocus_need_exit()) {
+					ret = CAMERA_INVALID_STATE;
+					CMR_RTN_IF_ERR(ret);
+				}
+				usleep(10*1000);
+			}
+
 			camera_set_flashdevice((uint32_t)FLASH_OPEN);
 			flash_param.mode=ISP_ALG_FAST;
 			flash_param.flash_eb=0x01;
@@ -1443,7 +1497,13 @@ int camera_autofocus_start(void)
 		}
 		if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
 			if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
-				sem_wait(&cxt->cmr_set.isp_alg_sem);
+				while (CAMERA_SUCCESS != sem_trywait(&cxt->cmr_set.isp_alg_sem)){
+					if (camera_autofocus_need_exit()) {
+						ret = CAMERA_INVALID_STATE;
+						CMR_RTN_IF_ERR(ret);
+					}
+					usleep(10*1000);
+				}
 			}
 			camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN);
 		}
@@ -1454,10 +1514,29 @@ int camera_autofocus_start(void)
 		af_param.param = SENSOR_EXT_FOCUS_MACRO;
 		af_param.zone_cnt = zone_cnt;
 		CMR_LOGV("SPRD OEM: camera_start_focus macro");
+		af_param.zone_cnt = 1;
+		af_param.zone[0].x = *ptr++;
+		af_param.zone[0].y = *ptr++;
+		af_param.zone[0].w = *ptr++;
+		af_param.zone[0].h = *ptr++;
+		if (CAMERA_SUCCESS != camera_check_autofocus_aera(&af_param.zone[0],1)) {
+			af_param.zone_cnt = 0;
+		}
 	} else {
 		if ((0 == zone_cnt) || (CAMERA_FOCUS_MODE_AUTO == cxt->cmr_set.af_mode)) {
 			af_param.cmd = SENSOR_EXT_FOCUS_START;
 			af_param.param = SENSOR_EXT_FOCUS_TRIG;
+			af_param.zone_cnt = 0;
+			if (zone_cnt) {
+				af_param.zone_cnt = 1;
+				af_param.zone[0].x = *ptr++;
+				af_param.zone[0].y = *ptr++;
+				af_param.zone[0].w = *ptr++;
+				af_param.zone[0].h = *ptr++;
+				if (CAMERA_SUCCESS != camera_check_autofocus_aera(&af_param.zone[0],1)) {
+					af_param.zone_cnt = 0;
+				}
+			}
 		} else if (1 == zone_cnt) {
 			af_param.cmd = SENSOR_EXT_FOCUS_START;
 			af_param.param = SENSOR_EXT_FOCUS_ZONE;
@@ -1492,7 +1571,7 @@ int camera_autofocus_start(void)
 			ret = CAMERA_NOT_SUPPORTED;
 		}
 	}
-
+    CMR_LOGI("cnt %d",af_param.zone_cnt);
 	if (CAMERA_SUCCESS == ret) {
 		cxt->af_busy = 1;
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
@@ -1593,6 +1672,8 @@ int camera_autofocus_stop(void)
 	pthread_mutex_unlock(&cxt->cmr_set.set_mutex);
 
 	CMR_LOGV("af_cancelled %d", cxt->cmr_set.af_cancelled);
+	camera_autofocus_quit();
+	CMR_LOGV("quit.");
 	return ret;
 }
 

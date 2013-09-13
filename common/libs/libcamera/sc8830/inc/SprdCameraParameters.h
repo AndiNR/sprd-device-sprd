@@ -1,19 +1,17 @@
 /*
-* hardware/sprd/common/libcamera/SprdCameraParameters.h
- * parameters on sc8825
+ * Copyright (C) 2012 The Android Open Source Project
  *
- * Copyright (C) 2013 Spreadtrum
- * 
- * Author: Shan He <shan.he@spreadtrum.com>
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #ifndef ANDROID_HARDWARE_SPRD_CAMERA_PARAMETERS_H
@@ -70,10 +68,12 @@ public:
 	int getRecordingHint();
 	int getFlashMode();
 	int getSlowmotion();
+	int getPreviewEnv();
 	int getPreviewFameRate();
 	int getAutoExposureMode();
 	void getMeteringAreas(int *area, int *count, Size *preview_size,
 					 Rect *preview_rect, int orientation, bool mirror);
+	void setZSLSupport(const char* value);
 
 
 	// These sizes have to be a multiple of 16 in each dimension
@@ -109,6 +109,7 @@ public:
 	static const char KEY_PREVIEWFRAMERATE[];
 	static const char KEY_AUTO_EXPOSURE[];
 	static const char KEY_METERING_AREAS[];
+	static const char KEY_PREVIEW_ENV[];
 
 private:
 

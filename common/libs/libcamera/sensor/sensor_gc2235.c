@@ -1,14 +1,17 @@
 /*
- * Copyright (C) 2012 Spreadtrum Communications Inc.
+ * Copyright (C) 2012 The Android Open Source Project
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 #include <utils/Log.h>
 #include "sensor.h"
@@ -34,7 +37,7 @@ LOCAL uint32_t _gc2235_ExtFunc(uint32_t ctl_param);
 
 static uint32_t s_gc2235_gain = 0;
 
-LOCAL const SENSOR_REG_T gc2235_com_raw[] = 
+LOCAL const SENSOR_REG_T gc2235_com_raw[] =
 {
 	/////////////////////////////////////////////////////
 	//////////////////////	 SYS   //////////////////////
@@ -50,7 +53,7 @@ LOCAL const SENSOR_REG_T gc2235_com_raw[] =
 	 {0xf9, 0xfe}, //[0] pll enable
 	 {0xfa, 0x00}, //div
 	 {0xfe, 0x00},
-	
+
 	/////////////////////////////////////////////////////
 	////////////////   ANALOG & CISCTL	 ////////////////
 	/////////////////////////////////////////////////////
@@ -59,42 +62,42 @@ LOCAL const SENSOR_REG_T gc2235_com_raw[] =
 	 {0x05, 0x00},
 	 {0x06, 0xd0},
 	 {0x07, 0x00},
-	 {0x08, 0x1a}, 
+	 {0x08, 0x1a},
 	 {0x0a, 0x02}, //row start
 	 {0x0c, 0x00}, //0c //col start
 	 {0x0d, 0x04}, //Window setting
-	 {0x0e, 0xd0}, 
-	 {0x0f, 0x06}, 
-	 {0x10, 0x50}, 
+	 {0x0e, 0xd0},
+	 {0x0f, 0x06},
+	 {0x10, 0x50},
 	 {0x17, 0x15}, //14 //[0]mirror [1]flip
-	 {0x18, 0x1e},                            
+	 {0x18, 0x1e},
 	 {0x19, 0x06},
 	 {0x1a, 0x01},
 	 {0x1b, 0x48},
-	 {0x1e, 0x88}, 	
+	 {0x1e, 0x88},
 	 {0x1f, 0x48}, //08//comv_r
 	 {0x20, 0x03}, //07
 	 {0x21, 0x6f}, //0f //rsg
-	 {0x22, 0x80}, 
+	 {0x22, 0x80},
 	 {0x23, 0xc1}, //c3
 	 {0x24, 0x2f}, //16//PAD_drv
 	 {0x26, 0x01}, //07
 	 {0x27, 0x30},
 	 {0x3f, 0x00},
-	
+
 	/////////////////////////////////////////////////////
 	//////////////////////	 ISP   //////////////////////
 	/////////////////////////////////////////////////////
 	 {0x8b, 0xa0},
 	 {0x8c, 0x02},
 	 {0x90, 0x01},
-	 {0x92, 0x02},	
+	 {0x92, 0x02},
 	 {0x94, 0x06},
-	 {0x95, 0x04}, 
+	 {0x95, 0x04},
 	 {0x96, 0xb0},
 	 {0x97, 0x06},
 	 {0x98, 0x40},
-	
+
 	/////////////////////////////////////////////////////
 	//////////////////////	 BLK   //////////////////////
 	/////////////////////////////////////////////////////
@@ -103,17 +106,17 @@ LOCAL const SENSOR_REG_T gc2235_com_raw[] =
 	 {0x5e, 0x20},//20
 	 {0x5f, 0x20},
 	 {0x60, 0x20},
-	 {0x61, 0x20},	
+	 {0x61, 0x20},
 	 {0x62, 0x20},
-	 {0x63, 0x20},	
+	 {0x63, 0x20},
 	 {0x64, 0x20},
 	 {0x65, 0x20},
 	 {0x66, 0x00},
-	 {0x67, 0x00},	
+	 {0x67, 0x00},
 	 {0x68, 0x00},
 	 {0x69, 0x00},
 
-	
+
 	/////////////////////////////////////////////////////
 	//////////////////////	 GAIN	/////////////////////
 	/////////////////////////////////////////////////////
@@ -121,11 +124,11 @@ LOCAL const SENSOR_REG_T gc2235_com_raw[] =
 	 {0xb3, 0x40},
 	 {0xb4, 0x40},
 	 {0xb5, 0x40},
-	
+
 	/////////////////////////////////////////////////////
 	////////////////////   DARK SUN   ///////////////////
 	/////////////////////////////////////////////////////
-	 {0xb8, 0x0f}, 
+	 {0xb8, 0x0f},
 	 {0xb9, 0x23},
 	 {0xba, 0xff},
 	 {0xbc, 0x00}, //dark sun_en
@@ -146,14 +149,14 @@ LOCAL const SENSOR_REG_T gc2235_com_raw[] =
 	 {0xfe, 0x00},
 	 {0xf2, 0x0f}, //sync_pad_io_ebi
 
-	
+
 };
 
 LOCAL SENSOR_REG_TAB_INFO_T s_gc2235_resolution_Tab_RAW[] = {
 	{ADDR_AND_LEN_OF_ARRAY(gc2235_com_raw), 0, 0, 24, SENSOR_IMAGE_FORMAT_RAW},
 	{ADDR_AND_LEN_OF_ARRAY(gc2235_com_raw), 1600, 1200, 24, SENSOR_IMAGE_FORMAT_RAW},
 	{ADDR_AND_LEN_OF_ARRAY(gc2235_com_raw), 1600, 1200, 24, SENSOR_IMAGE_FORMAT_RAW},
-	
+
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
@@ -179,7 +182,7 @@ static struct sensor_raw_info s_gc2235_raw_info={
 	&s_gc2235_tune_info,
 	&s_gc2235_fix_info
 };
-                         
+
 
 struct sensor_raw_info* s_gc2235_raw_info_ptr=&s_gc2235_raw_info;
 
@@ -303,13 +306,9 @@ SENSOR_INFO_T g_gc2235_raw_info = {
 	0,
 	0,
 	0,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
 	PNULL,
 	3,			// skip frame num while change setting
-#else
-	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1}
-#endif
 };
 
 LOCAL struct sensor_raw_info* Sensor_GetContext(void)
@@ -906,7 +905,7 @@ LOCAL uint32_t _gc2235_PowerOn(uint32_t power_on)
 	BOOLEAN reset_level = g_gc2235_raw_info.reset_pulse_level;
 
 	if (SENSOR_TRUE == power_on) {
-		
+
 		Sensor_PowerDown(!power_down);
 		// Open power
 		Sensor_SetMonitorVoltage(SENSOR_AVDD_2800MV);
@@ -918,15 +917,15 @@ LOCAL uint32_t _gc2235_PowerOn(uint32_t power_on)
 		Sensor_PowerDown(power_down);
 		// Reset sensor
 		Sensor_Reset(reset_level);
-		
+
 	} else {
-	
+
 		Sensor_PowerDown(power_down);
 		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
 		Sensor_SetVoltage(SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED);
 		Sensor_SetMonitorVoltage(SENSOR_AVDD_CLOSED);
-		
-		
+
+
 	}
 	SENSOR_PRINT("SENSOR_GC2235: _gc2235_Power_On(1:on, 0:off): %d  ", power_on);
 	return SENSOR_SUCCESS;
@@ -961,7 +960,7 @@ LOCAL uint32_t _gc2235_Identify(uint32_t param)
 	} else {
 		SENSOR_PRINT("SENSOR_GC2235: identify fail,pid_value=%x", pid_value);
 	}
-	
+
 	return ret_value;
 }
 
@@ -980,7 +979,7 @@ LOCAL uint32_t _gc2235_write_exposure(uint32_t param)
 
 
 	if (!expsure_line) expsure_line = 1; /* avoid 0 */
-	
+
 #ifdef GC2235_DRIVER_TRACE
 	SENSORDB("GC2235_Write_Shutter iShutter = %d \n",iShutter);
 #endif
@@ -988,7 +987,7 @@ LOCAL uint32_t _gc2235_write_exposure(uint32_t param)
 	if(expsure_line > 8192) expsure_line = 8192;//2    ^ 13
 	//Update Shutter
 	ret_value = Sensor_WriteReg(0x04, (expsure_line) & 0xFF);
-	ret_value = Sensor_WriteReg(0x03, (expsure_line >> 8) & 0x1F);	
+	ret_value = Sensor_WriteReg(0x03, (expsure_line >> 8) & 0x1F);
 	return ret_value;
 
 }
@@ -1007,10 +1006,10 @@ LOCAL uint32_t _gc2235_write_gain(uint32_t param)
 	else
 	{
 	//analogic gain
-	temp = 64*iReg/256;		
+	temp = 64*iReg/256;
 	Sensor_WriteReg(0xb0, temp); // global gain
 	Sensor_WriteReg(0xb1, 0xff);//only digital gain 12.13
-	}		
+	}
 	return param;
 
 }
@@ -1018,7 +1017,7 @@ LOCAL uint32_t _gc2235_write_gain(uint32_t param)
 LOCAL uint32_t _gc2235_SetEV(uint32_t param)
 {
 	uint32_t rtn = SENSOR_SUCCESS;
-#if 0	
+#if 0
 	SENSOR_EXT_FUN_T_PTR ext_ptr = (SENSOR_EXT_FUN_T_PTR) param;
 	uint16_t value=0x00;
 	uint32_t gain = s_gc2235_gain;
@@ -1063,7 +1062,7 @@ LOCAL uint32_t _gc2235_BeforeSnapshot(uint32_t param)
 	uint32_t gain = 0, value = 0;
 	uint32_t prv_linetime=s_gc2235_Resolution_Trim_Tab[SENSOR_MODE_PREVIEW_ONE].line_time;
 	uint32_t cap_linetime = s_gc2235_Resolution_Trim_Tab[param].line_time;
-	
+
 	SENSOR_PRINT("SENSOR_GC2235: BeforeSnapshot moe: %d",param);
 
 	if (SENSOR_MODE_PREVIEW_ONE >= param){

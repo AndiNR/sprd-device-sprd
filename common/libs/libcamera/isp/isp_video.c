@@ -1,21 +1,18 @@
 /*
- * =====================================================================================
+ * Copyright (C) 2012 The Android Open Source Project
  *
- *       Filename: isp_video.c
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       Description:  
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *       Version:  1.0
- *       Created:  07/13/2012 04:49:12 PM
- *       Revision: none
- *       Compiler: gcc
- *
- *       Author:   Binary Yang <Binary.Yang@spreadtrum.com.cn>
- *       Company:  © Copyright 2010 Spreadtrum Communications Inc.
- *
- * =====================================================================================
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -741,7 +738,7 @@ void send_capture_data(uint32_t format, uint32_t width, uint32_t height, char *c
 {
 	int ret;
 
-	if ((0 == (uint32_t)capture_img_end_flag)&&(format == (uint32_t)capture_format))
+	if ((0 == capture_img_end_flag)&&(format == (uint32_t)capture_format))
 	{
 		DBG("ISP_TOOL: capture format: %d, width: %d, height: %d.\n", format, width, height);
 		ret = handle_img_data(format, width, height, ch0_ptr, ch0_len, ch1_ptr, ch1_len, ch2_ptr, ch2_len);

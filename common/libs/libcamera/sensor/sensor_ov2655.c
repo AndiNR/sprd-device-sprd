@@ -1,14 +1,17 @@
 /*
- * Copyright (C) 2012 Spreadtrum Communications Inc.
+ * Copyright (C) 2012 The Android Open Source Project
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 #include "sensor.h"
 /**---------------------------------------------------------------------------*
@@ -556,13 +559,9 @@ SENSOR_INFO_T g_OV2655_yuv_info = {
 	0,			// threshold start postion
 	0,			// threshold end postion
 	0,			// i2c_dev_handler
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	{0, 2, 8, 1},
 	PNULL,
 	4,			// skip frame num while change setting
-#else
-	{0, 2, 8, 1}
-#endif
 };
 
 /**---------------------------------------------------------------------------*

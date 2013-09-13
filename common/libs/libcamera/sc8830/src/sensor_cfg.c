@@ -1,14 +1,17 @@
 /*
- * Copyright (C) 2012 Spreadtrum Communications Inc.
+ * Copyright (C) 2012 The Android Open Source Project
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 //#include <linux/i2c.h>
 //#include <linux/gpio.h>
@@ -55,6 +58,7 @@ SENSOR_INFO_T g_GC2035_yuv_info;
 extern SENSOR_INFO_T g_ov5640_mipi_yuv_info;
 extern SENSOR_INFO_T g_ov8825_mipi_raw_info;
 extern SENSOR_INFO_T g_imx179_mipi_raw_info;
+extern SENSOR_INFO_T g_ov8865_mipi_raw_info;
 /**---------------------------------------------------------------------------*
  **                         Constant Variables                                *
  **---------------------------------------------------------------------------*/
@@ -65,7 +69,8 @@ const SENSOR_INFO_T* main_sensor_infor_tab[]=
 	//&g_ov8830_mipi_raw_info,
 	&g_ov5640_mipi_yuv_info,
 	&g_imx179_mipi_raw_info,
-	//&g_ov5640_mipi_raw_info, // aiden tmp 
+	&g_ov8865_mipi_raw_info,
+	//&g_ov5640_mipi_raw_info, // aiden tmp
 	//&g_s5k5ccgx_yuv_info_mipi,
 	//&g_s5k4e1ga_mipi_raw_info,
 	//&g_hi351_mipi_yuv_info,
@@ -102,9 +107,9 @@ const SENSOR_INFO_T* atv_infor_tab[]=
 };
 
 /*****************************************************************************/
-//  Description:    This function is used to get sensor information table    
+//  Description:    This function is used to get sensor information table
 //  Author:         Liangwen.Zhen
-//  Note:           
+//  Note:
 /*****************************************************************************/
 SENSOR_INFO_T ** Sensor_GetInforTab(SENSOR_ID_E sensor_id)
 {
@@ -122,7 +127,7 @@ SENSOR_INFO_T ** Sensor_GetInforTab(SENSOR_ID_E sensor_id)
 			sensor_infor_tab_ptr=(SENSOR_INFO_T*)&sub_sensor_infor_tab;
 			break;
 		}
-		case SENSOR_ATV: 
+		case SENSOR_ATV:
 		{
 			sensor_infor_tab_ptr=(SENSOR_INFO_T*)&atv_infor_tab;
 			break;
@@ -135,9 +140,9 @@ SENSOR_INFO_T ** Sensor_GetInforTab(SENSOR_ID_E sensor_id)
 }
 
 /*****************************************************************************/
-//  Description:    This function is used to get sensor information table    
+//  Description:    This function is used to get sensor information table
 //  Author:         Liangwen.Zhen
-//  Note:           
+//  Note:
 /*****************************************************************************/
 uint32_t Sensor_GetInforTabLenght(SENSOR_ID_E sensor_id)
 {
@@ -155,7 +160,7 @@ uint32_t Sensor_GetInforTabLenght(SENSOR_ID_E sensor_id)
 			tab_lenght=(sizeof(sub_sensor_infor_tab)/sizeof(SENSOR_INFO_T*));
 			break;
 		}
-		case SENSOR_ATV: 
+		case SENSOR_ATV:
 		{
 			tab_lenght=(sizeof(atv_infor_tab)/sizeof(SENSOR_INFO_T*));
 			break;

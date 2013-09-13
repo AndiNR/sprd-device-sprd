@@ -1,14 +1,17 @@
 /*
- * Copyright (C) 2012 Spreadtrum Communications Inc.
+ * Copyright (C) 2012 The Android Open Source Project
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 #include <utils/Log.h>
 #include "sensor.h"
@@ -117,10 +120,10 @@ LOCAL const SENSOR_REG_T ov5640_common_init[] = {
 	{0x3c09, 0x1c},		/* light meter 2 threshold L*/
 	{0x3c0a, 0x9c},		/* sample number H*/
 	{0x3c0b, 0x40},		/* sample number L*/
-	{0x3820, 0x41},		
-	{0x3821, 0x07},		
-	{0x3814, 0x31},		
-	{0x3815, 0x31},	
+	{0x3820, 0x41},
+	{0x3821, 0x07},
+	{0x3814, 0x31},
+	{0x3815, 0x31},
 	{0x3800, 0x00},
 	{0x3801, 0x00},
 	{0x3802, 0x00},
@@ -215,7 +218,7 @@ LOCAL const SENSOR_REG_T ov5640_common_init[] = {
   {0x3036,0x38},
   {0x3037,0x13},
   {0x4837,0x0a},
-  
+
   //update iq setting davis 20120105
   //AEC target
   {0x3a0f, 0x30}, //stable in high
@@ -224,7 +227,7 @@ LOCAL const SENSOR_REG_T ov5640_common_init[] = {
   {0x3a1e, 0x26}, //stable out low
   {0x3a11, 0x60}, //fast zone high
   {0x3a1f, 0x14}, //fast zone low
-  	       
+
   //sp-tigher-lenc-cus
   {0x5800, 0x29},
   {0x5801, 0x1a},
@@ -288,41 +291,41 @@ LOCAL const SENSOR_REG_T ov5640_common_init[] = {
   {0x583b, 0x2a},
   {0x583c, 0x2a},
   {0x583d, 0xae},
-  	      
+
   //sp-tiger-awb-1
-  {0x5180, 0xff}, 
-  {0x5181, 0xf2}, 
-  {0x5182, 0x00}, 
-  {0x5183, 0x14}, 
-  {0x5184, 0x25}, 
-  {0x5185, 0x24}, 
-  {0x5186, 0x11}, 
-  {0x5187, 0x18}, 
-  {0x5188, 0x1a}, 
-  {0x5189, 0x8b}, 
-  {0x518a, 0x6a}, 
-  {0x518b, 0x9c}, 
-  {0x518c, 0x96}, 
-  {0x518d, 0x3f}, 
-  {0x518e, 0x2d}, 
-  {0x518f, 0x53}, 
-  {0x5190, 0x47}, 
-  {0x5191, 0xf8}, 
-  {0x5192, 0x04}, 
-  {0x5193, 0xf0}, 
-  {0x5194, 0xf0}, 
-  {0x5195, 0xf0}, 
-  {0x5196, 0x03}, 
-  {0x5197, 0x01}, 
-  {0x5198, 0x07}, 
-  {0x5199, 0xa9}, 
-  {0x519a, 0x04}, 
-  {0x519b, 0x00}, 
-  {0x519c, 0x04}, 
-  {0x519d, 0x8b}, 
-  {0x519e, 0x38}, 
-  	       
-  //Gamma      
+  {0x5180, 0xff},
+  {0x5181, 0xf2},
+  {0x5182, 0x00},
+  {0x5183, 0x14},
+  {0x5184, 0x25},
+  {0x5185, 0x24},
+  {0x5186, 0x11},
+  {0x5187, 0x18},
+  {0x5188, 0x1a},
+  {0x5189, 0x8b},
+  {0x518a, 0x6a},
+  {0x518b, 0x9c},
+  {0x518c, 0x96},
+  {0x518d, 0x3f},
+  {0x518e, 0x2d},
+  {0x518f, 0x53},
+  {0x5190, 0x47},
+  {0x5191, 0xf8},
+  {0x5192, 0x04},
+  {0x5193, 0xf0},
+  {0x5194, 0xf0},
+  {0x5195, 0xf0},
+  {0x5196, 0x03},
+  {0x5197, 0x01},
+  {0x5198, 0x07},
+  {0x5199, 0xa9},
+  {0x519a, 0x04},
+  {0x519b, 0x00},
+  {0x519c, 0x04},
+  {0x519d, 0x8b},
+  {0x519e, 0x38},
+
+  //Gamma
   {0x5480, 0x01}, //BIAS plus on
   {0x5481, 0x08},
   {0x5482, 0x14},
@@ -340,7 +343,7 @@ LOCAL const SENSOR_REG_T ov5640_common_init[] = {
   {0x548e, 0xdd},
   {0x548f, 0xea},
   {0x5490, 0x1d},
-  	       
+
   //color matrix
   {0x5381, 0x1a}, //CMX1 for Y
   {0x5382, 0x60}, //CMX2 for Y
@@ -353,8 +356,8 @@ LOCAL const SENSOR_REG_T ov5640_common_init[] = {
   {0x5389, 0x0f}, //CMX9 for V
   {0x538a, 0x01}, //sign[9]
   {0x538b, 0x98}, //sign[8:1]
-    
-  //UV adjust  
+
+  //UV adjust
   {0x5580, 0x02},
   {0x5583, 0x40},
   {0x5584, 0x10},
@@ -362,8 +365,8 @@ LOCAL const SENSOR_REG_T ov5640_common_init[] = {
   {0x558a, 0x00},
   {0x558b, 0xf8},
   {0x501d, 0x40}, //enable manual offset in contrast
-  	       
-  //CIP        
+
+  //CIP
   {0x5300, 0x08}, //sharpen-MT th1
   {0x5301, 0x30}, //sharpen-MT th2
   {0x5302, 0x16}, //sharpen-MT off1
@@ -424,7 +427,7 @@ LOCAL const SENSOR_REG_T ov5640_640x480_setting[] = {
 	{0x440e, 0x00},
 	{0x460b, 0x35},
 
-	{0x5001, 0xa7},	// SDE on, CMX on, AWB on, scale off 
+	{0x5001, 0xa7},	// SDE on, CMX on, AWB on, scale off
 
 	{0x3c07, 0x08},	// lightmeter 1 threshold[7:0]
 
@@ -434,7 +437,7 @@ LOCAL const SENSOR_REG_T ov5640_640x480_setting[] = {
 	{0x3036,0x38},
 	{0x3037,0x13},
 	{0x4837,0x0a},
-	{0x3108, 0x01},	
+	{0x3108, 0x01},
 
 	 	 //yuv
      {0x3002,0x1c},
@@ -442,7 +445,7 @@ LOCAL const SENSOR_REG_T ov5640_640x480_setting[] = {
      {0x3821,0x06},
      {0x501f,0x00},
      {0x460c,0x22},
-     {0x3824,0x02},	
+     {0x3824,0x02},
      {0x460b,0x37},
 
 #ifdef CONFIG_ARCH_SC8825
@@ -495,7 +498,7 @@ LOCAL const SENSOR_REG_T ov5640_1024x768_setting[] = {
 	{0x4407, 0x04},
 	{0x440e, 0x00},
 	{0x460b, 0x35},
-	{0x5001, 0xa7},	// SDE on, CMX on, AWB on, scale off 
+	{0x5001, 0xa7},	// SDE on, CMX on, AWB on, scale off
 	{0x3c07, 0x08},	// lightmeter 1 threshold[7:0]
 
 	/*pll*/
@@ -504,7 +507,7 @@ LOCAL const SENSOR_REG_T ov5640_1024x768_setting[] = {
 	{0x3036,0x38},
 	{0x3037,0x13},
 	{0x4837,0x0a},
-	{0x3108, 0x01},	
+	{0x3108, 0x01},
 
 	 	 //yuv
      {0x3002,0x1c},
@@ -512,7 +515,7 @@ LOCAL const SENSOR_REG_T ov5640_1024x768_setting[] = {
      {0x3821,0x06},
      {0x501f,0x00},
      {0x460c,0x22},
-     {0x3824,0x02},	
+     {0x3824,0x02},
      {0x460b,0x37},
 
 #ifdef CONFIG_ARCH_SC8825
@@ -624,7 +627,7 @@ LOCAL const SENSOR_REG_T ov5640_1280x960_setting[] = {
      {0x3036,0x54},
      {0x3037,0x13},
      {0x4837,0x0a},
-     {0x3108, 0x01},	
+     {0x3108, 0x01},
 
 	 	 //yuv
      {0x3002,0x1c},
@@ -632,7 +635,7 @@ LOCAL const SENSOR_REG_T ov5640_1280x960_setting[] = {
      {0x3821,0x06},
      {0x501f,0x00},
      {0x460c,0x22},
-     {0x3824,0x02},	
+     {0x3824,0x02},
      {0x460b,0x37},
 #ifdef CONFIG_ARCH_SC8825
      {0x3503,0x03}	// AEC/AGC off
@@ -686,8 +689,8 @@ LOCAL const SENSOR_REG_T ov5640_1280x960_jpeg_setting[] = {
      {0x3036,0x54},
      {0x3037,0x13},
      {0x4837,0x0a},
-     {0x3108, 0x01},	
-     
+     {0x3108, 0x01},
+
   	 //jpeg
      {0x3002,0x00},
      {0x3006,0xff},
@@ -749,7 +752,7 @@ LOCAL const SENSOR_REG_T ov5640_1600x1200_setting[] = {
      {0x3036,0x54},
      {0x3037,0x13},
      {0x4837,0x0a},
-     {0x3108, 0x01},	
+     {0x3108, 0x01},
 
 	 	 //yuv
      {0x3002,0x1c},
@@ -757,7 +760,7 @@ LOCAL const SENSOR_REG_T ov5640_1600x1200_setting[] = {
      {0x3821,0x06},
      {0x501f,0x00},
      {0x460c,0x22},
-     {0x3824,0x02},	
+     {0x3824,0x02},
      {0x460b,0x37},
 #ifdef CONFIG_ARCH_SC8825
      {0x3503,0x03}	// AEC/AGC off
@@ -812,7 +815,7 @@ LOCAL const SENSOR_REG_T ov5640_1600x1200_jpeg_setting[] = {
      {0x3036,0x54},
      {0x3037,0x13},
      {0x4837,0x0a},
-     {0x3108, 0x01},	
+     {0x3108, 0x01},
 
   	 //jpeg
      {0x3002,0x00},
@@ -868,13 +871,13 @@ LOCAL const SENSOR_REG_T ov5640_2048x1536_setting[] = {
      {0x5001,0xa7},
 
 		 /*pll*/
-	
+
      {0x3034,0x18},
      {0x3035,0x11},
      {0x3036,0x54},
      {0x3037,0x13},
      {0x4837,0x0a},
-     {0x3108, 0x01},	
+     {0x3108, 0x01},
 
 
      /*
@@ -893,9 +896,9 @@ LOCAL const SENSOR_REG_T ov5640_2048x1536_setting[] = {
      {0x3821,0x06},
      {0x501f,0x00},
      //{0x460c,0x22},
-     //{0x3824,0x02},	
+     //{0x3824,0x02},
      {0x460b,0x37},
-*/     
+*/
 
 #ifdef CONFIG_ARCH_SC8825
      {0x3503,0x03}	// AEC/AGC off
@@ -945,13 +948,13 @@ LOCAL const SENSOR_REG_T ov5640_2048x1536_jpeg_setting[] = {
      {0x5001,0xa7},
 
 		 /*pll*/
-	
+
      {0x3034,0x18},
      {0x3035,0x13},
      {0x3036,0x70},
      {0x3037,0x13},
      {0x4837,0x0a},
-     {0x3108, 0x02},	
+     {0x3108, 0x02},
      {0x4407,0x0c},
 
       /*
@@ -971,7 +974,7 @@ LOCAL const SENSOR_REG_T ov5640_2048x1536_jpeg_setting[] = {
      {0x3821,0x26},
      {0x501f,0x00},
      {0x4713,0x02},
-     {0x460b,0x35},		 
+     {0x460b,0x35},
 
 #ifdef CONFIG_ARCH_SC8825
      {0x3503,0x03}	// AEC/AGC off
@@ -1034,9 +1037,9 @@ LOCAL const SENSOR_REG_T ov5640_2592x1944_setting[] = {
      {0x3821,0x06},
      {0x501f,0x00},
      {0x460c,0x22},
-     {0x3824,0x02},	
+     {0x3824,0x02},
      {0x460b,0x37},
-  
+
 #ifdef CONFIG_ARCH_SC8825
      {0x3503,0x03}	// AEC/AGC off
 #endif
@@ -1090,7 +1093,7 @@ LOCAL const SENSOR_REG_T ov5640_2592x1944_jpeg_setting[] = {
      {0x3036,0x54},
      {0x3037,0x13},
      {0x4837,0x0a},
-     {0x3108, 0x01},	
+     {0x3108, 0x01},
 
   	 //jpeg
      {0x3002,0x00},
@@ -1101,7 +1104,7 @@ LOCAL const SENSOR_REG_T ov5640_2592x1944_jpeg_setting[] = {
      {0x460b,0x35},
      //{0x460c,0x22},
      //{0x3824,0x04},
-     
+
      {0x4407,0x20},
 
 #ifdef CONFIG_ARCH_SC8825
@@ -1258,13 +1261,9 @@ SENSOR_INFO_T g_ov5640_mipi_yuv_info = {
 	0,
 	0,
 	0,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	{SENSOR_INTERFACE_TYPE_CSI2, 2, 8, 1},
 	PNULL,
 	3,			// skip frame num while change setting
-#else
-	{SENSOR_INTERFACE_TYPE_CSI2, 2, 8, 1}
-#endif
 };
 
 LOCAL uint32_t _ov5640_GetExifInfo(uint32_t param)
@@ -2361,7 +2360,7 @@ int OV5640_capture(uint32_t param)
 	average = Sensor_ReadReg(0x56a1);
 
 	Sensor_SetMode(param);
-	Sensor_StreamOff();
+	Sensor_SetMode_WaitDone();
 
 	// read capture VTS
 	capture_VTS = OV5640_get_VTS();
@@ -2445,21 +2444,12 @@ LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param)
 
 	param = param&0xffff;
 	SENSOR_PRINT("%d,%d.",cap_mode,param);
-	if (SENSOR_MODE_PREVIEW_ONE >= param) {
-		int ae_ag_ctrl;
-		//turn off AE/AG
-		ae_ag_ctrl = Sensor_ReadReg(0x3503);
-		SENSOR_PRINT("before, ae_ag_ctrl 0x%x", ae_ag_ctrl);
-		ae_ag_ctrl = ae_ag_ctrl | 0x03;
-		Sensor_WriteReg(0x3503, ae_ag_ctrl);
-		SENSOR_PRINT("after, ae_ag_ctrl 0x%x", ae_ag_ctrl);
-		s_capture_shutter = OV5640_get_shutter();
-		s_capture_VTS = OV5640_get_VTS();
-		_ov5640_ReadGain(param);
+	if (cap_mode == param) {
+		SENSOR_PRINT("No need to switch mode");
 		return SENSOR_SUCCESS;
 	}
 	OV5640_capture(param);
-
+	usleep(15*1000);
 	return SENSOR_SUCCESS;
 }
 

@@ -1,17 +1,17 @@
 /*
- * hardware/sprd/hsdroid/libcamera/sprdcamerahardwareinterface.h
+ * Copyright (C) 2012 The Android Open Source Project
  *
- * Copyright (C) 2013 Spreadtrum
- * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 #ifndef ANDROID_HARDWARE_SPRD_CAMERA_HARDWARE_H
 #define ANDROID_HARDWARE_SPRD_CAMERA_HARDWARE_H
@@ -60,7 +60,7 @@ class SprdCameraHardware : public virtual RefBase {
 public:
 	SprdCameraHardware(int cameraId);
 	virtual                      ~SprdCameraHardware();
-	inline int                   getCameraId() const; 
+	inline int                   getCameraId() const;
 	virtual void                 release();
 	virtual status_t             startPreview();
 	virtual void                 stopPreview();
@@ -110,7 +110,7 @@ public:
 	static int                   getCameraInfo(int cameraId, struct camera_info *cameraInfo);
 	static const CameraInfo      kCameraInfo[];
 	static const CameraInfo      kCameraInfo3[];
-	
+
 private:
 	inline void                  print_time();
 
@@ -122,12 +122,12 @@ private:
 					int frame_offset, const char *name);
 		virtual ~MemPool() = 0;
 		void     completeInitialization();
-		bool     initialized() const { 
+		bool     initialized() const {
 			if (mHeap != NULL) {
 				if(MAP_FAILED != mHeap->base())
 					return true;
 				else
-					return false;	
+					return false;
 			} else {
 				return false;
 			}
@@ -149,16 +149,20 @@ private:
 
 	static int Callback_AllocCapturePmem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir);
 	static int Callback_FreeCapturePmem(void* handle);
-	
+
 	void                  FreeCameraMem(void);
 	sprd_camera_memory_t* GetPmem(int buf_size, int num_bufs);
 	void                  FreePmem(sprd_camera_memory_t* camera_memory);
-	void                  setFdmem(uint32_t size);	
+	void                  setFdmem(uint32_t size);
 	void                  FreeFdmem(void);
+	uint32_t              getPreviewBufferID(buffer_handle_t *buffer_handle);
+	void                  canclePreviewMem();
+	int                     releasePreviewFrame();
+	bool                  allocatePreviewMemByGraphics();
 	bool                  allocatePreviewMem();
 	void                  freePreviewMem();
 	bool                  allocateCaptureMem(bool initJpegHeap);
-	void                  freeCaptureMem();	
+	void                  freeCaptureMem();
 	uint32_t              getRedisplayMem();
 	void                  FreeReDisplayMem();
 	static void           camera_cb(camera_cb_type cb,
@@ -172,7 +176,7 @@ private:
 	void                  receiveRawPicture(camera_frame_type *frame);
 	void                  receiveJpegPicture(JPEGENC_CBrtnType *encInfo);
 	void                  receivePreviewFrame(camera_frame_type *frame);
-	void                  receivePreviewFDFrame(camera_frame_type *frame);	
+	void                  receivePreviewFDFrame(camera_frame_type *frame);
 	void                  receiveCameraExitError(void);
 	void                  receiveTakePictureError(void);
 	void                  receiveJpegPictureError(void);
@@ -187,14 +191,14 @@ private:
 
 	enum Sprd_camera_state {
 		SPRD_INIT,
-		SPRD_IDLE,     
+		SPRD_IDLE,
 		SPRD_ERROR,
 		SPRD_PREVIEW_IN_PROGRESS,
 		SPRD_FOCUS_IN_PROGRESS,
 		SPRD_WAITING_RAW,
 		SPRD_WAITING_JPEG,
 
-		// internal states 
+		// internal states
 		SPRD_INTERNAL_PREVIEW_STOPPING,
 		SPRD_INTERNAL_CAPTURE_STOPPING,
 		SPRD_INTERNAL_PREVIEW_REQUESTED,
@@ -222,7 +226,7 @@ private:
 						Sprd_camera_state to,
 						state_owner owner,
 						bool lock = true);
-	void                            setCameraState(Sprd_camera_state state, 
+	void                            setCameraState(Sprd_camera_state state,
 								state_owner owner = STATE_CAMERA);
 	inline Sprd_camera_state        getCameraState();
 	inline Sprd_camera_state        getPreviewState();
@@ -239,6 +243,7 @@ private:
 	bool                            WaitForCaptureDone();
 	bool                            WaitForCameraStart();
 	bool                            WaitForCameraStop();
+	bool                            WaitForFocusCancelDone();
 	bool                            isRecordingMode();
 	void                            setRecordingMode(bool enable);
 	bool                            startCameraIfNecessary();
@@ -256,17 +261,23 @@ private:
 	status_t                        setCameraParameters();
 	status_t                        checkSetParametersEnvironment();
 	status_t                        checkSetParameters(const SprdCameraParameters& params);
-	bool                            setCameraDimensions();	
+	bool                            setCameraDimensions();
 	void                            setCameraPreviewMode();
 	void                            changeEmcFreq(char flag);
 	void                            setPreviewFreq();
 	void                            set_ddr_freq(const char* freq_in_khz);
 	void                            restoreFreq();
-	bool                            displayOneFrame(uint32_t width, 
-							uint32_t height,
-							uint32_t phy_addr, char *frame_addr);
+	bool                            displayOneFrame(uint32_t width,
+							          uint32_t height,
+							          uint32_t phy_addr, char *frame_addr,
+							          uint32_t id);
+	bool                            displayOneFrameForCapture(uint32_t width,
+		                              uint32_t height,
+		                              uint32_t phy_addr,
+		                              char *virtual_addr);
 	bool                            iSDisplayCaptureFrame();
 	bool                            iSZslMode();
+	bool                            checkPreviewStateForCapture();
 	/* These constants reflect the number of buffers that libqcamera requires
 	for preview and raw, and need to be updated when libqcamera
 	changes.
@@ -275,7 +286,7 @@ private:
 	static const int                kPreviewRotBufferCount = 4;
 	static const int                kRawBufferCount        = 1;
 	static const int                kJpegBufferCount       = 1;
-	static const int                kRawFrameHeaderSize    = 0x0;	
+	static const int                kRawFrameHeaderSize    = 0x0;
 	Mutex                           mLock; // API lock -- all public methods
 	Mutex                           mCallbackLock;
 	Mutex                           mPreviewCbLock;
@@ -285,9 +296,12 @@ private:
 
 	uint32_t                        mPreviewHeapSize;
 	uint32_t                        mPreviewHeapNum;
+	uint32_t                        mPreviewDcamAllocBufferCnt;
 	sprd_camera_memory_t*           *mPreviewHeapArray;
-	uint32_t                        mPreviewHeapArray_phy[kPreviewBufferCount+kPreviewRotBufferCount];
-	uint32_t                           mPreviewHeapArray_vir[kPreviewBufferCount+kPreviewRotBufferCount];
+	uint32_t                        mPreviewHeapArray_phy[kPreviewBufferCount+kPreviewRotBufferCount+1];
+	uint32_t                           mPreviewHeapArray_vir[kPreviewBufferCount+kPreviewRotBufferCount+1];
+	buffer_handle_t           *mPreviewBufferHandle[kPreviewBufferCount];
+	buffer_handle_t           *mPreviewCancelBufHandle[kPreviewBufferCount];
 
 	sprd_camera_memory_t            *mRawHeap;
 	uint32_t                        mRawHeapSize;
@@ -313,7 +327,7 @@ private:
 	int                             mRawHeight;
 	int                             mRawWidth;
 	int                             mPreviewFormat;//0:YUV422;1:YUV420;2:RGB
-	int                             mPictureFormat;//0:YUV422;1:YUV420;2:RGB;3:JPEG  
+	int                             mPictureFormat;//0:YUV422;1:YUV420;2:RGB;3:JPEG
 	int                             mPreviewStartFlag;
 
 	bool                            mRecordingMode;
@@ -341,6 +355,7 @@ private:
 	bool                            mCaptureRawMode;
 	bool                            mIsRotCapture;
 	uint32_t                        mTimeCoeff;
+	uint32_t                        mPreviewBufferUsage;
 };
 
 }; // namespace android

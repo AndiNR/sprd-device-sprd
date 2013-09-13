@@ -1,14 +1,17 @@
 /*
- * Copyright (C) 2012 Spreadtrum Communications Inc.
+ * Copyright (C) 2012 The Android Open Source Project
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 #include <utils/Log.h>
 #include "sensor.h"
@@ -411,13 +414,9 @@ SENSOR_INFO_T g_ov5640_mipi_raw_info = {
 	0,
 	0,
 	0,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0},
 	PNULL,
 	3,			// skip frame num while change setting
-#else
-	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0}
-#endif
 };
 
 LOCAL struct sensor_raw_info* Sensor_GetContext(void)
@@ -1063,7 +1062,7 @@ LOCAL uint32_t _ov5640_Identify(uint32_t param)
 	} else {
 		SENSOR_PRINT("SENSOR_OV5640: identify fail,pid_value=%d", pid_value);
 	}
-	
+
 	return ret_value;
 }
 
@@ -1189,7 +1188,7 @@ LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param)
 	uint32_t capture_maxline, preview_exposure;
 	uint32_t prv_linetime=s_ov5640_Resolution_Trim_Tab[SENSOR_MODE_PREVIEW_ONE].line_time;
 	uint32_t cap_linetime;
-	
+
 	param = param&0xffff;
 	SENSOR_PRINT("%d,%d.",cap_mode,param);
 	cap_linetime = s_ov5640_Resolution_Trim_Tab[param].line_time;

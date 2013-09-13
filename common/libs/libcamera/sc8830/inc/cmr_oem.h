@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 The Android Open Source Project
+ * Copyright (C) 2012 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -229,6 +229,12 @@ struct arithmetic_context {
 	uint32_t                 fd_flag;
 };
 
+struct jpeg_specify_context {
+	uint32_t                jpeg_specify_state;
+	pthread_mutex_t         jpeg_specify_mutex;
+	sem_t                   jpeg_specify_cap_sem;
+};
+
 struct camera_settings {
 	uint32_t                 focal_len;
 	uint32_t                 brightness;
@@ -251,6 +257,7 @@ struct camera_settings {
 	uint32_t                 frame_rate;
 	uint32_t                 sensor_mode;
 	uint32_t                 auto_exposure_mode;
+	uint32_t                 preview_env;
 	/*all the above value will be set as 0xFFFFFFFF after inited*/
 	uint32_t                 set_end;
 
@@ -276,6 +283,7 @@ struct camera_context {
 	struct scaler_context    scaler_cxt;
 	struct rotation_context  rot_cxt;
 	struct arithmetic_context arithmetic_cxt;
+	struct jpeg_specify_context jpeg_specify_cxt;
 
 	/*for the workflow management*/
 	pthread_t                camera_main_thr;
@@ -321,6 +329,7 @@ struct camera_context {
 	sem_t                    stop_sem;
 	sem_t                    takepicdone_sem;
 	sem_t                    takepic_callback_sem;
+	sem_t                    sync_scale_sem;
 	uint32_t                 err_code;
 	uint32_t                 camera_id;
 	pthread_t                prev_thread;
@@ -395,6 +404,8 @@ struct camera_context {
 	pthread_mutex_t          cancel_mutex;
 	uint32_t                 cap_canceled;
 	takepicture_mode         cap_mode;
+
+	uint32_t                 is_reset_if_cfg;
 	/* for capture ZSL */
 	struct frm_info          cap_frm_info[CAMERA_CAP_FRM_CNT];
 	struct img_frm           cap_frm[CAMERA_CAP_FRM_CNT];
@@ -450,7 +461,8 @@ int camera_set_sensormark(void);
 int camera_save_sensormark(void);
 int camera_takepic_callback_done(struct camera_context *p_cxt);
 int camera_wait_takepic_callback(struct camera_context *p_cxt);
-
+int camera_sync_scale_start(struct camera_context *p_cxt);
+int camera_sync_scale_done(struct camera_context *p_cxt);
 int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 	uint32_t width, uint32_t height, struct img_addr *addr);
 uint32_t getOrientationFromRotationDegrees(int degrees);

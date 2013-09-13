@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 The Android Open Source Project
+ * Copyright (C) 2012 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -120,6 +120,14 @@ uint32_t ISP_Cali_Get_RawRGB_Stat(struct isp_addr_t *img_addr,
 
 uint32_t ISP_Cali_LNCCorrection(struct isp_addr_t * src_data, struct isp_addr_t * dst_data, struct isp_size_t img_size, uint8_t grid, uint16_t *lnc_tab);
 void ISP_Cali_GetLNCTabSize(struct isp_size_t img_size, uint32_t grid, uint32_t *tab_size);
+
+int32_t ISP_Cali_BLCorrecton(struct isp_addr_t *in_img_addr,
+								struct isp_addr_t *out_img_addr,
+								struct isp_rect_t *rect,
+								struct isp_size_t *img_size,
+								uint32_t  bayer_pttn,
+								struct isp_bayer_ptn_stat_t *stat_param
+								);
 
 #ifdef	 __cplusplus
 }

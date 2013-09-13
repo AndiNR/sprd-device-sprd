@@ -1,14 +1,17 @@
 /*
- * Copyright (C) 2012 Spreadtrum Communications Inc.
+ * Copyright (C) 2012 The Android Open Source Project
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 #include <utils/Log.h>
 #include "sensor.h"
@@ -66,36 +69,36 @@ static uint32_t g_af_slewrate = 1;
 
 LOCAL const SENSOR_REG_T imx179_common_init[] = {
 {0x0100, 0x00},
-{0x0101, 0x00}, 
-{0x0202, 0x03}, 
+{0x0101, 0x00},
+{0x0202, 0x03},
 {0x0203, 0xC5},
 {0x0301, 0x0A},
-{0x0303, 0x01}, 
-{0x0305, 0x06}, 
+{0x0303, 0x01},
+{0x0305, 0x06},
 {0x0309, 0x0A},
-{0x030B, 0x01}, 
-{0x030C, 0x00}, 
+{0x030B, 0x01},
+{0x030C, 0x00},
 {0x030D, 0x7D},
-{0x0340, 0x03}, 
+{0x0340, 0x03},
 {0x0341, 0xC9},
 {0x0342, 0x0D},
 {0x0343, 0x70},
-{0x0344, 0x00}, 
+{0x0344, 0x00},
 {0x0345, 0x28},
-{0x0346, 0x01}, 
+{0x0346, 0x01},
 {0x0347, 0x4C},
 {0x0348, 0x0C},
 {0x0349, 0xA7},
-{0x034A, 0x08}, 
+{0x034A, 0x08},
 {0x034B, 0x53},
-{0x034C, 0x05}, 
-{0x034D, 0x00}, 
-{0x034E, 0x02}, 
+{0x034C, 0x05},
+{0x034D, 0x00},
+{0x034E, 0x02},
 {0x034F, 0xD0},
-{0x0383, 0x01}, 
-{0x0387, 0x01}, 
-{0x0390, 0x01}, 
-{0x0401, 0x02}, 
+{0x0383, 0x01},
+{0x0387, 0x01},
+{0x0390, 0x01},
+{0x0401, 0x02},
 {0x0405, 0x14},
 {0x3020, 0x10},
 {0x3041, 0x15},
@@ -106,9 +109,9 @@ LOCAL const SENSOR_REG_T imx179_common_init[] = {
 {0x3345, 0x1F},
 {0x3362, 0x0A},
 {0x3363, 0x0A},
-{0x3364, 0x02}, 
+{0x3364, 0x02},
 {0x3368, 0x18},
-{0x3369, 0x00}, 
+{0x3369, 0x00},
 {0x3370, 0x67},
 {0x3371, 0x6F},
 {0x3372, 0x47},
@@ -117,47 +120,47 @@ LOCAL const SENSOR_REG_T imx179_common_init[] = {
 {0x3375, 0x1F},
 {0x3376, 0x7F},
 {0x3377, 0x2F},
-{0x33C8, 0x00}, 
-{0x33D4, 0x06}, 
+{0x33C8, 0x00},
+{0x33D4, 0x06},
 {0x33D5, 0x40},
-{0x33D6, 0x03}, 
+{0x33D6, 0x03},
 {0x33D7, 0x84},
 {0x4100, 0x0E},
-{0x4108, 0x01}, 
+{0x4108, 0x01},
 {0x4109, 0x7C},
 };
 
 LOCAL const SENSOR_REG_T imx179_1280x720_2lane_setting[] = {
-{0x0101, 0x00}, 
-{0x0202, 0x03}, 
+{0x0101, 0x00},
+{0x0202, 0x03},
 {0x0203, 0xC5},
 {0x0301, 0x0A},
-{0x0303, 0x01}, 
-{0x0305, 0x06}, 
+{0x0303, 0x01},
+{0x0305, 0x06},
 {0x0309, 0x0A},
-{0x030B, 0x01}, 
-{0x030C, 0x00}, 
+{0x030B, 0x01},
+{0x030C, 0x00},
 {0x030D, 0x7D},
-{0x0340, 0x03}, 
+{0x0340, 0x03},
 {0x0341, 0xC9},
 {0x0342, 0x0D},
 {0x0343, 0x70},
-{0x0344, 0x00}, 
+{0x0344, 0x00},
 {0x0345, 0x28},
-{0x0346, 0x01}, 
+{0x0346, 0x01},
 {0x0347, 0x4C},
 {0x0348, 0x0C},
 {0x0349, 0xA7},
-{0x034A, 0x08}, 
+{0x034A, 0x08},
 {0x034B, 0x53},
-{0x034C, 0x05}, 
-{0x034D, 0x00}, 
-{0x034E, 0x02}, 
+{0x034C, 0x05},
+{0x034D, 0x00},
+{0x034E, 0x02},
 {0x034F, 0xD0},
-{0x0383, 0x01}, 
-{0x0387, 0x01}, 
-{0x0390, 0x01}, 
-{0x0401, 0x02}, 
+{0x0383, 0x01},
+{0x0387, 0x01},
+{0x0390, 0x01},
+{0x0401, 0x02},
 {0x0405, 0x14},
 {0x3020, 0x10},
 {0x3041, 0x15},
@@ -168,9 +171,9 @@ LOCAL const SENSOR_REG_T imx179_1280x720_2lane_setting[] = {
 {0x3345, 0x1F},
 {0x3362, 0x0A},
 {0x3363, 0x0A},
-{0x3364, 0x02}, 
+{0x3364, 0x02},
 {0x3368, 0x18},
-{0x3369, 0x00}, 
+{0x3369, 0x00},
 {0x3370, 0x67},
 {0x3371, 0x6F},
 {0x3372, 0x47},
@@ -179,13 +182,13 @@ LOCAL const SENSOR_REG_T imx179_1280x720_2lane_setting[] = {
 {0x3375, 0x1F},
 {0x3376, 0x7F},
 {0x3377, 0x2F},
-{0x33C8, 0x00}, 
-{0x33D4, 0x06}, 
+{0x33C8, 0x00},
+{0x33D4, 0x06},
 {0x33D5, 0x40},
-{0x33D6, 0x03}, 
+{0x33D6, 0x03},
 {0x33D7, 0x84},
 {0x4100, 0x0E},
-{0x4108, 0x01}, 
+{0x4108, 0x01},
 {0x4109, 0x7C},
 };
 
@@ -316,7 +319,7 @@ LOCAL const SENSOR_REG_T imx179_3264x2448_4lane_setting[] = {
 {0x4109, 0x7C},
 };
 
-//22fps 500bps/lane 8M 
+//22fps 500bps/lane 8M
 LOCAL const SENSOR_REG_T imx179_3264x2448_4lane_setting_a[] = {
 //{0x0100, 0x00},
 {0x0101, 0x00},
@@ -498,7 +501,7 @@ LOCAL const SENSOR_REG_T imx179_3264x2448_4lane_setting_b[] = {
 {0x3377, 0x37},
 {0x33C8, 0x00},
 {0x33D4, 0x0C},
-{0x33D5, 0xC0}, 
+{0x33D5, 0xC0},
 {0x33D6, 0x09},
 {0x33D7, 0x90},
 {0x4100, 0x0E},
@@ -981,7 +984,6 @@ LOCAL SENSOR_TRIM_T s_imx179_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0, 0},
 	{0, 0, 0, 0, 0, 0, 0},
 };
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 
 LOCAL const SENSOR_REG_T s_imx179_1632x1224_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
 	/*video mode 0: ?fps*/
@@ -1084,7 +1086,6 @@ LOCAL uint32_t _imx179_set_video_mode(uint32_t param)
 	return 0;
 }
 
-#endif
 
 LOCAL SENSOR_IOCTL_FUNC_TAB_T s_imx179_ioctl_func_tab = {
 	PNULL,
@@ -1131,11 +1132,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_imx179_ioctl_func_tab = {
 	PNULL, //_imx179_GetExifInfo,
 	_imx179_ExtFunc,
 	PNULL, //_imx179_set_anti_flicker,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	_imx179_set_video_mode,
-#else
-	PNULL,
-#endif
 	PNULL, //pick_jpeg_stream
 	PNULL,  //meter_mode
 	PNULL, //get_status
@@ -1217,10 +1214,8 @@ SENSOR_INFO_T g_imx179_mipi_raw_info = {
 	{SENSOR_INTERFACE_TYPE_CSI2, 4, 10, 0},
 #endif
 
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	s_imx179_video_info,
 	3,			// skip frame num while change setting
-#endif
 };
 
 LOCAL struct sensor_raw_info* Sensor_GetContext(void)
@@ -1655,11 +1650,11 @@ LOCAL uint32_t Sensor_imx179_InitRawTuneInfo(void)
 	//GrGb
 	sensor_ptr->grgb.edge_thr=26;
 	sensor_ptr->grgb.diff_thr=80;
-	
+
 	//cfa
 	sensor_ptr->cfa.edge_thr=0x1a;
 	sensor_ptr->cfa.diff_thr=0x00;
-	
+
 	//cmc
 	sensor_ptr->cmc.matrix[0][0]=0x6f3;
 	sensor_ptr->cmc.matrix[0][1]=0x3e0a;
@@ -1670,7 +1665,7 @@ LOCAL uint32_t Sensor_imx179_InitRawTuneInfo(void)
 	sensor_ptr->cmc.matrix[0][6]=0x0d;
 	sensor_ptr->cmc.matrix[0][7]=0x3c03;
 	sensor_ptr->cmc.matrix[0][8]=0x7f0;
-	
+
 	//Gamma
 	sensor_ptr->gamma.axis[0][0]=0;
 	sensor_ptr->gamma.axis[0][1]=8;
@@ -1740,7 +1735,7 @@ LOCAL uint32_t Sensor_imx179_InitRawTuneInfo(void)
 	sensor_ptr->pref.y_thr=0x04;
 	sensor_ptr->pref.u_thr=0x04;
 	sensor_ptr->pref.v_thr=0x04;
-	
+
 	//bright
 	sensor_ptr->bright.factor[0]=0xd0;
 	sensor_ptr->bright.factor[1]=0xe0;
@@ -1758,7 +1753,7 @@ LOCAL uint32_t Sensor_imx179_InitRawTuneInfo(void)
 	sensor_ptr->bright.factor[13]=0x00;
 	sensor_ptr->bright.factor[14]=0x00;
 	sensor_ptr->bright.factor[15]=0x00;
-	
+
 	//contrast
 	sensor_ptr->contrast.factor[0]=0x10;
 	sensor_ptr->contrast.factor[1]=0x20;
@@ -1776,15 +1771,15 @@ LOCAL uint32_t Sensor_imx179_InitRawTuneInfo(void)
 	sensor_ptr->contrast.factor[13]=0x40;
 	sensor_ptr->contrast.factor[14]=0x40;
 	sensor_ptr->contrast.factor[15]=0x40;
-	
+
 	//hist
 	sensor_ptr->hist.mode;
 	sensor_ptr->hist.low_ratio;
 	sensor_ptr->hist.high_ratio;
-	
+
 	//auto contrast
 	sensor_ptr->auto_contrast.mode;
-	
+
 	//saturation
 	sensor_ptr->saturation.factor[0]=0x28;
 	sensor_ptr->saturation.factor[1]=0x30;
@@ -1832,10 +1827,10 @@ LOCAL uint32_t Sensor_imx179_InitRawTuneInfo(void)
 
 	//emboss
 	sensor_ptr->emboss.step=0x00;
-	
+
 	//global gain
 	sensor_ptr->global.gain=0x40;
-	
+
 	//chn gain
 	sensor_ptr->chn.r_gain=0x40;
 	sensor_ptr->chn.g_gain=0x40;
@@ -1852,7 +1847,7 @@ LOCAL uint32_t _dw9174_SRCInit(uint32_t mode)
 	uint8_t cmd_val[2] = {0x00};
 	uint16_t  slave_addr = 0;
 	uint16_t cmd_len = 0;
-	uint32_t ret_value = SENSOR_SUCCESS;	
+	uint32_t ret_value = SENSOR_SUCCESS;
 
 	slave_addr = DW9714_VCM_SLAVE_ADDR;
 	switch (mode) {
@@ -1864,20 +1859,20 @@ LOCAL uint32_t _dw9174_SRCInit(uint32_t mode)
 			cmd_len = 2;
 			cmd_val[0] = 0xec;
 			cmd_val[1] = 0xa3;
-			ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);			
+			ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
 			if(ret_value){
 				SENSOR_PRINT("SENSOR_IMX179: _dw9174_SRCInit fail!1");
 			}
 			cmd_val[0] = 0xf2;
 			cmd_val[1] = 0x00;
-			ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);			
+			ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
 			if(ret_value){
 				SENSOR_PRINT("SENSOR_IMX179: _dw9174_SRCInit fail!2");
 			}
 
 			cmd_val[0] = 0xdc;
-			cmd_val[1] = 0x51;	
-			ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);			
+			cmd_val[1] = 0x51;
+			ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
 			if(ret_value){
 				SENSOR_PRINT("SENSOR_IMX179: _dw9174_SRCInit fail!3");
 			}
@@ -2072,7 +2067,7 @@ LOCAL uint32_t _imx179_write_exposure(uint32_t param)
 	frame_len_cur = (Sensor_ReadReg(0x0341)) & 0xff;
 	frame_len_cur |= (Sensor_ReadReg(0x0340) << 0x08) & 0xff00;
 
-	SENSOR_PRINT("SENSOR_IMX179: write_exposure line:0x%x, dummy_line:0x%x, frame_len_cur:0x%x, frame_len:0x%x", 
+	SENSOR_PRINT("SENSOR_IMX179: write_exposure line:0x%x, dummy_line:0x%x, frame_len_cur:0x%x, frame_len:0x%x",
 		expsure_line, dummy_line, frame_len_cur, frame_len);
 
 	ret_value = Sensor_WriteReg(0x0104, 0x01);
@@ -2166,7 +2161,7 @@ LOCAL uint32_t _imx179_BeforeSnapshot(uint32_t param)
 		//return SENSOR_SUCCESS;
 	}
 
-	SENSOR_PRINT("BeforeSnapshot: capture_exposure 0x%x, frame_len 0x%x, preview_exposure 0x%x", 
+	SENSOR_PRINT("BeforeSnapshot: capture_exposure 0x%x, frame_len 0x%x, preview_exposure 0x%x",
 		capture_exposure, frame_len, preview_exposure);
 
 	Sensor_WriteReg(0x0104, 0x01);
@@ -2327,11 +2322,11 @@ LOCAL uint32_t _imx179_ExtFunc(uint32_t ctl_param)
 	SENSOR_PRINT_HIGH("0x%x", ext_ptr->cmd);
 
 	switch (ext_ptr->cmd) {
-	case SENSOR_EXT_FUNC_INIT:	
+	case SENSOR_EXT_FUNC_INIT:
 		break;
-	case SENSOR_EXT_FOCUS_START:		
+	case SENSOR_EXT_FOCUS_START:
 		break;
-	case SENSOR_EXT_EXPOSURE_START:	
+	case SENSOR_EXT_EXPOSURE_START:
 		break;
 	case SENSOR_EXT_EV:
 		rtn = _imx179_SetEV(ctl_param);
@@ -2372,7 +2367,7 @@ LOCAL uint32_t _imx179_ReadGain(uint16_t *data)
 
 	value = Sensor_ReadReg(0x0205);
 	if(data){
-		*data = value; 
+		*data = value;
 	}
 
 	SENSOR_PRINT("_imx179_ReadGain: gain %d", value);

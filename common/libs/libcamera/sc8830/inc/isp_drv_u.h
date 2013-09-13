@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 The Android Open Source Project
+ * Copyright (C) 2012 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ struct isp_video_limit {
 	uint32_t res;
 };
 
-struct ips_in_param { 
+struct ips_in_param {
 	struct img_frm src_frame;
 	uint32_t src_avail_height;
 	uint32_t src_slice_height;
@@ -37,7 +37,7 @@ struct ips_out_param {
 	uint32_t total_proc_height;
 };
 
-struct ipn_in_parm { 
+struct ipn_in_parm {
 	uint32_t src_avail_height;
 	uint32_t dst_buf_addr;
 	uint32_t dst_buf_size;
@@ -74,8 +74,8 @@ int  cmr_isp_video_capbility(struct isp_video_limit* limit);
 //int32_t isp_ioctl(cmd, param, callback);
 int  cmr_isp_video_start(struct img_size *img_size);
 int  cmr_isp_video_stop(void);
-int  cmr_isp_process_start(struct ips_in_param *in_parm_ptr, 
-		struct ips_out_param *out_param_ptr, 
+int  cmr_isp_process_start(struct ips_in_param *in_parm_ptr,
+		struct ips_out_param *out_param_ptr,
 		cmr_evt_cb callback);
 int  cmr_isp_process_next(struct ipn_in_parm *in_ptr, struct ipn_out_parm  *out_ptr);
 int  cmr_isp_evt_reg(cmr_evt_cb isp_event_cb);

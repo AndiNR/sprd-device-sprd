@@ -1,14 +1,17 @@
 /*
- * Copyright (C) 2012 Spreadtrum Communications Inc.
+ * Copyright (C) 2012 The Android Open Source Project
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 #include <utils/Log.h>
 #include "sensor.h"
@@ -41,7 +44,7 @@ static uint32_t s_s5k4e1ga_gain = 0;
 LOCAL const SENSOR_REG_T s5k4e1ga_com_mipi_raw[] = {
 	// ******************* //
 	// S5K4E1GX EVT3 MIPI Setting
-	// 
+	//
 	// last update date : 2011. 11. 30
 	//
 	// Full size output (2608 x 1960)
@@ -107,7 +110,7 @@ LOCAL const SENSOR_REG_T s5k4e1ga_1280X960_mipi_raw[] = {
 
 	// MIPI 1304 x 980 @ 30fps
 	// MCLK 24Mhz, 404Mbps per lane
-	
+
 	// Analog Setting
 	{0x301B, 0x83},
 	//+++++++++++++++++++++++++++++++//
@@ -119,10 +122,10 @@ LOCAL const SENSOR_REG_T s5k4e1ga_1280X960_mipi_raw[] = {
 	{0x30EE, 0x02},//DPHY enable [1]
 	{0x3111, 0xC6},//Embedded data off [5]
 	{0x0105, 0x01},
-	
+
 	//Factory only set END
 	//+++++++++++++++++++++++++++++++//
-	// Integration setting ... 
+	// Integration setting ...
 	{0x0202, 0x03},//coarse integration time
 	{0x0203, 0xD4},
 	{0x0204, 0x00},//analog gain[msb] 0100 x8 0080 x4
@@ -133,7 +136,7 @@ LOCAL const SENSOR_REG_T s5k4e1ga_1280X960_mipi_raw[] = {
 	// Line Length
 	{0x0342, 0x0A},//2738
 	{0x0343, 0xB2},
-	
+
 	//+++++++++++++++++++++++++++++++//
 	// PLL setting ...
 	//// input clock 24MHz
@@ -141,14 +144,14 @@ LOCAL const SENSOR_REG_T s5k4e1ga_1280X960_mipi_raw[] = {
 	{0x0305, 0x06},//PLL P = 6
 	{0x0306, 0x00},//PLL M[8] = 0
 	{0x0307, 0x65},//PLL M = 101
-	{0x30B5, 0x01},//PLL S = 1 
+	{0x30B5, 0x01},//PLL S = 1
 	{0x30E2, 0x02},//num lanes[1:0] = 2
 	{0x30F1, 0xB0},//DPHY BANDCTRL 404MHz=40.4MHz
-	
+
 	// MIPI Size Setting
 	{0x30A9, 0x02},//Horizontal Binning On
 	{0x300E, 0xEB},//Vertical Binning On
-	
+
 	//////////////////////////for 1304*980 //////////////
 
 	{0x0344,0x00},//x_addr_start	  //24=0x18,1280x2=2560,2608-2560=48d 48d/2=24d  Jack_20120419
@@ -172,7 +175,7 @@ LOCAL const SENSOR_REG_T s5k4e1ga_1280X960_mipi_raw[] = {
 	{0x034D,0x00},
 	{0x034E,0x03},//y_output_size 960
 	{0x034F,0xC0},
-	
+
 	{0x30BF, 0xAB}, //outif_enable[7], data_type[5:0](2Bh = bayer 10bit)
 	{0x30C0, 0x40}, //video_offset[7:4] 1630%12
 	{0x30C8, 0x06}, //video_data_length 1630 = 1304 * 1.25
@@ -182,7 +185,7 @@ LOCAL const SENSOR_REG_T s5k4e1ga_1280X960_mipi_raw[] = {
 LOCAL const SENSOR_REG_T s5k4e1ga_2592X1944_mipi_raw[] = {
 	// MIPI 2608 x 1960 @ 15fps
 	// MCLK 24Mhz, 404Mbps per lane
-	
+
 	// Analog Setting
 	{0x301B, 0x75},
 	//+++++++++++++++++++++++++++++++//
@@ -195,10 +198,10 @@ LOCAL const SENSOR_REG_T s5k4e1ga_2592X1944_mipi_raw[] = {
 	{0x3111, 0xC6},//Embedded data off [5]
 	{0x0105, 0x01},
 
-	
+
 	//Factory only set END
 	//+++++++++++++++++++++++++++++++//
-	// Integration setting ... 
+	// Integration setting ...
 	//{0x0202, 0x07},//coarse integration time
 	//{0x0203, 0xA8},
 	//{0x0204, 0x00},//analog gain[msb] 0100 x8 0080 x4
@@ -209,7 +212,7 @@ LOCAL const SENSOR_REG_T s5k4e1ga_2592X1944_mipi_raw[] = {
 	// Line Length
 	{0x0342, 0x0A},//2738
 	{0x0343, 0xB2},
-	
+
 	//+++++++++++++++++++++++++++++++//
 	// PLL setting ...
 	//// input clock 24MHz
@@ -217,14 +220,14 @@ LOCAL const SENSOR_REG_T s5k4e1ga_2592X1944_mipi_raw[] = {
 	{0x0305, 0x06},//PLL P = 6
 	{0x0306, 0x00},//PLL M[8] = 0
 	{0x0307, 0x65},//PLL M = 101
-	{0x30B5, 0x01},//PLL S = 1 
+	{0x30B5, 0x01},//PLL S = 1
 	{0x30E2, 0x02},//num lanes[1:0] = 2
 	{0x30F1, 0xB0},//DPHY BANDCTRL 404MHz=40.4MHz
-	
+
 	// MIPI Size Setting
 	{0x30A9, 0x03},//Horizontal Binning Off
 	{0x300E, 0xE8},//Vertical Binning Off
-	
+
 	////////////////////////////for 2608*1960 //////////////
 	{0x0344,0x00},//x_addr_start	  //24=0x18,1280x2=2560,2608-2560=48d 48d/2=24d  Jack_20120419
 	{0x0345,0x10},
@@ -249,7 +252,7 @@ LOCAL const SENSOR_REG_T s5k4e1ga_2592X1944_mipi_raw[] = {
 	{0x034D, 0x20},
 	{0x034E, 0x07},//y_output size
 	{0x034F, 0x98},
-	
+
 	{0x30BF, 0xAB},//outif_enable[7], data_type[5:0](2Bh = bayer 10bit)
 	{0x30C0, 0x00},//video_offset[7:4] 3260%12
 	{0x30C8, 0x0C},//video_data_length 3260 = 2608 * 1.25
@@ -410,13 +413,9 @@ SENSOR_INFO_T g_s5k4e1ga_mipi_raw_info = {
 	0,
 	0,
 	0,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0},
 	PNULL,
 	3,			// skip frame num while change setting
-#else
-	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0}
-#endif
 };
 
 LOCAL struct sensor_raw_info* Sensor_GetContext(void)
@@ -1045,7 +1044,7 @@ LOCAL uint32_t _s5k4e1ga_Identify(uint32_t param)
 	} else {
 		SENSOR_PRINT("SENSOR_s5k4e1ga: identify fail,pid_value=%d", pid_value);
 	}
-	
+
 	return ret_value;
 }
 
@@ -1118,22 +1117,22 @@ LOCAL uint32_t _s5k4e1ga_write_gain(uint32_t param)
 LOCAL uint32_t _s5k4e1ga_write_af(uint32_t param)
 {
 #define DW8714_VCM_SLAVE_ADDR (0x18>>1)
-	
+
 		uint32_t ret_value = SENSOR_SUCCESS;
 		uint8_t cmd_val[2] = {0x00};
 		uint16_t  slave_addr = 0;
 		uint16_t cmd_len = 0;
-	
+
 		SENSOR_PRINT("SENSOR_s5k4e1ga: _write_af %d", param);
-	
+
 		//for direct mode
 		slave_addr = DW8714_VCM_SLAVE_ADDR;
 		cmd_val[0] = (param&0xfff0)>>4;
 		cmd_val[1] = (param&0x0f)<<4;
-		cmd_len = 2;	
+		cmd_len = 2;
 		ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
 		SENSOR_PRINT("SENSOR_s5k4e1ga: _write_af, ret =  %d, MSL:%x, LSL:%x\n", ret_value, cmd_val[0], cmd_val[1]);
-	
+
 		return ret_value;
 
 }

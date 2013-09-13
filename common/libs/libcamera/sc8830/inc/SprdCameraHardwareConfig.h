@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2012 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #ifndef _SPRD_CAMERA_HARDWARE_CONFIG_H_
 #define _SPRD_CAMERA_HARDWARE_CONFIG_H_
 
@@ -181,6 +196,12 @@ enum {
 	CAMERA_SLOWMOTION_2,
 	CAMERA_SLOWMOTION_3,
 	CAMERA_SLOWMOTION_MAX
+};
+
+enum {
+	CAMERA_DC_PREVIEW = 0,
+	CAMERA_DV_PREVIEW,
+	CAMERA_PREVIEW_ENV_MAX
 };
 
 enum {
@@ -369,6 +390,12 @@ const struct str_map slowmotion_map[] = {
 	{NULL,              0}
 };
 
+const struct str_map previewenv_map[] = {
+	{"0",               CAMERA_DC_PREVIEW},
+	{"1",               CAMERA_DV_PREVIEW},
+	{NULL,              0}
+};
+
 const struct str_map auto_exposure_mode_map[] = {
 	{"frame-average",   CAMERA_AE_FRAME_AVG},
 	{"center-weighted", CAMERA_AE_CENTER_WEIGHTED},
@@ -394,9 +421,9 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"video-size", "720x480"},
 	{"video-picture-size-values", "1280x960,1280x960,1280x960"},
 	{"preferred-preview-size-for-video", ""},
-	{"video-frame-format-values", "yuv420sp,yuv420p"},
+	{"video-frame-format-values", "yuv420sp"},
 	{"video-frame-format", "yuv420sp"},
-	{"preview-format-values", "yuv420sp,yuv420p"},
+	{"preview-format-values", "yuv420sp"},
 	{"preview-format", "yuv420sp"},
 	{"picture-format-values", "jpeg"},
 	{"picture-format", "jpeg"},
@@ -456,7 +483,7 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"focus-mode-values", "infinity"},
 	{"focus-mode", "infinity"},
 	{"focus-distances", "2.0,2.5,Infinity"},
-	{"max-num-detected-faces-hw", "5"},
+	{"max-num-detected-faces-hw", "10"},
 	{"smile-snap-mode","0"},
 	{"hdr-supported","false"},
 	{"hdr","0"},
@@ -473,7 +500,8 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"slow-motion", "1"},
 	{"max-num-metering-areas", "0"},
 	{"auto-exposure","0"},
-	{"auto-exposure-supported", "0"}
+	{"auto-exposure-supported", "0"},
+    {"preview-env","0"}
 };
 struct config_element sprd_back_camera_hardware_config[] = {
 	{"whitebalance-values", "auto,incandescent,fluorescent,daylight,cloudy-daylight"},
@@ -511,9 +539,9 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"video-size", "720x480"},
 #endif
 	{"preferred-preview-size-for-video", ""},
-	{"video-frame-format-values", "yuv420sp,yuv420p"},
+	{"video-frame-format-values", "yuv420sp"},
 	{"video-frame-format", "yuv420sp"},
-	{"preview-format-values", "yuv420sp,yuv420p"},
+	{"preview-format-values", "yuv420sp"},
 	{"preview-format", "yuv420sp"},
 	{"picture-format-values", "jpeg"},
 	{"picture-format", "jpeg"},
@@ -570,7 +598,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"flash-mode", "off"},
 	{"flash-mode-supported", "true"},
 	{"focus-distances", "2.0,2.5,3.75"},
-	{"max-num-detected-faces-hw", "5"},
+	{"max-num-detected-faces-hw", "10"},
 	{"max-num-focus-areas", "3"},
 	{"iso-supported", "true"},
 	{"max-iso", "5"},
@@ -592,7 +620,8 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"slow-motion", "1"},
 	{"max-num-metering-areas", "1"},
     {"auto-exposure","frame-average"},
-    {"auto-exposure-values", "frame-average,center-weighted,spot-metering"}
+    {"auto-exposure-values", "frame-average,center-weighted,spot-metering"},
+    {"preview-env","0"}
 };
 
 #endif //_SPRD_CAMERA_HARDWARE_CONFIG_H_

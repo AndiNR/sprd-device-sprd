@@ -1,14 +1,17 @@
 /*
- * Copyright (C) 2012 Spreadtrum Communications Inc.
+ * Copyright (C) 2012 The Android Open Source Project
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 #ifndef _SENSOR_RAW_H_
 #define _SENSOR_RAW_H_
@@ -43,6 +46,8 @@
 #define SENSOR_AWB_CALI_NUM 0x09
 #define SENSOR_AWB_NUM 0x14
 #define SENSOR_MAP_NUM 0x08
+#define SENSOR_AWB_G_ESTIMATE_NUM 0x6
+#define SENSOR_AWB_GAIN_ADJUST_NUM 0x9
 
 #define RAW_INFO_END_ID 0x71717567
 
@@ -148,9 +153,22 @@ struct sensor_ae_param{
 	uint8_t smart;
 	uint8_t smart_rotio;
 	uint8_t quick_mode;
-	uint8_t reserved0;
+	uint8_t min_exposure;
 	int8_t ev[16];
-	uint32_t reserved[40];
+	uint16_t smart_base_gain;
+	uint16_t smart_wave_min;
+	uint16_t smart_wave_max;
+	uint8_t smart_pref_min;
+	uint8_t smart_pref_max;
+	uint8_t smart_denoise_min_index;
+	uint8_t smart_denoise_max_index;
+	uint8_t smart_edge_min_index;
+	uint8_t smart_edge_max_index;
+	uint8_t smart_mode;
+	uint8_t smart_sta_low_thr;
+	uint8_t smart_sta_high_thr;
+	uint8_t smart_sta_rotio;
+	uint32_t reserved[36];
 };
 
 struct sensor_ae_tab{
@@ -177,6 +195,34 @@ struct sensor_cali_info {
 	uint32_t b_sum;
 };
 
+struct sensor_awb_g_estimate_param
+{
+	uint16_t t_thr[SENSOR_AWB_G_ESTIMATE_NUM];
+	uint16_t g_thr[SENSOR_AWB_G_ESTIMATE_NUM][2];
+	uint16_t w_thr[SENSOR_AWB_G_ESTIMATE_NUM][2];
+	uint32_t num;
+};
+
+struct sensor_awb_linear_func
+{
+	int32_t a;
+	int32_t b;
+	uint32_t shift;
+};
+
+struct sensor_awb_wp_count_range
+{
+	uint16_t min_proportion;//min_proportion / 256
+	uint16_t max_proportion;//max_proportion / 256
+};
+
+struct sensor_awb_gain_adjust
+{
+	uint16_t t_thr[SENSOR_AWB_GAIN_ADJUST_NUM];
+	uint16_t w_thr[SENSOR_AWB_GAIN_ADJUST_NUM];
+	uint32_t num;
+};
+
 struct sensor_awb_param{
 	struct sensor_pos win_start;
 	struct sensor_size win_size;
@@ -195,7 +241,13 @@ struct sensor_awb_param{
 	uint32_t target_zone;
 	uint32_t smart;
 	uint32_t quick_mode;
-	uint32_t reserved[40];
+	struct sensor_awb_wp_count_range wp_count_range;
+	struct sensor_awb_g_estimate_param g_estimate;
+	struct sensor_awb_linear_func t_func;
+	struct sensor_awb_gain_adjust gain_adjust;
+	uint8_t debug_level;
+	uint8_t reserved0[3];
+	uint32_t reserved[9];
 };
 
 struct sensor_bpc_param{
@@ -243,9 +295,13 @@ struct sensor_cce_parm{
 	uint16_t v_shift;
 };
 
+struct sensor_gamma_tab{
+	uint16_t axis[2][26];
+};
+
 struct sensor_gamma_param{
 	uint16_t axis[2][26];
-	uint32_t reserved[130];
+	struct sensor_gamma_tab tab[5];
 };
 
 struct sensor_cce_uvdiv{
@@ -426,7 +482,9 @@ struct sensor_raw_tune_info{
 	struct sensor_global_gain_param global;
 	struct sensor_chn_gain_param chn;
 	struct sensor_flash_cali_param flash;
- };
+	struct sensor_cce_parm special_effect[16];
+	uint32_t reserved[256];
+};
 
 struct sensor_raw_fix_info{
 	struct sensor_ae_tab ae;

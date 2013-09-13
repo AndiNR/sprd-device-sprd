@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 The Android Open Source Project
+ * Copyright (C) 2012 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@
 #include "jpeg_exif_header.h"
 #include "sensor_drv_u.h"
 
-#define GC2035_I2C_ADDR_W 0x3c 
-#define GC2035_I2C_ADDR_R 0x3c 
+#define GC2035_I2C_ADDR_W 0x3c
+#define GC2035_I2C_ADDR_R 0x3c
 #define SENSOR_GAIN_SCALE 16
 
  typedef enum
@@ -660,13 +660,13 @@ static SENSOR_REG_T GC2035_YUV_COMMON[]=
 static SENSOR_REG_T GC2035_YUV_800x600[]=
 {
 	{0xfe , 0x00},
-	{0xfa , 0x00},
+	{0xfa , 0x11},
 	{0x05 , 0x01},
 	{0x06 , 0x25},
 	{0x07 , 0x00},
 	{0x08 , 0x14},
 	{0xf7 , 0x15},
-	{0xf8 , 0x87},
+	{0xf8 , 0x84},
 	{0xc8 , 0x40},
 	{0x99 , 0x22},
 	{0x9a , 0x06},
@@ -692,9 +692,9 @@ static SENSOR_REG_T GC2035_YUV_800x600[]=
 static SENSOR_REG_T GC2035_YUV_1280x960[]=
 {
 	{0xfe , 0x00},
-	{0xf8 , 0x82},
+	{0xf8 , 0x84},
 	{0xc8 , 0x00},
-	{0xfa , 0x00},
+	{0xfa , 0x11},
 	{0x99 , 0x55},
 	{0x9a , 0x06},
 	{0x9b , 0x02},
@@ -715,13 +715,13 @@ static SENSOR_REG_T GC2035_YUV_1280x960[]=
 static SENSOR_REG_T GC2035_YUV_1600x1200[]=
 {
 	{0xfe , 0x00},
-	{0xfa , 0x00},
+	{0xfa , 0x11},
 	{0x05 , 0x01},
 	{0x06 , 0x25},
 	{0x07 , 0x00},
 	{0x08 , 0x14},
 	{0xf7 , 0x15},
-	{0xf8 , 0x83},
+	{0xf8 , 0x84},
 	{0xc8 , 0x00},
 	{0x99 , 0x11},
 	{0x9a , 0x06},
@@ -763,7 +763,6 @@ static SENSOR_REG_TAB_INFO_T s_GC2035_resolution_Tab_YUV[]=
 	{PNULL, 0, 0, 0, 0, 0}
 };
 
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 LOCAL SENSOR_VIDEO_INFO_T s_GC2035_video_info[] = {
 	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
 	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
@@ -775,11 +774,10 @@ LOCAL SENSOR_VIDEO_INFO_T s_GC2035_video_info[] = {
 	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
 	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL}
 };
-#endif
 
-static SENSOR_IOCTL_FUNC_TAB_T s_GC2035_ioctl_func_tab = 
+static SENSOR_IOCTL_FUNC_TAB_T s_GC2035_ioctl_func_tab =
 {
-	// Internal 
+	// Internal
 	PNULL,
 	GC2035_PowerOn,
 	PNULL,
@@ -880,7 +878,7 @@ SENSOR_INFO_T g_GC2035_yuv_info =
 	{{0xf0, 0x20},					//supply two code to identify sensor.
 	{0xf1, 0x35}},					//for Example: index = 0-> Device id, index = 1 -> version id
 
-	SENSOR_AVDD_2800MV,				//voltage of avdd	
+	SENSOR_AVDD_2800MV,				//voltage of avdd
 
 	1600,						//max width of source image
 	1200,						//max height of source image
@@ -894,25 +892,21 @@ SENSOR_INFO_T g_GC2035_yuv_info =
 	&s_GC2035_ioctl_func_tab,				//point to ioctl function table
 
 	PNULL,						//information and table about Rawrgb sensor
-	PNULL,						//extend information about sensor	
+	PNULL,						//extend information about sensor
 	SENSOR_AVDD_1800MV,				//iovdd
 	SENSOR_AVDD_1800MV,				//dvdd
 	3,						//skip frame num before preview
 	1,						//skip frame num before capture
-	0,						//deci frame num during preview	
+	0,						//deci frame num during preview
 	0,						//deci frame num during video preview
 	0,						//threshold enable(only analog TV)
-	0,						//atv output mode 0 fix mode 1 auto mode	
+	0,						//atv output mode 0 fix mode 1 auto mode
 	0,						//atv output start postion
 	0,						//atv output end postion
 	0,
-#ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
 	s_GC2035_video_info,
 	4,						//skip frame num while change setting
-#else
-	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1}
-#endif
 };
 
 static void GC2035_WriteReg( uint8_t  subaddr, uint8_t data )
@@ -971,7 +965,7 @@ static uint32_t GC2035_Identify(uint32_t param)
 		sensor_id = Sensor_ReadReg(GC2035_PID_ADDR1) << 8;
 		sensor_id |= Sensor_ReadReg(GC2035_PID_ADDR2);
 		SENSOR_PRINT("%s sensor_id is %x\n", __func__, sensor_id);
-		
+
 		if (sensor_id == GC2035_SENSOR_ID) {
 			SENSOR_PRINT("the main sensor is GC2035\n");
 			return SENSOR_SUCCESS;
@@ -1009,7 +1003,7 @@ static void GC2035_set_shutter()
 
 	if  (shutter < 1)
 		shutter = 1;
-	
+
 	Sensor_WriteReg(0x03, (shutter >> 8)&0xff);
 	Sensor_WriteReg(0x04, shutter&0xff);
 }
@@ -1053,7 +1047,7 @@ static SENSOR_REG_T GC2035_ev_tab[][4]=
 
 static uint32_t set_GC2035_ev(uint32_t level)
 {
-	uint16_t i; 
+	uint16_t i;
 	SENSOR_REG_T* sensor_reg_ptr = (SENSOR_REG_T*)GC2035_ev_tab[level];
 
 	if (level > 6)
@@ -1248,9 +1242,9 @@ static uint32_t set_preview_mode(uint32_t preview_mode)
 	SENSOR_PRINT("set_preview_mode: preview_mode = %d\n", preview_mode);
 
 	set_GC2035_anti_flicker(0);
-	
+
 	switch (preview_mode) {
-	case DCAMERA_ENVIRONMENT_NORMAL: 
+	case DCAMERA_ENVIRONMENT_NORMAL:
 		{
 		//YCP_saturation
 		GC2035_WriteReg(0xfe , 0x02);
@@ -1399,7 +1393,7 @@ static uint32_t read_ev_value(uint32_t value)
 
 static uint32_t write_ev_value(uint32_t exposure_value)
 {
-	return 0;	
+	return 0;
 }
 
 static uint32_t read_gain_value(uint32_t value)

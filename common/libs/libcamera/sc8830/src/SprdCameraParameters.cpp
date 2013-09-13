@@ -1,20 +1,19 @@
 /*
-* hardware/sprd/common/libcamera/SprdCameraParameters.cpp
- * parameters on sc8825
+ * Copyright (C) 2012 The Android Open Source Project
  *
- * Copyright (C) 2013 Spreadtrum
- * 
- * Author: Shan He <shan.he@spreadtrum.com>
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+
 
 #define LOG_TAG "SprdCameraParameters"
 #include <utils/Log.h>
@@ -85,6 +84,7 @@ const char SprdCameraParameters::KEY_SHARPNESS[] = "sharpness";
 const char SprdCameraParameters::KEY_PREVIEWFRAMERATE[] = "preview-frame-rate";
 const char SprdCameraParameters::KEY_AUTO_EXPOSURE[] = "auto-exposure";
 const char SprdCameraParameters::KEY_METERING_AREAS[] = "metering-areas";
+const char SprdCameraParameters::KEY_PREVIEW_ENV[] = "preview-env";
 
 ////////////////////////////////////////////////////////////////////////////////////
 SprdCameraParameters::SprdCameraParameters():CameraParameters()
@@ -162,7 +162,7 @@ void SprdCameraParameters::getFocusAreas(int *area, int *count, Size *preview_si
 	if(area_count > 0) {
 		int ret = coordinate_convert(&focus_area[0], area_count, orientation, mirror,
 								preview_size, preview_rect);
-		
+
 		if(ret) {
 			area_count = 0;
 			LOGV("error: coordinate_convert error, ignore focus \n");
@@ -307,7 +307,7 @@ int SprdCameraParameters::getSaturation()
 
 int SprdCameraParameters::getExposureCompensation()
 {
-	const char *p = get(KEY_CAMERA_ID);
+	const char *p = get(KEY_EXPOSURE_COMPENSATION);
 
 	return lookup(exposure_compensation_map, p, CAMERA_EXPOSURW_COMPENSATION_DEFAULT);
 }
@@ -347,6 +347,13 @@ int SprdCameraParameters::getSlowmotion()
 	return lookup(slowmotion_map, p, CAMERA_SLOWMOTION_0);
 }
 
+int SprdCameraParameters::getPreviewEnv()
+{
+	const char *p = get(KEY_PREVIEW_ENV);
+
+	return lookup(previewenv_map, p, CAMERA_DC_PREVIEW);
+}
+
 int SprdCameraParameters::getAutoExposureMode()
 {
 	const char *p = get(KEY_AUTO_EXPOSURE);
@@ -354,6 +361,10 @@ int SprdCameraParameters::getAutoExposureMode()
 	return lookup(auto_exposure_mode_map, p, CAMERA_AE_FRAME_AVG);
 }
 
+void SprdCameraParameters::setZSLSupport(const char* value)
+{
+	set("zsl-supported",value);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -593,7 +604,7 @@ static int coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror
 	{
 		int point_x, point_y;
 
-		LOGV("coordinate_convert %d: org: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);			
+		LOGV("coordinate_convert %d: org: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
 
 		// only for angle 90/270
 		// calculate the centre point
