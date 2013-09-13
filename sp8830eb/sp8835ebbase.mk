@@ -65,6 +65,7 @@ PRODUCT_PACKAGES := \
 	Stk \
 	Launcher2 \
 	SprdDM \
+	Engapp \
 	Settings
   
 # prebuild files
