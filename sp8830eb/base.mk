@@ -53,6 +53,8 @@ PRODUCT_PACKAGES += \
     libsprddm \
     libvalidationtoolsjni \
     vtserver	\
+    libengappjni \
+    Engapp \
     \
     libstagefright_sprd_mpeg4enc	\
     libstagefright_sprd_mpeg4dec \
