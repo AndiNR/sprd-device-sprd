@@ -714,8 +714,15 @@ int detect_vlx_modem(int modem)
 			continue;
 		} else {
 			if(strstr(buf, "Assert") != NULL) {
-				MODEMD_LOGE("modem assert happen, buf=%s", buf);
-
+	                    char value[PROPERTY_VALUE_MAX] = {0};
+                            MODEMD_LOGE("modem assert happen, buf=%s", buf);
+				
+				property_get("persist.sys.kdump.enable", value, "");
+				if (strcmp(value, "1") == 0) {
+					property_set("sys.manual.panic", "1");
+					sleep(10);
+				}
+				
 				is_assert = 1;
 
 				/* info socket client that modem is assert */

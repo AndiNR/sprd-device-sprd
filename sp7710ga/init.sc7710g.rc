@@ -375,3 +375,15 @@ service set_mac /system/bin/ext_chown.sh  -e
     user root
     disabled
     oneshot
+#yingmin.piao for #Bug189515 kdump switch 20130715 --begin
+# Used to set enable kdump function
+on property:persist.sys.kdump.enable=1
+    write /proc/sysrq-trigger x
+
+on property:persist.sys.kdump.enable=0
+    write /proc/sysrq-trigger y
+
+# Used to set namual kdump
+on property:sys.manual.panic=*
+    write /proc/sysrq-trigger c
+#yingmin.piao for #Bug189515 kdump switch 20130715 --end
