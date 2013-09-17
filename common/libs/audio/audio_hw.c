@@ -243,7 +243,8 @@ struct tiny_audio_device {
     audio_mode_t mode;
     int out_devices;
     int in_devices;
-    int prev_devices;
+    int prev_out_devices;
+    int prev_in_devices;
     volatile int device_switch;  /*changing device flag*/
     volatile int cur_vbpipe_fd;  /*current vb pipe id, if all pipes is closed this is -1.*/
     cp_type_t  cp_type;
@@ -625,11 +626,15 @@ static void do_select_devices(struct tiny_audio_device *adev)
 {
     unsigned int i;
 
-    ALOGI("Changing devices: from (0x%08x) to (0x%08x)", adev->prev_devices, adev->out_devices);
-    if (adev->prev_devices == adev->out_devices)
+    if (adev->prev_out_devices == adev->out_devices
+            && adev->prev_in_devices == adev->in_devices)
         return;
-    adev->prev_devices = adev->out_devices;
-
+    ALOGI("Changing out_devices: from (0x%08x) to (0x%08x)",
+            adev->prev_out_devices, adev->out_devices);
+    ALOGI("Changing in_devices: from (0x%08x) to (0x%08x)",
+            adev->prev_in_devices, adev->in_devices);
+    adev->prev_out_devices = adev->out_devices;
+    adev->prev_in_devices = adev->in_devices;
     if(adev->eq_available)
         vb_effect_sync_devices(adev->out_devices);
 
@@ -1640,7 +1645,7 @@ static int in_set_format(struct audio_stream *stream, audio_format_t format)
 static int do_input_standby(struct tiny_stream_in *in)
 {
     struct tiny_audio_device *adev = in->dev;
-
+    ALOGI("%s, standby=%d, in_devices=0x%08x", __func__, in->standby, adev->in_devices);
     if (!in->standby) {
 #ifdef AUDIO_MUX_PCM    
         if (in->mux_pcm) {
