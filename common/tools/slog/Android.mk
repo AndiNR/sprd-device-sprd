@@ -30,6 +30,9 @@ LOCAL_MODULE_TAGS := optional
 ifeq ($(PLATFORM_VERSION),4.1.2)
 LOCAL_CFLAGS += -DSLOG_ALOGD_ALOGE
 endif
+ifeq ($(PLATFORM_VERSION),4.3)
+LOCAL_CFLAGS += -DSLOG_ALOGD_ALOGE
+endif
 LOCAL_LDLIBS += -lpthread
 LOCAL_C_INCLUDES += external/jpeg external/zlib
 LOCAL_SHARED_LIBRARIES := liblog libz libjpeg
