@@ -1272,6 +1272,7 @@ static bool out_bypass_data(struct tiny_stream_out *out, uint32_t frame_size, ui
         2. During in  AUDIO_MODE_IN_CALL and not in call_start, we should throw away some data in BT device.
         3. If mediaserver crash, we should throw away some pcm data after restarting mediaserver.
         4. After call thread gets stop_call cmd, but hasn't get lock.
+        5. In MODE_NORMAL and MODE_RINGTONE, can't route to DEVICE_OUT_ALL_SCO, this is bad pre-condition
     */
     int vbc_2arm =  1;
     struct tiny_audio_device *adev = out->dev;
@@ -1279,8 +1280,11 @@ static bool out_bypass_data(struct tiny_stream_out *out, uint32_t frame_size, ui
     if(adev->mode == AUDIO_MODE_IN_CALL){
         vbc_2arm = mixer_ctl_get_value(adev->private_ctl.vbc_switch,0);
     }
-    if (( (!adev->call_start) && (adev->mode == AUDIO_MODE_IN_CALL) && (adev->devices & AUDIO_DEVICE_OUT_ALL_SCO) )
-        || (adev->call_start && (!adev->call_connected)) || ((!vbc_2arm) && (!adev->call_start)) || adev->call_prestop) {
+    if (((!adev->call_start) && (adev->mode == AUDIO_MODE_IN_CALL) && (adev->devices & AUDIO_DEVICE_OUT_ALL_SCO)) ||
+        (adev->call_start && (!adev->call_connected)) ||
+        ((!vbc_2arm) && (!adev->call_start))          ||
+        (adev->call_prestop)                          ||
+        (((AUDIO_MODE_RINGTONE == adev->mode) || (AUDIO_MODE_NORMAL == adev->mode)) && (adev->devices & AUDIO_DEVICE_OUT_ALL_SCO))) {
         MY_TRACE("out_write throw away data call_start(%d) mode(%d) devices(0x%x) call_connected(%d) vbc_2arm(%d) call_prestop(%d)...",adev->call_start,adev->mode,adev->devices,adev->call_connected,vbc_2arm,adev->call_prestop);
         pthread_mutex_unlock(&adev->lock);
         pthread_mutex_unlock(&out->lock);
