@@ -3117,6 +3117,7 @@ void *camera_preview_thread(void *client_data)
 				uint32_t dst_y_phy_addr, dst_uv_phy_addr, src_y_phy_addr, src_uv_phy_addr;
 
 				timestamp_old = systemTime();
+                                ALOGV("SPRD OEM:camera_rotation");
 				ret = camera_rotation(g_rotation, s_camera_info.dcam_out_width, s_camera_info.dcam_out_height, g_buffers[g_releasebuff_index].phys_addr,g_buffers[g_preview_buffer_num ].phys_addr);
 				if(0 != ret)
 				{
@@ -3145,6 +3146,7 @@ void *camera_preview_thread(void *client_data)
 				src_uv_phy_addr = src_y_phy_addr + trim_rect.w*trim_rect.h;
 
 				timestamp_old = systemTime();
+                                ALOGV("SPRD OEM:camera_copy");
 				ret = camera_copy(SCALE_DATA_YUV420,trim_rect.w,trim_rect.h,dst_y_phy_addr,dst_uv_phy_addr,
 		                   		&trim_rect,src_y_phy_addr,src_uv_phy_addr,SCALE_DATA_YUV420);
 				if(0 != ret)
@@ -3989,7 +3991,7 @@ camera_ret_code_type camera_stop_preview(void)
 	{
 		usleep(10000);
 		num++;
-		ALOGV("waiting the preview stop....");
+		ALOGV("waiting the preview stop....times(%d)",num);
 		if(num >= 100){
 			pthread_kill(g_preview_thr, 9);
 			ALOGE("Force stop the preview!");
