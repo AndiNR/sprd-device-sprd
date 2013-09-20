@@ -205,7 +205,7 @@ gralloc_module_t const* SprdCameraHardware::mGrallocHal;
                 ALOGV("front camera parameters: set count : %d", count);
                 for(i = 0; i < count; i++)
                 {
-                        ALOGV("front camera parameters: set %d: key: %s, value: %s.", i, sprd_front_camera_hardware_config[i].key, sprd_front_camera_hardware_config[i].value);
+                        //ALOGV("front camera parameters: set %d: key: %s, value: %s.", i, sprd_front_camera_hardware_config[i].key, sprd_front_camera_hardware_config[i].value);
                         p.set(sprd_front_camera_hardware_config[i].key, sprd_front_camera_hardware_config[i].value);
                 }
         }
@@ -216,7 +216,7 @@ gralloc_module_t const* SprdCameraHardware::mGrallocHal;
                 ALOGV("back camera parameters: set count : %d", count);
                 for(i = 0; i < count; i++)
                 {
-                        ALOGV("back camera parameters: set %d: key: %s, value: %s.", i, sprd_back_camera_hardware_config[i].key, sprd_back_camera_hardware_config[i].value);
+                        //ALOGV("back camera parameters: set %d: key: %s, value: %s.", i, sprd_back_camera_hardware_config[i].key, sprd_back_camera_hardware_config[i].value);
                         p.set(sprd_back_camera_hardware_config[i].key, sprd_back_camera_hardware_config[i].value);
                 }
         }
