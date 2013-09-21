@@ -227,6 +227,7 @@ struct rotation_context {
 struct arithmetic_context {
 	uint32_t                 fd_inited;
 	uint32_t                 fd_flag;
+	uint32_t                 fd_num;
 };
 
 struct jpeg_specify_context {
@@ -330,6 +331,7 @@ struct camera_context {
 	sem_t                    takepicdone_sem;
 	sem_t                    takepic_callback_sem;
 	sem_t                    sync_scale_sem;
+	sem_t                    sync_rotate_sem;
 	uint32_t                 err_code;
 	uint32_t                 camera_id;
 	pthread_t                prev_thread;
@@ -399,6 +401,7 @@ struct camera_context {
 	uint32_t                 thum_from;
 	uint32_t                 thum_ready;
 	struct img_size          thum_size;
+	struct img_size          thum_size_backup;
 	struct cmr_cap_mem       cap_mem[CAMERA_CAP_FRM_CNT];
 	struct cmr_cap_2_frm     cap_2_mems;
 	pthread_mutex_t          cancel_mutex;
@@ -463,6 +466,8 @@ int camera_takepic_callback_done(struct camera_context *p_cxt);
 int camera_wait_takepic_callback(struct camera_context *p_cxt);
 int camera_sync_scale_start(struct camera_context *p_cxt);
 int camera_sync_scale_done(struct camera_context *p_cxt);
+int camera_sync_rotate_start(struct camera_context *p_cxt);
+int camera_sync_rotate_done(struct camera_context *p_cxt);
 int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 	uint32_t width, uint32_t height, struct img_addr *addr);
 uint32_t getOrientationFromRotationDegrees(int degrees);
