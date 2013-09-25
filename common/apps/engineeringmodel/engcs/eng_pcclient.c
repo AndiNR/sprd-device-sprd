@@ -1137,6 +1137,12 @@ int main (int argc, char** argv)
     //	ENG_LOG("vdiag thread start error");
     //}
 
+    /* use t3 to run vlog_fifo */
+    ENG_LOG("vlog thread start2"); 
+    if (0 != eng_thread_create( &t3, eng_vlog_fifo_thread, &cmdparam)){
+        ENG_LOG("vlog_fifo thread start error");
+    }
+
     ENG_LOG("vlog thread start3");
     if (0 != eng_thread_create( &t4, eng_sd_log, NULL)){
         ENG_LOG("sd log thread start error");

@@ -103,7 +103,12 @@ int get_user_diag_buf(char* buf,int len)
         if (buf[i] == 0x7e && ext_buf_len ==0){ //start
             ext_data_buf[ext_buf_len++] = buf[i];
         }else if (ext_buf_len > 0 && ext_buf_len < DATA_EXT_DIAG_SIZE){
-            ext_data_buf[ext_buf_len]=buf[i];
+            if (buf[i] == 0x7d) {//ppp shift char, the following char should plus 0x20
+                ENG_LOG("eng_vdiag %s: skip shift char:%x\n",__FUNCTION__, buf[i]);
+                ext_data_buf[ext_buf_len] = buf[++i]+0x20;
+            } else {
+                ext_data_buf[ext_buf_len]=buf[i];
+            }
             ext_buf_len++;
             if ( buf[i] == 0x7e ){
                 is_find = 1;

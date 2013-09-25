@@ -34,6 +34,7 @@ extern int eng_battery_calibration(char *data,unsigned int count,char *out_msg,i
 extern  struct eng_bt_eutops bt_eutops;
 extern  struct eng_wifi_eutops wifi_eutops;
 extern	struct eng_gps_eutops gps_eutops;
+extern eng_mutex_t w_mutex;
 
 static unsigned char tun_data[376];
 static int diag_pipe_fd = 0;
@@ -520,7 +521,11 @@ int eng_diag(char *buf,int len)
 int eng_diag_write2pc(int fd)
 {
 	//print_log(eng_diag_buf,eng_diag_len);
-	return write(fd,eng_diag_buf,eng_diag_len);
+	int cnt = 0;
+	eng_mutex_lock(&w_mutex);
+	cnt = write(fd,eng_diag_buf,eng_diag_len);
+	eng_mutex_unlock(&w_mutex);
+	return cnt;
 }
 
 int eng_diag_getver(unsigned char *buf,int len, char *rsp)

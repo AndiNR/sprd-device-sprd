@@ -120,5 +120,5 @@ int eng_diag_writeimei(char *req, char *rsp);
 void *eng_vlog_thread(void *x);
 void *eng_vdiag_thread(void *x);
 void * eng_sd_log(void * args);
-
+void *eng_vlog_fifo_thread(void *x);
 #endif

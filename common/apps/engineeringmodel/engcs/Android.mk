@@ -158,6 +158,7 @@ LOCAL_SRC_FILES     := eng_pcclient.c  \
 			eng_attok.c \
 			eng_diag.c \
 			vlog.c \
+			kfifo.c \
 			vdiag.c \
 			engphasecheck.c\
 			eng_sd_log.c \
