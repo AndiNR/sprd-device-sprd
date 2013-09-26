@@ -48,12 +48,14 @@
 #include "vb_control_parameters.h"
 #include "string_exchange_bin.h"
 
+#include "dumpdata.h"
 
 #ifdef AUDIO_MUX_PCM
 #include "audio_mux_pcm.h"
 #endif
 
 //#define XRUN_DEBUG
+//#define VOIP_DEBUG
 
 #ifdef XRUN_DEBUG
 #define XRUN_TRACE  ALOGW
@@ -62,8 +64,14 @@
 #endif
 #define BLUE_TRACE  ALOGW
 
-//#define AUDIO_DUMP
-#define AUDIO_OUT_FILE_PATH    "data/audio_out.pcm"
+#ifdef VOIP_DEBUG
+#define VOIP_TRACE  ALOGW
+#else
+#define VOIP_TRACE
+#endif
+
+
+//#define AUDIO_DUMP_EX
 
 #define PRIVATE_NAME_LEN 60
 
@@ -84,16 +92,18 @@
 #define PRIVATE_VBC_DA_EQ_PROFILE            "da eq profile"
 #define PRIVATE_VBC_AD01_EQ_PROFILE            "ad01 eq profile"
 #define PRIVATE_VBC_AD23_EQ_PROFILE            "ad23 eq profile"
+#define PRIVATE_SPEAKER_MUTE            "spk mute"
+#define PRIVATE_SPEAKER2_MUTE           "spk2 mute"
+#define PRIVATE_EARPIECE_MUTE           "earpiece mute"
+#define PRIVATE_HEADPHONE_MUTE           "hp mute"
 
 /* ALSA cards for sprd */
 #define CARD_SPRDPHONE "sprdphone"
 #define CARD_VAUDIO    "VIRTUAL AUDIO"
 #define CARD_VAUDIO_W  "VIRTUAL AUDIO W"
-#ifdef VOIP_DSP_PROCESS
 #define CARD_SCO    "saudiovoip"
-#else
-#define CARD_SCO    "bt-i2s"
-#endif
+#define CARD_BT_SCO    "bt-i2s"
+
 
 /* ALSA ports for sprd */
 #define PORT_MM 0
@@ -126,16 +136,15 @@
 #define RESAMPLER_BUFFER_SIZE (4 * RESAMPLER_BUFFER_FRAMES)
 
 #define DEFAULT_OUT_SAMPLING_RATE 44100
-#define DEFAULT_IN_SAMPLING_RATE  8000
 
-/* sampling rate when using MM low power port */
-#define MM_LOW_POWER_SAMPLING_RATE 44100
 /* sampling rate when using MM full power port */
 #define MM_FULL_POWER_SAMPLING_RATE 48000
 /* sampling rate when using VX port for narrow band */
 #define VX_NB_SAMPLING_RATE 8000
 /* sampling rate when using VX port for wide band */
 #define VX_WB_SAMPLING_RATE 16000
+
+#define AUDFIFO "/data/audiopara_tuning"
 
 struct pcm_config pcm_config_mm = {
     .channels = 2,
@@ -168,6 +177,10 @@ struct pcm_config pcm_config_vrec_vx = {    //voice record in vlx mode
     .period_count = 8,
     .format = PCM_FORMAT_S16_LE,
 };
+
+#define VOIP_CAPTURE_STREAM     0x1
+#define VOIP_PLAYBACK_STREAM    0x2
+
 
 
 struct pcm_config pcm_config_vplayback = {
@@ -226,6 +239,10 @@ struct tiny_private_ctl {
     struct mixer_ctl *vbc_da_eq_profile_select;
     struct mixer_ctl *vbc_ad01_eq_profile_select;
     struct mixer_ctl *vbc_ad23_eq_profile_select;
+    struct mixer_ctl *speaker_mute;
+    struct mixer_ctl *speaker2_mute;
+    struct mixer_ctl *earpiece_mute;
+    struct mixer_ctl *headphone_mute;
 };
 
 struct stream_routing_manager {
@@ -234,6 +251,9 @@ struct stream_routing_manager {
     pthread_cond_t   device_switch_cv;
     bool             is_exit;
 };
+
+#define VOIP_PIPE_NAME_MAX    16
+
 
 struct tiny_audio_device {
     struct audio_hw_device hw_device;
@@ -271,8 +291,13 @@ struct tiny_audio_device {
 
     audio_modem_t *cp;
     AUDIO_TOTAL_T *audio_para;
+    pthread_t        audiopara_tuning_thread;
 
     struct stream_routing_manager  routing_mgr;
+
+    int voip_state;
+    int voip_start;
+    bool master_mute;
 };
 
 struct tiny_stream_out {
@@ -283,15 +308,20 @@ struct tiny_stream_out {
     struct pcm *pcm;
     struct pcm *pcm_vplayback;
     struct pcm *pcm_sco;
+    struct pcm *pcm_bt_sco;
     int is_sco;
+    int is_bt_sco;
     struct resampler_itfe  *resampler_vplayback;
     struct resampler_itfe  *resampler_sco;
+    struct resampler_itfe  *resampler_bt_sco;
     struct resampler_itfe *resampler;
     char *buffer;
     char * buffer_vplayback;
     char * buffer_sco;
+    char * buffer_bt_sco;
     int standby;
     struct tiny_audio_device *dev;
+    unsigned int devices;
     int write_threshold;
     bool low_power;
     FILE * out_dump_fd;
@@ -307,6 +337,7 @@ struct tiny_stream_in {
     struct pcm *pcm;
     struct pcm * mux_pcm;
     int is_sco;
+    int is_bt_sco;
     int device;
     struct resampler_itfe *resampler;
     struct resampler_buffer_provider buf_provider;
@@ -379,10 +410,11 @@ static int s_tinycard = -1;
 static int s_vaudio = -1;
 static int s_vaudio_w = -1;
 static int s_sco= -1;
+static int s_bt_sco = -1;
 static AUDIO_TOTAL_T *audio_para_ptr = NULL;
 static struct tiny_audio_device *s_adev= NULL;
 
-
+static dump_data_info_t dump_info;
 
 /**
  * NOTE: when multiple mutexes have to be acquired, always respect the following order:
@@ -394,6 +426,7 @@ static void select_devices_signal(struct tiny_audio_device *adev);
 static void do_select_devices(struct tiny_audio_device *adev);
 static int set_route_by_array(struct mixer *mixer, struct route_setting *route,unsigned int len);
 static int adev_set_voice_volume(struct audio_hw_device *dev, float volume);
+static int adev_set_master_mute(struct audio_hw_device *dev, bool mute);
 static int do_input_standby(struct tiny_stream_in *in);
 static int do_output_standby(struct tiny_stream_out *out);
 static void force_all_standby(struct tiny_audio_device *adev);
@@ -415,16 +448,17 @@ static void *stream_routing_thread_entry(void * adev);
 static int stream_routing_manager_create(struct tiny_audio_device *adev);
 static void stream_routing_manager_close(struct tiny_audio_device *adev);
 
-/*
- * NOTE: audio stream(playback, capture) dump just for debug.
- */
-static int out_dump_create(FILE **out_fd, const char *path);
-static int out_dump_doing(FILE *out_fd, const void* buffer, size_t bytes);
-static int out_dump_release(FILE **fd);
-
 #include "vb_control_parameters.c"
 #include "at_commands_generic.c"
 #include "mmi_audio_loop.c"
+
+static long getCurrentTimeUs()
+{
+   struct timeval tv;
+   gettimeofday(&tv,NULL);
+   return tv.tv_sec* 1000000 + tv.tv_usec;
+}
+
 
 int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
 {
@@ -445,7 +479,18 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
     else if(type == 2) {
         ctl_str = "0";
     }
+    else
+    {
+        return 0;
+    }
 
+    if(modem->i2s_bt.fd < 0) {
+	modem->i2s_bt.fd = open(modem->i2s_bt.ctl_path,O_RDWR | O_SYNC);
+    }
+
+    if(modem->i2s_extspk.fd < 0) {
+	modem->i2s_extspk.fd = open(modem->i2s_extspk.ctl_path,O_RDWR | O_SYNC);
+    }
     ALOGW("i2s_pin_mux_sel in bt fd is %d, extspk fd is %d,type is %d,str is %s",modem->i2s_bt.fd,modem->i2s_extspk.fd,type,ctl_str);
 
     if(type != 2) {
@@ -484,41 +529,6 @@ static  int  pcm_mixer(int16_t  *buffer, uint32_t samples)
     }
     return 0;
 }
-
-static int out_dump_create(FILE **out_fd, const char *path)
-{
-    if (path == NULL) {
-        ALOGE("path not assigned.");
-        return -1;
-    }
-    *out_fd = (FILE *)fopen(path, "wb");
-    if (*out_fd == NULL ) {
-        ALOGE("cannot create file.");
-        return -1;
-    }
-    ALOGI("path %s created successfully.", path);
-    return 0;
-}
-
-static int out_dump_doing(FILE *out_fd, const void* buffer, size_t bytes)
-{
-    int ret;
-    if (out_fd) {
-        ret = fwrite((uint8_t *)buffer, bytes, 1, out_fd);
-        if (ret < 0) ALOGW("%d, fwrite failed.", bytes);
-    } else {
-        ALOGW("out_fd is NULL, cannot write.");
-    }
-    return 0;
-}
-
-static int out_dump_release(FILE **fd)
-{
-    fclose(*fd);
-    *fd = NULL;
-    return 0;
-}
-
 
 int set_call_route(struct tiny_audio_device *adev, int device, int on)
 {
@@ -626,6 +636,11 @@ static void do_select_devices(struct tiny_audio_device *adev)
 {
     unsigned int i;
 
+    if(adev->voip_state) {
+        ALOGI("do_select_devices in %x,but voip is on so skip",adev->out_devices);
+        return;
+    }
+
     if (adev->prev_out_devices == adev->out_devices
             && adev->prev_in_devices == adev->in_devices)
         return;
@@ -703,6 +718,26 @@ static void force_all_standby(struct tiny_audio_device *adev)
     }
 }
 
+static void force_standby_for_voip(struct tiny_audio_device *adev)
+{
+    struct tiny_stream_in *in;
+    struct tiny_stream_out *out;
+
+    if (adev->active_output && (!(adev->voip_state & VOIP_PLAYBACK_STREAM))) {
+       out = adev->active_output;
+       pthread_mutex_lock(&out->lock);
+       do_output_standby(out);
+       pthread_mutex_unlock(&out->lock);
+    }
+
+    if (adev->active_input && ( !(adev->voip_state & VOIP_CAPTURE_STREAM))) {
+       in = adev->active_input;
+       pthread_mutex_lock(&in->lock);
+       do_input_standby(in);
+       pthread_mutex_unlock(&in->lock);
+    }
+}
+
 static int start_vaudio_output_stream(struct tiny_stream_out *out)
 {
     unsigned int card = 0;
@@ -761,6 +796,55 @@ error:
 }
 
 
+
+static int open_voip_codec_pcm(struct tiny_audio_device *adev)
+{
+    ALOGE("voip:open voip_codec_pcm in");
+
+    ALOGD("voip:open codec pcm in adev->voip_state is %x",adev->voip_state);
+       if(!adev->pcm_modem_dl) {
+           adev->pcm_modem_dl= pcm_open(s_tinycard, PORT_MODEM, PCM_OUT, &pcm_config_vx);
+           if (!pcm_is_ready(adev->pcm_modem_dl)) {
+              ALOGE("cannot open pcm_modem_dl : %s", pcm_get_error(adev->pcm_modem_dl));
+               pcm_close(adev->pcm_modem_dl);
+               adev->pcm_modem_dl = NULL;
+           }
+       }
+    ALOGD("voip:open codec pcm in 2");
+       if(!adev->pcm_modem_ul) {
+           adev->pcm_modem_ul= pcm_open(s_tinycard, PORT_MODEM, PCM_IN, &pcm_config_vrec_vx);
+           if (!pcm_is_ready(adev->pcm_modem_ul)) {
+               ALOGE("cannot open pcm_modem_ul : %s", pcm_get_error(adev->pcm_modem_ul));
+              pcm_close(adev->pcm_modem_ul);
+               adev->pcm_modem_ul = NULL;
+           }
+       }
+    ALOGD("voip:open codec pcm out 2");
+
+    ALOGE("voip:open voip_codec_pcm out");
+    return 0;
+}
+
+static int  close_voip_codec_pcm(struct tiny_audio_device *adev)
+{
+    ALOGD("voip:close voip codec pcm in adev->voip_state is %x",adev->voip_state);
+    if(!adev->voip_state) {
+       if(adev->pcm_modem_ul) {
+           pcm_close(adev->pcm_modem_ul);
+          adev->pcm_modem_ul = NULL;
+       }
+       if(adev->pcm_modem_dl) {
+           pcm_close(adev->pcm_modem_dl);
+           adev->pcm_modem_dl = NULL;
+       }
+    }
+    ALOGD("voip:close voip codec pcm out");
+    return 0;
+}
+
+
+
+
 #ifdef AUDIO_MUX_PCM
 static int start_mux_output_stream(struct tiny_stream_out *out)
 {
@@ -811,6 +895,7 @@ static int start_sco_output_stream(struct tiny_stream_out *out)
 {
     unsigned int card = 0;
     unsigned int port = PORT_MM;
+    struct tiny_audio_device *adev = out->dev;
     int ret=0;
     BLUE_TRACE(" start_sco_output_stream in");
     card = s_sco;
@@ -818,7 +903,14 @@ static int start_sco_output_stream(struct tiny_stream_out *out)
     if(!out->buffer_sco){
         goto error;
     }
-    out->pcm_sco = pcm_open(card, port, PCM_OUT, &pcm_config_scoplayback);
+    //out->pcm_sco = pcm_open(card, port, PCM_OUT, &pcm_config_scoplayback);
+
+	ALOGD("start_sco_output_stream ok 1 ");
+    open_voip_codec_pcm(adev);
+    ALOGD("start_sco_output_stream error ok");
+    out->pcm_sco = pcm_open(card, port, PCM_OUT| PCM_MMAP |PCM_NOIRQ, &pcm_config_scoplayback);///////////////
+    ALOGD("start_sco_output_stream ok 4");////
+
 
     if (!pcm_is_ready(out->pcm_sco)) {
         goto error;
@@ -853,6 +945,60 @@ error:
     return -1;
 }
 
+static int start_bt_sco_output_stream(struct tiny_stream_out *out)
+{
+    unsigned int card = 0;
+    unsigned int port = PORT_MM;
+    struct tiny_audio_device *adev = out->dev;
+
+    int ret=0;
+    BLUE_TRACE(" start_bt_sco_output_stream in");
+    card = s_bt_sco;
+    out->buffer_bt_sco = malloc(RESAMPLER_BUFFER_SIZE);
+    if(!out->buffer_bt_sco){
+        goto error;
+    }
+    //out->pcm_sco = pcm_open(card, port, PCM_OUT, &pcm_config_scoplayback);
+
+    ALOGD("start_bt_sco_output_stream ok 1 ");
+    out->pcm_bt_sco = pcm_open(card, port, PCM_OUT| PCM_MMAP |PCM_NOIRQ, &pcm_config_scoplayback);///////////////
+    ALOGD("start_bt_sco_output_stream ok 4");////
+
+
+    if (!pcm_is_ready(out->pcm_bt_sco)) {
+        goto error;
+    }
+    else {
+        ret = create_resampler( DEFAULT_OUT_SAMPLING_RATE,
+                pcm_config_scoplayback .rate,
+                out->config .channels,
+                RESAMPLER_QUALITY_DEFAULT,
+                NULL,
+                &out->resampler_bt_sco);
+        if (ret != 0) {
+            goto error;
+        }
+    }
+
+    ALOGE("start_bt_sco_output_stream error ok");
+    return 0;
+
+error:
+    ALOGE("start_sco_output_stream error ");
+    if(out->buffer_bt_sco){
+        free(out->buffer_bt_sco);
+        out->buffer_bt_sco=NULL;
+    }
+    if(out->pcm_bt_sco){
+        ALOGE("start_sco_output_stream error: %s", pcm_get_error(out->pcm_bt_sco));
+        pcm_close(out->pcm_bt_sco);
+        out->pcm_bt_sco=NULL;
+        ALOGE("start_sco_output_stream: out\n");
+    }
+    return -1;
+}
+
+
 /* must be called with hw device and output stream mutexes locked */
 static int start_output_stream(struct tiny_stream_out *out)
 {
@@ -863,18 +1009,38 @@ static int start_output_stream(struct tiny_stream_out *out)
     int ret=0;
 
     adev->active_output = out;
+    ALOGD("start output stream out->is_sco is %d, in",out->is_sco);
 
-    if (!adev->call_start) {
-        /* FIXME: only works if only one output can be active at a time */
+    if (!adev->call_start && adev->voip_state == 0) {
+        /* FIXME: only works if only one output can be active at a time*/
+        adev->out_devices &= (~AUDIO_DEVICE_OUT_ALL);
+        adev->out_devices |= out->devices;
+        if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+            i2s_pin_mux_sel(adev,2);
+        }
         select_devices_signal(adev);
+    }
+    else if (adev->voip_state) {
+        if((adev->out_devices &AUDIO_DEVICE_OUT_ALL) != out->devices) {
+            adev->out_devices &= (~AUDIO_DEVICE_OUT_ALL);
+            adev->out_devices |= out->devices;
+        }
+        ret = at_cmd_route(adev);  //send at command to cp
+        if (ret < 0) {
+            ALOGE("start_output_stream at_cmd_route error(%d) ",ret);
+        }
     }
     /* default to low power: will be corrected in out_write if necessary before first write to
      * tinyalsa.
      */
     if(out->is_sco){
-        pthread_mutex_unlock(&adev->lock);
         ret=start_sco_output_stream(out);
-        pthread_mutex_lock(&adev->lock);
+        if(ret){
+            return ret;
+        }
+    }
+    else if(out->is_bt_sco){
+        ret=start_bt_sco_output_stream(out);
         if(ret){
             return ret;
         }
@@ -884,12 +1050,28 @@ static int start_output_stream(struct tiny_stream_out *out)
         ret=start_mux_output_stream(out);
 #else
         ret=start_vaudio_output_stream(out);
-#endif  
+#endif
         if(ret){
             return ret;
         }
     }
     else {
+        {
+#ifdef AUDIO_DUMP_EX
+            static int16 start_index = 0, i=0;
+            int16 temp_data[16]={0x0};
+            start_index++;
+            for(i=0; i<16; i++)
+            {
+                temp_data[i]  = 0x5555;
+            }
+            temp_data[0]=start_index;
+            dump_info.buf = temp_data;
+            dump_info.buf_len = 32;
+            dump_info.dump_switch_info = DUMP_MUSIC_HWL_BEFOORE_VBC;
+            dump_data(dump_info);
+#endif
+        }
         BLUE_TRACE("open s_tinycard in");
         card = s_tinycard;
         out->config = pcm_config_mm;
@@ -908,9 +1090,6 @@ static int start_output_stream(struct tiny_stream_out *out)
         BLUE_TRACE("open s_tinycard successfully");
     }
     out->resampler->reset(out->resampler);
-#ifdef AUDIO_DUMP
-    out_dump_create(&out->out_dump_fd, AUDIO_OUT_FILE_PATH);
-#endif
 
     return 0;
 }
@@ -1010,22 +1189,45 @@ static int do_output_standby(struct tiny_stream_out *out)
         if(out->pcm_sco) {
             pcm_close(out->pcm_sco);
             out->pcm_sco = NULL;
-            if(out->buffer_sco) {
-                free(out->buffer_sco);
-                out->buffer_sco = 0;
-            }
-            if(out->resampler_sco) {
-                release_resampler(out->resampler_sco);
-                out->resampler_sco= 0;
-            }
-            out->is_sco=false;
+	}
+	if(out->buffer_sco) {
+	    free(out->buffer_sco);
+	    out->buffer_sco = 0;
+	}
+	if(out->resampler_sco) {
+	    release_resampler(out->resampler_sco);
+	    out->resampler_sco= 0;
+	}
+        if(out->is_sco) {
+            adev->voip_state &= (~VOIP_PLAYBACK_STREAM);
+            if(!adev->voip_state) {
+               if(!adev->voip_state) {
+                  close_voip_codec_pcm(adev);
+               }
+	    }
+	    out->is_sco = false;
         }
-        if(out->pcm_vplayback) {         
+        if(out->pcm_bt_sco) {
+            pcm_close(out->pcm_bt_sco);
+            out->pcm_bt_sco = NULL;
+	}
+	if(out->buffer_bt_sco) {
+	    free(out->buffer_bt_sco);
+	    out->buffer_bt_sco = 0;
+	}
+	if(out->resampler_bt_sco) {
+	    release_resampler(out->resampler_bt_sco);
+	    out->resampler_bt_sco= 0;
+	}
+	if(out->is_bt_sco) {
+            out->is_bt_sco=false;
+        }
+        if(out->pcm_vplayback) {
 #ifdef AUDIO_MUX_PCM
             mux_pcm_close(out->pcm_vplayback);
 #else
             pcm_close(out->pcm_vplayback);
-#endif            
+#endif
 
             out->pcm_vplayback = NULL;
             if(out->buffer_vplayback) {
@@ -1037,9 +1239,6 @@ static int do_output_standby(struct tiny_stream_out *out)
                 out->resampler_vplayback = 0;
             }
         }
-#ifdef AUDIO_DUMP
-        out_dump_release(&out->out_dump_fd);
-#endif
 
         out->standby = 1;
     }
@@ -1085,11 +1284,11 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         ALOGW("[out_set_parameters],after str_parms_get_str,val(0x%x) ",val);
         pthread_mutex_lock(&adev->lock);
         pthread_mutex_lock(&out->lock);
-        if ((((adev->out_devices & AUDIO_DEVICE_OUT_ALL) != val) && (val != 0)) || (AUDIO_MODE_IN_CALL == adev->mode)) {
+		  if ((((adev->out_devices & AUDIO_DEVICE_OUT_ALL) != val) && (val != 0)) || (AUDIO_MODE_IN_CALL == adev->mode)||adev->voip_start) {
             adev->out_devices &= ~AUDIO_DEVICE_OUT_ALL;
             adev->out_devices |= val;
-            ALOGW("out_set_parameters want to set devices:0x%x old_mode:%d new_mode:%d call_start:%d ",
-			    adev->out_devices,cur_mode,adev->mode,adev->call_start);
+            out->devices = val;
+            ALOGW("out_set_parameters want to set devices:0x%x old_mode:%d new_mode:%d call_start:%d ",adev->out_devices,cur_mode,adev->mode,adev->call_start);
 
             if(1 == adev->call_start) {
                 if(adev->out_devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
@@ -1099,13 +1298,20 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                         i2s_pin_mux_sel(adev,0);
                 }
             }
+            else {
+                if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+                    i2s_pin_mux_sel(adev,2);
+                }
+            }
+
             cur_mode = adev->mode;
-            if(!adev->call_start)
+            if((!adev->call_start)&&(!adev->voip_state))
                 select_devices_signal(adev);
             pthread_mutex_unlock(&out->lock);
             pthread_mutex_unlock(&adev->lock);
 
-            if (AUDIO_MODE_IN_CALL == adev->mode) {
+
+              if ((AUDIO_MODE_IN_CALL == adev->mode) || adev->voip_start) {
                 ret = at_cmd_route(adev);  //send at command to cp
                 if (ret < 0) {
                     ALOGE("out_set_parameters at_cmd_route error(%d) ",ret);
@@ -1157,7 +1363,7 @@ static bool out_bypass_data(struct tiny_stream_out *out, uint32_t frame_size, ui
         MY_TRACE("out_write throw away data call_start(%d) mode(%d) devices(0x%x) call_connected(%d) vbc_2arm(%d) call_prestop(%d)...",adev->call_start,adev->mode,adev->out_devices,adev->call_connected,adev->vbc_2arm,adev->call_prestop);
         pthread_mutex_unlock(&adev->lock);
         pthread_mutex_unlock(&out->lock);
-        usleep(bytes * 1000000 / frame_size / sample_rate);
+        usleep((int64_t)bytes * 1000000 / frame_size / sample_rate);
         return true;
     }else{
         return false;
@@ -1173,7 +1379,7 @@ static ssize_t out_write_mux(struct tiny_stream_out *out, const void* buffer,
     int ret=0;
     size_t frame_size = 0;
     size_t in_frames = 0;
-    size_t out_frames =0; 
+    size_t out_frames =0;
     BLUE_TRACE("mux_playback out_write call_start(%d) call_connected(%d) ...in....",out->dev->call_start,out->dev->call_connected);
     frame_size = audio_stream_frame_size((const struct audio_stream *)(&out->stream.common));
     ALOGE(":out_write_mux in frame_size is %d",frame_size);
@@ -1206,7 +1412,7 @@ static ssize_t out_write_vaudio(struct tiny_stream_out *out, const void* buffer,
     int ret;
     size_t frame_size = 0;
     size_t in_frames = 0;
-    size_t out_frames =0; 
+    size_t out_frames =0;
     frame_size = audio_stream_frame_size((const struct audio_stream *)(&out->stream.common));
     in_frames = bytes / frame_size;
     out_frames = RESAMPLER_BUFFER_SIZE / frame_size;
@@ -1234,7 +1440,7 @@ static ssize_t out_write_sco(struct tiny_stream_out *out, const void* buffer,
     int ret;
     size_t frame_size = 0;
     size_t in_frames = 0;
-    size_t out_frames =0;    
+    size_t out_frames =0;
 
     frame_size = audio_stream_frame_size((const struct audio_stream *)(&out->stream.common));
     in_frames = bytes / frame_size;
@@ -1249,21 +1455,62 @@ static ssize_t out_write_sco(struct tiny_stream_out *out, const void* buffer,
         buf = out->buffer_sco;
         if(frame_size == 4){
             pcm_mixer(buf, out_frames*(frame_size/2));
-        }        
-        ret = pcm_write(out->pcm_sco, (void *)buf, out_frames*frame_size/2);
+
+        }
+       // ret = pcm_write(out->pcm_sco, (void *)buf, out_frames*frame_size/2);
+
+        ret = pcm_mmap_write(out->pcm_sco, (void *)buf, out_frames*frame_size/2);
     }
     else
         usleep(out_frames*1000*1000/out->config.rate);
 
-    BLUE_TRACE("out_write_sco out bytes is %d,frame_size %d, in_frames %d, out_frames %d,out->pcm_sco %x", bytes, frame_size,in_frames, out_frames,out->pcm_sco);
+    //BLUE_TRACE("voip:out_write_sco out bytes is %d,frame_size %d, in_frames %d, out_frames %d,out->pcm_sco %x", bytes, frame_size,in_frames, out_frames,out->pcm_sco);
     return 0;
 }
+
+static ssize_t out_write_bt_sco(struct tiny_stream_out *out, const void* buffer,
+        size_t bytes)
+{
+    void *buf;
+    int ret;
+    size_t frame_size = 0;
+    size_t in_frames = 0;
+    size_t out_frames =0;
+
+    frame_size = audio_stream_frame_size(&out->stream.common);
+    in_frames = bytes / frame_size;
+    out_frames = RESAMPLER_BUFFER_SIZE / frame_size;
+    BLUE_TRACE("out_write_bt_sco in bytes is %d,frame_size %d, in_frames %d, out_frames %d,out->pcm_sco %x", bytes, frame_size,in_frames, out_frames,out->pcm_sco);
+    if(out->pcm_bt_sco) {
+        out->resampler_bt_sco->resample_from_input(out->resampler_bt_sco,
+                (int16_t *)buffer,
+                &in_frames,
+                (int16_t *)out->buffer_bt_sco,
+                &out_frames);
+        buf = out->buffer_bt_sco;
+        if(frame_size == 4){
+            pcm_mixer(buf, out_frames*(frame_size/2));
+        }
+
+       //ret = pcm_write(out->pcm_sco, (void *)buf, out_frames*frame_size/2);
+
+        BLUE_TRACE("voip:out_write_bt_sco");
+        ret = pcm_mmap_write(out->pcm_bt_sco, (void *)buf, out_frames*frame_size/2);
+    }
+    else
+        usleep(out_frames*1000*1000/out->config.rate);
+
+    BLUE_TRACE("voip:out_write_bt_sco out bytes is %d,frame_size %d, in_frames %d, out_frames %d,out->pcm_sco %x", bytes, frame_size,in_frames, out_frames,out->pcm_sco);
+    return 0;
+}
+
 static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
         size_t bytes)
 {
     int ret = 0;
     struct tiny_stream_out *out = (struct tiny_stream_out *)stream;
     struct tiny_audio_device *adev = out->dev;
+    audio_modem_t *modem = adev->cp;
     size_t frame_size = 0;
     size_t in_frames = 0;
     size_t out_frames =0;
@@ -1271,45 +1518,108 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
     bool low_power;
     int kernel_frames;
     void *buf;
+    static long time1=0, time2=0, deltatime=0, deltatime2=0;
+    static long time3=0, time4=0, deltatime3=0,write_index=0, writebytes=0;
 
     pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&out->lock);
-    if (out_bypass_data(out,audio_stream_frame_size((const struct audio_stream *)(&stream->common)),out_get_sample_rate(&stream->common),bytes)) {
+
+    if (0==out->standby) {//in playing
+        if(modem->debug_info.enable)
+        {
+            time3 = getCurrentTimeUs();
+            if(time4>time3)
+            {
+                deltatime3 = time4-time3;
+                if(deltatime3>modem->debug_info.lastthis_outwritetime_gate)
+                {
+                    ALOGD("out_write lastthisoutwritedebuginfo time: %d(gate, us), %ld(us), %d(bytes).",
+                        modem->debug_info.lastthis_outwritetime_gate,
+                        deltatime3, bytes);
+                }
+            }
+        }
+    }
+
+#ifdef AUDIO_DUMP_EX
+    dump_info.buf = (void *)buffer;
+    dump_info.buf_len = bytes;
+    dump_info.dump_switch_info = DUMP_MUSIC_HWL_BEFORE_EXPRESS;
+    dump_data(dump_info);
+#endif
+
+    if (out_bypass_data(out,audio_stream_frame_size(&stream->common),out_get_sample_rate(&stream->common),bytes)) {
         return bytes;
     }
 #ifdef VOIP_DSP_PROCESS
-    if(adev->mode ==AUDIO_MODE_IN_COMMUNICATION)
+    if (((adev->voip_start == 1) && (!(out->devices & AUDIO_DEVICE_OUT_ALL_SCO)))&&(!adev->call_start))
 #else
-        if((adev->mode ==AUDIO_MODE_IN_COMMUNICATION) && (adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO))
+    if((adev->voip_start == 1) && (adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO))
 #endif
-        {
-            if(!out->is_sco ) {      
-                out->is_sco=true;
-                do_output_standby(out);
-            }
+    {
+        if(!out->is_sco ) {
+
+         //ALOGD("voip:out_write: start: out->is_sco is %d, voip_state is %d",out->is_sco,adev->voip_state);
+	    adev->voip_state |= VOIP_PLAYBACK_STREAM;
+	    force_standby_for_voip(adev);
+            ALOGI("wangzuo:out->is_sco is %d",out->is_sco);
+            do_output_standby(out);
+            out->is_sco=true;
         }
-        else{
-            if(out->is_sco){
-                do_output_standby(out);
-                out->is_sco=false;
-            }
+    }
+    else{
+        if(out->is_sco){
+            do_output_standby(out);
         }
+    }
+
+    if((adev->mode  != AUDIO_MODE_IN_CALL) && (out->devices & AUDIO_DEVICE_OUT_ALL_SCO)){
+        if(!out->is_bt_sco) {
+            ALOGI("bt_sco:out_write_start and do standby");
+            out->is_bt_sco=true;
+            do_output_standby(out);
+        }
+    }
+    else{
+        if(out->is_bt_sco){
+           ALOGI("bt_sco:out_write_stop and do standby");
+            do_output_standby(out);
+        }
+    }
+
+
+    if((!out->is_sco) && adev->voip_state){
+        ALOGE("out_write: drop data and sleep,out->is_sco is %d, adev->voip_state is %d,adev->voip_start is %d",out->is_sco,adev->voip_state,adev->voip_start);
+        usleep(100000);
+
+			pthread_mutex_unlock(&out->lock);
+			pthread_mutex_unlock(&adev->lock);
+			return bytes;
+		 }
 
     if (out->standby) {
+        out->standby = 0;
+        if(modem->debug_info.enable)
+        {
+            write_index=0;
+            writebytes=0;
+        }
         ret = start_output_stream(out);
         if (ret != 0) {
             pthread_mutex_unlock(&adev->lock);
             goto exit;
         }
-        out->standby = 0;
     }
     low_power = adev->low_power && !adev->active_input;
     pthread_mutex_unlock(&adev->lock);
+
     if(out->is_sco){
-        BLUE_TRACE("sco playback out_write call_start(%d) call_connected(%d) ...in....",adev->call_start,adev->call_connected);
         ret=out_write_sco(out,buffer,bytes);
     }
-    else if (adev->call_connected) {      
+    else if(out->is_bt_sco){
+        ret=out_write_bt_sco(out,buffer,bytes);
+    }
+    else if (adev->call_connected) {
 #ifdef AUDIO_MUX_PCM
         ret=out_write_mux(out,buffer,bytes);
 #else
@@ -1324,7 +1634,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
         if (low_power != out->low_power) {
             if (low_power) {
                 out->write_threshold = LONG_PERIOD_SIZE * PLAYBACK_LONG_PERIOD_COUNT;
-                out->config.avail_min = LONG_PERIOD_SIZE;
+                //out->config.avail_min = LONG_PERIOD_SIZE;
+                out->config.avail_min = (out->write_threshold * 3) / 4;
                 ALOGW("low_power out->write_threshold=%d, config.avail_min=%d, start_threshold=%d",
                         out->write_threshold,out->config.avail_min, out->config.start_threshold);
             } else {
@@ -1370,16 +1681,69 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
                      DEFAULT_OUT_SAMPLING_RATE);
                 if (time < MIN_WRITE_SLEEP_US)
                     time = MIN_WRITE_SLEEP_US;
+                if(modem->debug_info.enable)
+                {
+                    time1 = getCurrentTimeUs();
+                }
                 usleep(time);
+                if(modem->debug_info.enable)
+                {
+                    time2 = getCurrentTimeUs();
+                    deltatime = ((time1>time2)?(time1-time2):(time2-time1));
+                    deltatime -= time;
+                }
             }
         } while (kernel_frames > out->write_threshold);
 
-        ret = pcm_mmap_write(out->pcm, (void *)buf, out_frames * frame_size);
-#ifdef AUDIO_DUMP
-        out_dump_doing(out->out_dump_fd, (void *)buf, out_frames * frame_size);
+        if(modem->debug_info.enable)
+        {
+            time1 = getCurrentTimeUs();
+        }
+        ret = pcm_mmap_write(out->pcm, (void *)buf, out_frames * frame_size);//music playback
+        if(modem->debug_info.enable)
+        {
+            time2 = getCurrentTimeUs();
+            deltatime2 = ((time1>time2)?(time1-time2):(time2-time1));
+        }
+
+#ifdef AUDIO_DUMP_EX
+    dump_info.buf = buf;
+    dump_info.buf_len = out_frames * frame_size;
+    dump_info.dump_switch_info = DUMP_MUSIC_HWL_BEFOORE_VBC;
+    dump_data(dump_info);
 #endif
     }
+    if(modem->debug_info.enable)
+    {
+        int unnormal = 0;
+        time4 = getCurrentTimeUs();
 
+        write_index++;
+        writebytes += bytes;
+
+        if(deltatime3>modem->debug_info.lastthis_outwritetime_gate)
+        {
+            unnormal = 1;
+        }
+
+        if(deltatime2>modem->debug_info.pcmwritetime_gate)
+        {
+            unnormal = 1;
+        }
+
+        if(deltatime > modem->debug_info.sleeptime_gate)
+        {
+            unnormal = 1;
+        }
+        if(unnormal)
+        {
+            ALOGD("out_write debug %ld(index), %d(bytes), %ld(total bytes), lastthis:%ld, %d(gate), pcmwrite:%ld, %d(gate), sleep:%ld, %d(gate).",
+                        write_index, bytes, writebytes,
+                        deltatime3, modem->debug_info.lastthis_outwritetime_gate,
+                        deltatime2, modem->debug_info.pcmwritetime_gate,
+                        deltatime, modem->debug_info.sleeptime_gate);
+        }
+    }
 
 exit:
     if (ret != 0) {
@@ -1425,10 +1789,12 @@ static int in_deinit_resampler(struct tiny_stream_in *in)
 {
     if (in->resampler) {
         release_resampler(in->resampler);
+        in->resampler = NULL;
     }
 
     if(in->buffer){
         free(in->buffer);
+        in->buffer = NULL;
     }
     return 0;
 }
@@ -1437,27 +1803,25 @@ static int in_deinit_resampler(struct tiny_stream_in *in)
 static int in_init_resampler(struct tiny_stream_in *in)
 {
     int ret=0;
-    if (in->requested_rate != in->config.rate) {
-        in->buf_provider.get_next_buffer = get_next_buffer;
-        in->buf_provider.release_buffer = release_buffer;
+    in->buf_provider.get_next_buffer = get_next_buffer;
+    in->buf_provider.release_buffer = release_buffer;
 
-        in->buffer = malloc(in->config.period_size *
-                audio_stream_frame_size((const struct audio_stream *)(&in->stream.common)));
-        if (!in->buffer) {
-            ret = -ENOMEM;
-            goto err;
-        }
+    in->buffer = malloc(in->config.period_size *
+            audio_stream_frame_size(&in->stream.common));
+    if (!in->buffer) {
+        ret = -ENOMEM;
+        goto err;
+    }
 
-        ret = create_resampler(in->config.rate,
-                in->requested_rate,
-                in->config.channels,
-                RESAMPLER_QUALITY_DEFAULT,
-                &in->buf_provider,
-                &in->resampler);
-        if (ret != 0) {
-            ret = -EINVAL;
-            goto err;
-        }
+    ret = create_resampler(in->config.rate,
+            in->requested_rate,
+            in->config.channels,
+            RESAMPLER_QUALITY_DEFAULT,
+            &in->buf_provider,
+            &in->resampler);
+    if (ret != 0) {
+        ret = -EINVAL;
+        goto err;
     }
 
     return ret;
@@ -1478,28 +1842,48 @@ static int start_input_stream(struct tiny_stream_in *in)
     if (!adev->call_start) {
         adev->in_devices &= ~AUDIO_DEVICE_IN_ALL;
         adev->in_devices |= in->device;
+        if((in->device & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET){
+            i2s_pin_mux_sel(adev,2);
+        }
         select_devices_signal(adev);
     }
 
     /* this assumes routing is done previously */
 
     if(in->is_sco){
-        pthread_mutex_unlock(&adev->lock);
-        BLUE_TRACE("start sco input stream in");
+        //BLUE_TRACE("start sco input stream in");
+		BLUE_TRACE("voip:start sco input stream in in->requested_channels %d,in->config.channels %d",in->requested_channels,in->config.channels);
+        open_voip_codec_pcm(adev);
+        BLUE_TRACE("voip:start sco input stream in 4");
+
         in->config = pcm_config_scocapture;
         if(in->config.channels  != in->requested_channels) {
             in->config.channels = in->requested_channels;
         }
         in->active_rec_proc = 0;
+        BLUE_TRACE("in voip:opencard");
         in->pcm = pcm_open(s_sco,PORT_MM,PCM_IN,&in->config );
-        pthread_mutex_lock(&adev->lock);
         if (!pcm_is_ready(in->pcm)) {
             goto err;
-        }      
+        }
 #ifndef VOIP_DSP_PROCESS
         in->active_rec_proc = init_rec_process(get_mode_from_devices(in->device), in->config.rate);
         ALOGI("record process sco module created is %s.", in->active_rec_proc ? "successful" : "failed");
 #endif
+    } else if(in->is_bt_sco){
+        BLUE_TRACE("voip:start bt sco input stream in");
+        in->config = pcm_config_scocapture;
+        if(in->config.channels  != in->requested_channels) {
+            in->config.channels = in->requested_channels;
+        }
+        in->active_rec_proc = 0;
+        BLUE_TRACE("in  bt_sco:opencard");
+        in->pcm = pcm_open(s_bt_sco,PORT_MM,PCM_IN,&in->config );
+        if (!pcm_is_ready(in->pcm)) {
+            goto err;
+        }
+        in->active_rec_proc = init_rec_process(get_mode_from_devices(in->device), in->config.rate);
+        ALOGI("record process sco module created is %s.", in->active_rec_proc ? "successful" : "failed");
     }
     else if(adev->call_start) {
         int card=0;
@@ -1509,7 +1893,7 @@ static int start_input_stream(struct tiny_stream_in *in)
         in->mux_pcm = mux_pcm_open(s_vaudio,PORT_MM,PCM_IN,&pcm_config_vrec_vx);
         if (!pcm_is_ready(in->mux_pcm)) {
             ALOGE("voice-call rec cannot open pcm_in driver: %s", pcm_get_error(in->mux_pcm));
-            mux_pcm_close(in->mux_pcm);   
+            mux_pcm_close(in->mux_pcm);
             adev->active_input = NULL;
             return -ENOMEM;
         }
@@ -1522,16 +1906,16 @@ static int start_input_stream(struct tiny_stream_in *in)
             card = s_vaudio_w;
         }
 
-        in->pcm = pcm_open(card,PORT_MM,PCM_IN,&pcm_config_vrec_vx);      
+        in->pcm = pcm_open(card,PORT_MM,PCM_IN,&pcm_config_vrec_vx);
         if (!pcm_is_ready(in->pcm)) {
             ALOGE("voice-call rec cannot open pcm_in driver: %s", pcm_get_error(in->pcm));
-            pcm_close(in->pcm);   
+            pcm_close(in->pcm);
             adev->active_input = NULL;
             return -ENOMEM;
         }
-#endif        
+#endif
 
-    } 
+    }
     else {
         in->config = pcm_config_mm_ul;
         if(in->config.channels != in->requested_channels) {
@@ -1548,10 +1932,6 @@ static int start_input_stream(struct tiny_stream_in *in)
 
     if(in->requested_rate != in->config.rate) {
         ALOGE(": in->requested_rate is %d, in->config.rate is %d",in->requested_rate, in->config.rate);
-        ret=in_deinit_resampler( in);
-        if(ret) {
-            goto err;
-        }
         ret= in_init_resampler(in);
         ALOGE(": in_init_resampler ret is %d",ret);
         if(ret){
@@ -1647,7 +2027,7 @@ static int do_input_standby(struct tiny_stream_in *in)
     struct tiny_audio_device *adev = in->dev;
     ALOGI("%s, standby=%d, in_devices=0x%08x", __func__, in->standby, adev->in_devices);
     if (!in->standby) {
-#ifdef AUDIO_MUX_PCM    
+#ifdef AUDIO_MUX_PCM
         if (in->mux_pcm) {
             mux_pcm_close(in->mux_pcm);
             in->mux_pcm = NULL;
@@ -1657,13 +2037,31 @@ static int do_input_standby(struct tiny_stream_in *in)
         if (in->pcm) {
             pcm_close(in->pcm);
             in->pcm = NULL;
-        }
+	}
+	if(in->is_sco) {
+	    if(adev->voip_state) {
+		adev->voip_state &= (~VOIP_CAPTURE_STREAM);
+	    if(!adev->voip_state)
+		close_voip_codec_pcm(adev);
+	    }
+	    in->is_sco = false;
+	}
+	if(in->is_bt_sco) {
+	    in->is_bt_sco = false;
+	}
         adev->active_input = 0;
-        if (adev->mode != AUDIO_MODE_IN_CALL) {
+        if ((adev->mode != AUDIO_MODE_IN_CALL)
+#ifdef VOIP_DSP_PROCESS
+            &&(adev->voip_start ==0)
+#endif
+        )
+        {
             adev->in_devices &= ~AUDIO_DEVICE_IN_ALL;
             select_devices_signal(adev);
         }
-
+        if(in->resampler){
+            in_deinit_resampler( in);
+        }
         if (in->active_rec_proc) {
             AUDPROC_DeInitDp();
             in->active_rec_proc = 0;
@@ -1722,7 +2120,7 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
     if (ret >= 0) {
         val = atoi(value);
-        if ((in->device != val) && (val != 0)) {
+        if (in->device != val) {
             in->device = val;
             adev->in_devices &= ~AUDIO_DEVICE_IN_ALL;
             adev->in_devices |= in->device;
@@ -1779,13 +2177,22 @@ static int get_next_buffer(struct resampler_buffer_provider *buffer_provider,
                     (void*)in->buffer,
                     in->config.period_size *
                     audio_stream_frame_size((const struct audio_stream *)(&in->stream.common)));
-        }        
+        }
 #else
         in->read_status = pcm_read(in->pcm,
                 (void*)in->buffer,
                 in->config.period_size *
                 audio_stream_frame_size((const struct audio_stream *)(&in->stream.common)));
-#endif                                     
+
+
+#ifdef AUDIO_DUMP_EX
+    dump_info.buf = in->buffer;
+    dump_info.buf_len = in->config.period_size * audio_stream_frame_size(&in->stream.common);
+    dump_info.dump_switch_info =  DUMP_RECORD_HWL_AFTER_VBC;
+    dump_data(dump_info);
+#endif
+
+#endif
 
         if (in->read_status != 0) {
             if(in->pcm) {
@@ -1830,10 +2237,8 @@ static void release_buffer(struct resampler_buffer_provider *buffer_provider,
 static ssize_t read_frames(struct tiny_stream_in *in, void *buffer, ssize_t frames)
 {
     ssize_t frames_wr = 0;
-    //BLUE_TRACE("read_frames, frames=%d", frames);
     while (frames_wr < frames) {
         size_t frames_rd = frames - frames_wr;
-        //BLUE_TRACE("frames_wr=%d, frames=%d, frames_rd=%d", frames_wr, frames, frames_rd);
         if (in->resampler != NULL) {
             in->resampler->resample_from_provider(in->resampler,
                     (int16_t *)((char *)buffer +
@@ -1876,7 +2281,7 @@ static bool in_bypass_data(struct tiny_stream_in *in,uint32_t frame_size, uint32
         memset(buffer,0,bytes);
         pthread_mutex_unlock(&adev->lock);
         pthread_mutex_unlock(&in->lock);
-        usleep(bytes * 1000000 / frame_size / sample_rate);
+        usleep((int64_t)bytes * 1000000 / frame_size / sample_rate);
         return true;
     }else{
         return false;
@@ -1898,44 +2303,65 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
     }
 
 #ifdef VOIP_DSP_PROCESS
-    if(adev->mode ==AUDIO_MODE_IN_COMMUNICATION)
+    if(((adev->voip_start == 1) && (!((in->device & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_ALL_SCO)))
+            &&(!adev->call_start))
 #else
-        if((adev->mode == AUDIO_MODE_IN_COMMUNICATION) && (adev->in_devices & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET))
+    if((adev->voip_start == 1) && ((in->device & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET))
 #endif
-        {
-            if(!in->is_sco ) {       
-                ALOGE(": in_read sco start  and do standby");
-                do_input_standby(in);
-                in->is_sco=true;
-            }
+    {
+            if(!in->is_sco ) {
+            do_input_standby(in);
+            adev->voip_state |= VOIP_CAPTURE_STREAM;
+            force_standby_for_voip(adev);
+            in->is_sco=true;
         }
-        else{
-            if(in->is_sco){      
-                ALOGE(": in_read sco stop  and do standby");
-                do_input_standby( in);
-                in->is_sco=false;
-            }
+    }
+    else{
+        if(in->is_sco){
+            //ALOGE(": in_read sco stop  and do standby");
+            do_input_standby( in);
         }
+    }
+    if((adev->mode  != AUDIO_MODE_IN_CALL) &&
+            ((in->device & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET))
+    {
+        if(!in->is_bt_sco) {
+            do_input_standby(in);
+            in->is_bt_sco=true;
+        }
+    }
+    else{
+        if(in->is_bt_sco){
+            ALOGD("bt_sco:in_read_stop and do standby");
+            do_input_standby( in);
+        }
+    }
+
+    if((!in->is_sco) && adev->voip_state){
+        usleep(100000);
+        memset(buffer,0,bytes);
+        pthread_mutex_unlock(&in->lock);
+        pthread_mutex_unlock(&adev->lock);
+       return bytes;
+    }
 
     if (in->standby) {
+        in->standby = 0;
         ret = start_input_stream(in);
-        if (ret == 0)
-            in->standby = 0;
-
-        ALOGE(": start input_stream ret is %d, in->is_sco is %d",ret,in->is_sco);
     }
     pthread_mutex_unlock(&adev->lock);
+
 
     if (ret < 0)
         goto exit;
 
 #ifdef AUDIO_MUX_PCM
-    if(((adev->call_connected) &&(!in->mux_pcm)) 
+    if(((adev->call_connected) &&(!in->mux_pcm))
             ||((!adev->call_connected) &&(in->mux_pcm))) {
         usleep(20000);
         ALOGW("in_read no data read adev->call_connected is %d,in->mux_pcm is %x",adev->call_connected,(unsigned int)in->mux_pcm);
         pthread_mutex_unlock(&in->lock);
-        return bytes;           
+        return bytes;
     }
 #endif
 
@@ -1956,6 +2382,13 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
         if (ret == 0 && in->active_rec_proc)
             aud_rec_do_process(buffer, bytes);
     }
+
+#ifdef AUDIO_DUMP_EX
+    dump_info.buf = buffer;
+    dump_info.buf_len = bytes;
+    dump_info.dump_switch_info =  DUMP_RECORD_HWL_AFTER_EXPRESS;
+    dump_data(dump_info);
+#endif
 
     if (ret > 0)
         ret = 0;
@@ -2026,6 +2459,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
     out->dev = ladev;
     out->standby = 1;
+    out->devices = devices;
 
     config->format = out->stream.common.get_format(&out->stream.common);
     config->channel_mask = out->stream.common.get_channels(&out->stream.common);
@@ -2050,8 +2484,10 @@ static void adev_close_output_stream(struct audio_hw_device *dev,
     out_standby(&stream->common);
     if (out->buffer)
         free(out->buffer);
-    if (out->resampler)
+    if (out->resampler){
         release_resampler(out->resampler);
+        out->resampler = NULL;
+    }
 
     if(out->buffer_vplayback)
         free(out->buffer_vplayback);
@@ -2088,7 +2524,19 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             adev->low_power = true;
     }
 
-    ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));                                                
+ #if 1
+    ret = str_parms_get_str(parms, "sprd_voip_start", value, sizeof(value));
+    if (ret > 0) {
+        if(strcmp(value, "true") == 0) {
+            ALOGI("%s, voip turn on by output", __FUNCTION__);
+            adev->voip_start = 1;
+        } else if (strcmp(value, "false") == 0) {
+            ALOGI("%s, voip turn off by output", __FUNCTION__);
+            adev->voip_start = 0;
+        }
+    }
+#endif
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
     if (ret >= 0) {
         val = atoi(value);
         pthread_mutex_lock(&adev->lock);
@@ -2098,6 +2546,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 ALOGE("adev set device in val is %x",val);
                 adev->out_devices &= ~AUDIO_DEVICE_OUT_ALL;
                 adev->out_devices |= val;
+                if(adev->active_output)
+                    adev->active_output->devices = val;
 
                 if(adev->out_devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
                     if(adev->cp_type == CP_TG)
@@ -2141,12 +2591,14 @@ static int adev_init_check(const struct audio_hw_device *dev)
 static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
 {
     struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
-    BLUE_TRACE("adev_set_voice_volume in...volume:%f mode:%d call_start:%d ",volume,adev->mode,adev->call_start);
-
-    adev->voice_volume = volume;
-    /*Send at command to cp side*/
-    at_cmd_volume(volume,adev->mode);
-
+    if(adev->mode == AUDIO_MODE_IN_CALL || adev->call_start ){
+        BLUE_TRACE("adev_set_voice_volume in...volume:%f mode:%d call_start:%d ",volume,adev->mode,adev->call_start);
+        adev->voice_volume = volume;
+        /*Send at command to cp side*/
+        at_cmd_volume(volume,adev->mode);
+    }else{
+        BLUE_TRACE("%s in, not MODE_IN_CALL (%d), return ",__func__,adev->mode);
+    }
     return 0;
 }
 
@@ -2158,18 +2610,6 @@ static int adev_set_master_volume(struct audio_hw_device *dev, float volume)
     return -ENOSYS;
 }
 
-static int adev_set_master_mute(struct audio_hw_device *dev, bool mute)
-{
-    // TO DO
-    return 0;
-}
-
-static int adev_get_master_mute(struct audio_hw_device *dev, bool *mute)
-{
-    // TO DO
-    return 0;
-}
-
 static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
 {
     struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
@@ -2177,10 +2617,49 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
     pthread_mutex_lock(&adev->lock);
     if (adev->mode != mode) {
         adev->mode = mode;
-    }else{
+        adev_set_master_mute(dev, false);
+    } else {
         BLUE_TRACE("adev_set_mode,the same mode(%d)",mode);
     }
     pthread_mutex_unlock(&adev->lock);
+
+    return 0;
+}
+
+static int adev_set_master_mute(struct audio_hw_device *dev, bool mute)
+{
+    struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
+
+    //ALOGD("%s, mute=%d, master_mute=%d", __func__, mute, adev->master_mute);
+    if (adev->master_mute == mute)
+        return 0;
+    if (!adev->master_mute && adev->mode == AUDIO_MODE_IN_CALL)
+        return 0;
+    adev->master_mute = mute;
+    if (adev->private_ctl.speaker_mute
+            && (adev->out_devices & AUDIO_DEVICE_OUT_SPEAKER))
+        mixer_ctl_set_value(adev->private_ctl.speaker_mute, 0, mute);
+
+    if (adev->private_ctl.speaker2_mute
+            && (adev->out_devices & AUDIO_DEVICE_OUT_SPEAKER))
+        mixer_ctl_set_value(adev->private_ctl.speaker2_mute, 0, mute);
+
+    if (adev->private_ctl.earpiece_mute
+            && (adev->out_devices & AUDIO_DEVICE_OUT_EARPIECE))
+        mixer_ctl_set_value(adev->private_ctl.earpiece_mute, 0, mute);
+
+    if (adev->private_ctl.headphone_mute
+            && (adev->out_devices & (AUDIO_DEVICE_OUT_WIRED_HEADPHONE | AUDIO_DEVICE_OUT_WIRED_HEADPHONE)))
+        mixer_ctl_set_value(adev->private_ctl.headphone_mute, 0, mute);
+
+    return 0;
+}
+
+static int adev_get_master_mute(const struct audio_hw_device *dev, bool *mute)
+{
+    struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
+
+    *mute = adev->master_mute;
 
     return 0;
 }
@@ -2291,6 +2770,7 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
         free(in->buffer);
         release_resampler(in->resampler);
     }
+
     free(stream);
     return;
 }
@@ -2390,6 +2870,26 @@ static void adev_config_parse_private(struct config_parse_state *s, const XML_Ch
                 mixer_get_ctl_by_name(s->adev->mixer, name);
             CTL_TRACE(s->adev->private_ctl.vbc_ad23_eq_switch);
         }
+        else if (strcmp(s->private_name, PRIVATE_SPEAKER_MUTE) == 0) {
+            s->adev->private_ctl.speaker_mute =
+                mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.speaker_mute);
+        }
+        else if (strcmp(s->private_name, PRIVATE_SPEAKER2_MUTE) == 0) {
+            s->adev->private_ctl.speaker2_mute =
+                mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.speaker2_mute);
+        }
+        else if (strcmp(s->private_name, PRIVATE_EARPIECE_MUTE) == 0) {
+            s->adev->private_ctl.earpiece_mute =
+                mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.earpiece_mute);
+        }
+        else if (strcmp(s->private_name, PRIVATE_HEADPHONE_MUTE) == 0) {
+            s->adev->private_ctl.headphone_mute =
+                mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.headphone_mute);
+        }
     }
 }
 
@@ -2415,7 +2915,7 @@ static void adev_config_start(void *data, const XML_Char *elem,
         dev_num = sizeof(dev_names_linein) / sizeof(dev_names_linein[0]);
     }
 
-    /* default if not set it 0 */	
+    /* default if not set it 0 */
     for (i = 0; attr[i]; i += 2) {
         if (strcmp(attr[i], "name") == 0)
             name = attr[i + 1];
@@ -2564,10 +3064,6 @@ static int adev_config_parse(struct tiny_audio_device *adev)
     bool eof = false;
     int len;
 
-
-
-
-    //property_get("ro.product.device", property, "tiny_hw");
     snprintf(file, sizeof(file), "/system/etc/%s", "tiny_hw.xml");
 
     ALOGV("Reading configuration from %s\n", file);
@@ -2667,9 +3163,11 @@ static int get_mode_from_devices(int devices)
 {
     int ret = 3;
 
-    if ((devices & AUDIO_DEVICE_IN_BUILTIN_MIC) ||(devices & AUDIO_DEVICE_IN_BACK_MIC))
+    if (((devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BUILTIN_MIC)
+            ||((devices & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BACK_MIC))
         ret = 3;
-    else if ((devices & AUDIO_DEVICE_IN_WIRED_HEADSET)||(devices & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET))
+    else if (((devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_WIRED_HEADSET)
+            ||((devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET))
         ret = 0;
 
     return ret;
@@ -2741,8 +3239,8 @@ static void *stream_routing_thread_entry(void * param)
     int newprio=39;
 
     pthread_attr_init(&attr);
-    pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM); 
-    pthread_attr_setschedpolicy(&attr, SCHED_FIFO); 
+    pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
+    pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
     pthread_attr_getschedparam(&attr, &m_param);
     m_param.sched_priority=newprio;
     pthread_attr_setschedparam(&attr, &m_param);
@@ -2793,7 +3291,7 @@ static void stream_routing_manager_close(struct tiny_audio_device *adev)
 
 
 static  vbc_ctrl_pipe_para_t *adev_modem_create(audio_modem_t  *modem, const char *num)
-{	
+{
     vbc_ctrl_pipe_para_t *a;
     if (!atoi((char *)num)) {
         ALOGE("Unnormal modem num!");
@@ -2810,7 +3308,7 @@ static  vbc_ctrl_pipe_para_t *adev_modem_create(audio_modem_t  *modem, const cha
         if (modem->vbc_ctrl_pipe_info == NULL) {
             ALOGE("Unable to allocate modem profiles");
             return NULL;
-        } 
+        }
         else
         {
             /* initialise the new profile */
@@ -2848,7 +3346,7 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
         /* Obtain the modem num */
         if (strcmp(attr[0], "num") == 0) {
             ALOGD("The modem num is '%s'", attr[1]);
-            state->vbc_ctrl_pipe_info = adev_modem_create(modem, attr[1]);		
+            state->vbc_ctrl_pipe_info = adev_modem_create(modem, attr[1]);
         } else {
             ALOGE("no modem num!");
         }
@@ -2890,7 +3388,7 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
         if (strcmp(attr[0], "ctl_path") == 0) {
             ALOGD("The iis_for_btcall ctl path  is '%s'", attr[1]);
             if((strlen(attr[1]) +1) <= I2S_CTL_PATH_MAX){
-                memcpy(modem->i2s_bt.ctl_path , attr[1], strlen(attr[1])+1);		
+                memcpy(modem->i2s_bt.ctl_path , attr[1], strlen(attr[1])+1);
                 modem->i2s_bt.fd = open(modem->i2s_bt.ctl_path,O_RDWR | O_SYNC);
                 if(modem->i2s_bt.fd == -1) {
                     ALOGE(" audio_hw_primary: could not open i2s ctl fd,errno is %d",errno);
@@ -2904,7 +3402,7 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
         if (strcmp(attr[2], "index") == 0) {
             ALOGD("The iis_for_btcall index is '%s'", attr[3]);
             if((strlen(attr[3]) +1) <= I2S_CTL_INDEX_MAX)
-                memcpy(modem->i2s_bt.index , attr[3], strlen(attr[3])+1);		
+                memcpy(modem->i2s_bt.index , attr[3], strlen(attr[3])+1);
         } else {
             ALOGE("no iis_ctl index for bt call!");
         }
@@ -2922,7 +3420,7 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
         if (strcmp(attr[0], "ctl_path") == 0) {
             ALOGD("The iis_for_extspk ctl path  is '%s'", attr[1]);
             if((strlen(attr[1]) +1) <= I2S_CTL_PATH_MAX) {
-                memcpy(modem->i2s_extspk.ctl_path , attr[1], strlen(attr[1])+1);		
+                memcpy(modem->i2s_extspk.ctl_path , attr[1], strlen(attr[1])+1);
                 modem->i2s_extspk.fd = open(modem->i2s_extspk.ctl_path,O_RDWR | O_SYNC);
                 if(modem->i2s_extspk.fd == -1) {
                     ALOGE(" audio_hw_primary: could not open i2s ctl fd,errno is %d",errno);
@@ -2935,7 +3433,7 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
         if (strcmp(attr[2], "index") == 0) {
             ALOGD("The iis_for_extspk index is '%s'", attr[3]);
             if((strlen(attr[3]) +1) <= I2S_CTL_INDEX_MAX)
-                memcpy(modem->i2s_extspk.index , attr[3], strlen(attr[3])+1);		
+                memcpy(modem->i2s_extspk.index , attr[3], strlen(attr[3])+1);
         } else {
             ALOGE("no iis_ctl index for ext spk!");
         }
@@ -2948,6 +3446,122 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
             ALOGE("no iis_ctl index for bt call!");
         }
     }
+
+    else if ((strcmp(tag_name, "voip")&& !modem->voip_res.is_done) == 0) {
+
+            char prop_t[5] = {0};
+            char prop_w[5] = {0};
+            bool t_enable = false;
+            bool w_enalbe = false;
+
+            if(property_get(RO_MODEM_T_ENABLE_PROPERTY, prop_t, "") && 0 == strcmp(prop_t, "1") )
+            {
+                MY_TRACE("%s:ro.modem.t.enable",__func__);
+                t_enable = true;
+            }
+            if(property_get(RO_MODEM_W_ENABLE_PROPERTY, prop_w, "") && 0 == strcmp(prop_w, "1"))
+            {
+                MY_TRACE("%s:ro.modem.w.enable",__func__);
+                w_enalbe = true;
+            }
+           /* Obtain the modem num */
+
+           if (strcmp(attr[0], "modem") == 0) {
+
+                    if(strcmp(attr[1], "w") == 0)
+                    {
+                        if(w_enalbe){
+                            ALOGD("The voip run on modem  is '%s'", attr[1]);
+                            modem->voip_res.cp_type = CP_W;
+                            modem->voip_res.is_done = true;
+                        }
+                        else
+                            return ;
+                    }
+                    else if(strcmp(attr[1], "t") == 0)
+                    {
+
+                        if(t_enable){
+                            ALOGD("The voip run on modem  is '%s'", attr[1]);
+                            modem->voip_res.cp_type = CP_TG;
+                            modem->voip_res.is_done = true;
+                        }
+                        else
+                            return;
+                    }
+           } else {
+                    ALOGE("no modem type for voip!");
+                    goto attr_err;
+           }
+
+           if (strcmp(attr[2], "pipe") == 0) {
+                    ALOGD("voip pipe name is %s", attr[3]);
+                    if((strlen(attr[3]) +1) <= VOIP_PIPE_NAME_MAX)
+                       memcpy(modem->voip_res.pipe_name, attr[3], strlen(attr[3])+1);
+            }
+            else {
+                    ALOGE("'%s' No pipe filed!", attr[2]);
+                    goto attr_err;
+            }
+            if (strcmp(attr[4], "vbchannel") == 0) {
+                   modem->voip_res.channel_id = atoi((char *)attr[5]);
+            }
+            else {
+                    ALOGE("'%s' No vbc filed!", attr[4]);
+                    goto attr_err;
+            }
+
+           if (strcmp(attr[6], "enable") == 0) {
+                   ALOGD("The enable_for_voip is '%s'", attr[7]);
+                   if(strcmp(attr[7],"1") == 0)
+                       modem->voip_res.enable = true;
+           } else {
+                   ALOGE("no iis_ctl index for bt call!");
+           }
+   }
+   else if (strcmp(tag_name, "debug") == 0) //parse debug info
+   {
+        if (strcmp(attr[0], "enable") == 0)
+        {
+            if (strcmp(attr[1], "0") == 0)
+            {
+                modem->debug_info.enable = 0;
+            }
+            else
+            {
+                modem->debug_info.enable = 1;
+            }
+        }
+        else
+        {
+            ALOGE("no adaptable type for debug!");
+            goto attr_err;
+        }
+    }
+    else if (strcmp(tag_name, "debuginfo") == 0) //parse debug info
+    {
+        if (strcmp(attr[0], "sleepdeltatimegate") == 0)
+        {
+            ALOGD("The sleepdeltatimegate is  '%s'", attr[1]);
+            modem->debug_info.sleeptime_gate=atoi((char *)attr[1]);
+        }
+        else if (strcmp(attr[0], "pcmwritetimegate") == 0)
+        {
+            ALOGD("The pcmwritetimegate is  '%s'", attr[1]);
+            modem->debug_info.pcmwritetime_gate=atoi((char *)attr[1]);
+        }
+        else if (strcmp(attr[0], "lastthiswritetimegate") == 0)
+        {
+            ALOGD("The lastthiswritetimegate is  '%s'", attr[1]);
+            modem->debug_info.lastthis_outwritetime_gate=atoi((char *)attr[1]);
+        }
+        else
+        {
+            ALOGE("no adaptable info for debuginfo!");
+            goto attr_err;
+        }
+   }
+
 attr_err:
     return;
 }
@@ -3049,32 +3663,104 @@ static void vb_effect_getpara(struct tiny_audio_device *adev)
     int srcfd;
     char *filename = NULL;
 
-    if(read_already)
-    {
-        ALOGI("vb_effect_getpara read already.");
-        return;
-    }
-    else
-    {
-        ALOGI("vb_effect_getpara read first.");
-        read_already = 1;
-    }
-    //adev->audio_para = vb_effect_readpara();//get data from audio_para
     adev->audio_para = calloc(1, len);
     if (!adev->audio_para)
         return;
     memset(adev->audio_para, 0, len);
-#if 0
-    filename = ENG_AUDIO_PARA;
-#else
     srcfd = open((char *)(ENG_AUDIO_PARA_DEBUG), O_RDONLY);
     filename = (srcfd < 0 )? ( ENG_AUDIO_PARA):(ENG_AUDIO_PARA_DEBUG);
-    close(srcfd);
-#endif
+    if(srcfd >= 0)
+    {
+        close(srcfd);
+    }
     ALOGI("vb_effect_getpara read name:%s.", filename);
     stringfile2nvstruct(filename, adev->audio_para, len); //get data from audio_hw.txt.
     audio_para_ptr = adev->audio_para;
 }
+
+static void *audiopara_tuning_thread_entry(void * param)
+{
+    struct tiny_audio_device *adev = (struct tiny_audio_device *)param;
+    int fd_aud = -1;
+    int fd_dum = -1;
+    int ops_bit = 0;
+    int result = -1;
+    AUDIO_TOTAL_T ram_from_eng;
+    int mode_index = 0;
+    //mode_t mode_f = 0;
+    ALOGE("%s E\n",__FUNCTION__);
+    memset(&ram_from_eng,0x00,sizeof(AUDIO_TOTAL_T));
+    if (mkfifo(AUDFIFO,S_IFIFO|0666) <0) {
+        if (errno != EEXIST) {
+            ALOGE("%s create audio fifo error %s\n",__FUNCTION__,strerror(errno));
+            return NULL;
+        }
+    }
+    if(chmod(AUDFIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH) != 0) {
+        ALOGE("%s Cannot set RW to \"%s\": %s", __FUNCTION__,AUDFIFO, strerror(errno));
+    }
+    fd_aud = open(AUDFIFO,O_RDONLY);
+    if (fd_aud == -1) {
+        ALOGE("%s open audio FIFO error %s\n",__FUNCTION__,strerror(errno));
+        return NULL;
+    }
+    fd_dum = open(AUDFIFO,O_WRONLY);
+    if (fd_dum == -1) {
+        ALOGE("%s open dummy audio FIFO error %s\n",__FUNCTION__,strerror(errno));
+        return NULL;
+    }
+    while (ops_bit != -1) {
+        result = read(fd_aud,&ops_bit,sizeof(int));
+        ALOGE("%s read audio FIFO result %d,ram_req:%d\n",__FUNCTION__,result,ops_bit);
+        if (result >0) {
+            pthread_mutex_lock(&adev->lock);
+            if(ops_bit & ENG_FLASH_OPS)
+            {
+                ALOGE("%s audio para --> update from flash\n",__FUNCTION__);
+                if (adev->audio_para)
+                {
+                    free(adev->audio_para);
+                }
+                vb_effect_getpara(adev);
+                vb_effect_setpara(adev->audio_para);
+            }
+            else if(ops_bit & ENG_RAM_OPS)
+            {
+                ALOGE("%s audio para --> update from RAM\n",__FUNCTION__);
+                result = read(fd_aud,&mode_index,sizeof(int));
+                result = read(fd_aud,&ram_from_eng,sizeof(AUDIO_TOTAL_T));
+                ALOGE("%s read audio FIFO result %d,mode_index:%d,size:%d\n",__FUNCTION__,result,mode_index,sizeof(AUDIO_TOTAL_T));
+                adev->audio_para[mode_index] = ram_from_eng;
+            }
+			if(ENG_PGA_OPS & ops_bit) {
+				SetAudio_gain_route(adev,1);
+			}
+            pthread_mutex_unlock(&adev->lock);
+            ALOGE("%s read audio FIFO X.\n",__FUNCTION__);
+        }
+    }
+    ALOGE("exit from audio tuning thread");
+    close(fd_dum);
+    close(fd_aud);
+    unlink(AUDFIFO);
+    pthread_exit(NULL);
+    return NULL;
+}
+
+static int audiopara_tuning_manager_create(struct tiny_audio_device *adev)
+{
+    int ret;
+    /* create a thread to manager audiopara tuning.*/
+    ret = pthread_create(&adev->audiopara_tuning_thread, NULL,
+            audiopara_tuning_thread_entry, (void *)adev);
+    if (ret) {
+        ALOGE("pthread_create falied, code is %d", ret);
+        return ret;
+    }
+    return ret;
+}
+
+
 static int adev_open(const hw_module_t* module, const char* name,
         hw_device_t** device)
 {
@@ -3098,6 +3784,8 @@ static int adev_open(const hw_module_t* module, const char* name,
     adev->hw_device.set_voice_volume = adev_set_voice_volume;
     adev->hw_device.set_master_volume = adev_set_master_volume;
     adev->hw_device.set_mode = adev_set_mode;
+    adev->hw_device.set_master_mute = adev_set_master_mute;
+    adev->hw_device.get_master_mute = adev_get_master_mute;
     adev->hw_device.set_mic_mute = adev_set_mic_mute;
     adev->hw_device.get_mic_mute = adev_get_mic_mute;
     adev->hw_device.set_parameters = adev_set_parameters;
@@ -3108,8 +3796,6 @@ static int adev_open(const hw_module_t* module, const char* name,
     adev->hw_device.open_input_stream = adev_open_input_stream;
     adev->hw_device.close_input_stream = adev_close_input_stream;
     adev->hw_device.dump = adev_dump;
-    adev->hw_device.set_master_mute = adev_set_master_mute;
-    adev->hw_device.get_master_mute = adev_get_master_mute;
 
     pthread_mutex_lock(&adev->lock);
     ret = adev_modem_parse(adev);
@@ -3124,10 +3810,11 @@ static int adev_open(const hw_module_t* module, const char* name,
     s_tinycard = get_snd_card_number(CARD_SPRDPHONE);
     s_vaudio = get_snd_card_number(CARD_VAUDIO);
     s_sco = get_snd_card_number(CARD_SCO);
+    s_bt_sco = get_snd_card_number(CARD_BT_SCO);
     s_vaudio_w = get_snd_card_number(CARD_VAUDIO_W);
 
-    ALOGI("s_tinycard = %d, s_vaudio = %d,s_sco = %d,s_vaudio_w is %d", s_tinycard, s_vaudio,s_sco,s_vaudio_w);
-    if (s_tinycard < 0 && s_vaudio < 0&&(s_sco < 0 ) && (s_vaudio_w < 0)) {
+    ALOGI("s_tinycard = %d, s_vaudio = %d,s_sco = %d, s_bt_sco = %d,s_vaudio_w is %d", s_tinycard, s_vaudio,s_sco,s_bt_sco,s_vaudio_w);
+    if (s_tinycard < 0 && s_vaudio < 0&&(s_sco < 0 ) && (s_vaudio_w < 0)&&(s_bt_sco < 0)) {
         ALOGE("Unable to load sound card, aborting.");
         goto ERROR;
     }
@@ -3145,6 +3832,12 @@ static int adev_open(const hw_module_t* module, const char* name,
     }
     BLUE_TRACE("ret=%d, num_dev_cfgs=%d", ret, adev->num_dev_cfgs);
     BLUE_TRACE("dev_cfgs_on depth=%d, dev_cfgs_off depth=%d", adev->dev_cfgs->on_len,  adev->dev_cfgs->off_len);
+
+	ret = dump_parse_xml();
+	if (ret < 0) {
+        ALOGE("Unable to locate dump information  from XML, aborting.");
+        goto ERROR;
+    }
 
     /* generate eq params file of vbc effect*/
     adev->eq_available = false;
@@ -3192,8 +3885,21 @@ static int adev_open(const hw_module_t* module, const char* name,
     ret = vbc_ctrl_open(adev);
     if (ret < 0)  goto ERROR;
 
+	adev->cp->voip_res.adev = adev;
+#ifdef VOIP_DSP_PROCESS
+	ret = vbc_ctrl_voip_open(&(adev->cp->voip_res));
+	//ret = 0;//vbc_ctrl_voip_open(&(adev->cp->voip_res));
+	if (ret < 0) {
+	ALOGE("voip: vbc_ctrl_voip_open error ");
+	goto ERROR;
+	}
+#endif
+
     ret = mmi_audio_loop_open();
     if (ret)  ALOGW("Warning: audio loop can NOT work.");
+
+    ret =audiopara_tuning_manager_create(adev);
+    if (ret)  ALOGW("Warning: audio tuning can NOT work.");
 
     ret = stream_routing_manager_create(adev);
     if (ret) {

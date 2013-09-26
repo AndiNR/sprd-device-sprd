@@ -50,17 +50,47 @@ inline int mmi_pop_digit(char **start, char **ptr, int *len)
     return 0;
 }
 
+int headset_no_mic()
+{
+    char buf[12] = {'\0'};
+    const char* headsetStatePath = "/sys/class/switch/h2w/state";
+
+    int fd = open(headsetStatePath, O_RDONLY);
+    if(fd < 0) {
+        ALOGE("open failed %s ", strerror(errno));
+    } else {
+        ssize_t mBytesRead = read(fd, (char*)buf, 12);
+        close(fd);
+
+        if(mBytesRead > 0) {
+            int value = atoi((char*)buf);
+            // headset has mic
+            if(value == 2) {
+                ALOGW("Headset has no mic");
+                return 1;
+            } else if(value == 1) {
+                ALOGW("Headset has mic");
+            } else {
+                ALOGW("No Headset detect");
+            }
+        }
+    }
+    return 0;
+}
+
 int mmi_audio_mode_map(int ap_mode)
 {
-    int cp_mode=0;
-    if(ap_mode==1) {
-            cp_mode=0;
-    }
-    else if (ap_mode ==2){
-            cp_mode = 1;
-    }
-    else if (ap_mode ==4) {
-            cp_mode=2;
+    int cp_mode = 0;
+    if(ap_mode == 1) {
+        cp_mode = 0;
+    } else if(ap_mode == 2){
+        cp_mode = 1;
+    } else if(ap_mode == 4) {
+        if(headset_no_mic()) {
+            cp_mode = 4;
+        } else {
+            cp_mode = 2;
+        }
     }
     return cp_mode;
 }
@@ -96,6 +126,9 @@ void *mmi_audio_loop_thread(void *args)
 
 	ALOGE("peter: open /dev/pipe/mmi.audio.ctrl in\n");
     mmi_audio_ctrl = open("/dev/pipe/mmi.audio.ctrl", O_RDWR);
+    if(mmi_audio_ctrl < 0){
+        ALOGE("%s, open pipe error!! ",__func__);
+    }
     max_fd = mmi_audio_ctrl;
     memset(r_buf, 0, sizeof r_buf);
     
