@@ -62,7 +62,8 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 PRODUCT_PACKAGES := \
 	Phone \
 	framework2 \
-	Stk \
+        MsmsStk \
+        Stk1 \
 	Launcher2 \
 	SprdDM \
 	Settings
