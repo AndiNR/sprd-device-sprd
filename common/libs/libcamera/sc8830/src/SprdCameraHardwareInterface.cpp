@@ -1722,7 +1722,7 @@ uint32_t SprdCameraHardware::getRedisplayMem()
 	uint32_t buffer_size = camera_get_size_align_page(SIZE_ALIGN(mPreviewWidth) * (SIZE_ALIGN(mPreviewHeight)) * 3 / 2);
 
 	if (mIsRotCapture) {
-		buffer_size += camera_get_size_align_page(SIZE_ALIGN(mRawWidth) * SIZE_ALIGN(mRawHeight) * 3 / 2);
+		buffer_size <<= 1 ;
 	}
 
 	mReDisplayHeap = GetPmem(buffer_size, 1);
@@ -2610,7 +2610,7 @@ bool SprdCameraHardware::displayOneFrameForCapture(uint32_t width, uint32_t heig
 	mGrallocHal->unlock(mGrallocHal, *buf_handle);
 
 	if (0 != ret) {
-		LOGE("%s: camera_copy_data_virtual() failed.", __func__);
+		LOGE("%s: camera copy data failed.", __func__);
 		return false;
 	}
 
@@ -2666,7 +2666,7 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 		mGrallocHal->unlock(mGrallocHal, *buf_handle);
 
 		if (0 != ret) {
-			LOGE("%s: camera_copy_data_virtual() failed.", __func__);
+			LOGE("%s: camera copy data failed.", __func__);
 			return false;
 		}
 
