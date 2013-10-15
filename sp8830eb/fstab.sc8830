@@ -8,4 +8,3 @@
 /dev/block/platform/sprd-sdhci.3/by-name/cache	   /cache   ext4    noatime,nosuid,nodev,nomblk_io_submit  wait
 /dev/block/platform/sprd-sdhci.3/by-name/prodnv /productinfo     ext4    noatime,nosuid,nodev,nomblk_io_submit wait
 /devices/platform/sprd-sdhci.0/mmc_host/mmc1       /storage/sdcard1 vfat    defaults     voldmanaged=sdcard:auto
-/devices/platform/sprd-sdhci.3/mmc_host/mmc0       /storage/sdcard0 vfat    defaults     voldmanaged=internal:by-name
