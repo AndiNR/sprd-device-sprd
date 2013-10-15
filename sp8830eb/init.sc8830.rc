@@ -13,7 +13,7 @@ on early-init
 
 on fs
     mount_all /fstab.sc8830
-    #setprop ro.crypto.fuse_sdcard true
+    setprop ro.crypto.fuse_sdcard true
     write /sys/kernel/boot_adsp/boot 1
 
 on post-fs
@@ -36,23 +36,17 @@ on init
     # See storage config details at http://source.android.com/tech/storage/
     mkdir /mnt/shell/emulated 0700 shell shell
     mkdir /storage/emulated 0555 root root
-    mkdir /storage/sdcard0 0000 system system
     mkdir /storage/sdcard1 0000 system system
 
-    #export EXTERNAL_STORAGE /storage/emulated/legacy
-    #export EMULATED_STORAGE_SOURCE /mnt/shell/emulated
-    #export EMULATED_STORAGE_TARGET /storage/emulated
-    export EXTERNAL_STORAGE  /storage/sdcard0
-    export SECONDARY_STORAGE /storage/sdcard1
-
-    symlink /storage/sdcard0 /sdcard
-    symlink /sdcard /mnt/sdcard
+    export EXTERNAL_STORAGE /storage/emulated/legacy
+    export EMULATED_STORAGE_SOURCE /mnt/shell/emulated
+    export EMULATED_STORAGE_TARGET /storage/emulated
 
     # Support legacy paths
-    #symlink /storage/emulated/legacy /sdcard
-    #symlink /storage/emulated/legacy /mnt/sdcard
-    #symlink /storage/emulated/legacy /storage/sdcard0
-    #symlink /mnt/shell/emulated/0 /storage/emulated/legacy
+    symlink /storage/emulated/legacy /sdcard
+    symlink /storage/emulated/legacy /mnt/sdcard
+    symlink /storage/emulated/legacy /storage/sdcard0
+    symlink /mnt/shell/emulated/0 /storage/emulated/legacy
     
 on boot
     chown system system /sys/class/backlight/sprd_backlight/brightness
@@ -284,8 +278,8 @@ service nvitemd_w /bin/nvitemd /dev/spipe_w1 ./nvitem_w.cfg        FALSE
 #    class late_start
 
 # virtual sdcard daemon running as media_rw (1023)
-#service sdcard /system/bin/sdcard /data/media /mnt/shell/emulated 1023 1023
-#    class late_start
+service sdcard /system/bin/sdcard /data/media /mnt/shell/emulated 1023 1023
+    class late_start
 
 
 service hfag /system/bin/sdptool add --channel=10 HFAG
