@@ -1351,7 +1351,7 @@ int camera_preflash(void)
 #ifdef CONFIG_CAMERA_FLASH_CTRL
 	CMR_LOGI("start.");
     if (CAMERA_FLASH_MODE_AUTO == cxt->cmr_set.flash_mode) {
-		uint32_t skip_mode = 0;;
+		uint32_t skip_mode = 0;
 		uint32_t skip_number = 0;
 		ret = camera_set_flash(cxt->cmr_set.flash_mode, &skip_mode, &skip_number);
     }
@@ -1449,7 +1449,7 @@ int camera_autofocus_start(void)
 	}
 #ifndef CONFIG_CAMERA_FLASH_CTRL
 	if (CAMERA_FLASH_MODE_AUTO == cxt->cmr_set.flash_mode) {
-		uint32_t skip_mode = 0;;
+		uint32_t skip_mode = 0;
 		uint32_t skip_number = 0;
 		ret = camera_set_flash(cxt->cmr_set.flash_mode, &skip_mode, &skip_number);
 	}

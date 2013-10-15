@@ -2171,6 +2171,7 @@ int camera_before_set_internal(enum restart_mode re_mode)
 			g_cxt->stop_preview_mode = 1;
 			ret = camera_stop_preview_internal();
 			Sensor_Close();
+			CMR_LOGI("id:%d.",g_cxt->sn_cxt.cur_id);
 		} else {
 		    g_cxt->stop_preview_mode = 0;
 			ret = camera_stop_preview_internal();
@@ -3189,15 +3190,7 @@ camera_ret_code_type camera_stop_capture(void)
 {
 	CMR_MSG_INIT(message);
 	int                      ret = CAMERA_SUCCESS;
-#if 0
-/*	camera_cb_info           cb_info;
 
-	ret = camera_set_take_picture(TAKE_PICTURE_NO);
-	memset(&cb_info, 0, sizeof(camera_cb_info));
-	cb_info.cb_type = CAMERA_RSP_CB_SUCCESS;
-	cb_info.cb_func = CAMERA_FUNC_RELEASE_PICTURE;
-	camera_callback_start(&cb_info);*/
-#else
 	CMR_LOGV("stop capture.");
 	ret = camera_set_take_picture(TAKE_PICTURE_NO);
 
@@ -3212,7 +3205,6 @@ camera_ret_code_type camera_stop_capture(void)
 
 	camera_wait_stop(g_cxt);
 
-#endif
 	return ret;
 }
 
@@ -4375,7 +4367,7 @@ int camera_rotation_handle(uint32_t evt_type, uint32_t sub_type, struct img_frm 
 
 	if (IMG_CVT_ROTATING != g_cxt->rot_cxt.rot_state) {
 		CMR_LOGE("Error state %d", g_cxt->rot_cxt.rot_state);
-		return CAMERA_INVALID_STATE;
+		goto exit;
 	}
 
 	(void)sub_type;
@@ -4891,7 +4883,7 @@ int camera_capture_init(void)
 		g_cxt->cap_rot);
 
 	g_cxt->thum_ready = 0;
-	CMR_LOGI("test log:%d.",g_cxt->sn_cxt.capture_mode);
+	CMR_LOGI("sn_cxt_cap_mode%d.",g_cxt->sn_cxt.capture_mode);
 	sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode];
 	sensor_cfg.sn_size.width  = sensor_mode->width;
 	sensor_cfg.sn_size.height = sensor_mode->height;
@@ -5001,7 +4993,7 @@ int camera_capture_init_continue(void)
 		g_cxt->cap_rot);
 
 	g_cxt->thum_ready = 0;
-	CMR_LOGI("test log:%d.",g_cxt->sn_cxt.capture_mode);
+	CMR_LOGI("sn_cap_mode:%d.",g_cxt->sn_cxt.capture_mode);
 	sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode];
 	sensor_cfg.sn_size.width  = sensor_mode->width;
 	sensor_cfg.sn_size.height = sensor_mode->height;
@@ -6739,108 +6731,6 @@ int camera_start_rotate(struct frm_info *data)
 	return ret;
 }
 
-int camera_copy_data_virtual(uint32_t width, uint32_t height, uint32_t in_addr, uint32_t out_virtual_addr)
-{
-
-	struct img_frm           src_frame, dst_frame;
-	uint32_t                 img_len = (uint32_t)(width * height);
-	struct img_rect          rect;
-	int                      ret = CAMERA_SUCCESS;
-
-	CMR_LOGV("(w,h)%d %d; addr src, 0x%x dst virtual, 0x%x",
-		width, height, in_addr, out_virtual_addr);
-
-#if 0
-	if (!IS_PREVIEW) {
-		CMR_LOGE("Preview Stoped");
-		return ret;
-	}
-#endif
-
-	src_frame.fmt = ROT_YUV420;
-	src_frame.addr_phy.addr_y = in_addr;
-	src_frame.addr_phy.addr_u = in_addr + (uint32_t)(width * height);
-	src_frame.size.width      = width;
-	src_frame.size.height     = height;
-
-	dst_frame.addr_phy.addr_y = out_virtual_addr;
-	dst_frame.addr_phy.addr_u = out_virtual_addr + (uint32_t)(width * height);
-	dst_frame.size.width      = width;
-	dst_frame.size.height     = height;
-
-	return cmr_rot_cpy_to_virtual(&src_frame, &dst_frame);
-}
-
-int camera_copy_data(uint32_t width, uint32_t height, uint32_t in_addr, uint32_t out_addr)
-{
-
-	struct img_frm           src_frame, dst_frame;
-	uint32_t                 img_len = (uint32_t)(width * height);
-	struct img_rect          rect;
-	int                      ret = CAMERA_SUCCESS;
-
-	CMR_LOGV("(w,h)%d %d; addr src, 0x%x dst, 0x%x",
-		width, height, in_addr, out_addr);
-
-	if (!IS_PREVIEW) {
-		CMR_LOGE("Preview Stoped");
-		return ret;
-	}
-
-#if 1
-	src_frame.fmt = ROT_YUV420;
-	src_frame.addr_phy.addr_y = in_addr;
-	src_frame.addr_phy.addr_u = in_addr + (uint32_t)(width * height);
-	src_frame.size.width      = width;
-	src_frame.size.height     = height;
-
-	dst_frame.addr_phy.addr_y = out_addr;
-	dst_frame.addr_phy.addr_u = out_addr + (uint32_t)(width * height);
-	dst_frame.size.width      = width;
-	dst_frame.size.height     = height;
-
-	return cmr_rot_cpy(&src_frame, &dst_frame);
-#else
-	pthread_mutex_lock(&g_cxt->prev_mutex);
-
-	src_frame.addr_phy.addr_y = in_addr;
-	src_frame.addr_phy.addr_u = in_addr + img_len;
-	src_frame.size.width      = width;
-	src_frame.size.height     = height;
-	src_frame.fmt             = IMG_DATA_TYPE_YUV420;
-	src_frame.data_end.y_endian = 1;
-	src_frame.data_end.uv_endian = 2;
-	dst_frame.addr_phy.addr_y = out_addr;
-	dst_frame.addr_phy.addr_u = out_addr + img_len;
-	dst_frame.size.width      = width;
-	dst_frame.size.height     = height;
-	dst_frame.fmt             = IMG_DATA_TYPE_YUV420;
-	dst_frame.data_end.y_endian = 1;
-	dst_frame.data_end.uv_endian = 2;
-	rect.start_x              = 0;
-	rect.start_y              = 0;
-	rect.width                = width;
-	rect.height               = height;
-	cmr_scale_evt_reg(NULL);
-	ret = cmr_scale_start(height,
-			&src_frame,
-			&rect,
-			&dst_frame,
-			NULL,
-			NULL);
-	cmr_scale_evt_reg(camera_scaler_evt_cb);
-
-	CMR_LOGV("Done, %d", ret);
-	if (ret) {
-		CMR_LOGE("Failed to deinit scaler, %d", ret);
-	}
-
-	pthread_mutex_unlock(&g_cxt->prev_mutex);
-	return ret;
-#endif
-}
-
-
 int camera_get_data_redisplay(int output_addr,
 				int output_width,
 				int output_height,
@@ -6860,10 +6750,48 @@ int camera_get_data_redisplay(int output_addr,
 		input_width, input_height, input_addr_y, output_width,output_height,
 		output_addr,g_cxt->cfg_cap_rot);
 
-	if (IMG_ROT_0 == g_cxt->cfg_cap_rot) {
+	/* start scaling*/
+	rect.start_x              = 0;
+	rect.start_y              = 0;
+	rect.width                = input_width;
+	rect.height               = input_height;
+	src_frame.size.width      = input_width;
+	src_frame.size.height     = input_height;
+	src_frame.fmt             = IMG_DATA_TYPE_YUV420;
+	src_frame.data_end.y_endian = 1;
+	src_frame.data_end.uv_endian = 1;
 		src_frame.addr_phy.addr_y = input_addr_y;
 		src_frame.addr_phy.addr_u = input_addr_uv;
+	if (IMG_ROT_90 == g_cxt->cfg_cap_rot || IMG_ROT_270 == g_cxt->cfg_cap_rot)  {
+		dst_frame.size.width      = output_height;
+		dst_frame.size.height     = output_width;
+		dst_frame.addr_phy.addr_y = output_addr + ((img_len * 3) >> 1);
+		dst_frame.addr_phy.addr_u = dst_frame.addr_phy.addr_y + img_len;
 	} else {
+		dst_frame.size.width      = output_width;
+		dst_frame.size.height     = output_height;
+		dst_frame.addr_phy.addr_y = output_addr;
+		dst_frame.addr_phy.addr_u = dst_frame.addr_phy.addr_y + img_len;
+	}
+	dst_frame.fmt             = IMG_DATA_TYPE_YUV420;
+	dst_frame.data_end.y_endian = 1;
+	dst_frame.data_end.uv_endian = 2;
+	camera_sync_scale_start(g_cxt);
+	cmr_scale_evt_reg(NULL);
+	ret = cmr_scale_start(input_height,
+			&src_frame,
+			&rect,
+			&dst_frame,
+			NULL,
+			NULL);
+	cmr_scale_evt_reg(camera_scaler_evt_cb);
+	camera_sync_scale_done(g_cxt);
+	if (ret) {
+		CMR_LOGV("dis scale fail, %d", ret);
+		return -1;
+	}
+	/* start roattion*/
+	if (IMG_ROT_0 != g_cxt->cfg_cap_rot) {
 		if (IMG_ROT_90 == g_cxt->cfg_cap_rot) {
 			angle = IMG_ROT_270;
 		} else if (IMG_ROT_270 == g_cxt->cfg_cap_rot) {
@@ -6873,15 +6801,15 @@ int camera_get_data_redisplay(int output_addr,
 		}
 		rect.start_x = 0;
 		rect.start_y = 0;
-		rect.width  = input_width;
-		rect.height = input_height;
-		src_frame.addr_phy.addr_y = input_addr_y;
-		src_frame.addr_phy.addr_u = input_addr_uv;
-		src_frame.size.width = input_width;
-		src_frame.size.height = input_height;
+		rect.width  = dst_frame.size.width;
+		rect.height = dst_frame.size.height;
+		src_frame.addr_phy.addr_y = dst_frame.addr_phy.addr_y;
+		src_frame.addr_phy.addr_u = dst_frame.addr_phy.addr_u;
+		src_frame.size.width = dst_frame.size.width;
+		src_frame.size.height = dst_frame.size.height;
 		src_frame.fmt = IMG_DATA_TYPE_YUV420;
-		dst_frame.addr_phy.addr_y = output_addr + ((img_len *3) >> 1);
-		dst_frame.addr_phy.addr_u = dst_frame.addr_phy.addr_y + input_width * input_height;
+		dst_frame.addr_phy.addr_y = output_addr;
+		dst_frame.addr_phy.addr_u = dst_frame.addr_phy.addr_y + img_len;
 
 		camera_sync_rotate_start(g_cxt);
 		cmr_rot_evt_reg(NULL);
@@ -6894,42 +6822,11 @@ int camera_get_data_redisplay(int output_addr,
 		cmr_rot_evt_reg(camera_rot_evt_cb);
 		camera_sync_rotate_done(g_cxt);
 		if (ret) {
-			CMR_LOGV("rot fail, %d", ret);
+			CMR_LOGV("dis rot fail, %d", ret);
 			return -1;
 		}
-
-		temp = input_width;
-		input_width = input_height;
-		input_height = temp;
-		src_frame.addr_phy.addr_y = dst_frame.addr_phy.addr_y ;
-		src_frame.addr_phy.addr_u = dst_frame.addr_phy.addr_u;
 	}
-	src_frame.size.width      = input_width;
-	src_frame.size.height     = input_height;
-	src_frame.fmt             = IMG_DATA_TYPE_YUV420;
-	src_frame.data_end.y_endian = 1;
-	src_frame.data_end.uv_endian = 1;
-	dst_frame.addr_phy.addr_y = output_addr;
-	dst_frame.addr_phy.addr_u = output_addr + img_len;
-	dst_frame.size.width      = output_width;
-	dst_frame.size.height     = output_height;
-	dst_frame.fmt             = IMG_DATA_TYPE_YUV420;
-	dst_frame.data_end.y_endian = 1;
-	dst_frame.data_end.uv_endian = 2;
-	rect.start_x              = 0;
-	rect.start_y              = 0;
-	rect.width                = input_width;
-	rect.height               = input_height;
-	camera_sync_scale_start(g_cxt);
-	cmr_scale_evt_reg(NULL);
-	ret = cmr_scale_start(input_height,
-			&src_frame,
-			&rect,
-			&dst_frame,
-			NULL,
-			NULL);
-	cmr_scale_evt_reg(camera_scaler_evt_cb);
-	camera_sync_scale_done(g_cxt);
+
 	CMR_LOGV("Done, %d", ret);
 	return ret;
 }
