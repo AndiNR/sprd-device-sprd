@@ -249,7 +249,7 @@ SprdCameraHardware::~SprdCameraHardware()
 void SprdCameraHardware::release()
 {
     LOGV("release E");
-    LOGV("mLock:release S .\n");
+    LOGV("mLock:release E .\n");
     Mutex::Autolock l(&mLock);
 
     // Either preview was ongoing, or we are in the middle or taking a
@@ -286,7 +286,7 @@ void SprdCameraHardware::release()
 			setCameraState(SPRD_ERROR, STATE_CAMERA);
 			mMetadataHeap = NULL;
 			LOGE("release: fail to camera_stop().");
-			LOGV("mLock:release E.\n");
+			LOGV("mLock:release X.\n");
 			return;
 		}
 
@@ -297,7 +297,7 @@ void SprdCameraHardware::release()
 	deinitCapture();
 
 	LOGV("release X");
-	LOGV("mLock:release E.\n");
+	LOGV("mLock:release X.\n");
 }
 
 int SprdCameraHardware::getCameraId() const
@@ -334,9 +334,9 @@ void SprdCameraHardware::stopPreview()
 bool SprdCameraHardware::previewEnabled()
 {
     bool ret = 0;
-    LOGV("mLock:previewEnabled S.\n");
-    Mutex::Autolock l(&mLock);
     LOGV("mLock:previewEnabled E.\n");
+    Mutex::Autolock l(&mLock);
+    LOGV("mLock:previewEnabled X.\n");
     if(0 == mPreviewStartFlag) {
         return 1;
     }  else if (2 == mPreviewStartFlag) {
@@ -399,6 +399,10 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 	int usage;
 
     LOGV("%s: preview format %s", __func__, str_preview_format);
+
+	if (preview_width < 640) {
+		mPreviewBufferUsage = PREVIEW_BUFFER_USAGE_DCAM;
+	}
 
 #ifdef CONFIG_CAMERA_DMA_COPY
     usage = GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_PRIVATE_0;
@@ -570,7 +574,7 @@ void SprdCameraHardware::stopRecording()
 {
 	LOGV("stopRecording: E");
 	Mutex::Autolock l(&mLock);
-	camera_set_stop_preview_mode(0);
+	camera_set_stop_preview_mode(1);
 	stopPreviewInternal();
 	mRecordingFirstFrameTime = 0;
 	LOGV("stopRecording: X");
@@ -1698,6 +1702,7 @@ bool SprdCameraHardware::allocatePreviewMem()
 
 			if(NULL == PreviewHeap->handle) {
 				LOGE("Fail to GetPmem mPreviewHeap. buffer_size: 0x%x.", buffer_size);
+				FreePmem(PreviewHeap);
 				freePreviewMem();
 				return false;
 			}
@@ -2028,11 +2033,10 @@ void SprdCameraHardware::set_ddr_freq(const char* freq_in_khz)
 status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 {
 	takepicture_mode mode = getCaptureMode();
-	LOGV("startPreview E isRecording=%d.captureMode=%d",isRecording, mCaptureMode);
+	LOGV("startPreviewInternal E isRecording=%d.captureMode=%d",isRecording, mCaptureMode);
 
 	if (isPreviewing()) {
-		LOGE("startPreview is already in progress, doing nothing.");
-		LOGV("mLock:startPreview E.\n");
+		LOGE("startPreviewInternal: already in progress, doing nothing.X");
 		setRecordingMode(isRecording);
 		setCameraPreviewMode();
 		return NO_ERROR;
@@ -2049,18 +2053,16 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 			WaitForCaptureDone();
 		}
 
-	    if (isCapturing() || isPreviewing()) {
-			//LOGE("startPreview X Camera state is %s, expecting SPRD_IDLE!",
-			//getCameraStateStr(mCaptureState));
-			LOGV("mLock:startPreview E.\n");
+		if (isCapturing() || isPreviewing()) {
+			LOGE("startPreviewInternal X Capture state is %s, Preview state is %s, expecting SPRD_IDLE!",
+			getCameraStateStr(mCameraState.capture_state), getCameraStateStr(mCameraState.preview_state));
 			return INVALID_OPERATION;
-	    }
+		}
 	}
 	setRecordingMode(isRecording);
 
 	if (!initPreview()) {
-		LOGE("startPreview X initPreview failed.  Not starting preview.");
-		LOGV("mLock:startPreview E.\n");
+		LOGE("startPreviewInternal X initPreview failed.  Not starting preview.");
 		deinitPreview();
 		return UNKNOWN_ERROR;
 	}
@@ -2071,16 +2073,16 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 			deinitCapture();
 			set_ddr_freq("0");
 			mSetFreqCount--;
-			LOGE("initCapture failed. Not taking picture.");
+			LOGE("startPreviewInternal X initCapture failed. Not taking picture.");
 			return UNKNOWN_ERROR;
 		}
 	}
 
 	setCameraState(SPRD_INTERNAL_PREVIEW_REQUESTED, STATE_PREVIEW);
 	camera_ret_code_type qret = camera_start_preview(camera_cb, this,mode);
-	LOGV("camera_start_preview X");
+	LOGV("startPreviewInternal X");
 	if (qret != CAMERA_SUCCESS) {
-		LOGE("startPreview failed: sensor error.");
+		LOGE("startPreviewInternal failed: sensor error.");
 		setCameraState(SPRD_ERROR, STATE_PREVIEW);
 		deinitPreview();
 		if (iSZslMode()) {
@@ -2092,7 +2094,7 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 
 	bool result = WaitForPreviewStart();
 
-	LOGV("startPreview X,mRecordingMode=%d.",isRecordingMode());
+	LOGV("startPreviewInternal X,mRecordingMode=%d.",isRecordingMode());
 
 	return result ? NO_ERROR : UNKNOWN_ERROR;
 }
@@ -2104,7 +2106,7 @@ void SprdCameraHardware::stopPreviewInternal()
 	LOGV("stopPreviewInternal E");
 
 	if (!isPreviewing()) {
-		LOGE("Preview not in progress!");
+		LOGE("Preview not in progress! stopPreviewInternal X");
 		return;
 	}
 
@@ -2114,18 +2116,16 @@ void SprdCameraHardware::stopPreviewInternal()
 		cancelPictureInternal();
 	}
 
+	if(CAMERA_SUCCESS != camera_stop_preview()) {
+		setCameraState(SPRD_ERROR, STATE_PREVIEW);
+		LOGE("stopPreviewInternal X: fail to camera_stop_preview().");
+	}
+
 	if (iSZslMode()) {
 		while (0 < mSetFreqCount) {
 			set_ddr_freq("0");
 			mSetFreqCount--;
 		}
-	}
-
-	if(CAMERA_SUCCESS != camera_stop_preview()) {
-		setCameraState(SPRD_ERROR, STATE_PREVIEW);
-		deinitPreview();
-		LOGE("stopPreviewInternal: fail to camera_stop_preview().");
-		return;
 	}
 
 	WaitForPreviewStop();
@@ -2137,8 +2137,8 @@ void SprdCameraHardware::stopPreviewInternal()
 	deinitCapture();
 
 	end_timestamp = systemTime();
-	LOGE("Stop Preview Time:%lld(ms).",(end_timestamp - start_timestamp)/1000000);
-	LOGV("stopPreviewInternal: X Preview has stopped.");
+	LOGV("stopPreviewInternal X Time:%lld(ms).",(end_timestamp - start_timestamp)/1000000);
+	LOGV("stopPreviewInternal X Preview has stopped.");
 }
 
 takepicture_mode SprdCameraHardware::getCaptureMode()
@@ -2219,6 +2219,8 @@ status_t SprdCameraHardware::cancelPictureInternal()
 
 status_t SprdCameraHardware::initDefaultParameters()
 {
+	uint32_t lcd_w = 0, lcd_h = 0;
+
 	LOGV("initDefaultParameters E");
 	SprdCameraParameters p;
 
@@ -2228,6 +2230,12 @@ status_t SprdCameraHardware::initDefaultParameters()
 
 	p.setDefault(config);
 
+	if (getLcdSize(&lcd_w, &lcd_h))
+	{
+		/*update preivew size by lcd*/
+		p.updateSupportedPreviewSizes(lcd_w, lcd_h);
+	}
+
     if (setParameters(p) != NO_ERROR) {
 		LOGE("Failed to set default parameters?!");
 		return UNKNOWN_ERROR;
@@ -2236,6 +2244,49 @@ status_t SprdCameraHardware::initDefaultParameters()
     LOGV("initDefaultParameters X.");
     return NO_ERROR;
 }
+
+bool SprdCameraHardware::getLcdSize(uint32_t *width, uint32_t *height)
+{
+    char const * const device_template[] = {
+        "/dev/graphics/fb%u",
+        "/dev/fb%u",
+        NULL
+    };
+
+    int fd = -1;
+    int i = 0;
+    char name[64];
+
+    if (NULL == width || NULL == height)
+        return false;
+
+    while ((fd == -1) && device_template[i]) {
+        snprintf(name, 64, device_template[i], 0);
+        fd = open(name, O_RDONLY, 0);
+        i++;
+    }
+	LOGV("getLcdSize dev is %s", name);
+
+    if (fd < 0) {
+        LOGE("getLcdSize fail to open fb");
+        return false;
+    }
+
+    struct fb_var_screeninfo info;
+    if (ioctl(fd, FBIOGET_VSCREENINFO, &info) == -1) {
+        LOGE("getLcdSize fail to get fb info");
+		close(fd);
+        return false;
+    }
+
+	LOGV("getLcdSize w h %d %d", info.yres, info.xres);
+    *width  = info.yres;
+    *height = info.xres;
+
+	close(fd);
+	return true;
+}
+
 
 status_t SprdCameraHardware::setCameraParameters()
 {
@@ -2565,7 +2616,11 @@ int SprdCameraHardware::displayCopy(uint32_t dst_phy_addr, uint32_t dst_virtual_
 	}
 	ret = uv420CopyTrim(dma_copy_cfg);
 #else
-	memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, src_w*src_h*3/2);
+    if (mParameters.getPreviewEnv()) {
+		memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, SIZE_ALIGN(src_w)*SIZE_ALIGN(src_h)*3/2);
+    } else {
+		memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, src_w*src_h*3/2);
+    }
 #endif
 
 #endif
@@ -2680,7 +2735,6 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 			if (releasePreviewFrame())
 				return false;
 		}
-
 		if (0 != mPreviewWindow->enqueue_buffer(mPreviewWindow, mPreviewBufferHandle[id])) {
 			LOGE("displayOneFrame: eddy Could not enqueue gralloc buffer!\n");
 			return false;
@@ -3282,7 +3336,7 @@ void SprdCameraHardware::HandleStartPreview(camera_cb_type cb,
 
 	case CAMERA_EVT_CB_FD:
 		LOGV("CAMERA_EVT_CB_FD");
-		if ((isPreviewing()) && (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME)) {
+		if (isPreviewing()) {
 			receivePreviewFDFrame((camera_frame_type *)parm4);
 		}
 		break;

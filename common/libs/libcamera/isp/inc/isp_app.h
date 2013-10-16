@@ -184,6 +184,13 @@ enum isp_awb_mode{
 	ISP_AWB_MAX
 };
 
+enum isp_smart_awb {
+	ISP_SMART_AWB_NONE=0x00,
+	ISP_SMART_AWB_LNC=0x01,
+	ISP_SMART_AWB_CMC=0x02,
+	ISP_SMART_AWB_MAX
+};
+
 enum isp_format{
 	ISP_DATA_YUV422_3FRAME=0x00,
 	ISP_DATA_YUV422_2FRAME,
@@ -241,7 +248,7 @@ enum isp_ctrl_cmd{
 enum isp_capbility_cmd{
 	ISP_VIDEO_SIZE,
 	ISP_CAPTURE_SIZE,
-	ISP_FALSH_EB,
+	ISP_FLASH_EB,
 	ISP_CAPBILITY_MAX
 };
 
@@ -372,7 +379,7 @@ struct ipn_in_param{
 
 int isp_init(struct isp_init_param* ptr);
 int isp_deinit(void);
-int isp_capbility(enum isp_capbility_cmd cmd, void* param_ptr);
+int isp_capability(enum isp_capbility_cmd cmd, void* param_ptr);
 int isp_ioctl(enum isp_ctrl_cmd cmd, void* param_ptr);
 int isp_video_start(struct isp_video_start* param_ptr);
 int isp_video_stop(void);

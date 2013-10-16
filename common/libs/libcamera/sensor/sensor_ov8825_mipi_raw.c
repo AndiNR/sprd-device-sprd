@@ -1445,7 +1445,7 @@ LOCAL uint32_t Sensor_ov8825_InitRawTuneInfo(void)
 	struct sensor_raw_info* raw_sensor_ptr=Sensor_GetContext();
 	struct sensor_raw_tune_info* sensor_ptr=raw_sensor_ptr->tune_ptr;
 	struct sensor_raw_cali_info* cali_ptr=raw_sensor_ptr->cali_ptr;
-
+#if 0
 	raw_sensor_ptr->version_info->version_id=0x00010000;
 	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);
 
@@ -1682,47 +1682,7 @@ LOCAL uint32_t Sensor_ov8825_InitRawTuneInfo(void)
 	sensor_ptr->awb.r_gain[8]=0x400;
 	sensor_ptr->awb.g_gain[8]=0x400;
 	sensor_ptr->awb.b_gain[8]=0x400;
-	sensor_ptr->awb.cali_zone=0x40;
 	sensor_ptr->awb.target_zone=0x10;
-
-	/*awb cali*/
-	sensor_ptr->awb.cali_num=0;
-
-	sensor_ptr->awb.cali[0].x=140;
-	sensor_ptr->awb.cali[0].yt=241;
-	sensor_ptr->awb.cali[0].yb=212;
-
-	sensor_ptr->awb.cali[1].x=145;
-	sensor_ptr->awb.cali[1].yt=250;
-	sensor_ptr->awb.cali[1].yb=149;
-
-	sensor_ptr->awb.cali[2].x=152;
-	sensor_ptr->awb.cali[2].yt=254;
-	sensor_ptr->awb.cali[2].yb=136;
-
-	sensor_ptr->awb.cali[3].x=157;
-	sensor_ptr->awb.cali[3].yt=254;
-	sensor_ptr->awb.cali[3].yb=130;
-
-	sensor_ptr->awb.cali[4].x=163;
-	sensor_ptr->awb.cali[4].yt=245;
-	sensor_ptr->awb.cali[4].yb=126;
-
-	sensor_ptr->awb.cali[5].x=170;
-	sensor_ptr->awb.cali[5].yt=156;
-	sensor_ptr->awb.cali[5].yb=127;
-
-	sensor_ptr->awb.cali[6].x=175;
-	sensor_ptr->awb.cali[6].yt=157;
-	sensor_ptr->awb.cali[6].yb=130;
-
-	sensor_ptr->awb.cali[7].x=179;
-	sensor_ptr->awb.cali[7].yt=161;
-	sensor_ptr->awb.cali[7].yb=133;
-
-	sensor_ptr->awb.cali[8].x=184;
-	sensor_ptr->awb.cali[8].yt=166;
-	sensor_ptr->awb.cali[8].yb=135;
 
 	/*awb win*/
 	sensor_ptr->awb.win[0].x=135;
@@ -1818,7 +1778,7 @@ LOCAL uint32_t Sensor_ov8825_InitRawTuneInfo(void)
 	sensor_ptr->awb.t_func.b = -335;
 	sensor_ptr->awb.t_func.shift = 10;
 
-	sensor_ptr->awb.wp_count_range.min_proportion = 256 / 32;
+	sensor_ptr->awb.wp_count_range.min_proportion = 256 / 128;
 	sensor_ptr->awb.wp_count_range.max_proportion = 256 / 4;
 
 	sensor_ptr->awb.g_estimate.num = 4;
@@ -1848,18 +1808,38 @@ LOCAL uint32_t Sensor_ov8825_InitRawTuneInfo(void)
 
 	sensor_ptr->awb.gain_adjust.num = 5;
 	sensor_ptr->awb.gain_adjust.t_thr[0] = 1600;
-	sensor_ptr->awb.gain_adjust.w_thr[0] = 208;
-	sensor_ptr->awb.gain_adjust.t_thr[1] = 2000;
-	sensor_ptr->awb.gain_adjust.w_thr[1] = 224;
-	sensor_ptr->awb.gain_adjust.t_thr[2] = 2500;
-	sensor_ptr->awb.gain_adjust.w_thr[2] = 255;
+	sensor_ptr->awb.gain_adjust.w_thr[0] = 192;
+	sensor_ptr->awb.gain_adjust.t_thr[1] = 2200;
+	sensor_ptr->awb.gain_adjust.w_thr[1] = 208;
+	sensor_ptr->awb.gain_adjust.t_thr[2] = 3500;
+	sensor_ptr->awb.gain_adjust.w_thr[2] = 256;
 	sensor_ptr->awb.gain_adjust.t_thr[3] = 10000;
-	sensor_ptr->awb.gain_adjust.w_thr[3] = 255;
+	sensor_ptr->awb.gain_adjust.w_thr[3] = 256;
 	sensor_ptr->awb.gain_adjust.t_thr[4] = 12000;
-	sensor_ptr->awb.gain_adjust.w_thr[4] = 224;
+	sensor_ptr->awb.gain_adjust.w_thr[4] = 128;
 
+	sensor_ptr->awb.light.num = 7;
+	sensor_ptr->awb.light.t_thr[0] = 2300;
+	sensor_ptr->awb.light.w_thr[0] = 2;
+	sensor_ptr->awb.light.t_thr[1] = 2850;
+	sensor_ptr->awb.light.w_thr[1] = 4;
+	sensor_ptr->awb.light.t_thr[2] = 4150;
+	sensor_ptr->awb.light.w_thr[2] = 8;
+	sensor_ptr->awb.light.t_thr[3] = 5500;
+	sensor_ptr->awb.light.w_thr[3] = 160;
+	sensor_ptr->awb.light.t_thr[4] = 6500;
+	sensor_ptr->awb.light.w_thr[4] = 192;
+	sensor_ptr->awb.light.t_thr[5] = 7500;
+	sensor_ptr->awb.light.w_thr[5] = 96;
+	sensor_ptr->awb.light.t_thr[6] = 8200;
+	sensor_ptr->awb.light.w_thr[6] = 8;
+
+	sensor_ptr->awb.steady_speed = 6;
 	sensor_ptr->awb.debug_level = 0;
-
+#endif
+	sensor_ptr->awb.alg_id = 0;
+	sensor_ptr->awb.smart_index = 4;
+#if 0
 	//bpc
 	sensor_ptr->bpc.flat_thr=80;
 	sensor_ptr->bpc.std_thr=20;
@@ -2363,29 +2343,25 @@ LOCAL uint32_t Sensor_ov8825_InitRawTuneInfo(void)
 	sensor_ptr->css.low_sum_thr[6]=18;
 
 	//af info
-	sensor_ptr->af.max_step = 0x3ff;
-	sensor_ptr->af.min_step = 0;
-	sensor_ptr->af.max_tune_step = 100;
-	sensor_ptr->af.stab_period = 100;
-	sensor_ptr->af.alg_id = 2;
-	sensor_ptr->af.rough_count = 17;
-	sensor_ptr->af.af_rough_step[0] = 0;
-	sensor_ptr->af.af_rough_step[1] = 64;
-	sensor_ptr->af.af_rough_step[2] = 128;
-	sensor_ptr->af.af_rough_step[3] = 192;
-	sensor_ptr->af.af_rough_step[4] = 256;
-	sensor_ptr->af.af_rough_step[5] = 320;
-	sensor_ptr->af.af_rough_step[6] = 384;
-	sensor_ptr->af.af_rough_step[7] = 448;
-	sensor_ptr->af.af_rough_step[8] = 512;
-	sensor_ptr->af.af_rough_step[9] = 576;
-	sensor_ptr->af.af_rough_step[10] = 640;
-	sensor_ptr->af.af_rough_step[11] = 704;
-	sensor_ptr->af.af_rough_step[12] = 768;
-	sensor_ptr->af.af_rough_step[13] = 832;
-	sensor_ptr->af.af_rough_step[14] = 896;
-	sensor_ptr->af.af_rough_step[15] = 960;
-	sensor_ptr->af.af_rough_step[16] = 1023;
+	sensor_ptr->af.max_step=0x3ff;
+	sensor_ptr->af.min_step=0;
+	sensor_ptr->af.max_tune_step=0;
+	sensor_ptr->af.stab_period=120;
+	sensor_ptr->af.alg_id=3;
+	sensor_ptr->af.rough_count=12;
+	sensor_ptr->af.af_rough_step[0]=320;
+	sensor_ptr->af.af_rough_step[2]=384;
+	sensor_ptr->af.af_rough_step[3]=448;
+	sensor_ptr->af.af_rough_step[4]=512;
+	sensor_ptr->af.af_rough_step[5]=576;
+	sensor_ptr->af.af_rough_step[6]=640;
+	sensor_ptr->af.af_rough_step[7]=704;
+	sensor_ptr->af.af_rough_step[8]=768;
+	sensor_ptr->af.af_rough_step[9]=832;
+	sensor_ptr->af.af_rough_step[10]=896;
+	sensor_ptr->af.af_rough_step[11]=960;
+	sensor_ptr->af.af_rough_step[12]=1023;
+	sensor_ptr->af.fine_count=4;
 
 	//edge
 	sensor_ptr->edge.info[0].detail_thr=0x00;
@@ -2554,6 +2530,7 @@ LOCAL uint32_t Sensor_ov8825_InitRawTuneInfo(void)
 	sensor_ptr->special_effect[7].y_shift=0xff00;
 	sensor_ptr->special_effect[7].u_shift=0xffe2;
 	sensor_ptr->special_effect[7].v_shift=0x0028;
+#endif
 
 	return rtn;
 }
@@ -2574,22 +2551,49 @@ LOCAL uint32_t _ov8825_PowerOn(uint32_t power_on)
 	//uint32_t reset_width=g_ov8825_yuv_info.reset_pulse_width;
 
 	if (SENSOR_TRUE == power_on) {
-		Sensor_PowerDown(power_down);
-		// Open power
-		Sensor_SetMonitorVoltage(SENSOR_AVDD_2800MV);
-		Sensor_SetVoltage(dvdd_val, avdd_val, iovdd_val);
-		usleep(20*1000);
-		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
-		usleep(10*1000);
-		Sensor_PowerDown(!power_down);
-		usleep(10*1000);
-		// Reset sensor
-		Sensor_Reset(reset_level);
-		usleep(20*1000);
-	} else {
-		Sensor_PowerDown(power_down);
+		//set all power pin to disable status
 		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
+		Sensor_SetMonitorVoltage(SENSOR_AVDD_CLOSED);
 		Sensor_SetVoltage(SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED);
+		Sensor_SetResetLevel(reset_level);
+		Sensor_PowerDown(power_down);
+		usleep(20*1000);
+		//step 0 power up DOVDD, the AVDD
+		Sensor_SetMonitorVoltage(SENSOR_AVDD_3300MV);
+		Sensor_SetIovddVoltage(iovdd_val);
+		usleep(2000);
+		Sensor_SetAvddVoltage(avdd_val);
+		usleep(6000);
+		//step 1 power up DVDD
+		Sensor_SetDvddVoltage(dvdd_val);
+		usleep(6000);
+		//step 2 power down pin high
+		Sensor_PowerDown(!power_down);
+		usleep(2000);
+		//step 3 reset pin high
+		Sensor_SetResetLevel(!reset_level);
+		usleep(22*1000);
+		//step 4 xvclk
+		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
+		usleep(4*1000);
+	} else {
+		//power off should start > 1ms after last SCCB
+		usleep(4*1000);
+		//step 1 reset and PWDN
+		Sensor_SetResetLevel(reset_level);
+		usleep(2000);
+		Sensor_PowerDown(power_down);
+		usleep(2000);
+		//step 2 dvdd
+		Sensor_SetDvddVoltage(SENSOR_AVDD_CLOSED);
+		usleep(2000);
+		//step 4 xvclk
+		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
+		usleep(5000);
+		//step 5 AVDD IOVDD
+		Sensor_SetAvddVoltage(SENSOR_AVDD_CLOSED);
+		usleep(2000);
+		Sensor_SetIovddVoltage(SENSOR_AVDD_CLOSED);
 		Sensor_SetMonitorVoltage(SENSOR_AVDD_CLOSED);
 	}
 	SENSOR_PRINT("SENSOR_ov8825: _ov8825_Power_On(1:on, 0:off): %d", power_on);
@@ -2696,7 +2700,7 @@ LOCAL uint32_t _ov8825_Identify(uint32_t param)
 			{
 				SENSOR_PRINT("SENSOR_ov8825: the module is unknow error !");
 			}
-			//Sensor_ov8825_InitRawTuneInfo();
+			Sensor_ov8825_InitRawTuneInfo();
 		} else {
 			SENSOR_PRINT("SENSOR_ov8825: Identify this is OV%x%x sensor !", pid_value, ver_value);
 		}
