@@ -52,7 +52,7 @@ TARGET_BOARD_CAMERA_CAPTURE_MODE := true
 #back camera rotation capture
 TARGET_BOARD_BACK_CAMERA_ROTATION := false
 #front camera rotation capture
-TARGET_BOARD_FRONT_CAMERA_ROTATION :=  false
+TARGET_BOARD_FRONT_CAMERA_ROTATION := true 
 #rotation capture
 TARGET_BOARD_CAMERA_ROTATION_CAPTURE := true
 #video size 1080P,720P,D1
