@@ -326,7 +326,7 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
     float psnr_v = .0f;
 #endif
 
-    AVCHandle *mHandle;
+    AVCHandle *mHandle = NULL;
 
     // VSP buffer
 //	unsigned char* pbuf_inter = NULL;
@@ -644,6 +644,11 @@ err:
     {
         dlclose(mLibHandle);
         mLibHandle = NULL;
+    }
+
+    if (mHandle != NULL)
+    {
+        free (mHandle);
     }
 
     if (pbuf_extra != NULL)
