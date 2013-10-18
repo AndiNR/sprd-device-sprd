@@ -87,7 +87,6 @@ $(call inherit-product, frameworks/native/build/phone-HD720-dalvik-heap.mk)
 # include classified configs
 $(call inherit-product, $(BOARDDIR)/base.mk)
 $(call inherit-product, $(BOARDDIR)/proprietories.mk)
-$(call inherit-product, device/sprd/common/res/boot/boot_res.mk)
 
 
 # include standard configs
