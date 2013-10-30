@@ -186,7 +186,7 @@ BOOLEAN		ramDisk_Read(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 			NVITEM_PRINT("NVITEM partId%x:%s ECC error!\n",_ramdiskCfg[idx].partId,firstName);
 		}
 		NVITEM_PRINT("NVITEM partId%x:%s read error!\n",_ramdiskCfg[idx].partId,firstName);
-	}while(0)
+	}while(0);
 
 // 2 read second image
 	memset(buf,0xFF,size);
