@@ -2,32 +2,14 @@
 #include "nvitem_common.h"
 #include "nvitem_fs.h"
 #include "nvitem_config.h"
-
-#define CRC_16_L_SEED			0x80
-#define CRC_16_L_POLYNOMIAL	0x8000
-#define CRC_16_POLYNOMIAL		0x1021
-static unsigned short __crc_16_l_calc (uint8 *buf_ptr,uint32 len)
-{
-	unsigned int i;
-	unsigned short crc = 0;
-
-	while (len--!=0)	{
-		for (i = CRC_16_L_SEED; i !=0 ; i = i>>1){
-			if ( (crc & CRC_16_L_POLYNOMIAL) !=0){
-				crc = crc << 1 ;
-				crc = crc ^ CRC_16_POLYNOMIAL;
-			}
-			else	{
-				crc = crc << 1 ;
-			}
-			if ( (*buf_ptr & i) != 0){
-				crc = crc ^ CRC_16_POLYNOMIAL;
-			}
-		}
-		buf_ptr++;
-	}
-	return (crc);
-}
+typedef struct  _NV_HEADER {
+	uint32 magic;
+	uint32 len;
+	uint32 checksum;
+	uint32 version;
+}nv_header_t;
+#define NV_HEAD_MAGIC   0x00004e56
+#define NV_VERSION      101
 
 static unsigned short calc_checksum(unsigned char *dat, unsigned long len)
 {
@@ -63,30 +45,12 @@ static unsigned short calc_checksum(unsigned char *dat, unsigned long len)
 	TRUE(1): pass
 	FALSE(0): fail
 */
-static BOOLEAN _chkEcc(uint8* buf, uint32 size)
+static BOOLEAN _chkNVEcc(uint8* buf, uint32 size,uint16 checksum)
 {
 	uint16 crc,crcOri;
-//	crc = __crc_16_l_calc(buf, size-2);
-//	crcOri = (uint16)((((uint16)buf[size-2])<<8) | ((uint16)buf[size-1]) );
 
-	crc = calc_checksum(buf,size-4);
-	crcOri = (uint16)((((uint16)buf[size-3])<<8) | ((uint16)buf[size-4]) );
-
-	return (crc == crcOri);
-}
-
-
-static void _makEcc(uint8* buf, uint32 size)
-{
-	uint16 crc;
-	//crc = __crc_16_l_calc(buf, size-2);
-	crc = calc_checksum(buf,size-4);
-	buf[size-4] = (uint8)(0xFF&crc);
-	buf[size-3] = (uint8)(0xFF&(crc>>8));
-	buf[size-2] = 0;
-	buf[size-1] = 0;
-
-	return;
+	crc = calc_checksum(buf,size);
+	return (crc == checksum);
 }
 
 
@@ -172,11 +136,16 @@ int _getIdx(RAMDISK_HANDLE handle)
 */
 BOOLEAN		ramDisk_Read(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 {
-	int ret=0;
+	int ret1=0,ret2=0;
 	int fileHandle = 0;;
 	int idx;
+	char header[RAMNV_SECT_SIZE];
+	nv_header_t * header_ptr =NULL;
 
 	char *firstName, *secondName;
+
+	NVITEM_PRINT("ramDisk_Read enter\n");
+	header_ptr = header;
 
 	idx = _getIdx(handle);
 	if(-1 == idx){
@@ -193,43 +162,61 @@ BOOLEAN		ramDisk_Read(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 		firstName = _ramdiskCfg[idx].imageBak_path;
 	}
 // 1 read first image
-	memset(buf,0xFF,size);
-	fileHandle = open(firstName, O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
-	if(fileHandle >= 0){
-	    ret = read(fileHandle, buf, size);
-	    close(fileHandle);
-	}
-	//check crc
-	if(ret == size){
-		if(_chkEcc(buf, size)){
-			NVITEM_PRINT("NVITEM partId%x:%s read success!\n",_ramdiskCfg[idx].partId,firstName);
-			return 1;
+	do{
+		fileHandle = open(firstName, O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
+		if(0 > fileHandle){
+			NVITEM_PRINT("NVITEM partId%x:%s open file failed!\n",_ramdiskCfg[idx].partId,firstName);
+			break;
 		}
-		NVITEM_PRINT("NVITEM partId%x:%s ECC error!\n",_ramdiskCfg[idx].partId,firstName);
-	}
-	NVITEM_PRINT("NVITEM partId%x:%s read error!\n",_ramdiskCfg[idx].partId,firstName);
+		ret1 = read(fileHandle, header, RAMNV_SECT_SIZE);
+		ret2 = read(fileHandle,buf,size);
+		close(fileHandle);
+
+		if(RAMNV_SECT_SIZE != ret1){
+			NVITEM_PRINT("NVITEM partId%x:%s read first image head failed!\n",_ramdiskCfg[idx].partId,firstName);
+			break;
+		}
+
+	//check crc
+		if(ret2 == size){
+			if(_chkNVEcc(buf, size,header_ptr->checksum)){
+				NVITEM_PRINT("NVITEM partId%x:%s read success!\n",_ramdiskCfg[idx].partId,firstName);
+				return 1;
+			}
+			NVITEM_PRINT("NVITEM partId%x:%s ECC error!\n",_ramdiskCfg[idx].partId,firstName);
+		}
+		NVITEM_PRINT("NVITEM partId%x:%s read error!\n",_ramdiskCfg[idx].partId,firstName);
+	}while(0)
+
 // 2 read second image
 	memset(buf,0xFF,size);
+	memset(header,0x00,RAMNV_SECT_SIZE);
 	fileHandle = open(secondName, O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
 	if(fileHandle >= 0){
-	    ret = read(fileHandle, buf, size);
-	    close(fileHandle);
+	    ret1 = read(fileHandle, header, RAMNV_SECT_SIZE);
+		ret2 = read(fileHandle, buf, size);
+		close(fileHandle);
+		if(RAMNV_SECT_SIZE != ret1){
+			NVITEM_PRINT("NVITEM partId%x:%s read second image header failed!\n",_ramdiskCfg[idx].partId,firstName);
+			return 1;
+		}
 	}
 
-	if(ret != size){
-		NVITEM_PRINT("NVITEM partId%x:%s read error!\n",_ramdiskCfg[idx].partId,secondName);
+	if(ret2 != size){
+		NVITEM_PRINT("NVITEM ret2 = 0x%x,size = 0x%x partId%x:%s read error !\n",ret2,size,_ramdiskCfg[idx].partId,secondName);
 		return 1;
 	}
-	if(!_chkEcc(buf, size)){
+	if(!_chkNVEcc(buf, size,header_ptr->checksum)){
 		NVITEM_PRINT("NVITEM partId%x:%s ECC error!\n",_ramdiskCfg[idx].partId,secondName);
 		return 1;
 	}
 
 	fileHandle  = open(firstName, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
 	if(fileHandle >= 0){
-	    write(fileHandle, buf, size);
-	    fsync(fileHandle);
-	    close(fileHandle);
+	    write(fileHandle, header, RAMNV_SECT_SIZE);
+		write(fileHandle, buf, size);
+		fsync(fileHandle);
+		close(fileHandle);
 	}
 
 	NVITEM_PRINT("NVITEM  partId%x:%s read success!\n",_ramdiskCfg[idx].partId,secondName);
@@ -251,40 +238,61 @@ BOOLEAN		ramDisk_Write(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 	BOOLEAN ret;
 	int fileHandle = 0;;
 	int idx;
+	char header_buf[RAMNV_SECT_SIZE];
+	nv_header_t *header_ptr = NULL;
 
 	idx = _getIdx(handle);
 	if(-1 == idx){
 		return 0;
 	}
+	memset(header_buf,0x00,RAMNV_SECT_SIZE);
+	header_ptr = header_buf;
+	header_ptr->magic = NV_HEAD_MAGIC;
+	header_ptr->len = size;
+	header_ptr->version = NV_VERSION;
+	header_ptr->checksum = (uint32)calc_checksum(buf,size);
 // 1 get Ecc
-	_makEcc( buf, size);
+
 // 2 write bakup image
 	ret = 1;
 	fileHandle = open(_ramdiskCfg[idx].imageBak_path, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
 	if(fileHandle >= 0){
-	    if(size != write(fileHandle, buf, size)){
-		    ret =0;
-		    NVITEM_PRINT("NVITEM partId%x:bakup image write fail!\n",_ramdiskCfg[idx].partId);
-	    }
-	    fsync(fileHandle);
-	    close(fileHandle);
+		if(RAMNV_SECT_SIZE != write(fileHandle, header_buf, RAMNV_SECT_SIZE)){
+			ret = 0;
+			NVITEM_PRINT("NVITEM partId%x:bakup image header write fail!\n",_ramdiskCfg[idx].partId);
+		}
+		else{
+			NVITEM_PRINT("NVITEM write backup header");
+		}
+		if(size != write(fileHandle, buf, size)){
+			ret =0;
+			NVITEM_PRINT("NVITEM partId%x:bakup image write fail!\n",_ramdiskCfg[idx].partId);
+		}
+		fsync(fileHandle);
+		close(fileHandle);
 	}
 // 3 write origin image
 	fileHandle = open(_ramdiskCfg[idx].image_path, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
 	if(fileHandle >= 0){
-	    if(size != write(fileHandle, buf, size)){
-		    NVITEM_PRINT("NVITEM partId%x:origin image write fail!\n",_ramdiskCfg[idx].partId);
-		    ret = 0;
-	    }
-	    fsync(fileHandle);
-	    close(fileHandle);
-	    NVITEM_PRINT("NVITEM partId%x:image write finished %d!\n",_ramdiskCfg[idx].partId,ret);
+		if(RAMNV_SECT_SIZE != write(fileHandle, header_buf, RAMNV_SECT_SIZE)){
+			ret = 0;
+			NVITEM_PRINT("NVITEM partId%x:origin image header write fail!\n",_ramdiskCfg[idx].partId);
+		}
+		else{
+			NVITEM_PRINT("NVITEM write origin header");
+		}
+		if(size != write(fileHandle, buf, size)){
+			NVITEM_PRINT("NVITEM partId%x:origin image write fail!\n",_ramdiskCfg[idx].partId);
+			ret = 0;
+		}
+		fsync(fileHandle);
+		close(fileHandle);
+		NVITEM_PRINT("NVITEM partId%x:image write finished %d!\n",_ramdiskCfg[idx].partId,ret);
 	}
 	return ret;
-
 }
 
-void		ramDisk_Close(RAMDISK_HANDLE handle)
+void	ramDisk_Close(RAMDISK_HANDLE handle)
 {
 	return;
 }
