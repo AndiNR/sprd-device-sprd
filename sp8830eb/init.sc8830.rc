@@ -511,6 +511,10 @@ on boot
     insmod /system/lib/modules/ltr_558als.ko
     chown system system /dev/ltr_558als
     chmod 0664 /dev/ltr_558als
+    chown system system /sys/devices/platform/scxx30-dmcfreq.0/devfreq/scxx30-dmcfreq.0/ondemand/set_enable
+    chown media system /sys/devices/platform/scxx30-dmcfreq.0/devfreq/scxx30-dmcfreq.0/ondemand/set_fre
+    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+
 
 on property:ro.modem.t.enable=1
     symlink /dev/slog_td /dev/vbpipe0
@@ -630,6 +634,16 @@ service chown_service /system/bin/ext_chown.sh  -c
 
 #set mac addr
 service set_mac /system/bin/ext_chown.sh  -e
+    user root
+    disabled
+    oneshot
+
+service  inputfreq  /system/bin/inputfreq.sh
+    user root
+    disabled
+    oneshot
+
+service  recoveryfreq  /system/bin/recoveryfreq.sh
     user root
     disabled
     oneshot
