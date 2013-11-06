@@ -134,6 +134,8 @@ static int AccessADCDataFile(unsigned char flag, char *lpBuff, int size)
             memcpy(&cali_info.adc_para,lpBuff,sizeof(cali_info.adc_para));
         lseek(fd,SEEK_SET,0);
         ret = write(fd,&cali_info,sizeof(cali_info));
+	 fsync(fd);
+	 sleep(1);
     } else {
         if(fd < 0)
             return 0;
@@ -145,7 +147,7 @@ static int AccessADCDataFile(unsigned char flag, char *lpBuff, int size)
             memcpy(lpBuff,&cali_info.adc_para,sizeof(cali_info.adc_para));
     }
     close(fd);
-
+    sync();
     return ret;
 }
 static int get_battery_voltage(void)

@@ -18,6 +18,8 @@ on init
     chown root shell /tmp
     chmod 0775 /tmp
 
+mkdir /productinfo 0777 system system
+
     symlink /dev/slog_td /dev/vbpipe0
     symlink /dev/spipe_td1 /dev/vbpipe1
     symlink /dev/spipe_td2 /dev/vbpipe2
@@ -41,7 +43,7 @@ on fs
 on post-fs
     write /sys/devices/platform/sprd-sdhci.3/mmc_host/mmc0/mmc0:0001/block/mmcblk0/mmcblk0boot0/force_ro 0
     write /sys/devices/platform/sprd-sdhci.3/mmc_host/mmc0/mmc0:0001/block/mmcblk0/mmcblk0boot1/force_ro 0
-
+    chown system system /productinfo/adc.bin
 on boot
 
     ifup lo

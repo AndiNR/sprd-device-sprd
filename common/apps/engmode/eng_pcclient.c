@@ -18,7 +18,7 @@
 #define VLOG_PRI  -20
 #define USB_CONFIG_VSER_GSER  "mass_storage,adb,vser,gser"
 #define USB_CONFIG_GSER6  "mass_storage,adb,gser6"
-
+extern void	disconnect_vbus_charger(void);
 // current run mode: TD or W
 int g_run_mode = ENG_RUN_TYPE_TD;
 
@@ -150,6 +150,7 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
             str = strstr(cmdline, "calibration");
             if ( str  != NULL){
                 cmdvalue->califlag = 1;
+		   disconnect_vbus_charger();
                 /*calibration= mode,freq, device. Example: calibration=8,10096,146*/
                 str = strchr(str, '=');
                 if(str != NULL){
