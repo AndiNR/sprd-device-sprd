@@ -642,7 +642,11 @@ int camera_setting_init(void)
 		cxt->cmr_set.set_end,
 		cxt->cmr_set.af_cancelled);
 
+	cxt->cmr_set.isp_alg_timeout = 0;
+	cxt->cmr_set.isp_ae_stab_timeout = 0;
 	pthread_mutex_init (&cxt->cmr_set.set_mutex, NULL);
+	pthread_mutex_init (&cxt->cmr_set.isp_alg_mutex, NULL);
+	pthread_mutex_init (&cxt->cmr_set.isp_ae_stab_mutex, NULL);
 	sem_init(&cxt->cmr_set.isp_af_sem, 0, 0);
 	sem_init(&cxt->cmr_set.isp_alg_sem, 0, 0);
 	sem_init(&cxt->cmr_set.isp_ae_stab_sem, 0, 0);
@@ -655,10 +659,14 @@ int camera_setting_deinit(void)
 	struct camera_context    *cxt = camera_get_cxt();
 	int                      ret = CAMERA_SUCCESS;
 
+	cxt->cmr_set.isp_alg_timeout = 0;
+	cxt->cmr_set.isp_ae_stab_timeout = 0;
 	sem_destroy(&cxt->cmr_set.isp_af_sem);
 	sem_destroy(&cxt->cmr_set.isp_alg_sem);
 	sem_destroy(&cxt->cmr_set.isp_ae_stab_sem);
 	pthread_mutex_destroy(&cxt->cmr_set.set_mutex);
+	pthread_mutex_destroy(&cxt->cmr_set.isp_alg_mutex);
+	pthread_mutex_destroy(&cxt->cmr_set.isp_ae_stab_mutex);
 
 	return ret;
 }
@@ -841,7 +849,12 @@ int camera_snapshot_stop_set(void)
 int camera_autofocus_init(void)
 {
 	int                      ret = CAMERA_SUCCESS;
-
+	struct camera_context    *cxt = camera_get_cxt();
+#if 1
+	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
+		ret = camera_isp_ae_wait_stab();
+	}
+#endif
 	ret = Sensor_AutoFocusInit();
 
 	return ret;
@@ -1389,40 +1402,22 @@ int camera_preflash(void)
 
 	if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
-			struct isp_alg flash_param;
 			SENSOR_FLASH_LEVEL_T flash_level;
 			if (Sensor_GetFlashLevel(&flash_level)) {
 				CMR_LOGE("get flash level error.");
 			}
 
-			flash_param.mode=ISP_AWB_BYPASS;
-			ret = isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param);
-			if (CAMERA_SUCCESS != ret) {
-				CMR_LOGE("ISP_CTRL_ALG error.");
-			}
+			camera_isp_awb_bypass(ISP_AWB_BYPASS);
+			camera_isp_ae_bypass(ISP_AE_BYPASS);
 
-			flash_param.mode=ISP_AE_BYPASS;
-			flash_param.flash_eb=0x01;
-			ret = isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param);
-			if (CAMERA_SUCCESS != ret) {
-				CMR_LOGE("ISP_CTRL_FLASH_EG error.");
-			}
-			sem_wait(&cxt->cmr_set.isp_alg_sem);
+			camera_isp_alg_wait();
 			camera_set_flashdevice((uint32_t)FLASH_OPEN);
-			flash_param.mode=ISP_ALG_FAST;
-			flash_param.flash_eb=0x01;
-			/*flash_param.flash_ratio=flash_level.high_light*256/flash_level.low_light;*/
-			/*because hardware issue high equal to low, so use hight div high */
-			flash_param.flash_ratio=flash_level.high_light*256/flash_level.high_light;
-			ret = isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param);
-			if (CAMERA_SUCCESS != ret) {
-				CMR_LOGE("ISP_CTRL_FLASH_EG error.");
-			}
+			camera_isp_flash_ratio(&flash_level);
 		}
 	}
 	if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
-			sem_wait(&cxt->cmr_set.isp_alg_sem);
+			camera_isp_alg_wait();
 		}
 		camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN);
 	}
@@ -1430,7 +1425,7 @@ int camera_preflash(void)
 	return ret;
 }
 
-static int camera_check_autofocus_aera(SENSOR_RECT_T *rect_ptr,uint32_t rect_num)
+static int camera_check_autofocus_area(SENSOR_RECT_T *rect_ptr,uint32_t rect_num)
 {
 	uint32_t                 ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
@@ -1487,26 +1482,16 @@ int camera_autofocus_start(void)
 
 	if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
-			struct isp_alg flash_param;
 			SENSOR_FLASH_LEVEL_T flash_level;
 			if (Sensor_GetFlashLevel(&flash_level)) {
 				CMR_LOGE("get flash level error.");
 			}
 
-			flash_param.mode=ISP_AWB_BYPASS;
-			ret = isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param);
-			if (CAMERA_SUCCESS != ret) {
-				CMR_LOGE("ISP_CTRL_ALG error.");
-			}
+			camera_isp_awb_bypass(ISP_AWB_BYPASS);
 
-			flash_param.mode=ISP_AE_BYPASS;
-			flash_param.flash_eb=0x01;
-			ret = isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param);
-			if (CAMERA_SUCCESS != ret) {
-				CMR_LOGE("ISP_AE_BYPASS error.");
-			}
+			camera_isp_ae_bypass(ISP_AE_BYPASS);
 
-			while (CAMERA_SUCCESS != sem_trywait(&cxt->cmr_set.isp_alg_sem)){
+			if (CAMERA_SUCCESS != camera_isp_alg_wait()) {
 				if (camera_autofocus_need_exit(&af_cancel_is_ext)) {
 					ret = CAMERA_INVALID_STATE;
 					CMR_RTN_IF_ERR(ret);
@@ -1515,21 +1500,13 @@ int camera_autofocus_start(void)
 			}
 
 			camera_set_flashdevice((uint32_t)FLASH_OPEN);
-			flash_param.mode=ISP_ALG_FAST;
-			flash_param.flash_eb=0x01;
-			/*flash_param.flash_ratio=flash_level.high_light*256/flash_level.low_light;*/
-			/*because hardware issue high equal to low, so use hight div high */
-			flash_param.flash_ratio=flash_level.high_light*256/flash_level.high_light;
-			ret = isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param);
-			if (CAMERA_SUCCESS != ret) {
-				CMR_LOGE("ISP_CTRL_FLASH_EG error.");
-			}
+			camera_isp_flash_ratio(&flash_level);
 		} else {
 			camera_set_flashdevice((uint32_t)FLASH_OPEN);
 		}
 		if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
 			if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
-				while (CAMERA_SUCCESS != sem_trywait(&cxt->cmr_set.isp_alg_sem)){
+				if (CAMERA_SUCCESS != camera_isp_alg_wait()){
 					if (camera_autofocus_need_exit(&af_cancel_is_ext)) {
 						ret = CAMERA_INVALID_STATE;
 						CMR_RTN_IF_ERR(ret);
@@ -1551,7 +1528,7 @@ int camera_autofocus_start(void)
 		af_param.zone[0].y = *ptr++;
 		af_param.zone[0].w = *ptr++;
 		af_param.zone[0].h = *ptr++;
-		if (CAMERA_SUCCESS != camera_check_autofocus_aera(&af_param.zone[0],1)) {
+		if (CAMERA_SUCCESS != camera_check_autofocus_area(&af_param.zone[0],1)) {
 			af_param.zone_cnt = 0;
 		}
 	} else {
@@ -1565,7 +1542,7 @@ int camera_autofocus_start(void)
 				af_param.zone[0].y = *ptr++;
 				af_param.zone[0].w = *ptr++;
 				af_param.zone[0].h = *ptr++;
-				if (CAMERA_SUCCESS != camera_check_autofocus_aera(&af_param.zone[0],1)) {
+				if (CAMERA_SUCCESS != camera_check_autofocus_area(&af_param.zone[0],1)) {
 					af_param.zone_cnt = 0;
 				}
 			}
@@ -1577,7 +1554,7 @@ int camera_autofocus_start(void)
 			af_param.zone[0].y = *ptr++;
 			af_param.zone[0].w = *ptr++;
 			af_param.zone[0].h = *ptr++;
-			if (CAMERA_SUCCESS != camera_check_autofocus_aera(&af_param.zone[0],1)) {
+			if (CAMERA_SUCCESS != camera_check_autofocus_area(&af_param.zone[0],1)) {
 				af_param.cmd = SENSOR_EXT_FOCUS_START;
 				af_param.param = SENSOR_EXT_FOCUS_TRIG;
 				af_param.zone_cnt = 0;
@@ -1593,7 +1570,7 @@ int camera_autofocus_start(void)
 				af_param.zone[i].w = *ptr++;
 				af_param.zone[i].h = *ptr++;
 			}
-			if (CAMERA_SUCCESS != camera_check_autofocus_aera(&af_param.zone[0],zone_cnt)) {
+			if (CAMERA_SUCCESS != camera_check_autofocus_area(&af_param.zone[0],zone_cnt)) {
 				af_param.cmd = SENSOR_EXT_FOCUS_START;
 				af_param.param = SENSOR_EXT_FOCUS_TRIG;
 				af_param.zone_cnt = 0;
@@ -1702,9 +1679,9 @@ int camera_autofocus_stop(uint32_t is_external)
 	cxt->cmr_set.af_cancelled |= 0x01;
 	cxt->cmr_set.af_cancelled |= (is_external & 0x1) << 1;
 	cxt->cmr_set.bflash = 1;
+	CMR_LOGV("af_cancelled 0x%x", cxt->cmr_set.af_cancelled);
 	pthread_mutex_unlock(&cxt->cmr_set.set_mutex);
 
-	CMR_LOGV("af_cancelled 0x%x", cxt->cmr_set.af_cancelled);
 	camera_autofocus_quit();
 	CMR_LOGV("quit.");
 	return ret;
@@ -1764,8 +1741,12 @@ int camera_isp_alg_done(void *data)
 {
 	struct camera_context    *cxt = camera_get_cxt();
 
+	pthread_mutex_lock(&cxt->cmr_set.isp_alg_mutex);
 	CMR_LOGV("isp ALG done.");
-	sem_post(&cxt->cmr_set.isp_alg_sem);
+	if (0 == cxt->cmr_set.isp_alg_timeout) {
+		sem_post(&cxt->cmr_set.isp_alg_sem);
+	}
+	pthread_mutex_unlock(&cxt->cmr_set.isp_alg_mutex);
 	return 0;
 }
 
@@ -1781,13 +1762,49 @@ int camera_isp_af_stat(void* data)
 int camera_isp_ae_stab(void* data)
 {
 	struct camera_context    *cxt = camera_get_cxt();
-	CMR_LOGE("callback return.");
+	int tmpVal = 0;
+	pthread_mutex_lock(&cxt->cmr_set.isp_ae_stab_mutex);
+	CMR_LOGV("callback return.now eb: %d timeout: %d", cxt->is_isp_ae_stab_eb ,cxt->cmr_set.isp_ae_stab_timeout);
+	sem_getvalue(&cxt->cmr_set.isp_ae_stab_sem, &tmpVal);
+	while (0 < tmpVal) {
+		sem_wait(&cxt->cmr_set.isp_ae_stab_sem);
+		sem_getvalue(&cxt->cmr_set.isp_ae_stab_sem, &tmpVal);
+	}
 
-	if (cxt->is_isp_ae_stab_eb) {
-		cxt->is_isp_ae_stab_eb = 0;
+	if (cxt->is_isp_ae_stab_eb && (0 == cxt->cmr_set.isp_ae_stab_timeout)) {
 		sem_post(&cxt->cmr_set.isp_ae_stab_sem);
 	}
+	cxt->is_isp_ae_stab_eb = 0;
+	pthread_mutex_unlock(&cxt->cmr_set.isp_ae_stab_mutex);
 	return 0;
+}
+
+int camera_isp_alg_wait(void)
+{
+	int rtn = CAMERA_SUCCESS;
+	struct timespec ts;
+	struct camera_context    *cxt = camera_get_cxt();
+	pthread_mutex_lock(&cxt->cmr_set.isp_alg_mutex);
+
+	if (clock_gettime(CLOCK_REALTIME, &ts)) {
+		rtn = -1;
+		CMR_LOGE("get time failed.");
+	} else {
+		ts.tv_sec += ISP_ALG_TIMEOUT;
+		pthread_mutex_unlock(&cxt->cmr_set.isp_alg_mutex);
+		if (sem_timedwait((&cxt->cmr_set.isp_alg_sem), &ts)) {
+			pthread_mutex_unlock(&cxt->cmr_set.isp_alg_mutex);
+			rtn = -1;
+			cxt->cmr_set.isp_alg_timeout = 1;
+			CMR_LOGE("timeout.");
+		} else {
+			pthread_mutex_unlock(&cxt->cmr_set.isp_alg_mutex);
+			cxt->cmr_set.isp_alg_timeout = 0;
+			CMR_LOGV("done.");
+		}
+	}
+	pthread_mutex_unlock(&cxt->cmr_set.isp_alg_mutex);
+	return rtn;
 }
 
 int camera_isp_ae_wait_stab(void)
@@ -1796,16 +1813,30 @@ int camera_isp_ae_wait_stab(void)
 	struct timespec ts;
 	struct camera_context    *cxt = camera_get_cxt();
 
+	pthread_mutex_lock(&cxt->cmr_set.isp_ae_stab_mutex);
+	cxt->cmr_set.isp_ae_stab_timeout = 0;
+
 	if (clock_gettime(CLOCK_REALTIME, &ts)) {
 		rtn = -1;
 		CMR_LOGE("get time failed.");
 	} else {
 		ts.tv_sec += ISP_AE_STAB_TIMEOUT;
+		pthread_mutex_unlock(&cxt->cmr_set.isp_ae_stab_mutex);
+		CMR_LOGV("wait .....");
 		if (sem_timedwait((&cxt->cmr_set.isp_ae_stab_sem), &ts)) {
+			pthread_mutex_lock(&cxt->cmr_set.isp_ae_stab_mutex);
 			rtn = -1;
+			cxt->cmr_set.isp_ae_stab_timeout = 1;
 			CMR_LOGE("timeout.");
+		} else {
+			pthread_mutex_lock(&cxt->cmr_set.isp_ae_stab_mutex);
+			cxt->cmr_set.isp_ae_stab_timeout = 0;
+			CMR_LOGV("done.");
 		}
+		cxt->ae_wait_stab = 0x0;
 	}
+
+	pthread_mutex_unlock(&cxt->cmr_set.isp_ae_stab_mutex);
 	return rtn;
 }
 
@@ -1866,6 +1897,20 @@ int camera_ae_enable(uint32_t param)
 	if (ret) {
 		CMR_LOGE("ae enable err.");
 	}
+
+	return ret;
+}
+
+int camera_isp_get_ae_stab(uint32_t *isp_param)
+{
+	int ret = CAMERA_SUCCESS;
+	struct camera_context    *cxt = camera_get_cxt();
+
+	pthread_mutex_lock(&cxt->cmr_set.isp_ae_stab_mutex);
+	cxt->cmr_set.isp_ae_stab_timeout = 0;
+	cxt->ae_wait_stab = EN_WAIT_AE_STAB;
+	ret = isp_ioctl(ISP_CTRL_GET_FAST_AE_STAB, (void *)isp_param);
+	pthread_mutex_unlock(&cxt->cmr_set.isp_ae_stab_mutex);
 
 	return ret;
 }

@@ -492,7 +492,7 @@ struct config_element sprd_front_camera_hardware_config[] = {
 #else
 	{"zsl-supported","false"},
 #endif
-	{"zsl","0"},
+	{"zsl","1"},
 	{"capture-mode", "1"},
 	{"slow-motion-supported","false"},
 	{"max-slow-motion","3"},
@@ -501,7 +501,8 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"max-num-metering-areas", "0"},
 	{"auto-exposure","0"},
 	{"auto-exposure-supported", "0"},
-    {"preview-env","0"}
+    {"preview-env","0"},
+    {"video-snapshot-supported","false"}
 };
 struct config_element sprd_back_camera_hardware_config[] = {
 	{"whitebalance-values", "auto,incandescent,fluorescent,daylight,cloudy-daylight"},
@@ -615,7 +616,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
 #else
 	{"zsl-supported","false"},
 #endif
-	{"zsl","0"},
+	{"zsl","1"},
 	{"capture-mode", "1"},
 	{"slow-motion-supported","true"},
 	{"max-slow-motion","3"},
@@ -624,7 +625,8 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"max-num-metering-areas", "1"},
     {"auto-exposure","frame-average"},
     {"auto-exposure-values", "frame-average,center-weighted,spot-metering"},
-    {"preview-env","0"}
+    {"preview-env","0"},
+    {"video-snapshot-supported","false"}
 };
 
 #endif //_SPRD_CAMERA_HARDWARE_CONFIG_H_
