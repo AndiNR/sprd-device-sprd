@@ -44,6 +44,8 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_ov5640_mipi.c \
 	sensor/sensor_gc2035.c \
 	sensor/sensor_ov8865_mipi_raw.c \
+	sensor/sensor_gt2005.c \
+	sensor/sensor_gc0308.c \
 	vsp/sc8830/src/jpg_drv_sc8830.c \
 	jpeg/jpeg_fw_8830/src/jpegcodec_bufmgr.c \
 	jpeg/jpeg_fw_8830/src/jpegcodec_global.c \
@@ -68,6 +70,8 @@ LOCAL_SRC_FILES:= \
 	jpeg/jpeg_fw_8830/src/jpegdec_api.c  \
 	jpeg/jpeg_fw_8830/src/exif_writer.c  \
 	jpeg/jpeg_fw_8830/src/jpeg_stream.c \
+	isp/isp_app.c \
+	isp/isp_app_msg.c \
 	isp/isp_video.c \
 	isp/isp_param_tune_com.c \
 	isp/isp_param_tune_v0000.c \
