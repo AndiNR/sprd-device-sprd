@@ -492,7 +492,7 @@ struct config_element sprd_front_camera_hardware_config[] = {
 #else
 	{"zsl-supported","false"},
 #endif
-	{"zsl","1"},
+	{"zsl","0"},
 	{"capture-mode", "1"},
 	{"slow-motion-supported","false"},
 	{"max-slow-motion","3"},
@@ -616,7 +616,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
 #else
 	{"zsl-supported","false"},
 #endif
-	{"zsl","1"},
+	{"zsl","0"},
 	{"capture-mode", "1"},
 	{"slow-motion-supported","true"},
 	{"max-slow-motion","3"},
