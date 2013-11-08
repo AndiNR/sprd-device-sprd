@@ -2068,7 +2068,7 @@ camera_ret_code_type camera_cfg_rot_cap_param_reset(void)
 	g_cxt->cap_rot = g_cxt->cap_rot_backup;
 	g_cxt->thum_size = g_cxt->thum_size_backup;
 	g_cxt->actual_picture_size = g_cxt->actual_picture_size_backup;
-	
+
 	return ret;
 }
 
@@ -2690,12 +2690,9 @@ camera_ret_code_type camera_stop_preview(void)
 	CMR_MSG_INIT(message);
 	int                      ret = CAMERA_SUCCESS;
 #if FREE_PMEM_BAK_OEM
-#else
-	CMR_LOGE("chunyou 0");
+#else 
 	pthread_mutex_lock(&g_cxt->cb_mutex);
-	CMR_LOGE("chunyou 1");
 	pthread_mutex_unlock(&g_cxt->cb_mutex);
-	CMR_LOGE("chunyou 2");
 #endif
 	CMR_PRINT_TIME;
 	/*camera_flush_msg_queue();*/
@@ -4674,7 +4671,7 @@ void camera_call_cb(camera_cb_type cb,
 	}
 	if (g_cxt->camera_cb) {
 		(*g_cxt->camera_cb)(cb, client_data, func, parm4);
-	}	
+	}
 	if (parm4) {
 		pthread_mutex_unlock(&g_cxt->cb_mutex);
 	}
@@ -6443,7 +6440,7 @@ int camera_start_jpeg_encode(struct frm_info *data)
 
 	g_cxt->jpeg_cxt.proc_status.frame_info = *data;
 	g_cxt->jpeg_cxt.jpeg_state = JPEG_ENCODE;
-	if (g_cxt->is_cfg_rot_cap && (IMG_ROT_90 ==  g_cxt->cfg_cap_rot 
+	if (g_cxt->is_cfg_rot_cap && (IMG_ROT_90 ==  g_cxt->cfg_cap_rot
 		||IMG_ROT_270 ==  g_cxt->cfg_cap_rot)) {
 		g_cxt->actual_picture_size.width = g_cxt->actual_picture_size_backup.height;
 		g_cxt->actual_picture_size.height = g_cxt->actual_picture_size_backup.width;
