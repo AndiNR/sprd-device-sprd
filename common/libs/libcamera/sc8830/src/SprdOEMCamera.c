@@ -195,7 +195,7 @@ static int camera_prev_thread_deinit(void);
 static void *camera_prev_thread_proc(void *data);
 static int camera_prev_thread_handle();
 static int camera_prev_thread_rot_handle(uint32_t evt_type, uint32_t sub_type, struct img_frm * data);
-static int camera_preview_weak_init(int format_mode);
+int camera_preview_weak_init(int format_mode, enum restart_mode re_mode);
 static int camera_cap_thread_init(void);
 static int camera_cap_thread_deinit(void);
 static void *camera_cap_thread_proc(void *data);
@@ -2059,6 +2059,33 @@ camera_ret_code_type camera_set_dimensions(uint16_t picture_width,
 	return ret;
 }
 
+#ifdef SPRD_CAMERA_HAL2_VERSION
+camera_ret_code_type camera_set_preview_dimensions(
+					uint16_t display_width,
+					uint16_t display_height,
+					camera_cb_f_type callback,
+					void *client_data)
+{
+	int                      ret = CAMERA_SUCCESS;
+
+	CMR_LOGV("display %d %d,rot %d",
+		display_width,
+		display_height,
+		g_cxt->prev_rot);
+
+	/*g_cxt->prev_rot = IMG_ROT_90;*/
+	if (display_width && display_height) {
+		g_cxt->display_size.width  = display_width;
+		g_cxt->display_size.height = display_height;
+		ret = camera_preview_sensor_mode();
+		}
+		else {
+		ret = -CAMERA_INVALID_PARM;
+	}
+
+	return ret;
+}
+#endif
 camera_ret_code_type camera_cfg_rot_cap_param_reset(void)
 {
 	int                      ret = CAMERA_SUCCESS;
@@ -2181,6 +2208,7 @@ int camera_before_set_internal(enum restart_mode re_mode)
 		g_cxt->restart_timestamp = sec * 1000000000LL + usec * 1000;
 		break;
 	case RESTART_ZOOM:
+	case RESTART_ZOOM_RECT:
 		if (IS_CHN_BUSY(CHN_2)) {
 			ret = cmr_v4l2_cap_pause(CHN_2, 1);
 			SET_CHN_IDLE(CHN_2);
@@ -2263,8 +2291,8 @@ int camera_after_set_internal(enum restart_mode re_mode)
 		pthread_mutex_unlock(&g_cxt->main_prev_mutex);
 		break;
 	case RESTART_ZOOM:
-
-		ret = camera_preview_weak_init(g_cxt->preview_fmt);
+	case RESTART_ZOOM_RECT:
+		ret = camera_preview_weak_init(g_cxt->preview_fmt, re_mode);
 		if (ret) {
 			if (CMR_V4L2_RET_RESTART == ret) {
 				g_cxt->stop_preview_mode = 1;
@@ -3634,12 +3662,10 @@ void camera_v4l2_evt_cb(int evt, void* data)
 		}
 	}
 	ret = cmr_msg_post(queue_handle, &message);
-
 	if (ret) {
 		free(message.data);
 		CMR_LOGE("Faile to send one msg to camera main thread");
 	}
-
 	return;
 }
 
@@ -4755,10 +4781,21 @@ int camera_preview_init(int format_mode)
 	v4l2_cfg.cfg.src_img_rect.start_y = sensor_mode->trim_start_y;
 	v4l2_cfg.cfg.src_img_rect.width   = sensor_mode->trim_width;
 	v4l2_cfg.cfg.src_img_rect.height  = sensor_mode->trim_height;
-	ret = camera_get_trim_rect(&v4l2_cfg.cfg.src_img_rect, g_cxt->zoom_level, &v4l2_cfg.cfg.dst_img_size);
-	if (ret) {
-		CMR_LOGE("Failed to get trimming window for %d zoom level ", g_cxt->zoom_level);
-		goto exit;
+	if ((uint32_t)CAMERA_PARM_ZOOM_RECT != g_cxt->zoom_mode) {
+		ret = camera_get_trim_rect(&v4l2_cfg.cfg.src_img_rect, g_cxt->zoom_level, &v4l2_cfg.cfg.dst_img_size);
+		if (ret) {
+			CMR_LOGE("Failed to get trimming window for %d zoom level ", g_cxt->zoom_level);
+			goto exit;
+		}
+	} else {
+		v4l2_cfg.cfg.src_img_rect.start_x = g_cxt->zoom_rect.start_x;
+		v4l2_cfg.cfg.src_img_rect.start_y = g_cxt->zoom_rect.start_y;
+		v4l2_cfg.cfg.src_img_rect.width  = g_cxt->zoom_rect.width;
+		v4l2_cfg.cfg.src_img_rect.height = g_cxt->zoom_rect.height;
+		CMR_LOGV("zoom rect:%d,%d,%d,%d.",v4l2_cfg.cfg.src_img_rect.start_x,
+			      v4l2_cfg.cfg.src_img_rect.start_y,
+			      v4l2_cfg.cfg.src_img_rect.width,
+			      v4l2_cfg.cfg.src_img_rect.height);
 	}
 
 	g_cxt->preview_rect.start_x = v4l2_cfg.cfg.src_img_rect.start_x;
@@ -4779,7 +4816,6 @@ int camera_preview_init(int format_mode)
 		CMR_LOGE("Failed to alloc preview buffer");
 		goto exit;
 	}
-
 	ret = cmr_v4l2_buff_cfg(&buffer_info);
 	if (ret) {
 		CMR_LOGE("Failed to Q preview buffer");
@@ -4802,7 +4838,7 @@ exit:
 	return ret;
 }
 
-int camera_preview_weak_init(int format_mode)
+int camera_preview_weak_init(int format_mode, enum restart_mode re_mode)
 {
 	int                      ret = CAMERA_SUCCESS;
 	struct cap_cfg           v4l2_cfg;
@@ -4840,12 +4876,22 @@ int camera_preview_weak_init(int format_mode)
 	v4l2_cfg.cfg.src_img_rect.start_y = sensor_mode->trim_start_y;
 	v4l2_cfg.cfg.src_img_rect.width   = sensor_mode->trim_width;
 	v4l2_cfg.cfg.src_img_rect.height  = sensor_mode->trim_height;
-	ret = camera_get_trim_rect(&v4l2_cfg.cfg.src_img_rect, g_cxt->zoom_level, &v4l2_cfg.cfg.dst_img_size);
-	if (ret) {
-		CMR_LOGE("Failed to get trimming window for %d zoom level ", g_cxt->zoom_level);
-		goto exit;
+	if (RESTART_ZOOM == re_mode) {
+		ret = camera_get_trim_rect(&v4l2_cfg.cfg.src_img_rect, g_cxt->zoom_level, &v4l2_cfg.cfg.dst_img_size);
+		if (ret) {
+			CMR_LOGE("Failed to get trimming window for %d zoom level ", g_cxt->zoom_level);
+			goto exit;
+		}
+	} else {
+		v4l2_cfg.cfg.src_img_rect.start_x = g_cxt->zoom_rect.start_x;
+		v4l2_cfg.cfg.src_img_rect.start_y = g_cxt->zoom_rect.start_y;
+		v4l2_cfg.cfg.src_img_rect.width = g_cxt->zoom_rect.width;
+		v4l2_cfg.cfg.src_img_rect.height = g_cxt->zoom_rect.height;
+		CMR_LOGV("zoom rect:%d,%d,%d,%d.",v4l2_cfg.cfg.src_img_rect.start_x,
+			      v4l2_cfg.cfg.src_img_rect.start_y,
+			      v4l2_cfg.cfg.src_img_rect.width,
+			      v4l2_cfg.cfg.src_img_rect.height);
 	}
-
 	g_cxt->preview_rect.start_x = v4l2_cfg.cfg.src_img_rect.start_x;
 	g_cxt->preview_rect.start_y = v4l2_cfg.cfg.src_img_rect.start_y;
 	g_cxt->preview_rect.width   = v4l2_cfg.cfg.src_img_rect.width;
@@ -5388,10 +5434,21 @@ int camera_capture_ability(SENSOR_MODE_INFO_T *sn_mode,
 	img_cap->src_img_rect.start_y = sn_mode->trim_start_y;
 	img_cap->src_img_rect.width   = sn_mode->trim_width;
 	img_cap->src_img_rect.height  = sn_mode->trim_height;
-	ret = camera_get_trim_rect(&img_cap->src_img_rect, g_cxt->zoom_level, cap_size);
-	if (ret) {
-		CMR_LOGE("Failed to get trimming window for %d zoom level ", g_cxt->zoom_level);
-		goto exit;
+	if ((uint32_t)CAMERA_PARM_ZOOM_RECT != g_cxt->zoom_mode) {
+		ret = camera_get_trim_rect(&img_cap->src_img_rect, g_cxt->zoom_level, cap_size);
+		if (ret) {
+			CMR_LOGE("Failed to get trimming window for %d zoom level ", g_cxt->zoom_level);
+			goto exit;
+		}
+	} else {
+		img_cap->src_img_rect.start_x = g_cxt->zoom_rect.start_x;
+		img_cap->src_img_rect.start_y = g_cxt->zoom_rect.start_y;
+		img_cap->src_img_rect.width  = g_cxt->zoom_rect.width;
+		img_cap->src_img_rect.height = g_cxt->zoom_rect.height;
+		CMR_LOGV("zoom rect:%d,%d,%d,%d.",img_cap->src_img_rect.start_x,
+			      img_cap->src_img_rect.start_y,
+			      img_cap->src_img_rect.width,
+			      img_cap->src_img_rect.height);
 	}
 	sn_trim_rect.start_x = img_cap->src_img_rect.start_x;
 	sn_trim_rect.start_y = img_cap->src_img_rect.start_y;
@@ -5747,7 +5804,6 @@ int camera_v4l2_preview_handle(struct frm_info *data)
 			CMR_LOGV("Restart skip: frame is before restart, no need to skip this frame \n");
 		}
 	}
-
 	/*if (g_cxt->cap_mode == CAMERA_HDR_MODE) {
 		CMR_LOGV("Ignore this frame, HDR.");
 		ret = cmr_v4l2_free_frame(data->channel_id, data->frame_id);
@@ -5762,10 +5818,10 @@ int camera_v4l2_preview_handle(struct frm_info *data)
 		ret = camera_set_frame_type(&frame_type, data);
 		g_cxt->prev_buf_id = frame_type.buf_id;
 #if CB_LIGHT_SYNC
-		camera_call_cb(CAMERA_EVT_CB_FRAME,
-				camera_get_client_data(),
-				CAMERA_FUNC_START_PREVIEW,
-				(uint32_t)&frame_type);
+			camera_call_cb(CAMERA_EVT_CB_FRAME,
+					camera_get_client_data(),
+					CAMERA_FUNC_START_PREVIEW,
+					(uint32_t)&frame_type);
 #else
 		memset(&cb_info, 0, sizeof(camera_cb_info));
 		cb_info.cb_type = CAMERA_EVT_CB_FRAME;
@@ -6509,10 +6565,18 @@ int camera_start_scale(struct frm_info *data)
 			rect.width   = g_cxt->cap_orig_size.width;
 			rect.height  = g_cxt->cap_orig_size.height;
 		}
-		ret = camera_get_trim_rect(&rect, g_cxt->zoom_level, &g_cxt->picture_size);
-		if (ret) {
-			CMR_LOGE("Failed to calculate scaling window, %d", ret);
-			return ret;
+		if ((uint32_t)CAMERA_PARM_ZOOM_RECT != g_cxt->zoom_mode) {
+			ret = camera_get_trim_rect(&rect, g_cxt->zoom_level, &g_cxt->picture_size);
+			if (ret) {
+				CMR_LOGE("Failed to calculate scaling window, %d", ret);
+				return ret;
+			}
+		} else {
+			rect.start_x = g_cxt->zoom_rect.start_x;
+			rect.start_y = g_cxt->zoom_rect.start_y;
+			rect.width = g_cxt->zoom_rect.width;
+			rect.height = g_cxt->zoom_rect.height;
+			CMR_LOGV("zoom rect %d,%d,%d,%d.",rect.start_x,rect.start_y,rect.width,rect.height);
 		}
 		if (IMG_DATA_TYPE_RAW == g_cxt->cap_original_fmt) {
 #if 0
@@ -7422,11 +7486,19 @@ int camera_capture_get_max_size(SENSOR_MODE_INFO_T *sn_mode, uint32_t *io_width,
 	img_rc.start_y = sn_mode->trim_start_y;
 	img_rc.width   = sn_mode->trim_width;
 	img_rc.height  = sn_mode->trim_height;
-
-	ret = camera_get_trim_rect(&img_rc, g_cxt->zoom_level, &img_sz);
-	if (ret) {
-		CMR_LOGE("Failed to get trimming window for %d zoom level ", g_cxt->zoom_level);
-		goto exit;
+	if ((uint32_t)CAMERA_PARM_ZOOM_RECT != g_cxt->zoom_mode) {
+		ret = camera_get_trim_rect(&img_rc, g_cxt->zoom_level, &img_sz);
+		if (ret) {
+			CMR_LOGE("Failed to get trimming window for %d zoom level ", g_cxt->zoom_level);
+			goto exit;
+		}
+	} else {
+		img_rc.start_x = g_cxt->zoom_rect.start_x;
+		img_rc.start_y = g_cxt->zoom_rect.start_y;
+		img_rc.width   = g_cxt->zoom_rect.width;
+		img_rc.height  = g_cxt->zoom_rect.height;
+		CMR_LOGV("zoom rect %d,%d,%d,%d.",img_rc.start_x,img_rc.start_y,
+			      img_rc.width,img_rc.height);
 	}
 	if (ZOOM_POST_PROCESS == zoom_mode) {
 		if (*io_width < sn_mode->width) {

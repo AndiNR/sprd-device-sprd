@@ -13,15 +13,15 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/sc8830/isp_calibration/inc \
 	external/skia/include/images \
 	external/skia/include/core\
-        external/jhead \
-        external/sqlite/dist \
+	external/jhead \
+	external/sqlite/dist \
+	system/media/camera/include \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL/source/include/video \
 	$(TOP)/device/sprd/common/libs/gralloc \
 	$(TOP)/device/sprd/common/libs/mali/src/ump/include
 
 LOCAL_SRC_FILES:= \
 	sc8830/src/SprdOEMCamera.c \
-        sc8830/src/SprdCameraHardwareInterface.cpp \
 	sc8830/src/SprdCameraParameters.cpp \
 	sc8830/src/cmr_oem.c \
 	sc8830/src/cmr_set.c \
@@ -80,6 +80,18 @@ LOCAL_SRC_FILES:= \
 	sc8830/isp_calibration/src/utest_camera.cpp \
 	sc8830/isp_calibration/src/isp_calibration.c \
 	sc8830/isp_calibration/src/isp_cali_interface.c
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSIONG)),HAL1.0)
+LOCAL_SRC_FILES+= \
+	sc8830/src/SprdCameraHardwareInterface.cpp
+endif
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSIONG)),HAL2.0)
+LOCAL_SRC_FILES+= \
+	sc8830/src/SprdBaseThread.cpp \
+	sc8830/src/SprdCamera2.c \
+	sc8830/src/SprdCameraHWInterface2.cpp
+endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_CFLAGS := -fno-strict-aliasing -D_VSP_ -DJPEG_ENC -D_VSP_LINUX_ -DCHIP_ENDIAN_LITTLE -DCONFIG_CAMERA_2M -DANDROID_4100
@@ -222,7 +234,7 @@ LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia li
 endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
-LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libmorpho_facesolid libmorpho_easy_hdr
+LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libmorpho_facesolid libmorpho_easy_hdr libcamera_metadata
 endif
 
 include $(BUILD_EXECUTABLE)

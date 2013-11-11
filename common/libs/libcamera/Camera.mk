@@ -8,22 +8,22 @@ DLOPEN_LIBQCAMERA:= 1
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH) \
-        $(LOCAL_PATH)/sc8810 \
+	$(LOCAL_PATH)/sc8810 \
 	$(LOCAL_PATH)/vsp/sc8810/inc	\
 	$(LOCAL_PATH)/vsp/sc8810/src \
 	$(LOCAL_PATH)/jpeg/jpeg_fw_8810/inc \
 	$(LOCAL_PATH)/jpeg/jpeg_fw_8810/src \
 	external/skia/include/images \
 	external/skia/include/core\
-        external/jhead \
-        external/sqlite/dist \
+	external/jhead \
+	external/sqlite/dist \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL/source/include/video \
 	$(TOP)/device/sprd/common/libs/gralloc \
 	$(TOP)/device/sprd/common/libs/mali/src/ump/include
 
 LOCAL_SRC_FILES:= \
 	sc8810/SprdOEMCamera.cpp \
-        sc8810/SprdCameraHardwareInterface.cpp \
+	sc8810/SprdCameraHardwareInterface.cpp \
 	vsp/sc8810/src/vsp_drv_sc8810.c \
 	jpeg/jpeg_fw_8810/src/jpegcodec_bufmgr.c \
 	jpeg/jpeg_fw_8810/src/jpegcodec_global.c \
@@ -196,15 +196,15 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/isp/inc \
 	external/skia/include/images \
 	external/skia/include/core\
-        external/jhead \
-        external/sqlite/dist \
+	external/jhead \
+	external/sqlite/dist \
+	system/media/camera/include \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL/source/include/video \
 	$(TOP)/device/sprd/common/libs/gralloc \
 	$(TOP)/device/sprd/common/libs/mali/src/ump/include
 
 LOCAL_SRC_FILES:= \
 	sc8830/src/SprdOEMCamera.c \
-        sc8830/src/SprdCameraHardwareInterface.cpp \
 	sc8830/src/SprdCameraParameters.cpp \
 	sc8830/src/cmr_oem.c \
 	sc8830/src/cmr_set.c \
@@ -262,6 +262,18 @@ LOCAL_SRC_FILES:= \
 	isp/isp_param_size.c\
 	sc8830/isp_calibration/src/isp_calibration.c \
 	sc8830/isp_calibration/src/isp_cali_interface.c
+endif
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSIONG)),HAL1.0)
+LOCAL_SRC_FILES+= \
+	sc8830/src/SprdCameraHardwareInterface.cpp
+endif
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSIONG)),HAL2.0)
+LOCAL_SRC_FILES+= \
+	sc8830/src/SprdBaseThread.cpp \
+	sc8830/src/SprdCamera2.c \
+	sc8830/src/SprdCameraHWInterface2.cpp
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
@@ -406,7 +418,7 @@ LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia li
 endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
-LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libmorpho_facesolid libmorpho_easy_hdr
+LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libmorpho_facesolid libmorpho_easy_hdr libcamera_metadata
 endif
 
 include $(BUILD_SHARED_LIBRARY)
