@@ -1,41 +1,22 @@
 /*
-**
-** Copyright 2008, The Android Open Source Project
-** Copyright 2012, Samsung Electronics Co. LTD
-**
-** Licensed under the Apache License, Version 2.0 (the "License");
-** you may not use this file except in compliance with the License.
-** You may obtain a copy of the License at
-**
-**     http://www.apache.org/licenses/LICENSE-2.0
-**
-** Unless required by applicable law or agreed to in writing, software
-** distributed under the License is distributed on an "AS IS" BASIS,
-** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-** See the License for the specific language governing permissions and
-** limitations under the License.
-*/
-
-/*!
- * \file      ExynosCameraHWInterface2.cpp
- * \brief     source file for Android Camera API 2.0 HAL
- * \author    Sungjoong Kang(sj3.kang@samsung.com)
- * \date      2012/07/10
+ * Copyright (C) 2012 The Android Open Source Project
  *
- * <b>Revision History: </b>
- * - 2012/05/31 : Sungjoong Kang(sj3.kang@samsung.com) \n
- *   Initial Release
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * - 2012/07/10 : Sungjoong Kang(sj3.kang@samsung.com) \n
- *   2nd Release
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 
 #define LOG_TAG "SprdCameraHAL2"
 #include <utils/Log.h>
 #include <math.h>
-
 #include "SprdCameraHWInterface2.h"
 #include "SprdOEMCamera.h"
 
@@ -1106,6 +1087,7 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
 			
 	         mPreviewHeapArray_vir[i] = priv_handle->base;    
 			 mPreviewHeapArray_phy[i] = priv_handle->phyaddr;
+			 ALOGD("DEBUG(%s): preview addr 0x%x",__FUNCTION__, priv_handle->base);
 
 			 targetStreamParms->svcBufHandle[i] = registeringBuffers[i];//important
 			 targetStreamParms->svcBufStatus[i] = ON_HAL_INIT;
@@ -1115,7 +1097,7 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
 	    targetStreamParms->cancelBufNum = targetStreamParms->minUndequedBuffer;
 	    ALOGD("DEBUG(%s): END registerStreamBuffers", __FUNCTION__);
 
-	    return NO_ERROR;//0
+	    return NO_ERROR;
 
     }
 	else if (stream_id == STREAM_ID_PRVCB || stream_id == STREAM_ID_JPEG) {
@@ -1125,28 +1107,17 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
         targetParms->numSvcBuffers = num_buffers;
 
         for (uint32_t i = 0 ; i < targetParms->numSvcBuffers ; i++) {
-            ALOGV("(%s): registering substream(%d) Buffers[%d] (%x) ", __FUNCTION__,
-                i, stream_id, (uint32_t)(registeringBuffers[i]));
             if (m_grallocHal) {
-                if (m_grallocHal->lock(m_grallocHal, registeringBuffers[i],
-                       targetParms->usage, 0, 0,
-                       targetParms->width, targetParms->height, virtAddr) != 0) {
-                    ALOGE("ERR(%s): could not obtain gralloc buffer", __FUNCTION__);
-                }
-                else {
-                    
-                    const private_handle_t *priv_handle = reinterpret_cast<const private_handle_t *>(registeringBuffers[i]);
-       
-                    
-                    targetParms->subStreamGraphicFd[i]    = priv_handle->fd;
-					targetParms->subStreamAddVirt[i]   = (uint32_t)virtAddr[0];
-                    targetParms->svcBufHandle[i]       = registeringBuffers[i];
-					targetParms->svcBufStatus[i] = ON_HAL_INIT; 
-					targetParms->numSvcBufsInHal++;
-                }
+                const private_handle_t *priv_handle = reinterpret_cast<const private_handle_t *>(registeringBuffers[i]);
+                ALOGD("(%s): registering substream(%d) Buffers[%d] (%x) ", __FUNCTION__,
+                         i, stream_id, (uint32_t)(priv_handle->base));
+                targetParms->subStreamGraphicFd[i] = priv_handle->fd;
+				targetParms->subStreamAddVirt[i]   = (uint32_t)priv_handle->base;
+                targetParms->svcBufHandle[i]       = registeringBuffers[i];
+				targetParms->svcBufStatus[i] = ON_HAL_INIT; 
+				targetParms->numSvcBufsInHal++;
             }
         }
-        
         return 0;
     }
     else {
@@ -1434,7 +1405,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	//camera_srv_req  *tmpreq = NULL;
     uint32_t reqCount = 0;
 	camera_parm_type drvTag = (camera_parm_type)0;
-    int index = 0;
+    uint32_t index = 0;
 	int32_t i = 0;
 	Mutex::Autolock lock(m_requestMutex);
 	
@@ -1630,106 +1601,50 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 int SprdCameraHWInterface2::previewCBFrame(PreviewStream *stream, int32_t *srcBufVirt, int64_t frameTimeStamp)
 {
     stream_parameters_t     *StreamParms = &(stream->m_parameters);
-    substream_parameters_t  *subParms        = &m_subStreams[STREAM_ID_PRVCB];
-    status_t    res;
-    bool found = false;
-    int cropX, cropY, cropW, cropH = 0;
+    substream_parameters_t  *subParms    = &m_subStreams[STREAM_ID_PRVCB];
+	void *VirtBuf = NULL;
+    int  ret = 0;
     buffer_handle_t * buf = NULL;
+	const private_handle_t *priv_handle = NULL;
 
-    ALOGD("DEBUG(%s): index(%d)",__FUNCTION__, subParms->svcBufIndex);
-    for (int i = 0 ; i < subParms->numSvcBuffers ; i++) {
-        if (subParms->svcBufStatus[i] == ON_HAL_INIT) {
-            found = true;
-			subParms->svcBufIndex = i;
-            break;
-        }
-        
+	if ((NULL == subParms->streamOps) || (NULL == subParms->streamOps->dequeue_buffer)) {
+		ALOGE("ERR(%s): haven't stream ops", __FUNCTION__);
+		return 0;
+	}
+
+	ret = subParms->streamOps->dequeue_buffer(subParms->streamOps, &buf);
+    if (ret != NO_ERROR || buf == NULL) {
+        ALOGD("DEBUG(%s):  prvcb stream(%d) dequeue_buffer fail res(%d)",__FUNCTION__ , stream->m_index,  ret);
+		return ret;
     }
-    if (!found) {
-        ALOGE("(%s): cannot find free svc buffer", __FUNCTION__);
-        return 1;
-    }
+	//lock
+	if (m_grallocHal->lock(m_grallocHal, *buf, subParms->usage, 0, 0,
+                   subParms->width, subParms->height, &VirtBuf) != 0) {
+		ALOGE("ERR(%s): could not obtain gralloc buffer", __FUNCTION__);
+	}
+	priv_handle = reinterpret_cast<const private_handle_t *>(*buf);
 
     if (subParms->format == HAL_PIXEL_FORMAT_YCrCb_420_SP) {
-
-            ALOGV("DEBUG(%s):preview_w = %d, preview_h = %d, cb_w = %d, cb_h = %d",
-                     __FUNCTION__, StreamParms->width, StreamParms->height, subParms->width, subParms->height);
-            
-           
-                memcpy((char *)(subParms->subStreamAddVirt[subParms->svcBufIndex]),
+            ALOGD("DEBUG(%s):preview_w = %d, preview_h = %d, cb_w = %d, cb_h = %d",
+                     __FUNCTION__, StreamParms->width, StreamParms->height,
+                     subParms->width, subParms->height);        
+			memcpy((char *)(priv_handle->base),
                     srcBufVirt, (subParms->width * subParms->height * 3)/2);
-                
     }
     //unlock
     if (m_grallocHal) {
-        m_grallocHal->unlock(m_grallocHal, subParms->svcBufHandle[subParms->svcBufIndex]);
-        }
-        else {
-            
-            ALOGD("ERR previewCBFrame gralloc is NULL");
-        }
-    
-    res = subParms->streamOps->enqueue_buffer(subParms->streamOps, frameTimeStamp, &(subParms->svcBufHandle[subParms->svcBufIndex]));
+        m_grallocHal->unlock(m_grallocHal, *buf);
+    } else {
+        ALOGD("ERR previewCBFrame gralloc is NULL");
+	}
 
-    ALOGD("DEBUG(%s): streamthread[%d] enqueue_buffer index(%d) to svc done res(%d)",
-            __FUNCTION__, stream->m_index, subParms->svcBufIndex, res);
-    if (res == 0) {
-        subParms->svcBufStatus[subParms->svcBufIndex] = ON_SERVICE;
-        subParms->numSvcBufsInHal--;
-    }
-    else {
-        subParms->svcBufStatus[subParms->svcBufIndex] = ON_HAL_BUFERR;
-    }
+    ret = subParms->streamOps->enqueue_buffer(subParms->streamOps,
+                                               frameTimeStamp,
+                                               buf);
 
-    while (subParms->numSvcBufsInHal <= subParms->minUndequedBuffer)
-    {
-        bool found = false;
-        int Index = 0;
-		void *VirtBuf = NULL;
+    ALOGD("DEBUG(%s): return %d",__FUNCTION__, ret);
 
-        ALOGV("DEBUG(%s): prvcb currentBuf#(%d)", __FUNCTION__ , subParms->numSvcBufsInHal);
-
-        res = subParms->streamOps->dequeue_buffer(subParms->streamOps, &buf);
-        if (res != NO_ERROR || buf == NULL) {
-            ALOGD("DEBUG(%s): prvcb stream(%d) dequeue_buffer fail res(%d)",__FUNCTION__ , stream->m_index,  res);
-            break;
-        }
-	   {
-        const private_handle_t *priv_handle = reinterpret_cast<const private_handle_t *>(*buf);
-        subParms->numSvcBufsInHal ++;
-        ALOGV("DEBUG(%s): prvcb got buf(%x) numBufInHal(%d) version(%d), numFds(%d), numInts(%d)", __FUNCTION__, (uint32_t)(*buf),
-           subParms->numSvcBufsInHal, ((native_handle_t*)(*buf))->version, ((native_handle_t*)(*buf))->numFds, ((native_handle_t*)(*buf))->numInts);
-
-
-        for (Index = 0; Index < subParms->numSvcBuffers ; Index++) {
-            if (priv_handle->fd == subParms->subStreamGraphicFd[Index] && subParms->svcBufStatus[Index] == ON_SERVICE) {
-                found = true;
-                break;
-            }
-        }
-        ALOGD("DEBUG(%s): prvcb dequeueed_buffer found(%d) index = %d", __FUNCTION__, found, Index);
-
-        if (!found) {
-             break;
-        }
-
-        subParms->svcBufIndex = Index;
-        subParms->svcBufStatus[subParms->svcBufIndex] = ON_HAL_INIT;
-        if (m_grallocHal->lock(m_grallocHal, *buf, subParms->usage, 0, 0,
-                   subParms->width, subParms->height, &VirtBuf) != 0) 
-        {
-              ALOGE("ERR(%s): could not obtain gralloc buffer", __FUNCTION__);
-        }
-        else 
-		{
-              ALOGD("DEBUG(%s): [subStream] locked img buf (%x)", __FUNCTION__,(unsigned int)VirtBuf);
-			  subParms->subStreamGraphicFd[subParms->svcBufIndex]    = priv_handle->fd;
-			  subParms->subStreamAddVirt[subParms->svcBufIndex]   = (uint32_t)VirtBuf;
-              subParms->svcBufHandle[subParms->svcBufIndex]       = *buf;
-        }
-       }
-    }
-    return 0;
+    return ret;
 }
 
 //transite from 'from' state to 'to' state and signal the waitting thread. if the current state is not 'from', transite to SPRD_ERROR state
@@ -1851,7 +1766,6 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 		return;
 	}
 
-	
     status_t res = 0;
     stream_parameters_t     *targetStreamParms;
 	buffer_handle_t * buf = NULL;
@@ -1951,30 +1865,28 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 			 }
 			 return;
     	}
-		
+		ALOGD("m_staticReqInfo.outputStreamMask=0x%x.",m_staticReqInfo.outputStreamMask);
         if(m_staticReqInfo.outputStreamMask & STREAM_MASK_PRVCB)
 		{
 		    int i = 0;
             for (; i < NUM_MAX_SUBSTREAM ; i++) {
-	            if (m_previewStream->m_attachedSubStreams[i].streamId == STREAM_ID_PRVCB)
-	        	{
-	        	    previewCBFrame(m_previewStream, &(mPreviewHeapArray_vir[targetStreamParms->bufIndex]), targetStreamParms->m_timestamp);
-	               
+	            if (m_previewStream->m_attachedSubStreams[i].streamId == STREAM_ID_PRVCB) {
+	        	    previewCBFrame(m_previewStream,
+						           (int32_t*)mPreviewHeapArray_vir[targetStreamParms->bufIndex],
+						           targetStreamParms->m_timestamp);
 	                break;
-	        	}
-	            
+	        	}	            
 	        }
-		   
-		  if(i == NUM_MAX_SUBSTREAM)
-		  {
-	          ALOGD("err m_Camera2DealwithSubstream substream not regist");
-		  }
+			if(i == NUM_MAX_SUBSTREAM)
+			{
+			  ALOGD("err m_Camera2DealwithSubstream substream not regist");
+			}
 		}
-		
-        if(m_staticReqInfo.outputStreamMask & STREAM_MASK_PREVIEW)
-		{
-			ALOGD("receivePreviewFrame Display Preview,add=0x%x", targetStreamParms->svcBufHandle[targetStreamParms->bufIndex]);
-			
+
+        if(m_staticReqInfo.outputStreamMask & STREAM_MASK_PREVIEW) {
+			ALOGD("receivePreviewFrame Display Preview,add=0x%x",
+				 (uint32_t)targetStreamParms->svcBufHandle[targetStreamParms->bufIndex]);
+
 			if(targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] == ON_HAL_DRIVER)//can enq graphic buf
 			{
                 res = targetStreamParms->streamOps->enqueue_buffer(targetStreamParms->streamOps, targetStreamParms->m_timestamp,
