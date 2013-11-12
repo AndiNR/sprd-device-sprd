@@ -1563,7 +1563,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	    int ret = 0;
 	    stream_parameters_t     *targetStreamParms = &(m_previewStream->m_parameters);
 		
-        if(mCameraState.preview_state == SPRD_INIT)//start preview
+        if((mCameraState.preview_state == SPRD_INIT) || (SPRD_IDLE == mCameraState.preview_state))//start preview
     	{
     	    m_staticReqInfo.outputStreamMask = srcreq->outputStreamMask; 
             //hal parameters set
