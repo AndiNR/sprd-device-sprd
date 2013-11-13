@@ -39,7 +39,8 @@ SprdCameraHWInterface2::SprdCameraHWInterface2(int cameraId, camera2_device_t *d
             m_callbackClient(NULL),
             m_reqIsProcess(false),
             m_halDevice(dev),
-            m_CameraId(cameraId)
+            m_CameraId(cameraId),
+            m_previewStream(NULL)
            
 {
     ALOGD("(%s): reqindex=%d ENTER", __FUNCTION__, m_reqIsProcess);
@@ -60,33 +61,35 @@ SprdCameraHWInterface2::SprdCameraHWInterface2(int cameraId, camera2_device_t *d
 			return;
         }
     }
-    
+
     m_Camera2 = camera;
-     
+	ALOGD("(%s): camera init", __FUNCTION__);
+	if (CAMERA_SUCCESS != camera_init(cameraId)) {
+        ALOGE("(%s): camera init failed. exiting", __FUNCTION__);
+        return;
+	}
     m_RequestQueueThread = new RequestQueueThread(this);
-	
-	if(m_RequestQueueThread == NULL)
-	{
+
+	if(m_RequestQueueThread == NULL) {
         ALOGE("ERR(%s):create req thread No mem", __FUNCTION__);
 		*openInvalid = 1;
 		return;
 	}
 	m_halRefreshReq = allocate_camera_metadata(30,300);
-	if(!m_halRefreshReq)
-	{
+	if(!m_halRefreshReq) {
         ALOGE("ERR(%s):alloc halreq No mem", __FUNCTION__);
 		*openInvalid = 1;
 		return;
 	}
     for (int i = 0 ; i < STREAM_ID_LAST+1 ; i++)
          m_subStreams[i].type =  SUBSTREAM_TYPE_NONE;
-    
+
 	mCameraState.camera_state = SPRD_IDLE;
 	mCameraState.preview_state = SPRD_INIT;
-	
+
     m_RequestQueueThread->Start("RequestThread", PRIORITY_DEFAULT, 0);
     ALOGV("DEBUG(%s): created requestthread ", __FUNCTION__);
-	
+
     ALOGD("(%s): EXIT", __FUNCTION__);
 }
 
@@ -273,21 +276,19 @@ int SprdCameraHWInterface2::flushCapturesInProgress()
 
 static int initCamera2Info(int cameraId)
 {
-    if(cameraId == 0)
-	{
-	    if (!g_Camera2[0])
-    	{
+    if(cameraId == 0) {
+	    if (!g_Camera2[0]) {
             ALOGE("%s back not alloc!",__FUNCTION__);
 			return 1;
     	}
-		
+
 		g_Camera2[0]->sensorW             = 1632;
 	    g_Camera2[0]->sensorH             = 1224;
 	    g_Camera2[0]->sensorRawW          = 1632;
 	    g_Camera2[0]->sensorRawH          = 1224;
 	    g_Camera2[0]->numPreviewResolution = ARRAY_SIZE(PreviewResolutionSensorBack)/2;
 	    g_Camera2[0]->PreviewResolutions   = PreviewResolutionSensorBack;
-	    g_Camera2[0]->numJpegResolution   = ARRAY_SIZE(jpegResolutionSensorBack)/2;//must exist, otherwise parameters init fail
+	    g_Camera2[0]->numJpegResolution   = ARRAY_SIZE(jpegResolutionSensorBack)/2;
 	    g_Camera2[0]->jpegResolutions     = jpegResolutionSensorBack;
 	    g_Camera2[0]->minFocusDistance    = 0.1f;
 	    g_Camera2[0]->focalLength         = 3.43f;
@@ -299,11 +300,30 @@ static int initCamera2Info(int cameraId)
 	    g_Camera2[0]->numSceneModeOverrides = ARRAY_SIZE(sceneModeOverridesSensorBack);
 	    g_Camera2[0]->availableAeModes    = availableAeModesSensorBack;
 	    g_Camera2[0]->numAvailableAeModes = ARRAY_SIZE(availableAeModesSensorBack);	
-		//return 0;
-	}
-	else if(cameraId == 1)
-	{
-	    
+	} else if(cameraId == 1) {
+	    if (!g_Camera2[1]) {
+            ALOGE("%s back not alloc!",__FUNCTION__);
+			return 1;
+		}
+
+		g_Camera2[1]->sensorW             = 800;
+	    g_Camera2[1]->sensorH             = 600;
+	    g_Camera2[1]->sensorRawW          = 800;
+	    g_Camera2[1]->sensorRawH          = 600;
+	    g_Camera2[1]->numPreviewResolution = ARRAY_SIZE(PreviewResolutionSensorFront)/2;
+	    g_Camera2[1]->PreviewResolutions   = PreviewResolutionSensorFront;
+	    g_Camera2[1]->numJpegResolution   = ARRAY_SIZE(jpegResolutionSensorFront)/2;
+	    g_Camera2[1]->jpegResolutions     = jpegResolutionSensorFront;
+	    g_Camera2[1]->minFocusDistance    = 0.1f;
+	    g_Camera2[1]->focalLength         = 3.43f;
+	    g_Camera2[1]->aperture            = 2.7f;
+	    g_Camera2[1]->fnumber             = 2.7f;
+	    g_Camera2[1]->availableAfModes    = availableAfModesSensorBack;
+	    g_Camera2[1]->numAvailableAfModes = ARRAY_SIZE(availableAfModesSensorBack);
+	    g_Camera2[1]->sceneModeOverrides  = sceneModeOverridesSensorBack;
+	    g_Camera2[1]->numSceneModeOverrides = ARRAY_SIZE(sceneModeOverridesSensorBack);
+	    g_Camera2[1]->availableAeModes    = availableAeModesSensorBack;
+	    g_Camera2[1]->numAvailableAeModes = ARRAY_SIZE(availableAeModesSensorBack);
 	}
 	return 0;
 }
@@ -729,9 +749,10 @@ int SprdCameraHWInterface2::allocateStream(uint32_t width, uint32_t height, int 
     status_t res;
     
 
-    if ((format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED || format == CAMERA2_HAL_PIXEL_FORMAT_OPAQUE)  &&
+    if ((format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED || format == CAMERA2_HAL_PIXEL_FORMAT_OPAQUE
+		|| format == HAL_PIXEL_FORMAT_YCrCb_420_SP)  &&
             isSupportedResolution(m_Camera2, width, height)) {
-        
+		if (NULL == m_previewStream) {
             *stream_id = STREAM_ID_PREVIEW;//temporate preview thread created on oem, so new streamthread object,but not run.
 
             m_previewStream  = new PreviewStream(this, *stream_id);
@@ -741,7 +762,7 @@ int SprdCameraHWInterface2::allocateStream(uint32_t width, uint32_t height, int 
 				return 1;
         	}
 
-            *format_actual                      = HAL_PIXEL_FORMAT_YCrCb_420_SP;//HAL_PIXEL_FORMAT_YCrCb_420_SP
+            *format_actual                      = HAL_PIXEL_FORMAT_YCrCb_420_SP;
             *usage                              = GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_PRIVATE_0;
             
             *max_buffers                        = 6;
@@ -759,9 +780,36 @@ int SprdCameraHWInterface2::allocateStream(uint32_t width, uint32_t height, int 
             ALOGD("(%s): m_numRegisteredStream preview format=0x%x", __FUNCTION__, *format_actual);
             
             return 0;
-        
-        }
-	   else if (format == HAL_PIXEL_FORMAT_YCrCb_420_SP || format == HAL_PIXEL_FORMAT_YV12) {
+		} else {
+			*stream_id = STREAM_ID_RECORD;
+			ALOGD("DEBUG(%s): wjp stream_id (%d) stream_ops(0x%x)", __FUNCTION__, *stream_id,(uint32_t)stream_ops);
+            subParameters = &m_subStreams[STREAM_ID_RECORD];
+            memset(subParameters, 0, sizeof(substream_parameters_t));
+
+            *format_actual = HAL_PIXEL_FORMAT_YCbCr_420_SP;
+            *usage = GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_PRIVATE_0;
+            *max_buffers = 6;
+
+            subParameters->type         = SUBSTREAM_TYPE_RECORD;
+            subParameters->width        = width;
+            subParameters->height       = height;
+            subParameters->format       = *format_actual;
+            subParameters->streamOps     = stream_ops;
+            subParameters->usage         = *usage;
+            subParameters->numOwnSvcBuffers = *max_buffers;
+            subParameters->numSvcBufsInHal  = 0;
+            subParameters->minUndequedBuffer = 2;
+            ALOGD("wjp subParameters->streamOps 0x%x",(uint32_t)subParameters->streamOps);
+            res = m_previewStream->attachSubStream(STREAM_ID_RECORD, 20);
+            if (res != NO_ERROR) {
+                ALOGE("(%s): substream attach failed. res(%d)", __FUNCTION__, res);
+                return 1;
+            }
+            ALOGD("(%s): Enabling Record", __FUNCTION__);
+            return 0;
+		}
+    }
+	else if (format == HAL_PIXEL_FORMAT_YCrCb_420_SP || format == HAL_PIXEL_FORMAT_YV12) {
         *stream_id = STREAM_ID_PRVCB;
 
         subParameters = &m_subStreams[STREAM_ID_PRVCB];
@@ -1100,7 +1148,7 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
 	    return NO_ERROR;
 
     }
-	else if (stream_id == STREAM_ID_PRVCB || stream_id == STREAM_ID_JPEG) {
+	else if (stream_id == STREAM_ID_PRVCB || stream_id == STREAM_ID_JPEG || stream_id == STREAM_ID_RECORD) {
         substream_parameters_t  *targetParms;
         targetParms = &m_subStreams[stream_id];
 
@@ -1598,6 +1646,55 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	}
 }
 
+int SprdCameraHWInterface2::recordingFrame(PreviewStream *stream, int32_t *srcBufVirt, int64_t frameTimeStamp)
+{
+	stream_parameters_t     *StreamParms = &(stream->m_parameters);
+    substream_parameters_t  *subParms    = &m_subStreams[STREAM_ID_RECORD];
+	void *VirtBuf = NULL;
+    int  ret = 0;
+    buffer_handle_t * buf = NULL;
+	const private_handle_t *priv_handle = NULL;
+
+	if ((NULL == subParms->streamOps) || (NULL == subParms->streamOps->dequeue_buffer)) {
+		ALOGE("ERR(%s): haven't stream ops", __FUNCTION__);
+		return 0;
+	}
+
+	ret = subParms->streamOps->dequeue_buffer(subParms->streamOps, &buf);
+    if (ret != NO_ERROR || buf == NULL) {
+        ALOGD("DEBUG(%s):  prvcb stream(%d) dequeue_buffer fail res(%d)",__FUNCTION__ , stream->m_index,  ret);
+		return ret;
+    }
+	//lock
+	if (m_grallocHal->lock(m_grallocHal, *buf, subParms->usage, 0, 0,
+                   subParms->width, subParms->height, &VirtBuf) != 0) {
+		ALOGE("ERR(%s): could not obtain gralloc buffer", __FUNCTION__);
+	}
+	priv_handle = reinterpret_cast<const private_handle_t *>(*buf);
+
+    if (subParms->format == HAL_PIXEL_FORMAT_YCrCb_420_SP) {
+            ALOGD("DEBUG(%s):preview_w = %d, preview_h = %d, cb_w = %d, cb_h = %d",
+                     __FUNCTION__, StreamParms->width, StreamParms->height,
+                     subParms->width, subParms->height);
+			memcpy((char *)(priv_handle->base),
+                    srcBufVirt, (subParms->width * subParms->height * 3)/2);
+    }
+    //unlock
+    if (m_grallocHal) {
+        m_grallocHal->unlock(m_grallocHal, *buf);
+    } else {
+        ALOGD("ERR previewCBFrame gralloc is NULL");
+	}
+
+    ret = subParms->streamOps->enqueue_buffer(subParms->streamOps,
+                                               frameTimeStamp,
+                                               buf);
+
+    ALOGD("DEBUG(%s): return %d",__FUNCTION__, ret);
+
+    return ret;
+}
+
 int SprdCameraHWInterface2::previewCBFrame(PreviewStream *stream, int32_t *srcBufVirt, int64_t frameTimeStamp)
 {
     stream_parameters_t     *StreamParms = &(stream->m_parameters);
@@ -1866,19 +1963,31 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 			 return;
     	}
 		ALOGD("m_staticReqInfo.outputStreamMask=0x%x.",m_staticReqInfo.outputStreamMask);
-        if(m_staticReqInfo.outputStreamMask & STREAM_MASK_PRVCB)
-		{
+        if(m_staticReqInfo.outputStreamMask & STREAM_MASK_PRVCB) {
 		    int i = 0;
             for (; i < NUM_MAX_SUBSTREAM ; i++) {
 	            if (m_previewStream->m_attachedSubStreams[i].streamId == STREAM_ID_PRVCB) {
 	        	    previewCBFrame(m_previewStream,
-						           (int32_t*)mPreviewHeapArray_vir[targetStreamParms->bufIndex],
-						           targetStreamParms->m_timestamp);
+						(int32_t*)mPreviewHeapArray_vir[targetStreamParms->bufIndex],
+					targetStreamParms->m_timestamp);
 	                break;
-	        	}	            
-	        }
-			if(i == NUM_MAX_SUBSTREAM)
-			{
+				}
+			}
+			if(i == NUM_MAX_SUBSTREAM) {
+				ALOGD("err m_Camera2DealwithSubstream substream not regist");
+			}
+		}
+		if(m_staticReqInfo.outputStreamMask & STREAM_MASK_RECORD) {
+		    int i = 0;
+            for (; i < NUM_MAX_SUBSTREAM ; i++) {
+	            if (m_previewStream->m_attachedSubStreams[i].streamId == STREAM_ID_RECORD) {
+					recordingFrame(m_previewStream,
+									(int32_t*)mPreviewHeapArray_vir[targetStreamParms->bufIndex],
+									targetStreamParms->m_timestamp);
+	                break;
+				}
+		}
+			if(i == NUM_MAX_SUBSTREAM) {
 			  ALOGD("err m_Camera2DealwithSubstream substream not regist");
 			}
 		}
@@ -2274,7 +2383,7 @@ static int HAL2_device_dump(const struct camera2_device *dev, int fd)
 static int HAL2_getNumberOfCameras()
 {
     ALOGV("(%s): returning 2", __FUNCTION__);
-    return 1;//for test 2
+    return 2;
 }
 
 static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_t **info,
@@ -2575,7 +2684,7 @@ static int HAL2_getCameraInfo(int cameraId, struct camera_info *info)//malloc ca
 {
     ALOGD("DEBUG(%s): cameraID: %d", __FUNCTION__, cameraId);
     static camera_metadata_t * mCameraInfo[2] = {NULL, NULL};
-    status_t res;
+    status_t ret;
 
     if (cameraId == 0) {
         info->facing = CAMERA_FACING_BACK;//facing means back cam or front cam
@@ -2585,50 +2694,39 @@ static int HAL2_getCameraInfo(int cameraId, struct camera_info *info)//malloc ca
             g_Camera2[0] = (SprdCamera2Info *)malloc(sizeof(SprdCamera2Info));
 			if(!g_Camera2[0])
 			   ALOGE("%s no mem! backcam",__FUNCTION__);
-			
-            res = camera_init(cameraId);
-			ALOGD("(%s): camera init", __FUNCTION__);
-			if (res) {
-		        ALOGE("(%s): camera init failed. exiting", __FUNCTION__);
-		        return NO_INIT;
-			}
-			else
-			{
-                initCamera2Info(cameraId);
-			}
-			
+
+            initCamera2Info(cameraId);
         }
-    }
-    else if (cameraId == 1) {
+    } else if (cameraId == 1) {
         info->facing = CAMERA_FACING_FRONT;
 		info->orientation = 270;
-        if (!g_Camera2[1])
-        {
+        if (!g_Camera2[1]) {
             g_Camera2[1] = (SprdCamera2Info *)malloc(sizeof(SprdCamera2Info));
 			if(!g_Camera2[1])
-			   ALOGE("%s no mem! frontcam",__FUNCTION__);	
+			   ALOGE("%s no mem! frontcam",__FUNCTION__);
+
+			initCamera2Info(cameraId);
         }
-    }
-    else
+    } else {
         return BAD_VALUE;
-   
-	//info->orientation = 0;
-    info->device_version = HARDWARE_DEVICE_API_VERSION(2, 0);//decide that use which hal version
+    }
+
+    info->device_version = HARDWARE_DEVICE_API_VERSION(2, 0);
     if (mCameraInfo[cameraId] == NULL) {
-        res = ConstructStaticInfo(g_Camera2[cameraId],&(mCameraInfo[cameraId]), cameraId, true);
-        if (res != OK) {
+        ret = ConstructStaticInfo(g_Camera2[cameraId],&(mCameraInfo[cameraId]), cameraId, true);
+        if (ret != OK) {
             ALOGE("%s: Unable to allocate static info: %s (%d)",
-                    __FUNCTION__, strerror(-res), res);
-            return res;
+                    __FUNCTION__, strerror(-ret), ret);
+            return ret;
         }
-        res = ConstructStaticInfo(g_Camera2[cameraId], &(mCameraInfo[cameraId]), cameraId, false);
-        if (res != OK) {
+        ret = ConstructStaticInfo(g_Camera2[cameraId], &(mCameraInfo[cameraId]), cameraId, false);
+        if (ret != OK) {
             ALOGE("%s: Unable to fill in static info: %s (%d)",
-                    __FUNCTION__, strerror(-res), res);
-            return res;
+                    __FUNCTION__, strerror(-ret), ret);
+            return ret;
         }
     }
-    info->static_camera_characteristics = mCameraInfo[cameraId];//framework get info
+    info->static_camera_characteristics = mCameraInfo[cameraId];
     return NO_ERROR;
 }
 

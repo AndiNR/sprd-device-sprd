@@ -340,6 +340,7 @@ class RequestQueueThread : public SprdBaseThread{
 
 	bool                isSupportedResolution(SprdCamera2Info *camHal, int width, int height);
 	int                 previewCBFrame(PreviewStream *stream, int32_t *srcBufVirt, int64_t frameTimeStamp);
+	int                 recordingFrame(PreviewStream *stream, int32_t *srcBufVirt, int64_t frameTimeStamp);
 	void                receivePreviewFrame(camera_frame_type *frame);
 	void                HandleStartPreview(camera_cb_type cb, int32_t parm4);
     void                HandleStartCamera(camera_cb_type cb,
