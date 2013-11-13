@@ -786,7 +786,7 @@ int SprdCameraHWInterface2::allocateStream(uint32_t width, uint32_t height, int 
             subParameters = &m_subStreams[STREAM_ID_RECORD];
             memset(subParameters, 0, sizeof(substream_parameters_t));
 
-            *format_actual = HAL_PIXEL_FORMAT_YCbCr_420_SP;
+            *format_actual = HAL_PIXEL_FORMAT_YCrCb_420_SP;
             *usage = GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_PRIVATE_0;
             *max_buffers = 6;
 
