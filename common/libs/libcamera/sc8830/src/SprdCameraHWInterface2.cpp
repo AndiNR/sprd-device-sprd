@@ -34,14 +34,13 @@ gralloc_module_t const* SprdCameraHWInterface2::m_grallocHal;
 SprdCamera2Info * g_Camera2[2] = { NULL, NULL };
 
 SprdCameraHWInterface2::SprdCameraHWInterface2(int cameraId, camera2_device_t *dev, SprdCamera2Info * camera, int *openInvalid):
+            m_previewStream(NULL),
             m_requestQueueOps(NULL),
             m_frameQueueOps(NULL),
             m_callbackClient(NULL),
-            m_reqIsProcess(false),
             m_halDevice(dev),
-            m_CameraId(cameraId),
-            m_previewStream(NULL)
-           
+            m_reqIsProcess(false),
+            m_CameraId(cameraId)
 {
     ALOGD("(%s): reqindex=%d ENTER", __FUNCTION__, m_reqIsProcess);
     int ret = 0;
@@ -146,22 +145,19 @@ void SprdCameraHWInterface2::release()
 
 	camStatus = getPreviewState();
 	
-	if(camStatus != SPRD_IDLE)
-	{
+	if(camStatus != SPRD_IDLE) {
         ALOGE("(HAL2::release) preview sta=%d",camStatus);
 		if(camStatus == SPRD_PREVIEW_IN_PROGRESS)
 		{
 	        res = releaseStream(STREAM_ID_PREVIEW); 
-			if(res != CAMERA_SUCCESS)
-				return;
+			if(res != CAMERA_SUCCESS) {
+				ALOGE("releaseStream error.");
+			}
 		}
-		else
-		   return;
 	}
 
 	camStatus = getCameraState();
-	if(camStatus != SPRD_IDLE)
-	{
+	if(camStatus != SPRD_IDLE) {
         ALOGE("ERR stopping camera sta=%d",camStatus);
 		return;
 	}
@@ -231,13 +227,13 @@ int SprdCameraHWInterface2::notifyRequestQueueNotEmpty()
 			return 0;
 	    }
 	    reqNum++;
-	    ALOGD("notifyRequestQueueNotEmpty currep=0x%x reqnum=%d",curReq,reqNum);
+	    ALOGD("notifyRequestQueueNotEmpty currep=0x%x reqnum=%d",(uint32_t)curReq,(uint32_t)reqNum);
 		
         m_ReqQueue.push_back(curReq);
 		while(curReq)
 		{    
 		   m_requestQueueOps->dequeue_request(m_requestQueueOps, &curReq);
-		   ALOGD("%s Srv req 0x%x",__FUNCTION__,curReq); 
+		   ALOGD("%s Srv req 0x%x",__FUNCTION__,(uint32_t)curReq);
 		}
         
 		ALOGD("notifyRequestQueueNotEmpty srv clear flag processing=%d",m_reqIsProcess);	
@@ -1139,7 +1135,8 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
 
 			 targetStreamParms->svcBufHandle[i] = registeringBuffers[i];//important
 			 targetStreamParms->svcBufStatus[i] = ON_HAL_INIT;
-			 ALOGD("registerStreamBuffers index=%d Preview phyadd=0x%x,srv_add=0x%x",i, priv_handle->phyaddr,targetStreamParms->svcBufHandle[i]);
+			 ALOGD("registerStreamBuffers index=%d Preview phyadd=0x%x,srv_add=0x%x",
+					i, (uint32_t)priv_handle->phyaddr,(uint32_t)targetStreamParms->svcBufHandle[i]);
 		}
 	    
 	    targetStreamParms->cancelBufNum = targetStreamParms->minUndequedBuffer;
@@ -1446,6 +1443,61 @@ status_t SprdCameraHWInterface2::Camera2RefreshSrvReq(camera_req_info *srcreq, c
 	return res;
 }
 
+void SprdCameraHWInterface2::CameraConvertCropRegion(float **outPut, float sensorWidth, float sensorHeight, cropZoom *cropRegion)
+{
+	float    minOutputWidth,minOutputHeight;
+	float    OutputWidth,OutputHeight;
+	float    zoomRatio;
+	float    outputRatio;
+	float    minOutputRatio;
+	float    realSensorRatio;
+	float    zoomWidth,zoomHeight,zoomLeft,zoomTop;
+	uint32_t i = 0;
+
+	ALOGD("%s: crop %d %d %d %d.", __FUNCTION__ ,
+		  cropRegion->crop_x, cropRegion->crop_y, cropRegion->crop_w ,cropRegion->crop_h);
+
+	zoomWidth = (float)cropRegion->crop_w;
+	zoomHeight = (float)cropRegion->crop_h;
+
+	minOutputRatio = outPut[0][0]/outPut[0][1];
+	minOutputWidth = outPut[0][0];
+	minOutputHeight = outPut[0][1];
+	for (i = 1 ; i < sizeof(outPut) / sizeof(outPut[0]) ; ++i) {
+		outputRatio = outPut[i][0]/outPut[i][1];
+		OutputWidth = outPut[i][0];
+		OutputHeight = outPut[i][1];
+
+		if (minOutputRatio > outputRatio) {
+			minOutputRatio = outputRatio;
+			minOutputWidth = OutputWidth;
+			minOutputHeight = OutputHeight;
+		}
+	}
+	realSensorRatio = sensorWidth/sensorHeight;
+	if (minOutputRatio > 1632/1224) {
+		zoomRatio = 1632/zoomWidth;
+		zoomWidth = sensorWidth/zoomRatio;
+		zoomHeight = zoomWidth *minOutputHeight / minOutputWidth;
+	} else {
+		zoomRatio = 1224/zoomHeight;
+		zoomHeight = sensorHeight / zoomRatio;
+        zoomWidth = zoomHeight *
+                minOutputWidth / minOutputHeight;
+	}
+
+	zoomLeft = (sensorWidth - zoomWidth) / 2;
+    zoomTop  = (sensorHeight - zoomHeight) / 2;
+
+	cropRegion->crop_x = (uint32_t)zoomLeft;
+	cropRegion->crop_y = (uint32_t)zoomTop;
+	cropRegion->crop_w = (uint32_t)zoomWidth;
+	cropRegion->crop_h = (uint32_t)zoomHeight;
+
+    ALOGD("%s:Crop region calculated (x=%d,y=%d,w=%d,h=%d) for zoom=%f",__FUNCTION__ ,
+        cropRegion->crop_x, cropRegion->crop_y, cropRegion->crop_w, cropRegion->crop_h,zoomRatio);
+}
+
 void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, camera_metadata_t *orireq)
 {
     status_t res = 0;
@@ -1493,7 +1545,8 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
                 srcreq->sensorTimeStamp = entry.data.i64[0];
                 break;
 #endif
-
+			case ANDROID_CONTROL_AF_MODE:
+				break;
             case ANDROID_REQUEST_TYPE:	
 				ASIGNIFNOTEQUAL(srcreq->isReprocessing, entry.data.u8[0], (camera_parm_type)NULL)
 				ALOGD("DEBUG(%s): ANDROID_REQUEST_TYPE (%d)",  __FUNCTION__, entry.data.u8[0]);
@@ -1618,7 +1671,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 			SET_PARM(CAMERA_PARM_PREVIEW_MODE, CAMERA_PREVIEW_MODE_SNAPSHOT);
 			m_reqIsProcess = true;
 		    //if(camera_set_preview_dimensions(targetStreamParms->width,targetStreamParms->height,NULL,NULL) != 0)
-			if(camera_set_dimensions(640,480,targetStreamParms->width,targetStreamParms->height,NULL,NULL,NULL) != 0) {
+			if(camera_set_dimensions(640,480,targetStreamParms->width,targetStreamParms->height,NULL,NULL,0) != 0) {
 		       ALOGE("setCameraPreviewDimensions failed");
 			   return ;
 			}
@@ -2130,7 +2183,7 @@ void SprdCameraHWInterface2::RequestQueueThreadFunc(SprdBaseThread * self)
         }
         else
 		{
-		    ALOGD("DEBUG(%s): bef curreq=0x%x", __FUNCTION__, curReq);
+		    ALOGD("DEBUG(%s): bef curreq=0x%x", __FUNCTION__, (uint32_t)curReq);
 		    Camera2GetSrvReqInfo(&m_staticReqInfo, curReq);
 	
             ALOGD("DEBUG(%s): aft", __FUNCTION__);
@@ -2152,7 +2205,7 @@ void SprdCameraHWInterface2::RequestQueueThreadFunc(SprdBaseThread * self)
 		{
            ALOGE("ERR %s refresh req",__FUNCTION__);  
 		}
-		ALOGD("DEBUG(%s):  processing SIGNAL_REQ_THREAD_REQ_DONE,free add=0x%x", __FUNCTION__, m_staticReqInfo.ori_req);
+		ALOGD("DEBUG(%s):  processing SIGNAL_REQ_THREAD_REQ_DONE,free add=0x%x", __FUNCTION__, (uint32_t)m_staticReqInfo.ori_req);
         ret = m_requestQueueOps->free_request(m_requestQueueOps, m_staticReqInfo.ori_req);//orignal preview req metadata
         if (ret < 0)
             ALOGE("ERR(%s): free_request ret = %d", __FUNCTION__, ret);
@@ -2183,7 +2236,7 @@ void SprdCameraHWInterface2::RequestQueueThreadFunc(SprdBaseThread * self)
         }
         ret = append_camera_metadata(newReq, m_halRefreshReq);
         if (ret == 0) {
-            ALOGD("DEBUG(%s): frame metadata append success add=0x%x",__FUNCTION__, newReq);
+            ALOGD("DEBUG(%s): frame metadata append success add=0x%x",__FUNCTION__, (uint32_t)newReq);
             m_frameQueueOps->enqueue_frame(m_frameQueueOps, newReq);
         }
         else {
@@ -2394,7 +2447,7 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
     status_t ret;
 
     ALOGD("ConstructStaticInfo info_add=0x%x,sizereq=%d",
-                *info, sizeRequest);  
+                (int)*info, (int)sizeRequest);
 #define ADD_OR_SIZE( tag, data, count ) \
     if ( ( ret = addOrSize(*info, sizeRequest, &entryCount, &dataCount, \
             tag, data, count) ) != OK ) return ret
@@ -2749,6 +2802,7 @@ static camera2_device_ops_t camera2_device_ops = {
         SET_METHOD(set_notify_callback),
         SET_METHOD(get_metadata_vendor_tag_ops),
         SET_METHOD(dump),
+        NULL
 };
 
 #undef SET_METHOD
@@ -2833,7 +2887,8 @@ extern "C" {
           reserved:           {0},
       },
       get_number_of_cameras : HAL2_getNumberOfCameras,
-      get_camera_info       : HAL2_getCameraInfo
+      get_camera_info       : HAL2_getCameraInfo,
+      set_callbacks         : NULL
     };
 }
 

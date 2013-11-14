@@ -333,7 +333,8 @@ class RequestQueueThread : public SprdBaseThread{
     void                RequestQueueThreadFunc(SprdBaseThread * self);
    	void                SetReqProcessing(bool IsProc);
 	bool                GetReqProcessStatus();  
-	void                Camera2GetSrvReqInfo( camera_req_info *srcreq, camera_metadata_t *orireq);//total output streams
+	void                Camera2GetSrvReqInfo( camera_req_info *srcreq, camera_metadata_t *orireq);
+	void                CameraConvertCropRegion(float **outPut, float sensorWidth, float sensorHeight, cropZoom *cropRegion);
 	status_t            Camera2RefreshSrvReq(camera_req_info *srcreq, camera_metadata_t *dstreq);
 	status_t            CamconstructDefaultRequest(SprdCamera2Info *camHal, int request_template,camera_metadata_t **request, bool sizeRequest);
     bool                isSupportedJpegResolution(SprdCamera2Info *camHal, int width, int height);
@@ -404,7 +405,7 @@ class RequestQueueThread : public SprdBaseThread{
     List<camera_metadata_t *>           m_ReqQueue;
 	Mutex                               m_requestMutex;
 	Mutex                           mStateLock;
-	
+	Mutex                           mAFfModeTriggerLock;
 	Condition                       mStateWait;
     volatile camera_state           mCameraState;
 };
