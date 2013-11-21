@@ -2354,6 +2354,7 @@ void SprdCameraHardware::stopPreviewInternal()
 	nsecs_t start_timestamp = systemTime();
 	nsecs_t end_timestamp;
 	LOGV("stopPreviewInternal E");
+	Mutex::Autolock dCpL(&mDispCpLock);
 
 	if (!isPreviewing()) {
 		LOGE("Preview not in progress! stopPreviewInternal X");
@@ -2987,7 +2988,14 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 
 		private_h = (struct private_handle_t *)(*buf_handle);
 		dst_phy_addr =  (uint32_t)(private_h->phyaddr);
-		ret = displayCopy(dst_phy_addr, (uint32_t)vaddr, phy_addr, (uint32_t)virtual_addr, width, height);
+		if(SPRD_PREVIEW_IN_PROGRESS == getPreviewState()) {
+			Mutex::Autolock dCpL(&mDispCpLock);
+			ret = displayCopy(dst_phy_addr, (uint32_t)vaddr, phy_addr, (uint32_t)virtual_addr, width, height);
+		}
+		else {
+			mGrallocHal->unlock(mGrallocHal, *buf_handle);
+			return false;
+		}
 
 		mGrallocHal->unlock(mGrallocHal, *buf_handle);
 
