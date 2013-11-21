@@ -2032,8 +2032,11 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 		}
 		if(m_staticReqInfo.outputStreamMask & STREAM_MASK_RECORD) {
 		    int i = 0;
+			substream_parameters_t *subParameters;
+			subParameters = &m_subStreams[STREAM_ID_RECORD];
             for (; i < NUM_MAX_SUBSTREAM ; i++) {
-	            if (m_previewStream->m_attachedSubStreams[i].streamId == STREAM_ID_RECORD) {
+	           // if (m_previewStream->m_attachedSubStreams[i].streamId == STREAM_ID_RECORD) {
+				if (SUBSTREAM_TYPE_RECORD == subParameters->type) {
 					recordingFrame(m_previewStream,
 									(int32_t*)mPreviewHeapArray_vir[targetStreamParms->bufIndex],
 									targetStreamParms->m_timestamp);
