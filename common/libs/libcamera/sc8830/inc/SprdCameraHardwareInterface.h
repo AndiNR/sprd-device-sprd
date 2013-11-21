@@ -323,6 +323,7 @@ private:
 	Condition                       mParamWait;
 	Mutex                           mCbPrevDataBusyLock;
 	Mutex                           mCbCapDataBusyLock;
+	Mutex                           mDispCpLock;
 
 	uint32_t                        mPreviewHeapSize;
 	uint32_t                        mPreviewHeapNum;
