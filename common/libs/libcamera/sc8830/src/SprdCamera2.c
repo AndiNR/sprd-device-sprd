@@ -57,6 +57,40 @@ int androidSceneModeToDrvMode(camera_metadata_enum_android_control_scene_mode_t 
    return ret;
 }
 
+int androidAfModeToDrvAfMode(camera_metadata_enum_android_control_af_mode_t androidAfMode, int8_t *convertDrvMode)
+{
+   int ret = 0;
+
+   switch(androidAfMode)
+   {
+      case ANDROID_CONTROL_AF_MODE_AUTO:
+	  *convertDrvMode = CAMERA_FOCUS_MODE_AUTO;
+	  break;
+	  
+	  case ANDROID_CONTROL_AF_MODE_MACRO:
+      *convertDrvMode = CAMERA_FOCUS_MODE_MACRO;
+	  break;
+	  
+      case ANDROID_CONTROL_AF_MODE_EDOF:
+	  case ANDROID_CONTROL_AF_MODE_OFF:
+      *convertDrvMode = CAMERA_FOCUS_MODE_INFINITY; //OFF
+	  break;
+	  
+	  case ANDROID_CONTROL_AF_MODE_CONTINUOUS_VIDEO:
+      *convertDrvMode = CAMERA_FOCUS_MODE_INFINITY;
+	  break;
+
+      case ANDROID_CONTROL_AF_MODE_CONTINUOUS_PICTURE:
+      *convertDrvMode = CAMERA_FOCUS_MODE_INFINITY;
+	  break;
+	  
+	  default:
+	  *convertDrvMode = CAMERA_FOCUS_MODE_INFINITY;	
+   }
+   return ret;
+}
+
+
 
 int androidParametTagToDrvParaTag(uint32_t androidParaTag, camera_parm_type *convertDrvTag)
 {
@@ -68,11 +102,15 @@ int androidParametTagToDrvParaTag(uint32_t androidParaTag, camera_parm_type *con
 	  *convertDrvTag = CAMERA_PARM_SCENE_MODE;	
       
 	  break;
-	  #if 1
+	  
 	  case ANDROID_SCALER_CROP_REGION:
       *convertDrvTag = CAMERA_PARM_ZOOM_RECT;
 	  break;
-	  #endif
+
+	  case ANDROID_CONTROL_AF_MODE:
+      *convertDrvTag = CAMERA_PARM_AF_MODE;
+	  break;
+	  
 	  default:
 	  break;
    }

@@ -24,6 +24,7 @@ namespace android {
 
 #include "SprdOEMCamera.h"
 
+int androidAfModeToDrvAfMode(camera_metadata_enum_android_control_af_mode_t androidAfMode, int8_t *convertDrvMode);
 
 int androidSceneModeToDrvMode(camera_metadata_enum_android_control_scene_mode_t androidScreneMode, int8_t *convertDrvMode);
 int androidParametTagToDrvParaTag(uint32_t androidParaTag, camera_parm_type *convertDrvTag);
@@ -154,14 +155,14 @@ const int64_t kExposureTimeRange[2] =
     {1000L, 30000000000L} ; // 1 us - 30 sec
 
 const uint64_t kAvailableRawMinDurations[1] = {
-    kFrameDurationRange[0]
+    (uint64_t)kFrameDurationRange[0]
 };
 
 const uint64_t kAvailableProcessedMinDurations[1] = {
-    kFrameDurationRange[0]
+    (uint64_t)kFrameDurationRange[0]
 };
 const uint64_t kAvailableJpegMinDurations[1] = {
-    kFrameDurationRange[0]
+    (uint64_t)kFrameDurationRange[0]
 };
 
 }

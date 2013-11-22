@@ -38,6 +38,8 @@
 #include <camera/Camera.h>
 #include <camera/CameraParameters.h>
 #include <utils/List.h>
+#include <binder/MemoryHeapIon.h>
+#include <binder/MemoryBase.h>
 #include "SprdBaseThread.h"
 #include "gralloc_priv.h"
 #include <fcntl.h>
@@ -46,11 +48,12 @@
 
 #include "cutils/properties.h"
 #include "SprdOEMCamera.h"
+#include "SprdCameraHardwareConfig2.h"
 
 namespace android {
 
 
-#define NUM_MAX_STREAM_THREAD       (5)
+//#define NUM_MAX_STREAM_THREAD       (4)
 #define NUM_MAX_CAMERA_BUFFERS      (16)
 
 #define NUM_MAX_SUBSTREAM           (4)
@@ -63,6 +66,9 @@ namespace android {
 #define STREAM_MASK_PRVCB           (1<<STREAM_ID_PRVCB)
 #define STREAM_ID_JPEG              (4)
 #define STREAM_MASK_JPEG            (1<<STREAM_ID_JPEG)
+#define STREAM_ID_ZSL               (5)
+#define STREAM_MASK_ZSL             (1<<STREAM_ID_ZSL)
+#define STREAM_ID_CAPTURE           (6)
 #define STREAM_ID_JPEG_REPROCESS    (8)
 #define STREAM_ID_LAST              STREAM_ID_JPEG_REPROCESS
 
@@ -87,10 +93,12 @@ namespace android {
 
 
 #define ON_HAL_BUFQ         (1)
-#define ON_HAL_BUFERR       (2)
-#define ON_HAL_DRIVER       (3)
-#define ON_SERVICE          (4)
-#define ON_HAL_INIT         (5)//service deq 6 bufs firstly
+#define ON_HAL_BUFERR       (1 << 1)
+#define ON_HAL_DRIVER       (1 << 2)
+#define ON_SERVICE          (1 << 3)
+#define ON_HAL_INIT         (1 << 4)//service deq 6 bufs firstly
+
+#define MAX_MISCHEAP_NUM 50 //1024
 
 
 typedef struct stream_parameters {
@@ -117,6 +125,8 @@ typedef struct substream_parameters {
     const   camera2_stream_ops_t*   streamOps;
             uint32_t                usage;
             int                     numSvcBuffers;
+			//int                     bufSize;
+			int                     dataSize;//get encode jpeg size
             int                     numOwnSvcBuffers;
             buffer_handle_t         svcBufHandle[NUM_MAX_CAMERA_BUFFERS];
             uint32_t                subStreamAddVirt[NUM_MAX_CAMERA_BUFFERS];
@@ -131,6 +141,12 @@ typedef struct substream_entry {
     int                     priority;
     int                     streamId;
 } substream_entry_t;
+
+typedef struct sprd_camera_memory {
+	sp<MemoryHeapIon> ion_heap;
+	uint32_t phys_addr, phys_size;
+	void *data;
+}sprd_camera_memory_t;
 
 typedef struct _SprdCamera2Info
 {
@@ -193,6 +209,15 @@ public:
     virtual int         getMetadataVendorTagOps(vendor_tag_query_ops_t **ops);
     virtual int         dump(int fd);
 	
+	enum camera_flush_mem_type_e {
+		CAMERA_FLUSH_RAW_HEAP,
+		CAMERA_FLUSH_RAW_HEAP_ALL,
+		CAMERA_FLUSH_PREVIEW_HEAP,
+		CAMERA_FLUSH_MAX
+	};
+
+	int 						 flush_buffer(camera_flush_mem_type_e  type, int index, void *v_addr, void *p_addr, int size);
+	sprd_camera_memory_t* 		 GetCachePmem(int buf_size, int num_bufs);
 private:
 
     typedef enum _metadata_mode {
@@ -256,24 +281,37 @@ private:
 	typedef struct _camera_req_info	{
 		camera_metadata_t * ori_req;
 		int32_t            requestID;//the flag of using at the same time
-		uint32_t           frmCnt;
+		int32_t           frmCnt;
 		
 		uint32_t	       cropRegion0;//for preview
 		uint32_t	       cropRegion1;
 		uint32_t	       cropRegion2;
 		uint32_t	       cropRegion3;
-		uint8_t 	     outputStreamMask;
+		double             gpsLat;
+		double             gpsLon;
+		double             gpsAlt;
+		int64_t            gpsTimestamp;
+		int64_t            sensorTimeStamp;
+		uint8_t            gpsProcMethod[32];
+		uint8_t 	       outputStreamMask;
 		uint8_t            isReprocessing;
 		int8_t             sceneMode;
+		int8_t             afMode;
 		
 		capture_intent     captureIntent;//android action
 		ctl_mode           ctlMode;
 		metadata_mode    metadataMode;
 	} camera_req_info;
+
+    typedef struct _cam_hal_ctl{
+        ae_state           aeStatus;//control 
+        int                precaptureTrigID;
+		takepicture_mode   pictureMode;
+    }cam_hal_ctl;
 	
     static const int kPreviewBufferCount = 8;
 	static const int kPreviewRotBufferCount = 4;
-
+    static const int kRawBufferCount        = 1;
 	
 class RequestQueueThread : public SprdBaseThread{
         SprdCameraHWInterface2 *mHardware;
@@ -291,22 +329,23 @@ class RequestQueueThread : public SprdBaseThread{
         bool        m_releasing;
     };
 
-    class PreviewStream{
+    class Stream : virtual public RefBase{
         SprdCameraHWInterface2 *mHardware;
     public:
-        PreviewStream(SprdCameraHWInterface2 *hw, uint8_t new_index):
+        Stream(SprdCameraHWInterface2 *hw, uint8_t new_index):
             mHardware(hw),
+			m_index(new_index),	
+			m_numRegisteredStream(1),
 			m_IsRecevStopMsg(false),
 			m_IsFirstFrm(false),
-			m_numRegisteredStream(1),
-            m_index(new_index) {
+            m_halStopMsg(false) {
             memset(&m_parameters, 0, sizeof(stream_parameters_t));
 			for (int i = 0 ; i < NUM_MAX_SUBSTREAM ; i++) {
 		        m_attachedSubStreams[i].streamId    = -1;
 		        m_attachedSubStreams[i].priority    = 0;
 		    }
 			}
-        ~PreviewStream();
+        ~Stream();
        
         
         status_t    attachSubStream(int stream_id, int priority);
@@ -318,6 +357,9 @@ class RequestQueueThread : public SprdBaseThread{
 		void        setRecevStopMsg(bool IsRecevMsg);
 
 		bool        getRecevStopMsg();
+		void        setHalStopMsg(bool IsStopMsg);
+
+		bool        getHalStopMsg();
 		
         uint8_t                         m_index;
     //private:
@@ -327,21 +369,30 @@ class RequestQueueThread : public SprdBaseThread{
 		List<int>                       m_bufQueue;
 		Mutex                           m_BufQLock;
 		bool                            m_IsRecevStopMsg;
-		bool                            m_IsFirstFrm;   
+		bool                            m_IsFirstFrm;
+		bool                            m_halStopMsg;//oem/hal stop msg  
      };
 
+
+	static int Callback_AllocCapturePmem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir);
+	static int Callback_FreeCapturePmem(void* handle);
+	
+    bool                 allocateCaptureMem(void);
+	int                 ConstructProduceReq(camera_metadata_t **request,bool sizeRequest);
+	void                freeCaptureMem();
     void                RequestQueueThreadFunc(SprdBaseThread * self);
    	void                SetReqProcessing(bool IsProc);
 	bool                GetReqProcessStatus();  
+    bool                GetStartPreviewAftPic();
+	void                SetStartPreviewAftPic(bool IsPicPreview);
 	void                Camera2GetSrvReqInfo( camera_req_info *srcreq, camera_metadata_t *orireq);
 	void                CameraConvertCropRegion(float **outPut, float sensorWidth, float sensorHeight, cropZoom *cropRegion);
 	status_t            Camera2RefreshSrvReq(camera_req_info *srcreq, camera_metadata_t *dstreq);
 	status_t            CamconstructDefaultRequest(SprdCamera2Info *camHal, int request_template,camera_metadata_t **request, bool sizeRequest);
     bool                isSupportedJpegResolution(SprdCamera2Info *camHal, int width, int height);
-
+    void                DisplayPictureImg(camera_frame_type *frame);
 	bool                isSupportedResolution(SprdCamera2Info *camHal, int width, int height);
-	int                 previewCBFrame(PreviewStream *stream, int32_t *srcBufVirt, int64_t frameTimeStamp);
-	int                 recordingFrame(PreviewStream *stream, int32_t *srcBufVirt, int64_t frameTimeStamp);
+	int                 displaySubStream(sp<Stream> stream, int32_t *srcBufVirt, int64_t frameTimeStamp, uint16_t subStream);
 	void                receivePreviewFrame(camera_frame_type *frame);
 	void                HandleStartPreview(camera_cb_type cb, int32_t parm4);
     void                HandleStartCamera(camera_cb_type cb,
@@ -369,22 +420,30 @@ class RequestQueueThread : public SprdBaseThread{
 	{
        return mCameraState.preview_state;
 	}
-
+	
+    inline Sprd_camera_state        getCaptureState()
+	{
+       return mCameraState.capture_state;
+	}
 	static void camera_cb(camera_cb_type cb,
             const void *client_data,
             camera_func_type func,
             int32_t parm4);
 	bool                            WaitForPreviewStart();
 	bool                            WaitForCameraStop();
+	bool                            WaitForCaptureStart();
 	bool                            WaitForPreviewStop();
 	void                  HandleStopCamera(camera_cb_type cb, int32_t parm4);
 	void                  HandleStopPreview(camera_cb_type cb, int32_t parm4);
-
+    void                  HandleCancelPicture(camera_cb_type cb,int32_t parm4);
+    void                  HandleTakePicture(camera_cb_type cb,int32_t parm4);
+	void                  HandleEncode(camera_cb_type cb,int32_t parm4);
+	
 	sp<RequestQueueThread>      m_RequestQueueThread;
 	
     substream_parameters_t  m_subStreams[STREAM_ID_LAST+1];
     
-    PreviewStream *m_previewStream;
+    sp<Stream> m_Stream[STREAM_ID_LAST];//parent stream
     
     SprdCamera2Info      *m_Camera2;
     camera2_request_queue_src_ops_t     *m_requestQueueOps;
@@ -393,19 +452,24 @@ class RequestQueueThread : public SprdBaseThread{
     void                                *m_callbackClient;
 
     camera2_device_t                    *m_halDevice;
-	camera_req_info                      m_staticReqInfo; 
+	camera_req_info                      m_staticReqInfo;
+	cam_hal_ctl                          m_camCtlInfo;
+	sprd_camera_memory_t            *mRawHeap;
+	uint32_t                        mRawHeapSize;
 	bool                               m_reqIsProcess;
+	bool                               m_IsPrvAftPic;
 	camera_metadata_t                   *m_halRefreshReq;
     static gralloc_module_t const*      m_grallocHal;
 
 	int32_t						   mPreviewHeapArray_phy[kPreviewBufferCount+kPreviewRotBufferCount+1];
 	int32_t						   mPreviewHeapArray_vir[kPreviewBufferCount+kPreviewRotBufferCount+1];
-	
+	sp<MemoryHeapIon>              mMiscHeapArray[MAX_MISCHEAP_NUM];
+	uint32_t                             mMiscHeapNum;
     int             				    m_CameraId;
     List<camera_metadata_t *>           m_ReqQueue;
 	Mutex                               m_requestMutex;
 	Mutex                           mStateLock;
-	Mutex                           mAFfModeTriggerLock;
+	mutable Mutex                   m_afTrigLock;
 	Condition                       mStateWait;
     volatile camera_state           mCameraState;
 };
