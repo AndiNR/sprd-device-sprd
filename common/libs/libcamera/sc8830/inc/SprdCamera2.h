@@ -25,6 +25,7 @@ namespace android {
 #include "SprdOEMCamera.h"
 
 int androidAfModeToDrvAfMode(camera_metadata_enum_android_control_af_mode_t androidAfMode, int8_t *convertDrvMode);
+int androidFlashModeToDrvFlashMode(camera_metadata_enum_android_flash_mode_t androidFlashMode, int8_t *convertDrvMode);
 
 int androidSceneModeToDrvMode(camera_metadata_enum_android_control_scene_mode_t androidScreneMode, int8_t *convertDrvMode);
 int androidParametTagToDrvParaTag(uint32_t androidParaTag, camera_parm_type *convertDrvTag);

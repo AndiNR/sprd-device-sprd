@@ -233,6 +233,15 @@ private:
 		CAPTURE_INTENT_VIDEO_SNAPSHOT,
 		CAPTURE_INTENT_ZERO_SHUTTER_LAG
 	}capture_intent;
+
+	typedef enum _focus_status {
+		FOCUS_STAT_INACTIVE = 0,
+		FOCUS_STAT_ACTIVE_SCAN,
+		FOCUS_STAT_FOCUS_LOCKED,
+		FOCUS_STAT_FOCUS_NOT_LOCKED,
+		FOCUS_STAT_PASSIVE_SCAN,
+		FOCUS_STAT_PASSIVE_LOCKED
+	}focus_status;
 	
 	typedef enum _ctl_mode {
 		CONTROL_NONE = 0,
@@ -271,6 +280,12 @@ private:
 		uint32_t crop_w;
 		uint32_t crop_h;
     	}cropZoom;
+
+	typedef struct _cam_size{
+        uint32_t width;
+		uint32_t height;
+    	}cam_size;
+	
 	typedef struct _camera_state	{
 		Sprd_camera_state 	camera_state;
 		Sprd_camera_state 	preview_state;
@@ -297,6 +312,7 @@ private:
 		uint8_t            isReprocessing;
 		int8_t             sceneMode;
 		int8_t             afMode;
+		int8_t             flashMode;
 		
 		capture_intent     captureIntent;//android action
 		ctl_mode           ctlMode;
@@ -306,6 +322,7 @@ private:
     typedef struct _cam_hal_ctl{
         ae_state           aeStatus;//control 
         int                precaptureTrigID;
+		int                afTrigID;
 		takepicture_mode   pictureMode;
     }cam_hal_ctl;
 	
@@ -395,9 +412,8 @@ class RequestQueueThread : public SprdBaseThread{
 	int                 displaySubStream(sp<Stream> stream, int32_t *srcBufVirt, int64_t frameTimeStamp, uint16_t subStream);
 	void                receivePreviewFrame(camera_frame_type *frame);
 	void                HandleStartPreview(camera_cb_type cb, int32_t parm4);
-    void                HandleStartCamera(camera_cb_type cb,
-								  		int32_t parm4);
-	
+    void                HandleStartCamera(camera_cb_type cb, int32_t parm4);
+	int                 coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror, cam_size *preview_size, cropZoom *preview_rect);
 	void                PushReqQ(camera_metadata_t *reqInfo);
 	int              GetReqQueueSize();
 
@@ -420,7 +436,12 @@ class RequestQueueThread : public SprdBaseThread{
 	{
        return mCameraState.preview_state;
 	}
-	
+#if 0
+	inline Sprd_camera_state        getFocusState()
+	{
+       return mCameraState.focus_state;
+	}
+#endif
     inline Sprd_camera_state        getCaptureState()
 	{
        return mCameraState.capture_state;
@@ -438,6 +459,8 @@ class RequestQueueThread : public SprdBaseThread{
     void                  HandleCancelPicture(camera_cb_type cb,int32_t parm4);
     void                  HandleTakePicture(camera_cb_type cb,int32_t parm4);
 	void                  HandleEncode(camera_cb_type cb,int32_t parm4);
+	void                  HandleFocus(camera_cb_type cb,
+								  int32_t parm4);
 	
 	sp<RequestQueueThread>      m_RequestQueueThread;
 	
@@ -454,6 +477,7 @@ class RequestQueueThread : public SprdBaseThread{
     camera2_device_t                    *m_halDevice;
 	camera_req_info                      m_staticReqInfo;
 	cam_hal_ctl                          m_camCtlInfo;
+	focus_status                         m_focusStat;
 	sprd_camera_memory_t            *mRawHeap;
 	uint32_t                        mRawHeapSize;
 	bool                               m_reqIsProcess;

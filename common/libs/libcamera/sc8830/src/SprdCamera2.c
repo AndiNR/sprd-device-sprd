@@ -61,6 +61,7 @@ int androidAfModeToDrvAfMode(camera_metadata_enum_android_control_af_mode_t andr
 {
    int ret = 0;
 
+   ALOGD("%s afMode=%d",__FUNCTION__,androidAfMode);
    switch(androidAfMode)
    {
       case ANDROID_CONTROL_AF_MODE_AUTO:
@@ -77,11 +78,11 @@ int androidAfModeToDrvAfMode(camera_metadata_enum_android_control_af_mode_t andr
 	  break;
 	  
 	  case ANDROID_CONTROL_AF_MODE_CONTINUOUS_VIDEO:
-      *convertDrvMode = CAMERA_FOCUS_MODE_INFINITY;
+      *convertDrvMode = CAMERA_FOCUS_MODE_AUTO;
 	  break;
 
       case ANDROID_CONTROL_AF_MODE_CONTINUOUS_PICTURE:
-      *convertDrvMode = CAMERA_FOCUS_MODE_INFINITY;
+      *convertDrvMode = CAMERA_FOCUS_MODE_AUTO;//CAMERA_FOCUS_MODE_INFINITY
 	  break;
 	  
 	  default:
@@ -91,6 +92,30 @@ int androidAfModeToDrvAfMode(camera_metadata_enum_android_control_af_mode_t andr
 }
 
 
+int androidFlashModeToDrvFlashMode(camera_metadata_enum_android_flash_mode_t androidFlashMode, int8_t *convertDrvMode)
+{
+   int ret = 0;
+
+   ALOGD("%s flashMode=%d",__FUNCTION__,androidFlashMode);
+   switch(androidFlashMode)
+   {
+      case ANDROID_FLASH_MODE_OFF:
+	  *convertDrvMode = CAMERA_FLASH_MODE_OFF;
+	  break;
+	  
+	  case ANDROID_FLASH_MODE_SINGLE:
+      *convertDrvMode = CAMERA_FLASH_MODE_ON;
+	  break;
+	  
+      case ANDROID_FLASH_MODE_TORCH:
+      *convertDrvMode = CAMERA_FLASH_MODE_TORCH; //OFF
+	  break;
+	  
+	  default:
+	  *convertDrvMode = CAMERA_FLASH_MODE_AUTO;	
+   }
+   return ret;
+}
 
 int androidParametTagToDrvParaTag(uint32_t androidParaTag, camera_parm_type *convertDrvTag)
 {
@@ -109,6 +134,10 @@ int androidParametTagToDrvParaTag(uint32_t androidParaTag, camera_parm_type *con
 
 	  case ANDROID_CONTROL_AF_MODE:
       *convertDrvTag = CAMERA_PARM_AF_MODE;
+	  break;
+
+	  case ANDROID_FLASH_MODE:
+      *convertDrvTag = CAMERA_PARM_FLASH;
 	  break;
 	  
 	  default:

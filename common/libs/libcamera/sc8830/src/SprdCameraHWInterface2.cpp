@@ -68,11 +68,11 @@ int SprdCameraHWInterface2::ConstructProduceReq(camera_metadata_t **request, boo
 
 	
 	/** android.request */
-    #if 0
-	static const uint8_t metadataMode1 = ANDROID_REQUEST_METADATA_MODE_NONE;
+    
+	static const uint8_t afStat = ANDROID_CONTROL_AF_STATE_INACTIVE;
 	
-	ADD_OR_SIZE(ANDROID_REQUEST_METADATA_MODE, &metadataMode1, 1);
-    #endif
+	ADD_OR_SIZE(ANDROID_CONTROL_AF_STATE, &afStat, 1);
+    
 	static const int32_t id1 = 0;
 	ADD_OR_SIZE(ANDROID_REQUEST_ID, &id1, 1);
 
@@ -109,6 +109,7 @@ SprdCameraHWInterface2::SprdCameraHWInterface2(int cameraId, camera2_device_t *d
             m_frameQueueOps(NULL),
             m_callbackClient(NULL),
             m_halDevice(dev),
+            m_focusStat(FOCUS_STAT_INACTIVE),
             mRawHeap(NULL),
             mRawHeapSize(0),
 	        m_reqIsProcess(false),
@@ -170,6 +171,7 @@ SprdCameraHWInterface2::SprdCameraHWInterface2(int cameraId, camera2_device_t *d
 	mCameraState.camera_state = SPRD_IDLE;
 	mCameraState.preview_state = SPRD_INIT;
     mCameraState.capture_state = SPRD_INIT;
+	//mCameraState.focus_state = SPRD_IDLE;
     m_RequestQueueThread->Start("RequestThread", PRIORITY_DEFAULT, 0);
     
     ALOGD("(%s): EXIT", __FUNCTION__);
@@ -361,8 +363,12 @@ int SprdCameraHWInterface2::getInProgressCount()
 {
 	uint8_t ProcNum = 0;
 	//dead lock problem
-	//Mutex::Autolock lock(m_requestMutex);
-        
+	Mutex::Autolock lock(m_requestMutex);
+
+	if(m_reqIsProcess)
+	   ProcNum++;
+
+	ProcNum += m_ReqQueue.size();
 	if(SPRD_WAITING_RAW == getCaptureState() || SPRD_WAITING_JPEG == getCaptureState())
 	   ProcNum++ ;
     return ProcNum;
@@ -936,9 +942,6 @@ void SprdCameraHWInterface2::freeCaptureMem()
 {
     uint32_t i;
 
-	if (0 == mRawHeap) {
-		ALOGD("LOG_TAG:don't need free capture memory.");
-	}
 	if(mRawHeap){
 		if(mRawHeap->ion_heap != NULL) {
 			mRawHeap->ion_heap.clear();
@@ -1594,6 +1597,36 @@ void SprdCameraHWInterface2::HandleStopCamera(camera_cb_type cb, int32_t parm4)
 	ALOGD("HandleStopCamera out, state = %s", getCameraStateStr(getCameraState()));
 }
 
+void SprdCameraHWInterface2::HandleFocus(camera_cb_type cb,
+								  int32_t parm4)
+{
+    Mutex::Autolock lock(m_afTrigLock);
+
+	switch (cb) {
+	
+	case CAMERA_EXIT_CB_DONE:
+		ALOGD("camera cb: autofocus mNotify_cb start.");
+		m_focusStat = FOCUS_STAT_FOCUS_LOCKED;
+		m_notifyCb(CAMERA2_MSG_AUTOFOCUS, ANDROID_CONTROL_AF_STATE_FOCUSED_LOCKED, m_camCtlInfo.afTrigID, 0, m_callbackClient);
+		break;
+	case CAMERA_EXIT_CB_ABORT:
+		ALOGE("camera cb: autofocus aborted");
+		break;
+
+	case CAMERA_EXIT_CB_FAILED:
+		ALOGE("camera cb: autofocus failed");
+		m_focusStat = FOCUS_STAT_FOCUS_NOT_LOCKED;
+		m_notifyCb(CAMERA2_MSG_AUTOFOCUS, ANDROID_CONTROL_AF_STATE_NOT_FOCUSED_LOCKED, m_camCtlInfo.afTrigID, 0, m_callbackClient);
+		break;
+
+	default:
+		ALOGE("camera cb: unknown cb %d for CAMERA_FUNC_START_FOCUS!", cb);
+		m_focusStat = FOCUS_STAT_FOCUS_NOT_LOCKED;
+		m_notifyCb(CAMERA2_MSG_AUTOFOCUS, ANDROID_CONTROL_AF_STATE_NOT_FOCUSED_LOCKED, m_camCtlInfo.afTrigID, 0, m_callbackClient);
+		break;
+	}
+}
+
 void SprdCameraHWInterface2::camera_cb(camera_cb_type cb,
                                            const void *client_data,
                                            camera_func_type func,
@@ -1624,7 +1657,7 @@ void SprdCameraHWInterface2::camera_cb(camera_cb_type cb,
 	    break;
 
 	case CAMERA_FUNC_START_FOCUS:
-		//obj->HandleFocus(cb, parm4);
+		obj->HandleFocus(cb, parm4);
 		break;
 
 	case CAMERA_FUNC_START:
@@ -1816,19 +1849,62 @@ int SprdCameraHWInterface2::releaseReprocessStream(uint32_t stream_id)
 
 int SprdCameraHWInterface2::triggerAction(uint32_t trigger_id, int ext1, int ext2)
 {
-    ALOGD("DEBUG(%s): id(%x), %d, %d", __FUNCTION__, trigger_id, ext1, ext2);
-    
     Mutex::Autolock lock(m_afTrigLock);
-   
+	
+    ALOGD("DEBUG(%s): id(%x), %d, %d afmode=%d", __FUNCTION__, trigger_id, ext1, ext2, m_staticReqInfo.afMode);
+ 
     switch (trigger_id) {
     case CAMERA2_TRIGGER_AUTOFOCUS:
-        //OnAfTrigger(ext1);
-        m_notifyCb(CAMERA2_MSG_AUTOFOCUS, ANDROID_CONTROL_AF_STATE_NOT_FOCUSED_LOCKED, ext1, 0, m_callbackClient);
+		m_camCtlInfo.afTrigID = ext1;
+		#if 0
+		if(mCameraState.preview_state != SPRD_PREVIEW_IN_PROGRESS){
+			ALOGE("%s not in preview",__FUNCTION__);
+			return 1;
+		}
+		#endif
+		switch(m_staticReqInfo.afMode)
+		{
+		    case CAMERA_FOCUS_MODE_AUTO:
+			case CAMERA_FOCUS_MODE_MACRO:	
+			switch(m_focusStat)
+			{
+			   case FOCUS_STAT_INACTIVE:
+			   case FOCUS_STAT_FOCUS_LOCKED:
+			   case FOCUS_STAT_FOCUS_NOT_LOCKED:	
+               if(0 != camera_start_autofocus(CAMERA_AUTO_FOCUS, camera_cb, this)){
+					ALOGE("%s auto foucs fail.",__FUNCTION__);
+					return 1;
+				}
+			   m_focusStat = FOCUS_STAT_ACTIVE_SCAN;
+			   m_notifyCb(CAMERA2_MSG_AUTOFOCUS, ANDROID_CONTROL_AF_STATE_ACTIVE_SCAN, ext1, 0, m_callbackClient);
+	           //m_notifyCb(CAMERA2_MSG_AUTOFOCUS, ANDROID_CONTROL_AF_STATE_NOT_FOCUSED_LOCKED, ext1, 0, m_callbackClient);
+			   break;
+
+			   case FOCUS_STAT_ACTIVE_SCAN:
+			   
+			   break;
+			}	
+	        
+	        break;
+		}
         break;
 
     case CAMERA2_TRIGGER_CANCEL_AUTOFOCUS:
-        //OnAfCancel(ext1);
-        //m_notifyCb(CAMERA2_MSG_AUTOFOCUS, newState, m_afTriggerId, 0, m_callbackCookie);
+		m_camCtlInfo.afTrigID = ext1;
+        switch(m_staticReqInfo.afMode)
+		{
+		    case CAMERA_FOCUS_MODE_AUTO:
+			case CAMERA_FOCUS_MODE_MACRO:
+			if(m_focusStat == FOCUS_STAT_ACTIVE_SCAN){
+
+                if(camera_cancel_autofocus())
+				   ALOGE("%s cancel focus fail",__FUNCTION__);	
+			}
+            m_focusStat = FOCUS_STAT_INACTIVE;
+			m_notifyCb(CAMERA2_MSG_AUTOFOCUS, ANDROID_CONTROL_AF_STATE_INACTIVE, ext1, 0, m_callbackClient);
+			
+	        break;
+		}
         break;
 	
     case CAMERA2_TRIGGER_PRECAPTURE_METERING:
@@ -2021,7 +2097,17 @@ status_t SprdCameraHWInterface2::Camera2RefreshSrvReq(camera_req_info *srcreq, c
 		return BAD_VALUE;
 	}
 	ALOGD("%s befset reqid=%d",__FUNCTION__,srcreq->requestID);
-	
+    {
+		Mutex::Autolock lock(m_afTrigLock);
+		uint8_t afStat = (uint8_t)m_focusStat;
+			
+		res = find_camera_metadata_entry(dstreq, ANDROID_CONTROL_AF_STATE, &entry);
+	    if (res == NAME_NOT_FOUND) {
+	        ALOGE("%s not found!",__FUNCTION__);
+	    } else if (res == OK) {
+	        res = update_camera_metadata_entry(dstreq,entry.index, &afStat, 1, NULL);
+	    }
+	}
     res = find_camera_metadata_entry(dstreq, ANDROID_REQUEST_ID, &entry);
     if (res == NAME_NOT_FOUND) {
         ALOGE("%s not found!",__FUNCTION__);
@@ -2035,14 +2121,7 @@ status_t SprdCameraHWInterface2::Camera2RefreshSrvReq(camera_req_info *srcreq, c
     } else if (res == OK) {
         res = update_camera_metadata_entry(dstreq,entry.index, &(srcreq->sensorTimeStamp), 1, NULL);
     }
-	#if 0
-	res = find_camera_metadata_entry(dstreq, ANDROID_REQUEST_METADATA_MODE, &entry);
-    if (res == NAME_NOT_FOUND) {
-        ALOGE("%s not found!",__FUNCTION__);
-    } else if (res == OK) {
-        res = update_camera_metadata_entry(dstreq,entry.index, &(srcreq->metadataMode), 1, NULL);
-    }
-	#endif
+	
 	res = find_camera_metadata_entry(dstreq, ANDROID_REQUEST_FRAME_COUNT, &entry);
     if (res == NAME_NOT_FOUND) {
         ALOGE("%s not found!",__FUNCTION__);
@@ -2060,18 +2139,117 @@ status_t SprdCameraHWInterface2::Camera2RefreshSrvReq(camera_req_info *srcreq, c
 	        res = update_camera_metadata_entry(dstreq,entry.index, &capintent, 1, NULL);//note type of data
 	    }
 	}
-#if 0
-	//for test
-    res = find_camera_metadata_entry(dstreq,
-            ANDROID_REQUEST_ID,
-            &requestId);//get preview req id
-    if (res == OK) {
-        ALOGD("%s reqid=%d",__FUNCTION__,requestId.data.i32[0]);
-    }
-#endif
 	
 	return res;
 }
+
+int SprdCameraHWInterface2::coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror, cam_size *preview_size, cropZoom *preview_rect)
+{
+	int i;
+	int x1,x2,y1,y2;
+	int temp;
+	int recHalfWidth;
+	int recHalfHeight;
+	int centre_x;
+	int centre_y;
+	int ret = 0;
+	int width = preview_size->width;
+	int height = preview_size->height;
+
+	ALOGD("coordinate_convert: mPreviewWidth=%d, mPreviewHeight=%d, arr_size=%d, angle=%d, is_mirror=%d \n",
+	width, height, arr_size, angle, is_mirror);
+
+	for(i=0;i<arr_size*2;i++) {
+		x1 = rect_arr[i*2];
+		y1 = rect_arr[i*2+1];
+
+		if(is_mirror)
+			x1 = -x1;
+	}
+
+	for(i=0;i<arr_size;i++)
+	{
+		// (x1, y1, x2, y2)
+		// if x1 > x2, (x2, y1, x1, y2)
+		if(rect_arr[i*4] > rect_arr[i*4+2])
+		{
+			temp					= rect_arr[i*4];
+			rect_arr[i*4]		= rect_arr[i*4+2];
+			rect_arr[i*4+2] 	= temp;
+		}
+
+		if(rect_arr[i*4+1] > rect_arr[i*4+3])
+		{
+			temp					= rect_arr[i*4+1];
+			rect_arr[i*4+1] 	  = rect_arr[i*4+3];
+			rect_arr[i*4+3] 	= temp;
+		}
+	}
+
+	for(i=0; i<arr_size*4; i+=2) {
+		if(rect_arr[i] < 0) {
+			rect_arr[i]= 0;
+		}
+		if(rect_arr[i] > width) {
+			rect_arr[i] = width;
+		}
+
+		if(rect_arr[i+1] < 0) {
+			rect_arr[i+1]= 0;
+		}
+
+		if(rect_arr[i+1] > height) {
+			rect_arr[i+1] = height;
+		}
+	}
+
+	int preview_x = preview_rect->crop_x;
+	int preview_y = preview_rect->crop_y;
+	int preview_w = preview_rect->crop_w;
+	int preview_h = preview_rect->crop_h;
+
+	for(i=0;i<arr_size;i++)
+	{
+		int point_x, point_y;
+
+		ALOGD("coordinate_convert %d: org: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
+
+		// only for angle 90/270
+		// calculate the centre point
+		recHalfHeight	= (rect_arr[i*4+2] - rect_arr[i*4])/2;
+		recHalfWidth	= (rect_arr[i*4+3] - rect_arr[i*4+1])/2;
+		centre_y		= rect_arr[i*4+2] - recHalfHeight;
+		centre_x		= rect_arr[i*4+3] - recHalfWidth;
+
+        recHalfWidth	= (rect_arr[i*4+2] - rect_arr[i*4])/2;
+		recHalfHeight	= (rect_arr[i*4+3] - rect_arr[i*4+1])/2;
+		centre_y		= rect_arr[i*4+3] - recHalfHeight;
+		centre_x		= rect_arr[i*4+2] - recHalfWidth;		
+		//LOGV("CAMERA HAL:coordinate_convert %d: center point: x=%d, y=%d\n", i, centre_x, centre_y);
+
+		// map to sensor coordinate
+		//centre_y		= height - centre_y;
+		//LOGV("coordinate_convert %d: sensor centre pointer: x=%d, y=%d, half_w=%d, half_h=%d.\n",
+				//i, centre_x, centre_y, recHalfWidth, recHalfHeight);
+
+		point_x = preview_x + centre_x*preview_w/width;
+		point_y = preview_y + centre_y*preview_h/height;
+		//LOGV("coordinate_convert %d: out point: x=%d, y=%d\n", i, point_x, point_y);
+
+		rect_arr[i*4]		= point_x - recHalfWidth;
+		rect_arr[i*4+1] 	= point_y - recHalfHeight;
+		rect_arr[i*4+2] 	= point_x + recHalfWidth;
+		rect_arr[i*4+3] 	= point_y + recHalfHeight;
+
+		ALOGD("coordinate_convert %d: final: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
+		
+		rect_arr[i*4+2] = (((rect_arr[i*4+2] - rect_arr[i*4])+ 3)>> 2) << 2;
+		rect_arr[i*4+3] = (((rect_arr[i*4+3] - rect_arr[i*4+1])+ 3)>> 2) << 2;
+	}
+
+	return ret;
+}
+
 
 void SprdCameraHWInterface2::CameraConvertCropRegion(float **outPut, float sensorWidth, float sensorHeight, cropZoom *cropRegion)
 {
@@ -2138,6 +2316,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
     uint32_t index = 0;
 	size_t i = 0;
 	bool IsSetPara = true;
+	stream_parameters_t     *targetStreamParms = NULL;
 	
 	Mutex::Autolock lock(m_requestMutex);
 	
@@ -2147,7 +2326,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	    ALOGD("DEBUG(%s): Err para is NULL!", __FUNCTION__);
         return;
 	}
-	#define ASIGNIFNOTEQUAL(x, y, flag) if((x) != (y))\
+	#define ASIGNIFNOTEQUAL(x, y, flag) if((x) != (y) || ((x) == (y) && (x) == 0))\
 		                            {\
 			                            (x) = (y);\
 			                            if((void *)flag != NULL)\
@@ -2158,6 +2337,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 
 	m_reqIsProcess = true;
 	srcreq->ori_req = orireq;
+	
     reqCount = (uint32_t)get_camera_metadata_entry_count(srcreq->ori_req);
 	//first get metadata struct
     for (; index < reqCount ; index++) {
@@ -2263,14 +2443,50 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
                 break;
 
             case ANDROID_CONTROL_AF_REGIONS:
-				#if 0
-				if(srcreq->afRegion[0] != entry.data.i32[0] || srcreq->afRegion[1] != entry.data.i32[1] || srcreq->afRegion[2] != entry.data.i32[2] || \
-					srcreq->afRegion[3] != entry.data.i32[3] || srcreq->afRegion[4] != entry.data.i32[4]){
-	                for (i=0 ; i < entry.count ; i++)
-	                    srcreq->afRegion[i] = entry.data.i32[i];
+				{
+					int area[5 + 1] = {0};//single point
+					#if 0
+					cropZoom rect = {0};				
+					cam_size previewSize = {0};
+					int is_mirror = (m_CameraId == 1) ? 1 : 0;
+
+		            if(m_Stream[STREAM_ID_PREVIEW - 1] != NULL)
+	                    targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters); 
+					previewSize.width = targetStreamParms->width;
+					previewSize.height = targetStreamParms->height;
+					res = camera_get_preview_rect((int *)(&rect.crop_x), (int *)(&rect.crop_y), (int *)(&rect.crop_w), (int *)(&rect.crop_h));
+					if(res)
+					   ALOGE("%s get preview rect err",__FUNCTION__);
+					#endif
+					if(entry.count == 5){
+						area[0] = 1;
+		                for (i=1 ; i < entry.count; i++)
+		                    area[i] = entry.data.i32[i - 1];
+					}
+					ALOGD("DEBUG(%s): ANDROID_CONTROL_AF_REGIONS (%d %d %d %d %d cnt=%d)",  __FUNCTION__, area[1],area[2],area[3],area[4],entry.data.i32[4],entry.count);
+					//coordinate_convert(&area[1],1,0,is_mirror, &previewSize, &rect);
+					area[3]= area[3] - area[1];
+					area[4]= area[4] - area[2];
+					SET_PARM(CAMERA_PARM_FOCUS_RECT, (int32_t)area);
+            	}
+                break;
+
+			case ANDROID_FLASH_MODE:
+				{
+					int8_t FlashMode = 0; 
+
+					res = androidFlashModeToDrvFlashMode((camera_metadata_enum_android_flash_mode_t)entry.data.u8[0], &FlashMode);
+					ALOGD("DEBUG(%s): flash mode (%d) ret=%d",  __FUNCTION__,FlashMode,res);
+					res = androidParametTagToDrvParaTag(ANDROID_FLASH_MODE, &drvTag);
+					if(res)
+					{
+						ALOGE("ERR(%s): drv not support flash mode",  __FUNCTION__);
+					}
+					if(m_CameraId == 0)
+					{
+					    ASIGNIFNOTEQUAL(srcreq->flashMode, FlashMode, drvTag)
+					}
 				}
-				#endif
-				ALOGD("DEBUG(%s): ANDROID_CONTROL_AF_REGIONS (%d %d %d %d %d cnt=%d)",  __FUNCTION__, entry.data.i32[0],entry.data.i32[1],entry.data.i32[2],entry.data.i32[3],entry.data.i32[4],entry.count);
                 break;
 				
             case ANDROID_REQUEST_ID:
@@ -2332,7 +2548,8 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 		    (srcreq->captureIntent == CAPTURE_INTENT_VIDEO_RECORD || srcreq->captureIntent == CAPTURE_INTENT_PREVIEW))//diff req
 	{
 	    
-	    stream_parameters_t     *targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
+	    if(m_Stream[STREAM_ID_PREVIEW - 1] != NULL)
+	        targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
 
         if(m_Stream[STREAM_ID_PREVIEW - 1]->getHalStopMsg())//normal picture
 		{
@@ -3491,7 +3708,7 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
     ADD_OR_SIZE(ANDROID_QUIRKS_USE_ZSL_FORMAT,
             &quirkUseZslFormat, 1);
 
-    static const uint8_t quirkMeteringCropRegion = 1;
+    static const uint8_t quirkMeteringCropRegion = 0;
     ADD_OR_SIZE(ANDROID_QUIRKS_METERING_CROP_REGION,
             &quirkMeteringCropRegion, 1);
 
