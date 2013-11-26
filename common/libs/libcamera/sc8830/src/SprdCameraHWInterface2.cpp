@@ -935,7 +935,11 @@ allocate_capture_mem_failed:
 void SprdCameraHWInterface2::freeCaptureMem()
 {
     uint32_t i;
-	if(!mRawHeap){
+
+	if (0 == mRawHeap) {
+		ALOGD("LOG_TAG:don't need free capture memory.");
+	}
+	if(mRawHeap){
 		if(mRawHeap->ion_heap != NULL) {
 			mRawHeap->ion_heap.clear();
 			//delete mRawHeap->ion_heap;
