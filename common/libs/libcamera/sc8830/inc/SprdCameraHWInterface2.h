@@ -296,8 +296,8 @@ private:
 	typedef struct _camera_req_info	{
 		camera_metadata_t * ori_req;
 		int32_t            requestID;//the flag of using at the same time
-		int32_t           frmCnt;
-		
+		int32_t            frmCnt;
+		int32_t            aeCompensation;
 		uint32_t	       cropRegion0;//for preview
 		uint32_t	       cropRegion1;
 		uint32_t	       cropRegion2;
@@ -313,10 +313,14 @@ private:
 		int8_t             sceneMode;
 		int8_t             afMode;
 		int8_t             flashMode;
+		int8_t             aeFlashMode;
+		int8_t             awbMode;
 		
 		capture_intent     captureIntent;//android action
 		ctl_mode           ctlMode;
 		metadata_mode    metadataMode;
+		ae_lock            aeLock;
+		awb_lock            awbLock;
 	} camera_req_info;
 
     typedef struct _cam_hal_ctl{

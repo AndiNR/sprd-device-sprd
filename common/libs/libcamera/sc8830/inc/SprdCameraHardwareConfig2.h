@@ -43,6 +43,21 @@ enum {
 	CAMERA_FLASH_MODE_MAX
 };
 
+enum {
+	CAMERA_WB_AUTO = 0,
+	CAMERA_WB_INCANDESCENT,
+	CAMERA_WB_FLUORESCENT = 4, //id 2 and 3 not used
+	CAMERA_WB_DAYLIGHT,
+	CAMERA_WB_CLOUDY_DAYLIGHT,
+	CAMERA_WB_MAX
+};
+
+enum {
+	CAMERA_AE_FRAME_AVG = 0,
+	CAMERA_AE_CENTER_WEIGHTED,
+	CAMERA_AE_SPOT_METERING,
+	CAMERA_AE_MODE_MAX
+};
 
 typedef enum _ae_state {
 	AE_STATE_INACTIVE = 1,
@@ -52,5 +67,16 @@ typedef enum _ae_state {
 	AE_STATE_FLASH_REQUIRED,
 	AE_STATE_PRECAPTURE
 }ae_state;
+
+typedef enum _awb_lock {
+	AWB_LOCK_OFF,
+	AWB_LOCK_ON
+}awb_lock;
+
+typedef enum _ae_lock {
+	AE_LOCK_OFF,
+	AE_LOCK_ON
+}ae_lock;
+
 
 #endif //_SPRD_CAMERA_HARDWARE_CONFIG_H_

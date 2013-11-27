@@ -657,7 +657,7 @@ status_t SprdCameraHWInterface2::CamconstructDefaultRequest(
     static const uint8_t effectMode = ANDROID_CONTROL_EFFECT_MODE_OFF;
     ADD_OR_SIZE(ANDROID_CONTROL_EFFECT_MODE, &effectMode, 1);
 
-    static const uint8_t sceneMode = ANDROID_CONTROL_SCENE_MODE_UNSUPPORTED;
+    static const uint8_t sceneMode = ANDROID_CONTROL_SCENE_MODE_ACTION;//ANDROID_CONTROL_SCENE_MODE_UNSUPPORTED
     ADD_OR_SIZE(ANDROID_CONTROL_SCENE_MODE, &sceneMode, 1);
 
     static const uint8_t aeMode = ANDROID_CONTROL_AE_MODE_ON;
@@ -1909,7 +1909,6 @@ int SprdCameraHWInterface2::triggerAction(uint32_t trigger_id, int ext1, int ext
 	
     case CAMERA2_TRIGGER_PRECAPTURE_METERING:
 		//notify start
-        //m_camCtlInfo.aeStatus = AE_STATE_SEARCHING;
 		m_camCtlInfo.precaptureTrigID = ext1;
 		m_notifyCb(CAMERA2_MSG_AUTOEXPOSURE,
                         ANDROID_CONTROL_AE_STATE_PRECAPTURE,
@@ -1917,8 +1916,7 @@ int SprdCameraHWInterface2::triggerAction(uint32_t trigger_id, int ext1, int ext
         m_notifyCb(CAMERA2_MSG_AUTOWB,
                     ANDROID_CONTROL_AWB_STATE_CONVERGED,
                     m_camCtlInfo.precaptureTrigID, 0, m_callbackClient);
-
-		//notify end isp dq
+		//to do oem add callback
 		m_notifyCb(CAMERA2_MSG_AUTOEXPOSURE,
                         ANDROID_CONTROL_AE_STATE_CONVERGED,
                         m_camCtlInfo.precaptureTrigID, 0, m_callbackClient);
@@ -1926,8 +1924,6 @@ int SprdCameraHWInterface2::triggerAction(uint32_t trigger_id, int ext1, int ext
         m_notifyCb(CAMERA2_MSG_AUTOWB,
                         ANDROID_CONTROL_AWB_STATE_CONVERGED,
                         m_camCtlInfo.precaptureTrigID, 0, m_callbackClient);
-        m_camCtlInfo.precaptureTrigID = 0;
-		//here hal stop preview first(framework wait for 200ms)
         break;
     default:
         break;
@@ -2471,22 +2467,95 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
             	}
                 break;
 
+            case ANDROID_CONTROL_AE_REGIONS:
+				{
+					int area[5 + 1] = {0};//single point
+					
+					if(entry.count == 5){
+						area[0] = 1;
+		                for (i=1 ; i < entry.count; i++)
+		                    area[i] = entry.data.i32[i - 1];
+					}
+					ALOGD("DEBUG(%s): ANDROID_CONTROL_AE_REGIONS (%d %d %d %d %d cnt=%d)",  __FUNCTION__, area[1],area[2],area[3],area[4],entry.data.i32[4],entry.count);
+					area[3]= area[3] - area[1];
+					area[4]= area[4] - area[2];
+					SET_PARM(CAMERA_PARM_EXPOSURE_METERING, (int32_t)area);
+            	}
+                break;
+				
 			case ANDROID_FLASH_MODE:
 				{
 					int8_t FlashMode = 0; 
 
 					res = androidFlashModeToDrvFlashMode((camera_metadata_enum_android_flash_mode_t)entry.data.u8[0], &FlashMode);
 					ALOGD("DEBUG(%s): flash mode (%d) ret=%d",  __FUNCTION__,FlashMode,res);
-					res = androidParametTagToDrvParaTag(ANDROID_FLASH_MODE, &drvTag);
+					if(CAMERA_FLASH_MODE_TORCH == FlashMode){
+						res = androidParametTagToDrvParaTag(ANDROID_FLASH_MODE, &drvTag);
+						if(res)
+						{
+							ALOGE("ERR(%s): drv not support flash mode",  __FUNCTION__);
+						}
+						if(m_CameraId == 0)
+						{
+						    ASIGNIFNOTEQUAL(srcreq->flashMode, FlashMode, drvTag)
+						}
+					}
+				}
+                break;
+
+			case ANDROID_CONTROL_AE_MODE://framework use it control flash mode
+                {
+					int8_t FlashMode = 0; 
+
+					res = androidAeModeToDrvAeMode((camera_metadata_enum_android_control_ae_mode_t)entry.data.u8[0], &FlashMode);
+					ALOGD("DEBUG(%s): ae flash mode (%d) ret=%d",  __FUNCTION__,FlashMode,res);
+					res = androidParametTagToDrvParaTag(ANDROID_CONTROL_AE_MODE, &drvTag);
 					if(res)
 					{
-						ALOGE("ERR(%s): drv not support flash mode",  __FUNCTION__);
+						ALOGE("ERR(%s): drv not support ae flash mode",  __FUNCTION__);
 					}
 					if(m_CameraId == 0)
 					{
-					    ASIGNIFNOTEQUAL(srcreq->flashMode, FlashMode, drvTag)
+					    ASIGNIFNOTEQUAL(srcreq->aeFlashMode, FlashMode, drvTag)
 					}
+					//SET_PARM(CAMERA_PARM_AUTO_EXPOSURE_MODE, CAMERA_AE_FRAME_AVG);
 				}
+
+                break;	
+
+			case ANDROID_CONTROL_AE_LOCK:
+				ASIGNIFNOTEQUAL(srcreq->aeLock, (ae_lock)entry.data.u8[0],(camera_parm_type)NULL)
+                
+                break;
+
+			case ANDROID_CONTROL_AE_EXPOSURE_COMPENSATION:
+				res = androidParametTagToDrvParaTag(ANDROID_CONTROL_AE_EXPOSURE_COMPENSATION, &drvTag);
+				if(res)
+				{
+					ALOGE("ERR(%s): drv not support ae flash mode",  __FUNCTION__);
+				}
+				ASIGNIFNOTEQUAL(srcreq->aeCompensation, entry.data.i32[0] + 3, drvTag)
+                ALOGD("DEBUG(%s): ANDROID_CONTROL_AE_EXPOSURE_COMPENSATION (%d)",  __FUNCTION__, entry.data.i32[0]);
+                break;
+
+            case ANDROID_CONTROL_AWB_MODE:
+                {
+					int8_t AwbMode = 0; 
+
+					res = androidAwbModeToDrvAwbMode((camera_metadata_enum_android_control_awb_mode_t)entry.data.u8[0], &AwbMode);
+					ALOGD("DEBUG(%s): ae flash mode (%d) ret=%d",  __FUNCTION__,AwbMode,res);
+					res = androidParametTagToDrvParaTag(ANDROID_CONTROL_AWB_MODE, &drvTag);
+					if(res)
+					{
+						ALOGE("ERR(%s): drv not support ae flash mode",  __FUNCTION__);
+					}
+					ASIGNIFNOTEQUAL(srcreq->awbMode, AwbMode, drvTag)	
+				}
+				
+                break;
+
+            case ANDROID_CONTROL_AWB_LOCK:
+                ASIGNIFNOTEQUAL(srcreq->awbLock, (awb_lock)entry.data.u8[0],(camera_parm_type)NULL)
                 break;
 				
             case ANDROID_REQUEST_ID:
@@ -2666,7 +2735,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 				freeCaptureMem();
 				return ;
 			}
-			
+			SET_PARM(CAMERA_PARM_SHOT_NUM, 1);
 			setCameraState(SPRD_INTERNAL_RAW_REQUESTED, STATE_CAPTURE);
 			if(CAMERA_SUCCESS != camera_take_picture(camera_cb, this, CAMERA_NORMAL_MODE))
 		    {

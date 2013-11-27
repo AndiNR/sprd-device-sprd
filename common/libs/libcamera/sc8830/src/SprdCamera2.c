@@ -29,6 +29,7 @@ int androidSceneModeToDrvMode(camera_metadata_enum_android_control_scene_mode_t 
 {
    int ret = 0;
 
+   ALOGD("%s sceneMode=%d",__FUNCTION__,androidScreneMode);
    switch(androidScreneMode)
    {
       case ANDROID_CONTROL_SCENE_MODE_UNSUPPORTED:
@@ -99,6 +100,7 @@ int androidFlashModeToDrvFlashMode(camera_metadata_enum_android_flash_mode_t and
    ALOGD("%s flashMode=%d",__FUNCTION__,androidFlashMode);
    switch(androidFlashMode)
    {
+      #if 0
       case ANDROID_FLASH_MODE_OFF:
 	  *convertDrvMode = CAMERA_FLASH_MODE_OFF;
 	  break;
@@ -106,16 +108,84 @@ int androidFlashModeToDrvFlashMode(camera_metadata_enum_android_flash_mode_t and
 	  case ANDROID_FLASH_MODE_SINGLE:
       *convertDrvMode = CAMERA_FLASH_MODE_ON;
 	  break;
-	  
+	  #endif
       case ANDROID_FLASH_MODE_TORCH:
       *convertDrvMode = CAMERA_FLASH_MODE_TORCH; //OFF
 	  break;
 	  
-	  default:
-	  *convertDrvMode = CAMERA_FLASH_MODE_AUTO;	
+	  //default:
+	  //*convertDrvMode = CAMERA_FLASH_MODE_AUTO;	
    }
    return ret;
 }
+
+int androidAeModeToDrvAeMode(camera_metadata_enum_android_control_ae_mode_t androidAeMode, int8_t *convertDrvMode)
+{
+   int ret = 0;
+
+   ALOGD("%s aeMode=%d",__FUNCTION__,androidAeMode);
+   switch(androidAeMode)
+   {
+      case ANDROID_CONTROL_AE_MODE_OFF:
+	  *convertDrvMode = -1;//para err
+	  ret = -1;
+	  break;
+	  
+	  case ANDROID_CONTROL_AE_MODE_ON:
+      *convertDrvMode = CAMERA_FLASH_MODE_OFF;
+	  break;
+	  
+      case ANDROID_CONTROL_AE_MODE_ON_AUTO_FLASH:
+      *convertDrvMode = CAMERA_FLASH_MODE_AUTO; 
+	  break;
+
+	  case ANDROID_CONTROL_AE_MODE_ON_ALWAYS_FLASH:
+      *convertDrvMode = CAMERA_FLASH_MODE_ON;
+	  break;
+	  
+	  default:
+	  *convertDrvMode = CAMERA_FLASH_MODE_OFF;	
+   }
+   return ret;
+}
+
+int androidAwbModeToDrvAwbMode(camera_metadata_enum_android_control_awb_mode_t androidAwbMode, int8_t *convertDrvMode)
+{
+   int ret = 0;
+
+   ALOGD("%s awbMode=%d",__FUNCTION__,androidAwbMode);
+   switch(androidAwbMode)
+   {
+      case ANDROID_CONTROL_AWB_MODE_OFF:
+	  *convertDrvMode = CAMERA_WB_MAX;
+	  break;
+	  
+	  case ANDROID_CONTROL_AWB_MODE_AUTO:
+      *convertDrvMode = CAMERA_WB_AUTO;
+	  break;
+	  
+      case ANDROID_CONTROL_AWB_MODE_INCANDESCENT:
+      *convertDrvMode = CAMERA_WB_INCANDESCENT; //OFF
+	  break;
+
+	  case ANDROID_CONTROL_AWB_MODE_FLUORESCENT:
+      *convertDrvMode = CAMERA_WB_FLUORESCENT; //OFF
+	  break;
+
+	  case ANDROID_CONTROL_AWB_MODE_DAYLIGHT:
+      *convertDrvMode = CAMERA_WB_DAYLIGHT; //OFF
+	  break;
+
+	  case ANDROID_CONTROL_AWB_MODE_CLOUDY_DAYLIGHT:
+      *convertDrvMode = CAMERA_WB_CLOUDY_DAYLIGHT; //OFF
+	  break;
+	  
+	  default:
+	  *convertDrvMode = CAMERA_WB_AUTO;	
+   }
+   return ret;
+}
+
 
 int androidParametTagToDrvParaTag(uint32_t androidParaTag, camera_parm_type *convertDrvTag)
 {
@@ -124,18 +194,27 @@ int androidParametTagToDrvParaTag(uint32_t androidParaTag, camera_parm_type *con
    switch(androidParaTag)
    {
       case ANDROID_CONTROL_SCENE_MODE:
-	  *convertDrvTag = CAMERA_PARM_SCENE_MODE;	
-      
+	  *convertDrvTag = CAMERA_PARM_SCENE_MODE;	 
+	  break;
+
+	  case ANDROID_CONTROL_AWB_MODE:
+	  *convertDrvTag = CAMERA_PARM_WB;	 
 	  break;
 	  
 	  case ANDROID_SCALER_CROP_REGION:
       *convertDrvTag = CAMERA_PARM_ZOOM_RECT;
 	  break;
 
+      
+	  case ANDROID_CONTROL_AE_EXPOSURE_COMPENSATION:
+	  *convertDrvTag = CAMERA_PARM_EXPOSURE_COMPENSATION;
+	  break;
+
 	  case ANDROID_CONTROL_AF_MODE:
       *convertDrvTag = CAMERA_PARM_AF_MODE;
 	  break;
-
+	  
+      case ANDROID_CONTROL_AE_MODE://to do ae and flash
 	  case ANDROID_FLASH_MODE:
       *convertDrvTag = CAMERA_PARM_FLASH;
 	  break;
