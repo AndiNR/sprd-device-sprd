@@ -40,18 +40,14 @@ int androidParametTagToDrvParaTag(uint32_t androidParaTag, camera_parm_type *con
 #define CAMERA2_MAX_FACES 10
 
 
+
 const int32_t jpegResolutionSensorBack[] =
-{
-    2560, 1920,
-    2560, 1440,
-    2160, 1440,
+{ 
+    2592, 1944,
     2048, 1536,
     1600, 1200,
-    1280, 1024,
     1280,  960,
-    1152,  864,
      640,  480,
-     320,  240,
 };
 
 const int32_t jpegResolutionSensorFront[] =

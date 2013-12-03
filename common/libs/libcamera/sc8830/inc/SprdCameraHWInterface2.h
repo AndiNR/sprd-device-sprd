@@ -76,6 +76,8 @@ namespace android {
 
 #define SIGNAL_REQ_THREAD_REQ_DONE          (SIGNAL_THREAD_COMMON_LAST<<3)
 
+#define SIGNAL_REQ_THREAD_PRECAPTURE_METERING_DONE          (SIGNAL_THREAD_COMMON_LAST<<4)
+
 #define SIGNAL_THREAD_RELEASE                   (SIGNAL_THREAD_COMMON_LAST<<8)
 
 #define SIGNAL_STREAM_REPROCESSING_START        (SIGNAL_THREAD_COMMON_LAST<<14)
@@ -99,7 +101,9 @@ namespace android {
 #define ON_HAL_INIT         (1 << 4)//service deq 6 bufs firstly
 
 #define MAX_MISCHEAP_NUM 50 //1024
-
+#define SENSOR_ORIG_WIDTH 1632
+#define SENSOR_ORIG_HEIGHT 1224
+#define ALIGN_ZOOM_CROP_BITS (~0x03)
 
 typedef struct stream_parameters {
             uint32_t                width;
@@ -274,12 +278,6 @@ private:
 		STATE_CAPTURE,
 		STATE_FOCUS,
 	};
-    typedef struct _cropZoom{
-        uint32_t crop_x;
-		uint32_t crop_y;
-		uint32_t crop_w;
-		uint32_t crop_h;
-    	}cropZoom;
 
 	typedef struct _cam_size{
         uint32_t width;
@@ -307,6 +305,7 @@ private:
 		double             gpsAlt;
 		int64_t            gpsTimestamp;
 		int64_t            sensorTimeStamp;
+		cam_size           thumbnailJpgSize;
 		uint8_t            gpsProcMethod[32];
 		uint8_t 	       outputStreamMask;
 		uint8_t            isReprocessing;
@@ -315,6 +314,7 @@ private:
 		int8_t             flashMode;
 		int8_t             aeFlashMode;
 		int8_t             awbMode;
+		int8_t             isCropSet;
 		
 		capture_intent     captureIntent;//android action
 		ctl_mode           ctlMode;
@@ -389,6 +389,7 @@ class RequestQueueThread : public SprdBaseThread{
 		int                             m_numRegisteredStream;
 		List<int>                       m_bufQueue;
 		Mutex                           m_BufQLock;
+		Mutex                           m_stateLock;
 		bool                            m_IsRecevStopMsg;
 		bool                            m_IsFirstFrm;
 		bool                            m_halStopMsg;//oem/hal stop msg  
@@ -403,11 +404,13 @@ class RequestQueueThread : public SprdBaseThread{
 	void                freeCaptureMem();
     void                RequestQueueThreadFunc(SprdBaseThread * self);
    	void                SetReqProcessing(bool IsProc);
-	bool                GetReqProcessStatus();  
+	bool                GetReqProcessStatus(); 
+	bool                GetRecStopMsg();
+	void                SetRecStopMsg(bool recStop);
     bool                GetStartPreviewAftPic();
 	void                SetStartPreviewAftPic(bool IsPicPreview);
 	void                Camera2GetSrvReqInfo( camera_req_info *srcreq, camera_metadata_t *orireq);
-	void                CameraConvertCropRegion(float **outPut, float sensorWidth, float sensorHeight, cropZoom *cropRegion);
+	void                CameraConvertCropRegion(uint32_t sensorWidth, uint32_t sensorHeight, cropZoom *cropRegion);
 	status_t            Camera2RefreshSrvReq(camera_req_info *srcreq, camera_metadata_t *dstreq);
 	status_t            CamconstructDefaultRequest(SprdCamera2Info *camHal, int request_template,camera_metadata_t **request, bool sizeRequest);
     bool                isSupportedJpegResolution(SprdCamera2Info *camHal, int width, int height);
@@ -486,6 +489,7 @@ class RequestQueueThread : public SprdBaseThread{
 	uint32_t                        mRawHeapSize;
 	bool                               m_reqIsProcess;
 	bool                               m_IsPrvAftPic;
+	bool                               m_recStopMsg;
 	camera_metadata_t                   *m_halRefreshReq;
     static gralloc_module_t const*      m_grallocHal;
 
@@ -496,6 +500,7 @@ class RequestQueueThread : public SprdBaseThread{
     int             				    m_CameraId;
     List<camera_metadata_t *>           m_ReqQueue;
 	Mutex                               m_requestMutex;
+	Mutex                               m_halCBMutex;
 	Mutex                           mStateLock;
 	mutable Mutex                   m_afTrigLock;
 	Condition                       mStateWait;
