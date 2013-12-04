@@ -1768,17 +1768,15 @@ int SprdCameraHWInterface2::releaseStream(uint32_t stream_id)
 		camera_set_preview_mem(0, 0, 0, 0);
         if(m_Stream[STREAM_ID_PREVIEW - 1] != NULL)
         {
-            memset(&m_subStreams[STREAM_ID_RECORD], 0, sizeof(substream_parameters_t));
+            //memset(&m_subStreams[STREAM_ID_RECORD], 0, sizeof(substream_parameters_t));//record para from m_subStreams[STREAM_ID_RECORD]
 			m_Stream[STREAM_ID_PREVIEW - 1]->detachSubStream(STREAM_ID_RECORD);
 			memset(&m_subStreams[STREAM_ID_PRVCB], 0, sizeof(substream_parameters_t));
 			m_Stream[STREAM_ID_PREVIEW - 1]->detachSubStream(STREAM_ID_PRVCB);
-			m_Stream[STREAM_ID_PREVIEW - 1]->releaseBufQ();
 			m_Stream[STREAM_ID_PREVIEW - 1] = NULL;
         }
-        //ALOGV("(%s): m_numRegisteredStream = %d", __FUNCTION__, targetStream->m_numRegisteredStream);   
+          
     }
-	else if (stream_id == STREAM_ID_JPEG) {
-		//freeCaptureMem();
+	else if (stream_id == STREAM_ID_JPEG) {	
         memset(&m_subStreams[stream_id], 0, sizeof(substream_parameters_t));
 		
 		if(m_Stream[STREAM_ID_CAPTURE - 1] != NULL){
@@ -2284,10 +2282,12 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
     uint32_t index = 0;
 	cropZoom zoom1 = {0,0,0,0};
 	cropZoom zoom = {0,0,0,0};
+	cropZoom zoom0 = {0,0,0,0};
     uint16_t wid = 0, height = 0;
 	size_t i = 0;
 	bool IsSetPara = true;
 	stream_parameters_t     *targetStreamParms = NULL;
+	capture_intent lastCapInt = m_staticReqInfo.captureIntent;//change
 	
 	Mutex::Autolock lock(m_requestMutex);
 	
@@ -2372,22 +2372,22 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 			case ANDROID_SCALER_CROP_REGION:
 				{
 				
-				zoom1.crop_x = entry.data.i32[0] & ALIGN_ZOOM_CROP_BITS;
-				zoom1.crop_y = entry.data.i32[1] & ALIGN_ZOOM_CROP_BITS;
-				zoom1.crop_w = entry.data.i32[2] & ALIGN_ZOOM_CROP_BITS;
-				zoom1.crop_h = entry.data.i32[3] & ALIGN_ZOOM_CROP_BITS;
-				if(zoom1.crop_x != srcreq->cropRegion0 || zoom1.crop_y != srcreq->cropRegion1\
-					  || zoom1.crop_w != srcreq->cropRegion2 || zoom1.crop_h != srcreq->cropRegion3 || srcreq->captureIntent == CAPTURE_INTENT_STILL_CAPTURE\
+				zoom0.crop_x = entry.data.i32[0] & ALIGN_ZOOM_CROP_BITS;
+				zoom0.crop_y = entry.data.i32[1] & ALIGN_ZOOM_CROP_BITS;
+				zoom0.crop_w = entry.data.i32[2] & ALIGN_ZOOM_CROP_BITS;
+				zoom0.crop_h = entry.data.i32[3] & ALIGN_ZOOM_CROP_BITS;
+				if(zoom0.crop_x != srcreq->cropRegion0 || zoom0.crop_y != srcreq->cropRegion1\
+					  || zoom0.crop_w != srcreq->cropRegion2 || zoom0.crop_h != srcreq->cropRegion3 || srcreq->captureIntent == CAPTURE_INTENT_STILL_CAPTURE\
 					  || m_Stream[STREAM_ID_PREVIEW - 1]->getHalStopMsg())
 				{
-				    srcreq->cropRegion0 = zoom1.crop_x;
-					srcreq->cropRegion1 = zoom1.crop_y;
-					srcreq->cropRegion2 = zoom1.crop_w;
-					srcreq->cropRegion3 = zoom1.crop_h;
+				    srcreq->cropRegion0 = zoom0.crop_x;
+					srcreq->cropRegion1 = zoom0.crop_y;
+					srcreq->cropRegion2 = zoom0.crop_w;
+					srcreq->cropRegion3 = zoom0.crop_h;
 					srcreq->isCropSet = true;
 				}
 				
-				ALOGD("DEBUG(%s): ANDROID_SCALER_CROP_REGION (%d %d %d %d)",  __FUNCTION__,zoom1.crop_x,zoom1.crop_y,zoom1.crop_w,zoom1.crop_h);
+				ALOGD("DEBUG(%s): ANDROID_SCALER_CROP_REGION (%d %d %d %d)",  __FUNCTION__,zoom0.crop_x,zoom0.crop_y,zoom0.crop_w,zoom0.crop_h);
 				}
 				break;
 				
@@ -2599,6 +2599,14 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
         }
     } 
 
+    if(lastCapInt != CAPTURE_INTENT_VIDEO_RECORD && srcreq->captureIntent == CAPTURE_INTENT_VIDEO_RECORD && srcreq->isCropSet == false){
+		srcreq->cropRegion0 = zoom0.crop_x;
+		srcreq->cropRegion1 = zoom0.crop_y;
+		srcreq->cropRegion2 = zoom0.crop_w;
+		srcreq->cropRegion3 = zoom0.crop_h;
+		srcreq->isCropSet = true;
+    }
+	
 	if(srcreq->isCropSet){
 		//srcreq->isCropSet = false;
 		res = androidParametTagToDrvParaTag(ANDROID_SCALER_CROP_REGION, &drvTag);
@@ -3106,21 +3114,13 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 			}
 		}
 		if(m_staticReqInfo.outputStreamMask & STREAM_MASK_RECORD && !GetRecStopMsg()) {
-		    int i = 0;		
+			substream_parameters_t *subParameters;
 			
-            for (; i < NUM_MAX_SUBSTREAM ; i++) {
-	            if (StreamSP->m_attachedSubStreams[i].streamId == STREAM_ID_RECORD)
-	        	{
+	        subParameters = &m_subStreams[STREAM_ID_RECORD];
+		    if (SUBSTREAM_TYPE_RECORD == subParameters->type){
 	        	    displaySubStream(StreamSP, (int32_t *)(mPreviewHeapArray_vir[targetStreamParms->bufIndex]),\
 						      targetStreamParms->m_timestamp,STREAM_ID_RECORD);
-	               
-	                break;
-				}
 			}
-			if(i == NUM_MAX_SUBSTREAM) {
-				ALOGD("err receivepreviewframe rec substream not regist");
-			}
-			
 		}
 
         if(m_staticReqInfo.outputStreamMask & STREAM_MASK_PREVIEW) {
