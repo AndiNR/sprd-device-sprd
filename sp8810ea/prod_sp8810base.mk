@@ -36,9 +36,10 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 PRODUCT_PACKAGES := \
 	VoiceDialer \
 	Phone \
-    framework2 \
+	framework2 \
 	Settings \
-      ES_File_Explorer.apk
+	Stk  \
+	ES_File_Explorer.apk
 
 # prebuild files
 PRODUCT_PACKAGES += \
