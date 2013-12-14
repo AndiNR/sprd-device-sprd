@@ -42,8 +42,9 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 PRODUCT_PACKAGES := \
 	VoiceDialer \
 	Phone \
-    framework2 \
-	Settings
+	framework2 \
+	Settings \
+	Stk
 
 # prebuild files
 PRODUCT_PACKAGES += \
